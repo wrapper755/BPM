@@ -124,6 +124,7 @@ class MainWindow(QMainWindow):
 
         self.explorer = Explorer(self.workspace, self, listed=settings.open_processes)
         self.explorer.opening.connect(self.open_definition)
+        self.explorer.picked.connect(self.refresh_menus)
 
         # STU-03. **받는 일은 이 창이 한다** — 탐색기는 돌아온 것을 그리기만 한다.
         self.resource_tree = resources.ResourceExplorer(self)
@@ -584,7 +585,8 @@ class MainWindow(QMainWindow):
         """
         open_process = self.process is not None
         self.add_definition_action.setEnabled(open_process)
-        self.close_action.setEnabled(open_process)
+        # 목록에 남았는데 열리지 않은 것도 닫을(목록에서 뺄) 수 있어야 한다 — 고른 줄이 그 입구다.
+        self.close_action.setEnabled(open_process or self.explorer.selected_process_id() is not None)
         self.save_as_action.setEnabled(open_process)
         found = self.opened_definition()
         entry = self.process.entry_definition if self.process is not None else None

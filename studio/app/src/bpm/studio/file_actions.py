@@ -269,9 +269,20 @@ def close_process(window: MainWindow) -> None:
 
     다음에 띄울 때도 열지 않는다. 파일은 지우지 않는다 — 다시 올리는 길은 `open_process`다.
 
+    닫는 것은 **탐색기에서 고른 줄의 BPM 프로세스**이고 고른 줄이 없으면 열린 것이다. 고른 것이
+    열린 것이 아니면 **목록에서만 뺀다** — 캔버스는 건드리지 않는다.
+
     저장 안 한 변경은 같은 관문(`may_discard`)이 묻는다. 시험 실행 중이면 닫지 않는다 — 실행이
     그 그림에 노드 상태를 칠하고, 끝나면 그 BPM 프로세스의 기록을 쓴다.
     """
+    picked = window.explorer.selected_process_id()
+    if picked is not None and (window.process is None or picked != window.process.id):
+        found = window.workspace.find(picked)
+        window.explorer.unlist(picked)
+        remember_last_opened(window)
+        window.refresh_menus()
+        window.say(f"목록에서 뺐습니다: {found.display if found is not None else picked}")
+        return
     if window.process is None:
         window.say(NO_PROCESS)
         return

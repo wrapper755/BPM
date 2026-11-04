@@ -35,6 +35,10 @@ MINIMAL = """<?xml version="1.0" encoding="UTF-8"?>
 class FakeExplorer:
     refreshed: list[str] = field(default_factory=list)
     listed: list[str] = field(default_factory=list)
+    picked: str | None = None
+
+    def selected_process_id(self) -> str | None:
+        return self.picked
 
     def refresh(self, *, opened: str = "", adding: Any = ()) -> None:
         self.refreshed.append(opened)
@@ -112,6 +116,9 @@ class FakeWindow:
 
     def retitle(self) -> None:
         self.retitled += 1
+
+    def refresh_menus(self) -> None:
+        pass
 
     def opened_definition(self) -> Definition | None:
         if self.process is None or self.definition is None:
@@ -260,6 +267,37 @@ def test_closing_with_nothing_open_says_so(tmp_path: Path) -> None:
     window.process, window.definition = None, None
     file_actions.close_process(window)  # type: ignore[arg-type]
     assert window.said == [file_actions.NO_PROCESS] and window.canvas.cleared == 0
+
+
+def test_closing_a_listed_process_that_is_not_open_only_takes_it_off_the_list(tmp_path: Path) -> None:
+    """목록에 남았는데 열리지 않은 것 — 고른 줄이 닫을 대상이고 **캔버스는 그대로다**."""
+    window = opened(tmp_path, "main.bpmn")
+    other = window.workspace.create("c.d", name="다른 것", entry="x.bpmn")
+    window.explorer.listed.append(other.id)
+    window.settings.open_processes = ("a.b", "c.d")
+    window.explorer.picked = "c.d"
+    window.dirty = True  # 열린 것의 변경은 묻지도 않는다 — 그것을 닫는 게 아니다
+    file_actions.close_process(window)  # type: ignore[arg-type]
+    assert window.explorer.listed == ["a.b"] and list(window.settings.open_processes) == ["a.b"]
+    assert window.process is not None and window.process.id == "a.b" and window.canvas.cleared == 0
+    assert window.said[-1] == "목록에서 뺐습니다: 다른 것"
+
+
+def test_closing_with_nothing_open_takes_the_picked_process_off_the_list(tmp_path: Path) -> None:
+    window = opened(tmp_path, "main.bpmn")
+    window.process, window.definition = None, None
+    window.explorer.picked = "a.b"
+    file_actions.close_process(window)  # type: ignore[arg-type]
+    assert window.explorer.listed == [] and window.canvas.cleared == 0
+    assert window.said == ["목록에서 뺐습니다: 한글 이름"]
+
+
+def test_closing_the_picked_open_process_closes_it(tmp_path: Path) -> None:
+    window = opened(tmp_path, "main.bpmn")
+    window.explorer.picked = "a.b"
+    file_actions.close_process(window)  # type: ignore[arg-type]
+    assert window.process is None and window.canvas.cleared == 1
+    assert window.said[-1] == "닫았습니다: 한글 이름"
 
 
 def test_closing_keeps_unsaved_edits_when_asked_to_cancel(tmp_path: Path, monkeypatch: Any) -> None:

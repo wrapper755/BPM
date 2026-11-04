@@ -130,6 +130,8 @@ class Explorer(QTreeView):
 
     #: 열 정의의 경로 (`Definition.path`).
     opening = Signal(str)
+    #: 고른 줄이 바뀌었다 — 「BPM 프로세스 닫기」가 켜지는 조건이 이것을 본다 (STU-01).
+    picked = Signal()
 
     def __init__(
         self, workspace: Workspace, parent: QWidget | None = None, *, listed: Iterable[str] = ()
@@ -145,6 +147,7 @@ class Explorer(QTreeView):
         self.setSelectionBehavior(QTreeView.SelectionBehavior.SelectRows)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.doubleClicked.connect(lambda _: self.open_selected())
+        self.selectionModel().selectionChanged.connect(lambda *_: self.picked.emit())
         self.refresh()
 
     def refresh(self, *, opened: str = "", adding: Iterable[str] = ()) -> None:
@@ -182,6 +185,18 @@ class Explorer(QTreeView):
         if item is None:
             return None
         return str(item.data(_KIND)), item.data(_PAYLOAD)
+
+    def selected_process_id(self) -> str | None:
+        """고른 줄이 속한 BPM 프로세스 id — 정의 줄이면 그 위의 것. 그룹 줄·고른 것 없음은 `None`."""
+        indexes = self.selectedIndexes()
+        if not indexes:
+            return None
+        item = self._model.itemFromIndex(indexes[0].siblingAtColumn(0))
+        if item is not None and item.data(_KIND) == ROW_DEFINITION:
+            item = item.parent()
+        if item is None or item.data(_KIND) != ROW_PROCESS:
+            return None
+        return str(item.data(_PAYLOAD))
 
     def open_selected(self) -> None:
         found = self.selection()
