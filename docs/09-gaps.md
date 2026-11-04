@@ -135,7 +135,7 @@ ADR로 고른다. 그때 `extensions/*` 워크스페이스 멤버·`--selftest -
 놓친 차례는 가장 최근 한 번, 배포 전 차례는 없다, `expires_at`은 다음 차례, 차례는 기본 키로 먼저 잡고 멱등 키도 일정·차례로
 짓는다. 식은 `contracts.schedule` 하나이고 **C1 R13**이 올릴 때, Studio 이벤트 편집기가 고칠 때 같은 함수로 본다. 일정이 만든
 작업은 `requested_by` `timer:<식>`이고 PC 실행기·서버 실행기가 실행 기록의 `source`를 **`schedule`**로 적는다(`job_source`).
-BX-23이 작업 지시 없이 서버 실행기에서 끝까지 도는 것을 `tests/test_m7_server_rerun.py`가 본다. 콘솔은 CON-02 「일정」(C5 `GET /schedules` — 다음 차례·마지막
+BX-23이 작업 지시 없이 서버 실행기에서 끝까지 도는 것을 `tests/server/test_m7_server_rerun.py`가 본다. 콘솔은 CON-02 「일정」(C5 `GET /schedules` — 다음 차례·마지막
 차례·놓친 차례·만들지 못한 코드)이 보이고, 같은 묶음에서 CON-01 「외부 작업」(C15 `GET /external-tasks?run_id=` — 일감이
 기다리는지·일꾼이 쥐었는지·다시 나갔는지)도 더했다. 남겨 둔 것: BPM 프로세스마다 다른 시간대(ADR-0110 「다시 볼 조건」).
 
@@ -189,7 +189,7 @@ BX-23이 작업 지시 없이 서버 실행기에서 끝까지 도는 것을 `te
 서버 실행이 위임으로 멈추면 **자리를 놓고**, 재시작을 건너 **작업이 하나**이며(작업 id가 스냅샷과
 함께 간다), **선언한 `outputs`가 값으로 돌아와** `bpm:call.output`이 적은 변수에 담기고, 실패·거절은
 **오류 경계가 받고**, Studio 시험 실행은 **케이스가 적어 둔 결과로** 끝까지 간다. 지키는 시험은 셋이다
-— `tests/test_core_events.py`(엔진)·`test_studio_runner.py`(케이스 포트)·`test_server_runner_delegation.py`
+— `tests/shared/test_core_events.py`(엔진)·`test_studio_runner.py`(케이스 포트)·`test_server_runner_delegation.py`
 (실행기·Center, 마지막 하나는 **PC를 진짜 자식 프로세스로 돌려** 현장이 만든 값이 서버 변수에
 담기는 것까지 본다). **업무 예제에도 들어왔다** — BX-16이 쓰던 사내 확장 우회(`center-jobs`)를
 걷어내고 `bpm:call.delegate`로 다시 썼다(2026-10-16). 그 예제가 제품 흠 하나를 드러냈다:
@@ -248,7 +248,7 @@ BX-23이 작업 지시 없이 서버 실행기에서 끝까지 도는 것을 `te
 
 남은 두 가지는 **공백이 아니라 선언의 일**이다: 서버에서 돌 태스크 종류를 가진 확장이 아직
 하나도 없고(지금은 깔린 내장 확장이 없다 — ADR-0114), 그 길이 정말 열렸는지는
-가짜 확장으로 끝까지 돌려 본다 (`tests/test_server_runner_extension_run.py`).
+가짜 확장으로 끝까지 돌려 본다 (`tests/server/test_server_runner_extension_run.py`).
 
 **닫은 것들** — §3-12(타이머로 깨우는 자리)는 [ADR-0061](decisions/0061-waking-runs-whose-timer-is-due.md)로 닫았다(하트비트가 쓸어서 깨우고 자리가 있을 때만 — 기한은 「그 시각 이후」다). 3-10(정의 고정)은 [ADR-0060](decisions/0060-pinning-external-definitions.md)으로 닫았고(그림에 고정하고 막지 않고 경고한다 — 재료가 이미 깔려 있어 계약이 늘지 않았다), 3-11(`requires.settings`)은 [ADR-0059](decisions/0059-sending-mail-and-webhooks.md)가 닫았다. 3-9는 [ADR-0049](decisions/0049-deployment-target-must-exist.md)로 닫았다 — 배포 대상은 등록된 PC여야 하고, 등록 전에는 봉투에 적을 `bot_ui_id`가 없어 「미리 배포해 두기」는 길이 아니었다.
 
@@ -309,7 +309,7 @@ CON-07 상세 「서버 주소」에서 넣고 **정의의 허용 호스트 안�
 - **편의 접근자 둘을 지웠다** (2026-10-16) — `ExtensionHost.adapter_operations()`(창·어댑터는 정의의 `m.adapter.operations`를 직접 읽는다)와 `secret_config_keys()`(`credentials.py`가 `configuration()`에 `.secret`을 걸어 본다). **쓰는 길이 둘이면 한쪽만 고친다.** 함께 적어 둔 `studio_editors()`는 **쓰인다** — `editor(task_type)`가 그것을 부른다(단수 메서드 뒤에 있어 「호출자 없음」으로 잘못 적혀 있었다). 시험은 **제품이 쓰는 길**로 고쳐 같은 것을 본다.
 - **C1의 「아는 값」 둘을 정했다** (2026-10-16) — `KNOWN_SETTINGS`는 **쓰는 쪽을 만들었다**(R11: `requires.settings`가 아는 값인가 — R9와 같은 까닭이고, 지금 Studio가 넣는 것은 `smtp` 하나뿐이라 올라간 패키지는 다 지난다). `KNOWN_BUILT_BY`는 **검사하지 않는 쪽으로 정했다** — 남의 도구로 만든 올바른 패키지를 거부하게 되므로 열린 문자열이 맞다. 그 까닭을 **상수 옆에 적어** 두어 다음 사람이 「검사가 없다」고 또 적지 않게 했다.
 - **`extension_api`에 우리 호출자가 없는 상수들은 정상이다** (`SEVERITY_INFO`) — 그 패키지는 **확장 저자에게 주는 API**(C13)다. 우리 코드가 다 쓰는지로 셈하지 않는다. (`HOST_SERVER_RUNNER`·`RUN_LOCATION_SERVER`는 2026-10-16에 쓰는 쪽이 생겼다 — [ADR-0064](decisions/0064-extension-tasks-on-the-server.md). 그때 그 둘을 대조하다 §3-14를 찾았다.)
-- **도메인 목록의 정의는 `manifest.py` 하나다** — `KNOWN_DOMAINS`·`PC_ONLY_DOMAINS`를 `bpmn_ext`(C14 B8·B6)와 `core`(사전 점검·AI 태스크)가 import해 쓴다. 자리가 C1 쪽인 것은 층 때문이다 (`bpmn_ext`가 `manifest`를 import하므로 거꾸로는 순환이다). **두 벌로 되돌리지 않는다** — 값이 같고 거르는 자리만 다른 목록이 둘이면 조용히 갈라진다(`triggers[].kind`가 그랬다). `tests/test_contracts_bpmn_ext.py`가 **같은 객체인지**(`is`) 본다.
+- **도메인 목록의 정의는 `manifest.py` 하나다** — `KNOWN_DOMAINS`·`PC_ONLY_DOMAINS`를 `bpmn_ext`(C14 B8·B6)와 `core`(사전 점검·AI 태스크)가 import해 쓴다. 자리가 C1 쪽인 것은 층 때문이다 (`bpmn_ext`가 `manifest`를 import하므로 거꾸로는 순환이다). **두 벌로 되돌리지 않는다** — 값이 같고 거르는 자리만 다른 목록이 둘이면 조용히 갈라진다(`triggers[].kind`가 그랬다). `tests/shared/test_contracts_bpmn_ext.py`가 **같은 객체인지**(`is`) 본다.
 - **「C13 `docs_url`·`owners`, C11 `Operation.json_schema`를 콘솔이 보이지 않는다」는 닫았다** (2026-10-18) — 대조해 보니 **셋 중 둘은 계약에 없는 칸**이었다(C13에 `owners`가 없고, C11 작업의 스키마는 `input_schema`·`output_schema`이며 STU-14·STU-03 툴팁이 그것으로 칸을 그린다). 남은 `docs_url`은 STU-15·BUI-11 상세 맨 위에 「설명 문서」로 보인다. **없는 칸을 공백으로 적어 두면** 다음 사람이 그 칸을 만들러 간다.
 
 ## 6. M6 첫째 — 현장 시나리오 3: 멈춤

@@ -57,14 +57,14 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 
 완료 기준:
 - [x] 루트에서 `uv sync`, `uv run pytest`가 Windows·Linux 모두 통과 — `.github/workflows/ci.yml`. PR마다 Linux, Windows는 주 1회(월요일, main)와 수동 실행이다 ([ADR-0108](decisions/0108-windows-ci-weekly.md))
-- [x] 의존 방향 import 검사 테스트 통과 (`01-architecture` §5) — `tests/test_import_direction.py` (선언 의존 전이 + 실제 import)
+- [x] 의존 방향 import 검사 테스트 통과 (`01-architecture` §5) — `tests/integration/test_import_direction.py` (선언 의존 전이 + 실제 import)
 - [x] 계약 패키지에서 JSON Schema가 생성됨 — `scripts/gen_schemas.py` (확장이 소유한 계약은 그 확장의 `schemas/`에 쓴다)
-- [x] `service_kit`으로 만든 빈 서비스 앱이 `/healthz`, `/manifest`에 답하고, 관리 콘솔에서 발급한 API 키로만 호출되며, 허용되지 않은 모드를 거부함 (C11) — `tests/test_service_kit.py`. 관리 콘솔 화면(SVC-00~03)은 M2에서 붙었다
+- [x] `service_kit`으로 만든 빈 서비스 앱이 `/healthz`, `/manifest`에 답하고, 관리 콘솔에서 발급한 API 키로만 호출되며, 허용되지 않은 모드를 거부함 (C11) — `tests/server/test_service_kit.py`. 관리 콘솔 화면(SVC-00~03)은 M2에서 붙었다
 - [x] 스파이크 S1~S5 ADR 작성 — ADR-0020~0024 (모두 수락, 2026-10-03). 따라온 계약 변경(C8 `class_name`, C10 `session_locked`, C13 `command`→`entry`)도 계약에 들었다
-- [x] `shared/extension_api`(인터페이스)와 `core` 확장 호스트 골격, 빈 내장 확장 하나가 Studio·PC 실행기에 태스크 종류·유틸리티를 기여함, 플랫폼이 특정 확장을 import하지 않음을 검사 테스트로 확인 ([ADR-0018](decisions/0018-extensions.md)) — C13 모델·검사 규칙 E1~E6(`chaeksas.contracts.extension`), 인터페이스(`TaskExecutor`·`TaskEditor`·`BotUiUtility`·`PreflightCheck`·어댑터 해석기 규격), 호스트(`chaeksas.core.extensions`: 엔트리 포인트 `chaeksas.extensions` → 기여 등록 → `entry` 해석), 내장 확장 `ui-automation`의 `extension.json`. `tests/test_extension_host.py`·`tests/test_contracts_extension.py`
+- [x] `shared/extension_api`(인터페이스)와 `core` 확장 호스트 골격, 빈 내장 확장 하나가 Studio·PC 실행기에 태스크 종류·유틸리티를 기여함, 플랫폼이 특정 확장을 import하지 않음을 검사 테스트로 확인 ([ADR-0018](decisions/0018-extensions.md)) — C13 모델·검사 규칙 E1~E6(`chaeksas.contracts.extension`), 인터페이스(`TaskExecutor`·`TaskEditor`·`BotUiUtility`·`PreflightCheck`·어댑터 해석기 규격), 호스트(`chaeksas.core.extensions`: 엔트리 포인트 `chaeksas.extensions` → 기여 등록 → `entry` 해석), 내장 확장 `ui-automation`의 `extension.json`. `tests/shared/test_extension_host.py`·`tests/shared/test_contracts_extension.py`
 - [x] `design/tokens.json` → 웹 CSS·Tailwind 테마(`@theme`)·상태 표(TS)·Qt QSS·미리보기 생성기와 명암비·간격 배수 검사, CI가 생성물 최신 여부 확인 — `scripts/gen_tokens.py`
 - [x] `server/web/` 워크스페이스: `packages/ui`(Button·StatusBadge·DataTable·Field·Dialog·EmptyState·ErrorBanner), `api-types`가 계약 JSON Schema에서 생성됨(33묶음), Windows에서 `pnpm dev` — pnpm 워크스페이스(앱 2 + 패키지 3), Next.js 16·Tailwind 4, CI에 웹 작업 추가(Win+Linux에서 `check:api-types`·`typecheck`·`build`)
-- [x] Qt 테마: 같은 토큰으로 밝게/어둡게, Pretendard 포함 — `chaeksas.qt.theme.apply_theme()`가 글꼴 등록 + 생성된 QSS + 팔레트를 함께 적용하고, 「시스템 따름」은 OS 변경을 따라간다. 글꼴은 Pretendard 1.3.9(굵기 4개 OTF)·JetBrains Mono 2.304를 저장소에 넣었다(OFL). 웹도 같은 글꼴을 가변 woff2로 자체 호스팅한다. `tests/test_qt_theme.py` 18개가 화면 없이 돈다 (CI Linux는 Qt 라이브러리를 깔고 돈다)
+- [x] Qt 테마: 같은 토큰으로 밝게/어둡게, Pretendard 포함 — `chaeksas.qt.theme.apply_theme()`가 글꼴 등록 + 생성된 QSS + 팔레트를 함께 적용하고, 「시스템 따름」은 OS 변경을 따라간다. 글꼴은 Pretendard 1.3.9(굵기 4개 OTF)·JetBrains Mono 2.304를 저장소에 넣었다(OFL). 웹도 같은 글꼴을 가변 woff2로 자체 호스팅한다. `tests/shared/test_qt_theme.py` 18개가 화면 없이 돈다 (CI Linux는 Qt 라이브러리를 깔고 돈다)
 
 ## M2. Center 최소 + PC 실행기 연결
 
@@ -90,7 +90,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] Studio: 메인 창(STU-01), BPM 프로세스 탐색기, 속성 패널, 시험 실행 (Windows) — 캔버스는 QtWebEngine 안의 bpmn-js이고 배포본은 `server/web/`에서 판을 고정해 복사한다 ([ADR-0022](decisions/0022-studio-canvas.md)·[ADR-0029](decisions/0029-bpmn-js-vendoring.md)). 속성 패널(STU-04)은 요소별 폼과 C14 모델로 검증하는 「JSON」 탭이고 「적용」은 캔버스를 거친다. 아래 탭 「검사」가 B1~B16을 보인다. 시험 실행(STU-08·09)은 케이스의 결재·메시지·위임·`$now_plus`·`$test_receiver`를 다루고 **자율 수행이 배운 재생 명세를 패키지에 적는다**. 바깥으로 웹훅을 쏘지 않는다. 케이스 편집기(STU-07)는 엔진과 같은 `validate_answer`로 검증하고, 패키지 내보내기는 매니페스트를 그림에서 모은다(시험 케이스는 넣지 않는다)
 - [x] 패키지 매니페스트에 `run_location`이 처음부터 들어가고, Studio 「실행 전 검사」가 서버 불가 태스크를 잡고 「실행 위치를 PC로 바꾸기」를 제안 (C1, 기본값 서버, 서버 실행은 M7) — 매니페스트의 `run_location`(없으면 **서버**)과 B6은 `contracts.bpmn_ext`에 있고 검사 탭이 보인다. 제안 단추는 화면 설계서대로 **STU-06**에 있다(`process_dialog.py` — 검사 탭에는 쓰기 단추를 두지 않는다). 세는 함수는 B6과 하나(`contracts.server_blockers`)다
 - [x] BPMN 확장 속성(C14)을 읽고 **쓰며**, 실행 전 검사가 화면에 보임 — 계약 쪽은 `contracts.bpmn_ext`(B1~B16), 식 자리 검사(B15)는 `core.expr_check`, 쓰기는 속성 패널이 캔버스를 거쳐 한다
-- [x] **인수 시험:** [업무 예제](08-business-examples/README.md#마일스톤별-인수-시험-묶음)의 M3 묶음이 Studio 시험 실행에서 케이스 모두 통과 (AI 태스크는 자율 수행 → 결정 수행 재생 둘 다) — **29개 모두 통과한다** (`tests/test_m3_acceptance.py`, `REMAINING`이 비었다). 모델은 127.0.0.1에 띄운 OpenAI 호환 스텁이고 답은 시험이 정한다(`tests/canned_answers.py`), 표본 파일은 시험이 그 자리에서 만든다(`tests/sample_files.py`). 재생은 **판정이 같은 것**과 **정말 되밟은 것**(C3 `node_state: replayed`)을 함께 본다
+- [x] **인수 시험:** [업무 예제](08-business-examples/README.md#마일스톤별-인수-시험-묶음)의 M3 묶음이 Studio 시험 실행에서 케이스 모두 통과 (AI 태스크는 자율 수행 → 결정 수행 재생 둘 다) — **29개 모두 통과한다** (`tests/studio/test_m3_acceptance.py`, `REMAINING`이 비었다). 모델은 127.0.0.1에 띄운 OpenAI 호환 스텁이고 답은 시험이 정한다(`tests/canned_answers.py`), 표본 파일은 시험이 그 자리에서 만든다(`tests/sample_files.py`). 재생은 **판정이 같은 것**과 **정말 되밟은 것**(C3 `node_state: replayed`)을 함께 본다
 
 ## M4. UI 자동화
 
@@ -113,7 +113,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 외부 확장 하나(시험용 외부 앱)를 정의 파일만으로 Center에 등록하고, 서비스 앱 태스크(STU-14)로 HTTP 어댑터를 통해 부름 (C13 §4) — 관리자가 CON-07에서 정의를 올리면 E1~E8을 지난 뒤 **Center가 서명한다**(E6, ADR-0090). 어댑터는 **어댑터 일꾼**(`server/adapter_consumer`)이 `core.http_adapter.AdapterCaller`로 돌리고 주소·키는 그 일꾼의 환경변수에만 있다. 실행하는 쪽은 `core.app_directory`로 봉투를 다시 검증하고, 고정한 `definition_hash`와 다르면 시작조차 하지 않는다 ([ADR-0060](decisions/0060-pinning-external-definitions.md))
 - [x] 사전 점검이 BPM 프로세스에 빠진 것을 잡고 Center가 그것을 안다 (C4 `readiness`) — 처음 기준이었던 서비스 앱 키는 [ADR-0102](decisions/0102-calling-outside-is-pull.md)로 없어졌다. `core.preflight`가 갖춰야 할 설정(`requires.settings`)·꺼 둔 확장·확장 태스크 종류·`web`·`desktop` AI 환경을 보고 하트비트 `readiness`로 올린다. **점검이 실행을 막지 않고**(터진 것만 빼고 사유를 남긴다) 준비되지 않은 BPM 프로세스는 띄우지 않는다(`not_ready`)
 - [x] 예제가 쓰는 모의 서비스 앱(ERP·디렉터리·신용·헬프데스크 등)을 `samples/`로 만든다 — `samples/mock_apps`: C11 앱 열셋은 `bpm-mock-apps serve`의 **일꾼 하나**가 Center에서 가져가고, 외부 앱 둘(`ext-credit`·`ext-helpdesk`)은 `service_kit`을 쓰지 않아 어댑터 일꾼이 부른다. 거짓 데이터의 값은 케이스가 정하고 시험이 예제의 DMN을 실제로 돌려 대조한다. 부르는 예제가 없는 앱은 두지 않는다
-- [x] **인수 시험:** 업무 예제 M5 묶음 통과, PC 예제는 Center 배포 → PC 실행기 실행으로 다시 통과 — **19개** (`tests/test_m5_acceptance.py`), **BX-33은 일부러 실패하는 교육 예제**라 그 의도한 실패를 따로 본다 ([ADR-0039](decisions/0039-optional-variables-and-b11.md)). 모의 앱은 진짜 소켓에 뜨고 일꾼이 Center에서 일감을 가져가며, 외부 확장 둘은 서명 봉투로 등록된다. BX-16은 PC 위임이라 결과를 케이스가 적는다(C14 `delegations`). **PC 예제 재통과**는 `tests/test_m5_pc_rerun.py`다 — 그림에서 읽은 PC 예제(지금은 FX-19 하나)가 승인·배포 → 하트비트 설치 → Center 작업 지시 → 진짜 실행 프로세스로 끝까지 돈다. 업무 값은 C3에 없어 결과가 맞는지는 Studio 시험 실행이 본다
+- [x] **인수 시험:** 업무 예제 M5 묶음 통과, PC 예제는 Center 배포 → PC 실행기 실행으로 다시 통과 — **19개** (`tests/integration/test_m5_acceptance.py`), **BX-33은 일부러 실패하는 교육 예제**라 그 의도한 실패를 따로 본다 ([ADR-0039](decisions/0039-optional-variables-and-b11.md)). 모의 앱은 진짜 소켓에 뜨고 일꾼이 Center에서 일감을 가져가며, 외부 확장 둘은 서명 봉투로 등록된다. BX-16은 PC 위임이라 결과를 케이스가 적는다(C14 `delegations`). **PC 예제 재통과**는 `tests/integration/test_m5_pc_rerun.py`다 — 그림에서 읽은 PC 예제(지금은 FX-19 하나)가 승인·배포 → 하트비트 설치 → Center 작업 지시 → 진짜 실행 프로세스로 끝까지 돈다. 업무 값은 C3에 없어 결과가 맞는지는 Studio 시험 실행이 본다
 
 ## M6. 첫 릴리스 (지금)
 
@@ -141,7 +141,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] PC 위임: 서버 BPM 프로세스의 Call Activity가 **배포된 PC BPM 프로세스**을 부르면 PC 실행기에서 실행되고 결과로 이어 감 — ADR-0062의 「증명할 다섯」이 다 찼다. 그림은 `bpm:call.delegate`, 엔진은 네 번째 기다림(`WAIT_DELEGATION`), 실행기는 `CenterDelegator`, Center는 배포된·활성인·대기열이 짧은 PC를 고르고(`center/api/delegations.py`), 결과는 PC의 작업 ack `outputs`로 올라온다. Studio 시험 실행은 케이스의 `delegations`로 끝낸다(`CaseDelegator`). **PC 실행기는 일부러 꽂지 않는다**. 업무 예제 BX-16이 FX-19를 맡긴다
 - **서버의 확장 태스크** (ADR-0064): `run_locations`에 `server`를 적은 종류만 수행기를 낸다. 적지 않은 것은 사전 점검이 시작 전에 막는다(`task_types_wrong_location`)
 - [x] 콘솔 「서버 실행」(CON-12)에서 실행 중·기다리는 실행·대기열을 본다 — 목록(`/server-runners`)과 상세(`/server-runners/<id>`)다. 「실행 중」·「기다리는 실행」·「BPM 프로세스별 상한」은 실행기 하나의 것이라 상세에, 「대기열」은 목록 쪽에 있다
-- [x] **인수 시험:** 실행 위치 서버인 업무·기능 예제 전부가 서버 실행기에서 통과 — `tests/test_m7_server_rerun.py`가 실행 위치 `server`인 예제 **47개를 그림에서 읽어** 배포·설치는 전부 보고, 끝까지 도는 것은 **묶음 44개 + 전용 시험 둘**이다(`ELSEWHERE` — BX-16은 PC 위임, FX-24는 일괄 기동이라 발판이 더 필요하다). **BX-33은 일부러 실패하는** 교육 예제라(ADR-0039) 의도한 실패를 따로 본다. 갈래 셋을 합쳐 47개와 맞춰 보므로 조용히 빠지는 일이 없다. 결재는 Center 결재함(C6), 메시지는 Center 메시지 API(C12)에 넣는다. BX-03(며칠 대기)은 `tests/test_server_runner_resume.py`가 재시작을 끼워 넣어 보고, 시나리오 1·2·4(BX-10·BX-20·BX-30)가 여기 든다 ([ADR-0055](decisions/0055-m6-field-scenario-is-scenario-3.md))
+- [x] **인수 시험:** 실행 위치 서버인 업무·기능 예제 전부가 서버 실행기에서 통과 — `tests/server/test_m7_server_rerun.py`가 실행 위치 `server`인 예제 **47개를 그림에서 읽어** 배포·설치는 전부 보고, 끝까지 도는 것은 **묶음 44개 + 전용 시험 둘**이다(`ELSEWHERE` — BX-16은 PC 위임, FX-24는 일괄 기동이라 발판이 더 필요하다). **BX-33은 일부러 실패하는** 교육 예제라(ADR-0039) 의도한 실패를 따로 본다. 갈래 셋을 합쳐 47개와 맞춰 보므로 조용히 빠지는 일이 없다. 결재는 Center 결재함(C6), 메시지는 Center 메시지 API(C12)에 넣는다. BX-03(며칠 대기)은 `tests/server/test_server_runner_resume.py`가 재시작을 끼워 넣어 보고, 시나리오 1·2·4(BX-10·BX-20·BX-30)가 여기 든다 ([ADR-0055](decisions/0055-m6-field-scenario-is-scenario-3.md))
 
 ## M8. 건넬 수 있게, 고칠 수 있게
 
@@ -167,7 +167,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 미뤄 둔 빚 하나를 **실제로 고쳐** 수단이 도는 것을 보인다 — **2판이 `deployment_results.bot_ui_id` → `host_id`**다 (그 칸은 PC와 서버 실행기를 함께 담는데 이름을 못 고쳐 부르는 쪽이 바꿔 부르고 있었다). **데이터가 든 옛 DB를 옮기는 것**까지 시험이 본다(새로 만든 DB와 옮긴 DB의 표·열이 같다)
 - [x] **키 묶기를 DB도 지킨다** ([ADR-0066](decisions/0066-migration-guards.md), 3판) — `bot_uis`·`server_runners`의 `key_id`·`machine_id`에 UNIQUE 넷. 겹친 옛 행(2026-10-08 전에 생길 수 있었다)은 **짐작해 고치지 않는다**(#57) — 단계의 **지킴 질의**가 걸리면 문을 하나도 돌리지 않고 무엇이 겹쳤는지와 고치는 길을 말한다. 고르는 것은 사람이고 `bpm-center hosts duplicates`·`retire <id>`가 **옮기기를 돌리지 않고** DB를 연다(은퇴는 지우지 않는다 — 이력이 그 id를 가리킨다). 판정은 그대로 `host_keys.py`에 있다(사람에게 할 말은 그쪽이 안다)
 - [x] **CON-06 「내려받은 횟수」** — **된다** (4판, C5 `download_count`·`last_downloaded_at`): 계약과 화면을 먼저 고치고 열 둘을 더했다. **관문을 지나 파일을 내어 줄 때만** 센다(막힌 요청은 세지 않는다)
-- [x] PostgreSQL 전환은 **그다음이고 이 단계에서 정한다** — **정했다** ([ADR-0070](decisions/0070-center-stays-on-sqlite.md)): **옮기지 않는다** — Center는 SQLite로 남고, 옮길 조건 셋(Center 여러 대·쓰기 잠금 관측·회사 요구)을 적었다. 옮기기 수단은 둘을 받을 수 있게 **SQL을 이식할 모양으로만** 적고 그것을 `tests/test_center_sql_portable.py`가 지킨다(실제 PostgreSQL에서 돌려 보지는 않는다). 백업은 `docs/04-setup.md` §6-4
+- [x] PostgreSQL 전환은 **그다음이고 이 단계에서 정한다** — **정했다** ([ADR-0070](decisions/0070-center-stays-on-sqlite.md)): **옮기지 않는다** — Center는 SQLite로 남고, 옮길 조건 셋(Center 여러 대·쓰기 잠금 관측·회사 요구)을 적었다. 옮기기 수단은 둘을 받을 수 있게 **SQL을 이식할 모양으로만** 적고 그것을 `tests/server/test_center_sql_portable.py`가 지킨다(실제 PostgreSQL에서 돌려 보지는 않는다). 백업은 `docs/04-setup.md` §6-4
 
 **선행은 M7이다.** 다만 A는 **M6의 사람 몫 둘을 쉽게 만든다** — 현장 PC에 개발 체크아웃을
 세우지 않아도 되므로, 순서상 M6보다 늦지만 **M6를 돕는다**.
@@ -180,13 +180,13 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 > 기다리고, 일꾼이 가져가 끝낸다. Center 콘솔에서 바깥 기능의 주소·키를 넣는 칸이 없어지는 것이 끝이다.
 > 한 조각이 끝날 때마다 옛 길을 **그 조각에서 걷는다** (두 길을 나란히 두지 않는다).
 
-- [x] 조각 1 — **C15 합의**: 계약 모델(`contracts.external_task`), Center 외부 작업 표(15판)·API·롱폴링(새 일감·끝내기가 종을 울린다, 상한 200), 일꾼 승인(요청 코드 → 토큰을 봉해 내려 준다, 토픽은 승인할 때) — `tests/test_center_external_tasks.py`
-- [x] 조각 2 — **서비스 앱**: `service_kit` 가져가기 루프, 모의 앱 13개, 부르는 쪽 셋(서버 실행기·실행 프로세스·Studio)의 `ServiceCaller`. C11 `/v1/ops`·서비스 앱 키 배달(ADR-0094)을 걷는다. M3·M5·M7 묶음이 초록 — **됐다**: `service_kit.consumer`(`Consumer`·`Enrollment`·`TokenFile`), `bpm-mock-apps serve`가 열셋을 일꾼 하나로, 부르는 쪽은 `core.services.CenterServiceCaller` 하나(실행 프로세스는 PC 실행기가 청한 호출 토큰 — `POST /call-tokens`). 서비스 앱 키·Studio 개발 키·BUI-05 키 알림·사전 점검의 키 점검을 걷었다 — `tests/test_service_kit_consumer.py`·`test_c15_round_trip.py`
-- [x] 조각 3 — **어댑터 일꾼** (`bpm-adapter-consumer`): 외부 앱 둘(모의), Center의 외부 앱 키·외부 확장 주소 덮어쓰기를 걷는다 — **됐다**: `server/adapter_consumer`, 주소·키는 `BPM_ADAPTER__EXT__<확장>__*`에만, 사설망은 `BPM_ADAPTER__ALLOW_PRIVATE_NETWORK`로 연다 — `tests/test_adapter_consumer.py`
+- [x] 조각 1 — **C15 합의**: 계약 모델(`contracts.external_task`), Center 외부 작업 표(15판)·API·롱폴링(새 일감·끝내기가 종을 울린다, 상한 200), 일꾼 승인(요청 코드 → 토큰을 봉해 내려 준다, 토픽은 승인할 때) — `tests/server/test_center_external_tasks.py`
+- [x] 조각 2 — **서비스 앱**: `service_kit` 가져가기 루프, 모의 앱 13개, 부르는 쪽 셋(서버 실행기·실행 프로세스·Studio)의 `ServiceCaller`. C11 `/v1/ops`·서비스 앱 키 배달(ADR-0094)을 걷는다. M3·M5·M7 묶음이 초록 — **됐다**: `service_kit.consumer`(`Consumer`·`Enrollment`·`TokenFile`), `bpm-mock-apps serve`가 열셋을 일꾼 하나로, 부르는 쪽은 `core.services.CenterServiceCaller` 하나(실행 프로세스는 PC 실행기가 청한 호출 토큰 — `POST /call-tokens`). 서비스 앱 키·Studio 개발 키·BUI-05 키 알림·사전 점검의 키 점검을 걷었다 — `tests/server/test_service_kit_consumer.py`·`test_c15_round_trip.py`
+- [x] 조각 3 — **어댑터 일꾼** (`bpm-adapter-consumer`): 외부 앱 둘(모의), Center의 외부 앱 키·외부 확장 주소 덮어쓰기를 걷는다 — **됐다**: `server/adapter_consumer`, 주소·키는 `BPM_ADAPTER__EXT__<확장>__*`에만, 사설망은 `BPM_ADAPTER__ALLOW_PRIVATE_NETWORK`로 연다 — `tests/server/test_adapter_consumer.py`
 - [x] 조각 4 — **UI 자동화**: 그 확장의 계획·치유·보고·등록을 외부 작업으로 옮겼다 — 확장은 뒤에 [ADR-0114](decisions/0114-remove-ui-automation.md)로 걷었다
 - [x] 조각 5 — **화면**: CON-07(주소·키 칸 → 일꾼 승인·토픽 상태), STU-10 — 화면 문서를 먼저 고친다 — **된다**: CON-07은 기능 목록·일꾼 승인 대기·토픽 표, STU-10에 서비스 앱 키 칸이 없고, CON-02의 「서비스 앱 키 참조」 열도 걷었다
 - [x] 조각 6 — **긴 작업**: 서버 실행기가 외부 작업을 기다리는 동안 스레드를 놓는다 (다섯째 기다림) — **돈다** ([ADR-0103](decisions/0103-long-external-tasks.md)): 한 번 기다려 끝나지 않으면 `external_task`로 멈추고 결과는 하트비트 주기마다 묻는다. M7 묶음이 서비스 호출 예제 넷을 **모든 호출을 넘긴 채로** 끝까지 돌린다
-- [x] 옛 키 칸 — C14 `bpm:serviceCall.key_ref`·`bpm:process.service_keys`, C1 `requires.service_apps[].key_ref`·`task_key_refs`·R4를 걷었다. 예제 생성기가 더 적지 않고(`key_ref`를 적으면 거부한다), 옛 파일은 모르는 칸으로 읽어 **B7이 경고 한 줄**로 말한다. 판은 올리지 않았다(선택 칸 — 원칙 3) — `tests/test_contracts_bpmn_ext.py`·`test_contracts.py`
+- [x] 옛 키 칸 — C14 `bpm:serviceCall.key_ref`·`bpm:process.service_keys`, C1 `requires.service_apps[].key_ref`·`task_key_refs`·R4를 걷었다. 예제 생성기가 더 적지 않고(`key_ref`를 적으면 거부한다), 옛 파일은 모르는 칸으로 읽어 **B7이 경고 한 줄**로 말한다. 판은 올리지 않았다(선택 칸 — 원칙 3) — `tests/shared/test_contracts_bpmn_ext.py`·`test_contracts.py`
 
 ## 나중에 (범위 밖, 기록만)
 

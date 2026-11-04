@@ -56,7 +56,7 @@ class SnapshotMismatch(RuntimeError):
 def audit_fields() -> list[str]:
     """`Run`의 칸이 셋 중 하나에 다 들어갔나 — **칸이 늘면 여기서 드러난다**.
 
-    시험이 이것을 부른다 (`tests/test_core_run_snapshot.py`). 엔진에 칸을 더하고 여기 적지
+    시험이 이것을 부른다 (`tests/shared/test_core_run_snapshot.py`). 엔진에 칸을 더하고 여기 적지
     않으면 되살린 실행이 **다른 답을 낸다** — 조용히 빠지는 것을 막는 그물이다.
     """
     known = {"run_id", *STORED, *REPLUGGED, *DROPPED}

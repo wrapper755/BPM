@@ -9,7 +9,7 @@
 멤버는 하나다 — `samples/mock_apps` (import 이름 `chaeksas.mock_apps`). 앱 열다섯 개를
 `pyproject.toml` 열다섯 개로 쪼개지 않는다.
 
-**아무 멤버도 `samples/`를 의존하지 않는다** (`tests/test_import_direction.py`가 막는다).
+**아무 멤버도 `samples/`를 의존하지 않는다** (`tests/integration/test_import_direction.py`가 막는다).
 쓰는 쪽은 `tests/`와 사람이 띄우는 `bpm-mock-apps`뿐이다.
 
 ## 두 종류다
@@ -92,7 +92,7 @@ uv run bpm-adapter-consumer
 예제를 비틀지 않고 앱이 예제를 따라간다 (CLAUDE.md §3-6). 값마다 어느 케이스가 요구하는지
 코드에 적어 두었다. 숫자를 고치려면 `docs/08-business-examples/cases/`를 먼저 본다.
 
-`tests/test_mock_apps.py`가 **예제의 DMN을 실제로 돌려** 대조한다 — 눈으로 맞춘 숫자가 아니다.
+`tests/server/test_mock_apps.py`가 **예제의 DMN을 실제로 돌려** 대조한다 — 눈으로 맞춘 숫자가 아니다.
 
 | 케이스가 기대하는 것 | 앱의 거짓 데이터 |
 | --- | --- |
@@ -124,7 +124,7 @@ curl -X POST localhost:8010/erp/mock/v1/scenario -d '{"name":"이관1건"}'
 **`center-jobs`는 걷어냈다** — 진짜 Center의 `POST /jobs`를 부르던 앱이고, BX-16이 「서버가 PC에
 일을 넘기는 요소가 없다」를 메우려고 쓰던 **우회**였다. [ADR-0062](../docs/decisions/0062-pc-delegation.md)가
 PC 위임(`bpm:call.delegate`)으로 그 공백을 닫아 BX-16이 더 이상 작업을 만들지 않는다 — 부르는
-예제가 없는 앱은 두지 않는다 (`tests/test_mock_apps.py`의 「예제가 부르지 않는 작업」 검사가
+예제가 없는 앱은 두지 않는다 (`tests/server/test_mock_apps.py`의 「예제가 부르지 않는 작업」 검사가
 그것을 지킨다).
 
 ## 드러난 공백

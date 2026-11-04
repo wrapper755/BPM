@@ -447,7 +447,7 @@ def deployment_refusal(problems: Sequence[Violation]) -> tuple[int, Violation] |
 
     상태는 규칙 이름으로 가른다 — `V…`는 C2 봉투(`ENVELOPE_REFUSAL_STATUS`), 나머지는
     `DEPLOYMENT_REFUSAL_STATUS`다. **배포 규칙을 더하면 그 표에 적는다** (적지 않으면 지금까지
-    모두 그러했듯 상태 충돌 409로 답한다 — `tests/test_center_api.py`가 표와 규칙을 대조한다).
+    모두 그러했듯 상태 충돌 409로 답한다 — `tests/server/test_center_api.py`가 표와 규칙을 대조한다).
     """
     if not problems:
         return None

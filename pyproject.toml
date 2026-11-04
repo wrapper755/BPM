@@ -57,8 +57,11 @@ known-first-party = ["chaeksas"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# 시험은 제품 폴더에 나뉘어 있고(ADR-0129) 도우미는 `tests/` 바로 밑에 있다. 시험이 다른 폴더의 시험 모듈을
+# 빌려 쓰기도 해서 모두를 경로에 올린다 — 모으는 순서에 따라 import가 되다 말다 하지 않게.
+pythonpath = ["tests", "tests/shared", "tests/server", "tests/studio", "tests/bot", "tests/integration"]
 addopts = "-q"
-# 서버 쪽 시험 — CI의 Windows 잡은 `-m "not server"`로 뺀다 (`tests/ci_scope.py`, ADR-0104).
+# 서버 쪽 시험(`tests/server/`) — CI의 Windows 잡은 `-m "not server"`로 뺀다 (`tests/ci_scope.py`, ADR-0104·0129).
 markers = ["server: 서버(Center·서버 실행기·일꾼) 쪽 시험 — Linux에서만 돈다"]
 
 [tool.mypy]

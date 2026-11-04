@@ -1,7 +1,7 @@
 """어떤 모의 앱이 있는가 — 한 자리에 모아 둔다.
 
 `app_id`는 **업무 예제의 `bpm:serviceCall.app_id` 그대로**다. 예제가 부르는 것이 여기
-없으면 M5 인수 시험을 돌릴 수 없으므로, `tests/test_mock_apps.py`가 예제 BPMN에서
+없으면 M5 인수 시험을 돌릴 수 없으므로, `tests/server/test_mock_apps.py`가 예제 BPMN에서
 읽어 이 표와 대조한다 — 손으로 맞춘 목록이 아니다.
 """
 

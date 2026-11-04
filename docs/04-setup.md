@@ -273,10 +273,10 @@ PostgreSQL은 쓰지 않는다). 컨테이너에서는 `/data/center.sqlite3`·`
 
 그래서 같은 시험 묶음이라도 **OS마다 건너뛰는 것이 다르다** — 셈은 CI가 말해 준 값으로만 적는다.
 
-**그런데 CI의 Windows 잡은 같은 묶음이 아니다 — 서버 시험을 뺀다** ([ADR-0104](decisions/0104-windows-ci-runs-the-client-side.md)). 서버(Center·서버 실행기·일꾼·서비스 앱·모의 앱·M7 묶음)는 Linux에서만 돌므로 그 파일들을 `tests/ci_scope.py`의 `SERVER_SIDE`에 적고, `conftest.py`가 `server` 표시를 붙이며 Windows 잡은 `uv run pytest -m "not server"`로 돈다. 표시로 빠진 시험은 **건너뜀이 아니라 「선택 해제」**라 셈에 따로 나온다(`… deselected`). 그래서 Linux는 「통과 + 건너뜀 = 모은 시험 수」이고 Windows는 「통과 + 건너뜀 + 선택 해제 = 모은 시험 수」다 — 셈을 적을 때 그것으로 맞춰 본다.
+**그런데 CI의 Windows 잡은 같은 묶음이 아니다 — 서버 시험을 뺀다** ([ADR-0104](decisions/0104-windows-ci-runs-the-client-side.md)). 서버(Center·서버 실행기·일꾼·서비스 앱·모의 앱·M7 묶음)는 Linux에서만 돌므로 그 시험들을 **`tests/server/`에 두고**([ADR-0129](decisions/0129-product-folders.md)), `conftest.py`가 그 폴더의 시험에 `server` 표시를 붙이며 Windows 잡은 `uv run pytest -m "not server"`로 돈다. 표시로 빠진 시험은 **건너뜀이 아니라 「선택 해제」**라 셈에 따로 나온다(`… deselected`). 그래서 Linux는 「통과 + 건너뜀 = 모은 시험 수」이고 Windows는 「통과 + 건너뜀 + 선택 해제 = 모은 시험 수」다 — 셈을 적을 때 그것으로 맞춰 본다.
 
-- **기본은 양쪽이다** — 새 시험 파일은 적지 않으면 Windows에서도 돈다.
-- **엔진(`core`)과 PC 쪽 코드가 걸린 시험은 서버로 적지 않는다** — PC BPM 프로세스는 Windows에서 엔진을 돌린다. `tests/test_ci_scope.py`가 서버 파일이 PC 실행기·Studio·Qt 코드를 import하지 않는지 본다.
+- **시험은 다섯 폴더 중 하나에 둔다** — `shared/`(계약·엔진·Qt 공용)·`server/`(Linux만)·`studio/`·`bot/`·`integration/`(제품을 가로지르는 것, 저장소 전체 검사). `server/` 밖은 Windows에서도 돈다. 시험 도우미(`stub_model.py`·`waiting.py` 등)는 `tests/` 바로 밑에 있고, `tests/` 바로 밑에 시험 파일을 두면 `test_ci_scope.py`가 막는다.
+- **엔진(`core`)과 PC 쪽 코드가 걸린 시험은 `server/`에 두지 않는다** — PC BPM 프로세스는 Windows에서 엔진을 돌린다. `tests/integration/test_ci_scope.py`가 서버 파일이 PC 실행기·Studio·Qt 코드를 import하지 않는지 본다.
 - Windows 개발 PC에서 CI와 같은 것을 보려면 `uv run pytest -m "not server"`, 전부는 그냥 `uv run pytest`다.
 
 ### Qt 창 시험에 `TestClient`를 붙이지 않는다
@@ -294,7 +294,7 @@ exit 139). 죽는 자리는 **돌던 시험과 무관한 곳**이라 — 우리 
 셈은 끝까지 간 실행에서만 읽는다.
 
 - 창은 **가짜 읽기 클라이언트**로 시험한다 (`CenterReader`를 상속해 메모리에서 답한다 —
-  `tests/test_studio_install.py`의 `FakeReader`). 창이 아니라 **담는 것**(목록·줄 계산)은
+  `tests/integration/test_studio_install.py`의 `FakeReader`). 창이 아니라 **담는 것**(목록·줄 계산)은
   애초에 Qt 없이 도는 함수로 갈라져 있다.
 - 진짜 Center로 보는 것은 **Qt 없는 시험**에 둔다 (설치·제거·내보내기처럼 값이 큰 길).
 - 창을 띄웠으면 그 시험 안에서 **닫고 `deleteLater()`**로 치운다 — 뒤 시험이 도는 중에 Qt

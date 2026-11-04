@@ -80,7 +80,7 @@ ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 
 
 ### 등록 요청과 승인
 
-> 상태: **돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) — `server_runner/enroll.py`(요청·묻기·받기, 보낸 요청은 데이터 폴더의 `enrollment.json` — 키도 봉함도 담지 않는다)와 Center의 C4와 같은 코드다. 시험: `tests/test_server_runner_agent.py`·`tests/test_center_enrollment.py`.
+> 상태: **돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) — `server_runner/enroll.py`(요청·묻기·받기, 보낸 요청은 데이터 폴더의 `enrollment.json` — 키도 봉함도 담지 않는다)와 Center의 C4와 같은 코드다. 시험: `tests/server/test_server_runner_agent.py`·`tests/server/test_center_enrollment.py`.
 
 **C4 §등록 요청과 승인과 같다** — 같은 요청 코드·같은 봉함·같은 24시간·같은 막기이고, 다른 것은 아래뿐이다. 규칙은 코드로도 한 자리에 둔다(키 묶기의 `center/host_keys.py`와 같은 결).
 

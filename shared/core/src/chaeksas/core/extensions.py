@@ -2,7 +2,7 @@
 
 **플랫폼은 특정 확장을 모른다.** Studio·PC 실행기·실행기·서버 실행기는 시작할 때 이 호스트를 만들어
 엔트리 포인트(`chaeksas.extensions`)로 찾은 확장 정의(C13)를 읽고, 기여 지점별 목록을 묻는다.
-확장 이름이 플랫폼 코드에 나오지 않는다 (`tests/test_import_direction.py`가 막는다).
+확장 이름이 플랫폼 코드에 나오지 않는다 (`tests/integration/test_import_direction.py`가 막는다).
 
     host = ExtensionHost()
     host.load_entry_points()

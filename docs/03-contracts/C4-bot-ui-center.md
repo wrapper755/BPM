@@ -32,7 +32,7 @@ PC 실행기가 **등록 요청**을 보내 관리자의 승인으로 Center API
 
 ## 등록 요청과 승인
 
-> 상태: **돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) — Center `center/enrollments.py`·`api/enrollments.py`, PC 실행기 `agent.request_enrollment()`·`enroll_step()`, 봉함·요청 코드는 `chaeksas.contracts.enrollment` 한 자리다. 시험: `tests/test_center_enrollment.py`·`tests/test_bot_ui_agent.py`. 개발·CI의 환경변수 길(`BPM_BOT_UI__CENTER_API_KEY`)은 그대로 남는다.
+> 상태: **돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) — Center `center/enrollments.py`·`api/enrollments.py`, PC 실행기 `agent.request_enrollment()`·`enroll_step()`, 봉함·요청 코드는 `chaeksas.contracts.enrollment` 한 자리다. 시험: `tests/server/test_center_enrollment.py`·`tests/integration/test_bot_ui_agent.py`. 개발·CI의 환경변수 길(`BPM_BOT_UI__CENTER_API_KEY`)은 그대로 남는다.
 
 설치하는 사람은 **Center 주소만** 넣는다. 키를 만드는 것도 내려 주는 것도 Center이고, 사람은 **이 PC를 들일지 승인만** 한다.
 
