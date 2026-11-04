@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c12-message-response",
+  "$id": "urn:bpm:contracts:c12-message-response",
   "additionalProperties": true,
   "properties": {
     "delivered_to": {

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@chaeksas/ui";
-import type { UsageRecord } from "@chaeksas/api-types/c11-usage-page";
+import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { UsageRecord } from "@bpm/api-types/c11-usage-page";
 import { APP_URL, CENTER_CONSOLE_URL, load, reason, svc } from "@/lib/page";
 import { RunLink } from "@/components/RunLink";
 import { Shell } from "@/components/Shell";

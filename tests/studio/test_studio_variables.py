@@ -24,10 +24,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import QStringListModel  # noqa: E402
 from PySide6.QtWidgets import QComboBox, QLineEdit, QStyleOptionViewItem  # noqa: E402
 
-from chaeksas.contracts.bpmn_ext import Case, InputDecl, ProcessInfo, read_process  # noqa: E402
-from chaeksas.studio.case_dialog import CaseDialog  # noqa: E402
-from chaeksas.studio.cases import declared_inputs, read, result_names, write  # noqa: E402
-from chaeksas.studio.variables import (  # noqa: E402
+from bpm.contracts.bpmn_ext import Case, InputDecl, ProcessInfo, read_process  # noqa: E402
+from bpm.studio.case_dialog import CaseDialog  # noqa: E402
+from bpm.studio.cases import declared_inputs, read, result_names, write  # noqa: E402
+from bpm.studio.variables import (  # noqa: E402
     MAX_VALUE,
     InputRow,
     build_inputs,
@@ -39,7 +39,7 @@ from chaeksas.studio.variables import (  # noqa: E402
     process_patch,
     value_text,
 )
-from chaeksas.studio.variables_tab import (  # noqa: E402
+from bpm.studio.variables_tab import (  # noqa: E402
     DEFAULT,
     INPUTS,
     MADE,
@@ -53,7 +53,7 @@ from chaeksas.studio.variables_tab import (  # noqa: E402
     TYPE,
     VariablesTab,
 )
-from chaeksas.studio.workspace import Workspace  # noqa: E402
+from bpm.studio.workspace import Workspace  # noqa: E402
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
 RECONCILIATION = "bx01_invoice_reconciliation"  # 입력 셋이 정의돼 있다
@@ -399,7 +399,7 @@ def completions(line: QLineEdit) -> list[str]:
 
 
 def test_the_approval_editor_offers_the_known_names(app: Any) -> None:
-    from chaeksas.studio.approval_editor import ApprovalEditor  # noqa: PLC0415
+    from bpm.studio.approval_editor import ApprovalEditor  # noqa: PLC0415
 
     names = QStringListModel(["결과", "감독자"])
     editor = ApprovalEditor(names=names)
@@ -414,9 +414,9 @@ def test_the_approval_editor_offers_the_known_names(app: Any) -> None:
 
 
 def test_the_service_editor_name_cells_offer_the_known_names(app: Any) -> None:
-    from chaeksas.studio.name_pick import NameDelegate  # noqa: PLC0415
-    from chaeksas.studio.service_catalog import Catalog  # noqa: PLC0415
-    from chaeksas.studio.service_editor import ServiceTaskEditor  # noqa: PLC0415
+    from bpm.studio.name_pick import NameDelegate  # noqa: PLC0415
+    from bpm.studio.service_catalog import Catalog  # noqa: PLC0415
+    from bpm.studio.service_editor import ServiceTaskEditor  # noqa: PLC0415
 
     names = QStringListModel(["결과"])
     editor = ServiceTaskEditor(Catalog(), names=names)
@@ -454,8 +454,8 @@ def window(app: Any, tmp_path: Path) -> Any:
             _PROBE.append(QWebEngineView())
     except Exception as e:  # noqa: BLE001
         pytest.skip(f"QtWebEngine을 띄울 수 없다: {type(e).__name__}: {e}")
-    from chaeksas.studio.main_window import MainWindow  # noqa: PLC0415
-    from chaeksas.studio.settings import Settings  # noqa: PLC0415
+    from bpm.studio.main_window import MainWindow  # noqa: PLC0415
+    from bpm.studio.settings import Settings  # noqa: PLC0415
 
     found = MainWindow(Settings(data_dir=tmp_path))
     if not wait_for(lambda: found.canvas.live):
@@ -465,7 +465,7 @@ def window(app: Any, tmp_path: Path) -> Any:
 
 def test_applying_goes_through_the_canvas_and_undoes_in_one_step(window: Any) -> None:
     """ADR-0022 — 「적용」은 캔버스로 가고 **실행 취소 한 걸음**에 되돌아간다. 파일은 그대로다."""
-    from chaeksas.studio import file_actions  # noqa: PLC0415
+    from bpm.studio import file_actions  # noqa: PLC0415
 
     made = window.workspace.import_example(EXAMPLES, RECONCILIATION)
     path = made.entry_definition.path

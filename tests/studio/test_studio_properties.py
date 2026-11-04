@@ -22,9 +22,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS", "--no-sandbox --disable-gpu")
 os.environ.setdefault("QTWEBENGINE_DISABLE_SANDBOX", "1")
 
-from chaeksas.contracts.bpmn_ext import read_process  # noqa: E402
-from chaeksas.studio.preflight import CLEAN, inspect, node_of, summarize  # noqa: E402
-from chaeksas.studio.properties import (  # noqa: E402
+from bpm.contracts.bpmn_ext import read_process  # noqa: E402
+from bpm.studio.preflight import CLEAN, inspect, node_of, summarize  # noqa: E402
+from bpm.studio.properties import (  # noqa: E402
     CONDITION_KINDS,
     GATEWAY_KINDS,
     SCRIPT_KINDS,
@@ -171,7 +171,7 @@ def test_no_example_breaks_f6_with_the_real_extension_table() -> None:
     Studio가 표를 넘기므로 걸리는 예제가 생기면 **설계자 화면에 오류로 뜬다** — 그때는 예제를
     비틀지 말고 그림의 실행 위치를 고친다.
     """
-    from chaeksas.core.extensions import ExtensionHost  # noqa: PLC0415
+    from bpm.core.extensions import ExtensionHost  # noqa: PLC0415
 
     host = ExtensionHost()
     host.load_entry_points()
@@ -232,7 +232,7 @@ def test_a_violation_points_at_a_node_so_the_canvas_can_jump() -> None:
 
 def test_the_workspace_feeds_b14_with_dmn_and_call_targets(tmp_path: Path) -> None:
     """**혼자서는 할 수 없는 검사는 인자로 받는다** — Studio는 늘 준다 (그래야 B14가 돈다)."""
-    from chaeksas.studio.workspace import Workspace  # noqa: PLC0415
+    from bpm.studio.workspace import Workspace  # noqa: PLC0415
 
     made = Workspace(tmp_path / "w").ensure().import_example(EXAMPLES, "fx02_business_rule")
     entry = made.entry_definition
@@ -248,20 +248,20 @@ def test_the_workspace_feeds_b14_with_dmn_and_call_targets(tmp_path: Path) -> No
 
 
 def opened(tmp_path: Path, example: str) -> Any:
-    from chaeksas.studio.workspace import Workspace  # noqa: PLC4015,PLC0415
+    from bpm.studio.workspace import Workspace  # noqa: PLC4015,PLC0415
 
     return Workspace(tmp_path / "w").ensure().import_example(EXAMPLES, example)
 
 
 def studio_extensions() -> Any:
-    from chaeksas.studio.extensions import Extensions  # noqa: PLC0415
+    from bpm.studio.extensions import Extensions  # noqa: PLC0415
 
     return Extensions.load()
 
 
 def test_a_bot_that_calls_service_apps_is_not_blocked_for_keys(tmp_path: Path) -> None:
     """ADR-0102 — 서비스 앱 키가 없어졌다. 서비스 앱을 쓰는 그림이라도 **키로 막지 않는다**."""
-    from chaeksas.studio.preflight import readiness  # noqa: PLC0415
+    from bpm.studio.preflight import readiness  # noqa: PLC0415
 
     found = readiness(opened(tmp_path, "bx22_offboarding_access"))
     assert not [v for v in found if v.blocks], [str(v) for v in found]
@@ -272,7 +272,7 @@ def test_a_diagram_that_calls_nothing_says_nothing(tmp_path: Path) -> None:
 
     조건 없이 한마디씩 하면 B11에서 겪은 일이 되풀이된다 — 거짓 경고가 쌓여 아무도 읽지 않는다.
     """
-    from chaeksas.studio.preflight import readiness  # noqa: PLC0415
+    from bpm.studio.preflight import readiness  # noqa: PLC0415
 
     ext = studio_extensions()
     found = readiness(
@@ -285,7 +285,7 @@ def test_a_diagram_that_calls_nothing_says_nothing(tmp_path: Path) -> None:
 
 def test_unsaved_edits_are_admitted_not_hidden(tmp_path: Path) -> None:
     """요구 사항은 **저장된 파일**에서 모은다 — 방금 더한 키 참조를 「없다」고 하면 엉뚱한 데를 고친다."""
-    from chaeksas.studio.preflight import UNSAVED, readiness  # noqa: PLC0415
+    from bpm.studio.preflight import UNSAVED, readiness  # noqa: PLC0415
 
     found = readiness(opened(tmp_path, "fx19_manual_task_pc"), dirty=True)
 
@@ -295,8 +295,8 @@ def test_unsaved_edits_are_admitted_not_hidden(tmp_path: Path) -> None:
 
 def test_a_broken_extension_check_warns_without_blocking(tmp_path: Path) -> None:
     """`PreflightCheck` 규약 — **점검이 실행을 막지 않는다.** 다만 조용히 넘어가지도 않는다."""
-    from chaeksas.core.extensions import Contribution, ExtensionHost  # noqa: PLC0415
-    from chaeksas.studio.preflight import readiness  # noqa: PLC0415
+    from bpm.core.extensions import Contribution, ExtensionHost  # noqa: PLC0415
+    from bpm.studio.preflight import readiness  # noqa: PLC0415
 
     class Broken:
         def check(self, target: Any) -> Any:
@@ -339,7 +339,7 @@ def app() -> Any:
 def canvas(app: Any) -> Any:
     from PySide6.QtCore import QEventLoop, QTimer
 
-    from chaeksas.studio.canvas import Canvas
+    from bpm.studio.canvas import Canvas
 
     found = Canvas()
     loop = QEventLoop()
@@ -416,7 +416,7 @@ def test_an_unpinned_external_definition_warns_but_does_not_block(tmp_path: Path
     막으면 사람이 뒷문(「고정 없이 내보내기」)을 요구하고 그 뒷문이 기본값이 된다. 서명되지
     않은 정의는 **봉투 관문이 이미 막는다** (C13 E6 — 첫째 관문이다).
     """
-    from chaeksas.studio.preflight import readiness  # noqa: PLC0415
+    from bpm.studio.preflight import readiness  # noqa: PLC0415
 
     # BX-32는 `ext-helpdesk`(외부)를 쓰고, 지금 그림에는 고정이 없다.
     found = readiness(
@@ -436,7 +436,7 @@ def test_nothing_is_said_when_we_do_not_know_what_is_external(tmp_path: Path) ->
     외부 확장은 이 PC에 깔리지 않아 호스트가 모르고(`host.get()`이 `None`이다) 점검은 서버를
     부르지 않는다. 그래서 받아 둔 리소스 목록을 **부르는 쪽이** 넘긴다.
     """
-    from chaeksas.studio.preflight import readiness  # noqa: PLC0415
+    from bpm.studio.preflight import readiness  # noqa: PLC0415
 
     found = readiness(opened(tmp_path, "bx32_customer_inquiry"))
     assert [v for v in found if v.code == "definition_unpinned"] == []
@@ -451,9 +451,9 @@ def test_a_pinned_drawing_says_nothing(tmp_path: Path) -> None:
     """
     import json  # noqa: PLC0415
 
-    from chaeksas.studio.extension_dialog import pin_patch  # noqa: PLC0415
-    from chaeksas.studio.preflight import readiness  # noqa: PLC0415
-    from chaeksas.studio.workspace import Workspace  # noqa: PLC0415
+    from bpm.studio.extension_dialog import pin_patch  # noqa: PLC0415
+    from bpm.studio.preflight import readiness  # noqa: PLC0415
+    from bpm.studio.workspace import Workspace  # noqa: PLC0415
 
     process = opened(tmp_path, "bx32_customer_inquiry")
     entry = process.entry_definition
@@ -482,7 +482,7 @@ def test_a_pinned_drawing_says_nothing(tmp_path: Path) -> None:
 
 
 def collect_needs(process: Any) -> Any:
-    from chaeksas.studio.packaging import collect_requires  # noqa: PLC0415
+    from bpm.studio.packaging import collect_requires  # noqa: PLC0415
 
     return collect_requires(process).extensions
 

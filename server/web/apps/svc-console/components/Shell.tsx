@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
-import { BpmMark, Button, StatusBadge } from "@chaeksas/ui";
-import type { AdminStatus } from "@chaeksas/api-types/c11-admin-status";
+import { BpmMark, Button, StatusBadge } from "@bpm/ui";
+import type { AdminStatus } from "@bpm/api-types/c11-admin-status";
 import { logout } from "@/app/actions";
 import { NO_MODULE, pagesOf } from "@/lib/console-modules";
 import { Refresh } from "./Refresh";

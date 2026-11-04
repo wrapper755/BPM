@@ -28,7 +28,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c5-job-info",
+  "$id": "urn:bpm:contracts:c5-job-info",
   "additionalProperties": true,
   "description": "`GET /jobs/{id}` — 만들 때 받은 것 + Center가 아는 것.\n\n취소(`DELETE /jobs/{id}`)도 이 모양으로 답한다. 202일 때는 `cancel_requested=true`이고,\n결과는 다음 하트비트의 ack로 `cancel_result`에 적힌다.",
   "properties": {

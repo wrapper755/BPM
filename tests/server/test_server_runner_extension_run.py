@@ -28,15 +28,15 @@ import fake_server_extension
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.hashing import MANIFEST_NAME, content_hash_zip
-from chaeksas.core.extensions import ExtensionHost
-from chaeksas.core.run_log import log_path
-from chaeksas.server_runner import agent as agent_mod
-from chaeksas.server_runner.center_client import CenterClient
-from chaeksas.server_runner.settings import Settings
+from bpm.center.app import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store
+from bpm.contracts.hashing import MANIFEST_NAME, content_hash_zip
+from bpm.core.extensions import ExtensionHost
+from bpm.core.run_log import log_path
+from bpm.server_runner import agent as agent_mod
+from bpm.server_runner.center_client import CenterClient
+from bpm.server_runner.settings import Settings
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 AT = "2026-10-16T09:00:00+09:00"

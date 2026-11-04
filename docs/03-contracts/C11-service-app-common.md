@@ -5,7 +5,7 @@
 | 상태 | **구현됨** (2026-10-09, [09-gaps](../09-gaps.md) §1 대조) — 2026-10-29부터 **일꾼**이다 ([ADR-0102](../decisions/0102-calling-outside-is-pull.md)): 앱은 C15로 Center에서 일감을 가져가고 HTTP로 업무 호출을 받지 않는다 |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 서비스 앱(일꾼) → Center (C15 가져가기·끝내기). 업무 호출의 모양은 부르는 쪽이 C15로 Center에 올린 것이다 |
-| 코드 위치 | 모델 `shared/contracts/src/chaeksas/contracts/service_app.py`, 받는 쪽 뼈대 `server/service_kit/` (`service_kit.consumer` — 가져가기 루프), **부르는 쪽 `chaeksas.core.services`** (`CenterServiceCaller` — 멱등 칸·재시도·C3 `service_call` 기록). 보기: 업무 예제가 부르는 **모의 앱 열셋**은 [`samples/`](../../samples/README.md) |
+| 코드 위치 | 모델 `shared/contracts/src/bpm/contracts/service_app.py`, 받는 쪽 뼈대 `server/service_kit/` (`service_kit.consumer` — 가져가기 루프), **부르는 쪽 `bpm.core.services`** (`CenterServiceCaller` — 멱등 칸·재시도·C3 `service_call` 기록). 보기: 업무 예제가 부르는 **모의 앱 열셋**은 [`samples/`](../../samples/README.md) |
 | JSON Schema | [`c11-service-app-manifest.json`](../../packages/contracts/schemas/c11-service-app-manifest.json) · [`c11-op-request.json`](../../packages/contracts/schemas/c11-op-request.json) · [`c11-op-response.json`](../../packages/contracts/schemas/c11-op-response.json) · [`c11-health-response.json`](../../packages/contracts/schemas/c11-health-response.json) |
 | 관련 ADR | [0010](../decisions/0010-service-apps.md), [0015](../decisions/0015-run-location.md), [0102](../decisions/0102-calling-outside-is-pull.md) |
 | 관련 화면 | STU-14, SVC-00·01·03 |
@@ -127,7 +127,7 @@ AdminStatus:
 
 ## 모델 연결
 
-모델(LLM)이 필요한 작업이 있는 앱은 `service_kit`이 주는 모델 연결을 쓴다 ([ADR-0034](../decisions/0034-service-app-model-connection.md)). 클라이언트는 `chaeksas.llm`(OpenAI 호환 `/v1/chat/completions`) 하나다.
+모델(LLM)이 필요한 작업이 있는 앱은 `service_kit`이 주는 모델 연결을 쓴다 ([ADR-0034](../decisions/0034-service-app-model-connection.md)). 클라이언트는 `bpm.llm`(OpenAI 호환 `/v1/chat/completions`) 하나다.
 
 | 환경변수 | 뜻 |
 | --- | --- |
@@ -181,7 +181,7 @@ AdminStatus:
 | 2026-10-29 | 1 | **앱이 일꾼이 된다** — `POST /v1/ops`·`/manifest`·앱 안의 키(`/v1/keys/self`·`/center/v1/keys`·`/center/v1/trust`)·관리 API의 키 발급을 걷고 C15 가져가기로 같은 작업을 수행한다. 폴백은 시험 일감일 때만, 추가 권한은 Center가 건다, 카탈로그는 일꾼이 올린다 | [0102](../decisions/0102-calling-outside-is-pull.md) |
 | 2026-10-25 | 1 | §Center가 발급하는 키 — `CENTER__URL`, `GET /center/v1/trust`, `POST /center/v1/keys`(C2 봉투 `service_key`, 해시만), 키 레코드 `issued_by`·`center_key_id`·`issued_for`. 새 경로·선택 칸이라 옛 부르는 쪽은 그대로다 | [0094](../decisions/0094-service-app-keys-ride-the-deployment.md) |
 | 2026-10-03 | 1 | 관리 API(`/admin/v1/status`·`keys`·`usage`)의 경로·모델·권한을 적었다 — ADR-0017이 경로만 말하고 모양이 없어서 콘솔이 타입을 손으로 쓸 수밖에 없었다 | 0017 |
-| 2026-10-05 | 1 | 모델 연결(`BPM_SVC_<APP>__LLM__*`)과 503 `llm_unavailable`, 관리 상태의 `llm` 의존 줄을 적었다 — 서비스 앱은 `core`를 쓸 수 없어 모델 클라이언트를 `chaeksas.llm`으로 내렸다. 모델 칸은 새로 생긴 것이라 기존 앱은 영향이 없다 | 0034 |
+| 2026-10-05 | 1 | 모델 연결(`BPM_SVC_<APP>__LLM__*`)과 503 `llm_unavailable`, 관리 상태의 `llm` 의존 줄을 적었다 — 서비스 앱은 `core`를 쓸 수 없어 모델 클라이언트를 `bpm.llm`으로 내렸다. 모델 칸은 새로 생긴 것이라 기존 앱은 영향이 없다 | 0034 |
 | 2026-10-05 | 1 | `Operation.required_scopes`를 더했다 — 추가 권한을 **작업이 선언하고 뼈대가 건다** (C9의 `registry_write`를 앱마다 손으로 거는 것을 막는다). 없던 칸이라 기존 앱은 영향이 없다 | 0013 |
 | 2026-10-01 | 1 | 초안 (키는 앱 관리 콘솔 발급·자체 검증, 멱등 키, `server_ok`) | 0010, 0013, 0015 |
 | 2026-10-01 | 1 | 검토 반영: 멱등 키에 `operation`·`node_instance` 추가와 본문 충돌 409, 폴백은 키가 자율 수행을 허용할 때만, 키 앞자리 규칙, usage 이름 통일, 보관 7일 | — |

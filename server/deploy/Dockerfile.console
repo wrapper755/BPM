@@ -27,7 +27,7 @@ ENV CI=1 NEXT_TELEMETRY_DISABLED=1
 WORKDIR /repo
 COPY --from=deps /repo/ ./
 COPY server/web/ server/web/
-RUN corepack enable && pnpm --filter "@chaeksas/${APP}" build \
+RUN corepack enable && pnpm --filter "@bpm/${APP}" build \
  && mkdir -p server/web/apps/${APP}/public
 
 FROM node:${NODE_VERSION} AS runtime

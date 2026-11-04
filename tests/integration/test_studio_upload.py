@@ -27,12 +27,12 @@ from fastapi.testclient import TestClient
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.center.app import create_app  # noqa: E402
-from chaeksas.center.settings import Settings as CenterSettings  # noqa: E402
-from chaeksas.center.storage import Store  # noqa: E402
-from chaeksas.contracts.center_api import PackageInfo  # noqa: E402
-from chaeksas.contracts.hashing import content_hash_zip  # noqa: E402
-from chaeksas.studio import center_resources, export_actions, services, upload  # noqa: E402
+from bpm.center.app import create_app  # noqa: E402
+from bpm.center.settings import Settings as CenterSettings  # noqa: E402
+from bpm.center.storage import Store  # noqa: E402
+from bpm.contracts.center_api import PackageInfo  # noqa: E402
+from bpm.contracts.hashing import content_hash_zip  # noqa: E402
+from bpm.studio import center_resources, export_actions, services, upload  # noqa: E402
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 AT = "2026-10-11T09:00:00+09:00"
@@ -353,8 +353,8 @@ def webengine(qt_app: Any) -> Any:
 @pytest.fixture
 def window(tmp_path: Path, webengine: Any) -> Any:
     """STU-01 메인 창 하나. 캔버스가 뜨기를 **기다리지 않는다** — 보는 것은 붙은 자리다."""
-    from chaeksas.studio.main_window import MainWindow
-    from chaeksas.studio.settings import Settings
+    from bpm.studio.main_window import MainWindow
+    from bpm.studio.settings import Settings
 
     return MainWindow(Settings(data_dir=tmp_path))
 
@@ -402,7 +402,7 @@ def test_the_run_location_table_comes_from_the_host_and_goes_to_all_three(
     # 지금은 깔린 확장이 없어 비어 있다 (ADR-0114) — 비어 있어도 **같은 것**이 셋에 간다.
 
     examples = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
-    from chaeksas.studio.workspace import Workspace
+    from bpm.studio.workspace import Workspace
 
     window.process = Workspace(tmp_path / "작업").ensure().import_example(
         examples, "fx19_manual_task_pc"
@@ -434,7 +434,7 @@ def test_the_run_location_table_comes_from_the_host_and_goes_to_all_three(
         def exec(self) -> int:
             return 0
 
-    monkeypatch.setattr("chaeksas.studio.main_window.ProcessInfoDialog", FakeDialog)
+    monkeypatch.setattr("bpm.studio.main_window.ProcessInfoDialog", FakeDialog)
     window.edit_info()
     assert given == [table]
 
@@ -478,8 +478,8 @@ def test_the_upload_window_reads_its_own_company(center: TestClient, studio_key:
 
 def test_the_upload_window_says_where_the_work_sits(qt_app: Any, center: TestClient, studio_key: str,
                                                     tmp_path: Path) -> None:
-    from chaeksas.studio.upload_dialog import NO_ORG, UploadDialog
-    from chaeksas.studio.workspace import Workspace
+    from bpm.studio.upload_dialog import NO_ORG, UploadDialog
+    from bpm.studio.workspace import Workspace
 
     _organized(center, studio_key)
     process = Workspace(tmp_path / "작업").ensure().create("buy-request", name="구매 요청")
@@ -502,8 +502,8 @@ def test_the_upload_window_says_where_the_work_sits(qt_app: Any, center: TestCli
 
 def test_the_place_goes_into_the_manifest(tmp_path: Path) -> None:
     """고른 자리는 매니페스트(C1 `place`)로 간다 — 기록을 다시 읽어도 남는다."""
-    from chaeksas.studio.packaging import build_manifest
-    from chaeksas.studio.workspace import Workspace, write_record
+    from bpm.studio.packaging import build_manifest
+    from bpm.studio.workspace import Workspace, write_record
 
     space = Workspace(tmp_path / "작업").ensure()
     examples = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"

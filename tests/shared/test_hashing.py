@@ -11,14 +11,14 @@ from pathlib import Path
 
 import pytest
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     FloatInPayloadError,
     canonical_json,
     content_hash_dir,
     content_hash_from_files,
     content_hash_zip,
 )
-from chaeksas.contracts.hashing import sha256_hex
+from bpm.contracts.hashing import sha256_hex
 
 
 def test_canonical_json_sorts_keys_and_drops_spaces() -> None:

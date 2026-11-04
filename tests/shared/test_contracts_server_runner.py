@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     DEFAULT_MAX_CONCURRENCY,
     DEFAULT_PER_BOT_CONCURRENCY,
     KNOWN_RESTORE_REFUSALS,

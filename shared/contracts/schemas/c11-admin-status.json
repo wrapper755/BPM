@@ -149,7 +149,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c11-admin-status",
+  "$id": "urn:bpm:contracts:c11-admin-status",
   "additionalProperties": true,
   "description": "`GET /admin/v1/status` (SVC-01). **관리자 토큰으로만** 부른다.",
   "properties": {

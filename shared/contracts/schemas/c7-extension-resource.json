@@ -21,7 +21,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c7-extension-resource",
+  "$id": "urn:bpm:contracts:c7-extension-resource",
   "additionalProperties": true,
   "description": "확장 하나 (C13 정의에서 모은 것).",
   "properties": {

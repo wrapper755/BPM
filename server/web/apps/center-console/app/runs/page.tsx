@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button, DataTable, ErrorBanner, StatusBadge, type Column } from "@chaeksas/ui";
-import type { RunInfo } from "@chaeksas/api-types/c3-run-info";
+import { Button, DataTable, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { sourceLabel } from "@/lib/labels";

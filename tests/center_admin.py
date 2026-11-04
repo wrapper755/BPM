@@ -20,8 +20,8 @@ from typing import Any
 
 import httpx
 
-from chaeksas.contracts.resources import ExtensionResource
-from chaeksas.contracts.signing import AdminKey
+from bpm.contracts.resources import ExtensionResource
+from bpm.contracts.signing import AdminKey
 
 API = "/api/v1"
 #: 시험의 Center가 받는 관리자 토큰 (`CenterSettings(admin_token="t-admin")`).
@@ -140,7 +140,7 @@ def revoke_extension(client: Any, extension_id: str, version: str, *, reason: st
     """외부 확장 등록 해제 — 콘솔·API 길은 없다 (ADR-0122). 일꾼 폴더가 거둘 때 쓰는 함수를 그대로 부른다."""
     from consumers import store_of  # noqa: PLC0415
 
-    from chaeksas.center.api import resources  # noqa: PLC0415
+    from bpm.center.api import resources  # noqa: PLC0415
 
     return resources.revoke_extension(
         store_of(client), extension_id, version, reason=reason, by="시험"

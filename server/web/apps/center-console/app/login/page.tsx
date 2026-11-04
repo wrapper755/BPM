@@ -1,4 +1,4 @@
-import { BpmMark } from "@chaeksas/ui";
+import { BpmMark } from "@bpm/ui";
 import { LoginForm } from "./form";
 
 /**

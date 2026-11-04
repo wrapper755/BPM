@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from ci_scope import is_server_side
 
-from chaeksas.bot_ui.credentials import Credentials
+from bpm.bot_ui.credentials import Credentials
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -23,7 +23,7 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 def _bot_ui_data_dir_is_temporary(tmp_path_factory: pytest.TempPathFactory, monkeypatch: Any) -> Iterator[Path]:
     """**어느 시험도 개발 PC의 PC 실행기 데이터 폴더를 쓰지 않는다.**
 
-    기본 위치(Windows `%LOCALAPPDATA%` 밑 `chaeksas/bot-ui`)에 쓰면, 그 PC에서 진짜 PC 실행기를 띄웠을 때 시험이 남긴
+    기본 위치(Windows `%LOCALAPPDATA%` 밑 `bpm/bot-ui`)에 쓰면, 그 PC에서 진짜 PC 실행기를 띄웠을 때 시험이 남긴
     주소·이름으로 뜬다 (이슈 #3에서 실제로 그랬다). `BPM_BOT_UI__DATA_DIR`는 설정이 읽는 덮어쓰기다.
     """
     path = tmp_path_factory.mktemp("bot-ui-data")
@@ -41,6 +41,18 @@ def _studio_data_dir_is_temporary(tmp_path_factory: pytest.TempPathFactory, monk
     """
     path = tmp_path_factory.mktemp("studio-data")
     monkeypatch.setenv("BPM_STUDIO__DATA_DIR", str(path))
+    yield path
+
+
+@pytest.fixture(autouse=True)
+def _server_runner_data_dir_is_temporary(tmp_path_factory: pytest.TempPathFactory, monkeypatch: Any) -> Iterator[Path]:
+    """**어느 시험도 개발 PC의 서버 실행기 데이터 폴더를 쓰지 않는다.** (위 PC 실행기와 같은 까닭)
+
+    기본 위치를 지으면 옛 이름(Chaeksas)의 폴더를 새 이름으로 **옮기기까지** 한다 (ADR-0130) — 시험이
+    개발 PC의 진짜 폴더를 옮기면 안 된다.
+    """
+    path = tmp_path_factory.mktemp("server-runner-data")
+    monkeypatch.setenv("BPM_SERVER_RUNNER__DATA_DIR", str(path))
     yield path
 
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from chaeksas.extension_api import TaskContext, TaskOutcome
+from bpm.extension_api import TaskContext, TaskOutcome
 
 #: 수행된 태스크마다 한 줄 — `(node_id, 실행 위치, 런타임 포트)`.
 CALLS: list[tuple[str, str, Any]] = []

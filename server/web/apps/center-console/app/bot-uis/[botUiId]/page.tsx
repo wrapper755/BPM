@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { DEPLOYMENT_REASON } from "@/lib/app-logs";
 import { redirect } from "next/navigation";
-import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@chaeksas/ui";
-import type { BotUiInfo } from "@chaeksas/api-types/c5-bot-ui-info";
-import type { DeploymentInfo } from "@chaeksas/api-types/c5-deployment-info";
+import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
+import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import { CenterError, center, session } from "@/lib/center";
 import { readinessLabel } from "@/lib/summary";
 import { Shell } from "@/components/Shell";
 import { BotUiActions } from "../actions-ui";
-import type { CenterKeyInfo } from "@chaeksas/api-types/c7-center-key-info";
+import type { CenterKeyInfo } from "@bpm/api-types/c7-center-key-info";
 import { KeyLine } from "@/components/KeyLine";
 import { keyByPrefix } from "@/lib/center-keys";
 import type { Route } from "next";

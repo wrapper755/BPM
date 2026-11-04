@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { DataTable, EmptyState, ErrorBanner, StatusBadge, cn, type Column } from "@chaeksas/ui";
-import type { CompanyInfo } from "@chaeksas/api-types/c16-company-info";
-import type { DepartmentInfo } from "@chaeksas/api-types/c16-department-info";
-import type { StaffInfo } from "@chaeksas/api-types/c16-staff-info";
+import { DataTable, EmptyState, ErrorBanner, StatusBadge, cn, type Column } from "@bpm/ui";
+import type { CompanyInfo } from "@bpm/api-types/c16-company-info";
+import type { DepartmentInfo } from "@bpm/api-types/c16-department-info";
+import type { StaffInfo } from "@bpm/api-types/c16-staff-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { fullTime } from "@/app/bot-uis/page";

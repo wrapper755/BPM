@@ -22,8 +22,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS", "--no-sandbox --disable-gpu")
 os.environ.setdefault("QTWEBENGINE_DISABLE_SANDBOX", "1")
 
-from chaeksas.contracts.bpmn_ext import Loop, read_process  # noqa: E402
-from chaeksas.studio.canvas import VIEW_PAGE, WEB_DIR, Canvas, CanvasError  # noqa: E402
+from bpm.contracts.bpmn_ext import Loop, read_process  # noqa: E402
+from bpm.studio.canvas import VIEW_PAGE, WEB_DIR, Canvas, CanvasError  # noqa: E402
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
 
@@ -219,7 +219,7 @@ def test_the_process_info_round_trips_through_the_canvas(canvas: Any) -> None:
 
     창이 다루지 않는 칸(`inputs`)까지 통째로 되돌려 쓰므로, 왕복해도 그것이 남아야 한다.
     """
-    from chaeksas.contracts.bpmn_ext import ProcessInfo
+    from bpm.contracts.bpmn_ext import ProcessInfo
 
     canvas.create_empty("Proc_info", "청구서 점검")
     # 옛 칸(`service_keys`, ADR-0102)은 **모르는 칸**이다 — 그것도 왕복해 남아야 한다 (C14 B7이 말한다).
@@ -349,7 +349,7 @@ def test_a_real_drop_makes_a_node_where_it_landed(canvas: Any) -> None:
     from PySide6.QtGui import QDragEnterEvent, QDropEvent
     from PySide6.QtWidgets import QApplication
 
-    from chaeksas.studio import resources
+    from bpm.studio import resources
 
     canvas.create_empty("Proc_drop", "드롭 시험")
     canvas.resize(900, 700)
@@ -415,7 +415,7 @@ def test_a_drop_of_something_else_is_left_to_the_page(canvas: Any) -> None:
     from PySide6.QtGui import QDropEvent
     from PySide6.QtWidgets import QApplication
 
-    from chaeksas.studio import resources
+    from bpm.studio import resources
 
     canvas.accept_drops_of(resources.MIME_TYPE)
     got: list[Any] = []
@@ -663,7 +663,7 @@ def test_the_pages_draw_with_theme_variables_and_write_no_colors() -> None:
     """두 페이지가 같은 변수로 그리고, 색 값은 토큰에서만 온다 (CLAUDE.md §5)."""
     import re
 
-    from chaeksas.studio.canvas import CANVAS_TOKENS, EDIT_PAGE
+    from bpm.studio.canvas import CANVAS_TOKENS, EDIT_PAGE
 
     for page in (EDIT_PAGE, VIEW_PAGE):
         text = (WEB_DIR / page).read_text(encoding="utf-8")
@@ -676,7 +676,7 @@ def test_the_pages_draw_with_theme_variables_and_write_no_colors() -> None:
 
 
 def test_every_canvas_variable_is_a_token_in_both_themes() -> None:
-    from chaeksas.studio.canvas import CANVAS_TOKENS, canvas_colors
+    from bpm.studio.canvas import CANVAS_TOKENS, canvas_colors
 
     light, dark = canvas_colors("light"), canvas_colors("dark")
     assert set(light) == set(dark) == set(CANVAS_TOKENS)
@@ -688,8 +688,8 @@ def test_the_diagram_follows_the_app_theme_without_reloading(canvas: Any) -> Non
     from PySide6.QtGui import QColor
     from PySide6.QtWidgets import QApplication
 
-    from chaeksas.qt.theme import apply_theme
-    from chaeksas.studio.canvas import canvas_colors
+    from bpm.qt.theme import apply_theme
+    from bpm.studio.canvas import canvas_colors
 
     app = QApplication.instance()
     assert isinstance(app, QApplication)
@@ -842,7 +842,7 @@ def test_a_receive_task_message_round_trips(canvas: Any) -> None:
 
 def test_a_data_output_round_trips_and_goes_away(canvas: Any) -> None:
     """STU-04 「파일 출력」 — 데이터 객체의 `bpm:dataOutput`이 캔버스로 오가고 `None`이면 사라진다."""
-    from chaeksas.contracts.bpmn_ext import DataOutput
+    from bpm.contracts.bpmn_ext import DataOutput
 
     canvas.call_sync("importXML", (EXAMPLES / "bx01_invoice_reconciliation.bpmn").read_text(encoding="utf-8"))
     found = canvas.call_sync("properties", "Data_Table")
@@ -860,7 +860,7 @@ def test_a_data_output_round_trips_and_goes_away(canvas: Any) -> None:
 
 def test_the_defaults_round_trip_beside_the_process_info(canvas: Any) -> None:
     """STU-04 「기본값」 — 정의 자체의 `bpm:defaults`만 바꿔도 `bpm:process`는 남는다."""
-    from chaeksas.contracts.bpmn_ext import Defaults
+    from bpm.contracts.bpmn_ext import Defaults
 
     canvas.create_empty("Proc_defaults", "기본값 시험")
     process = {"run_location": "server", "outputs": ["결과"]}

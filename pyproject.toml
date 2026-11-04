@@ -53,7 +53,7 @@ explicit-preview-rules = true
 select = ["E", "F", "I", "UP", "B", "PTH", "PLW1514"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["chaeksas"]
+known-first-party = ["bpm"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -71,8 +71,8 @@ explicit_package_bases = true
 strict = true
 # 뼈대 단계: 외부 라이브러리 타입이 없는 것은 아직 막지 않는다.
 ignore_missing_imports = true
-# 멤버마다 src 레이아웃이라 각 src가 모듈 경로의 뿌리다 (chaeksas.* 네임스페이스, ADR-0019).
-# 뿌리를 알려 주지 않으면 같은 파일이 packages.contracts.src.chaeksas.contracts로도 보여 충돌한다.
+# 멤버마다 src 레이아웃이라 각 src가 모듈 경로의 뿌리다 (bpm.* 네임스페이스, ADR-0019).
+# 뿌리를 알려 주지 않으면 같은 파일이 packages.contracts.src.bpm.contracts로도 보여 충돌한다.
 mypy_path = [
     "shared/contracts/src",
     "shared/extension_api/src",

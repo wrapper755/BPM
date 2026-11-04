@@ -18,10 +18,10 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.bpmn_ext import read_process
-from chaeksas.core.delegation import RecordingDelegator
-from chaeksas.core.engine import Engine, EngineError, Run, RunEnv, State
-from chaeksas.core.run_log import RunLog
+from bpm.contracts.bpmn_ext import read_process
+from bpm.core.delegation import RecordingDelegator
+from bpm.core.engine import Engine, EngineError, Run, RunEnv, State
+from bpm.core.run_log import RunLog
 
 NOW = datetime(2026, 10, 4, 9, 30, tzinfo=UTC)
 RUN_ID = "run_20261004_093000_abc123"
@@ -571,7 +571,7 @@ def test_a_called_process_can_wait_for_a_human() -> None:
 
 def test_a_called_process_speaks_with_the_outer_package_id() -> None:
     """안쪽 실행은 **같은 실행**이다 — 결재 요청(C6)이 안쪽 그림 id를 말하면 안 된다 (ADR-0086)."""
-    from chaeksas.core import requests
+    from bpm.core import requests
 
     child = make(
         '<bpmn:startEvent id="Sub_Start"/>'
@@ -631,7 +631,7 @@ def test_cancel_activity_defaults_to_interrupting() -> None:
 
 
 def test_timer_is_variable_tells_a_duration_from_a_name() -> None:
-    from chaeksas.contracts.bpmn_ext import Timer  # noqa: PLC0415
+    from bpm.contracts.bpmn_ext import Timer  # noqa: PLC0415
 
     assert Timer(kind="timeDuration", value="PT30M").is_variable is False
     assert Timer(kind="timeDuration", value="마감기한").is_variable is True
@@ -683,7 +683,7 @@ def test_the_contract_picks_the_same_receiver_as_the_engine() -> None:
 
     그래서 여기서 **같은 경우들을 양쪽에 물어 답을 맞춰 본다**.
     """
-    from chaeksas.contracts.server_runner import WaitingRun, message_matches
+    from bpm.contracts.server_runner import WaitingRun, message_matches
 
     cases: list[tuple[bool, Any, str, Any]] = [
         # (기다리는 쪽에 상관 키가 있나, 그 값, 보낼 이름, 보낼 상관 키)

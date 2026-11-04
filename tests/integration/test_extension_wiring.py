@@ -13,10 +13,10 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.bot_ui.runner import runner_args  # noqa: E402
-from chaeksas.bot_ui.runner_main import RunnerSecrets  # noqa: E402
-from chaeksas.core.extensions import HostTasks, load_host  # noqa: E402
-from chaeksas.studio.extensions import StudioSecrets  # noqa: E402
+from bpm.bot_ui.runner import runner_args  # noqa: E402
+from bpm.bot_ui.runner_main import RunnerSecrets  # noqa: E402
+from bpm.core.extensions import HostTasks, load_host  # noqa: E402
+from bpm.studio.extensions import StudioSecrets  # noqa: E402
 
 
 def test_host_tasks_say_none_for_an_unknown_task_type() -> None:
@@ -26,8 +26,8 @@ def test_host_tasks_say_none_for_an_unknown_task_type() -> None:
 
 def test_runner_secrets_give_the_call_token_and_extension_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
     """`call_token`은 이 실행의 호출 토큰(C15 — 제어 파일로 갈아 넣는다), 나머지는 그 확장의 비밀 칸이다."""
-    from chaeksas.bot_ui.credentials import Credentials  # noqa: PLC0415
-    from chaeksas.bot_ui.runner_main import CallTokenHolder  # noqa: PLC0415
+    from bpm.bot_ui.credentials import Credentials  # noqa: PLC0415
+    from bpm.bot_ui.runner_main import CallTokenHolder  # noqa: PLC0415
 
     monkeypatch.setattr(Credentials, "extension_secret", lambda self, ext, ref: f"{ext}/{ref}")
     holder = CallTokenHolder(value="bpm_ctr_first")

@@ -5,7 +5,7 @@
   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:bpm="urn:chaeksas:bpmn:1"
-  id="Defs_bx03_expense_approval" targetNamespace="urn:chaeksas:examples" exporter="chaeksas-examples" exporterVersion="1">
+  id="Defs_bx03_expense_approval" targetNamespace="urn:chaeksas:examples" exporter="bpm-examples" exporterVersion="1">
   <bpmn:message id="Msg_expense_request" name="expense_request" />
   <bpmn:error id="Err_SEND_FAILED" name="SEND_FAILED" errorCode="SEND_FAILED" />
   <bpmn:process id="Proc_bx03_expense_approval" name="지출 결재" isExecutable="true">

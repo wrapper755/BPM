@@ -16,12 +16,12 @@ from pathlib import Path
 
 import pytest
 
-from chaeksas.contracts.bpmn_ext import server_blockers
-from chaeksas.contracts.manifest import validate
-from chaeksas.core.extensions import ExtensionHost
-from chaeksas.studio.dialogs import example_ids
-from chaeksas.studio.packaging import build_manifest
-from chaeksas.studio.workspace import BpmProcess, Workspace
+from bpm.contracts.bpmn_ext import server_blockers
+from bpm.contracts.manifest import validate
+from bpm.core.extensions import ExtensionHost
+from bpm.studio.dialogs import example_ids
+from bpm.studio.packaging import build_manifest
+from bpm.studio.workspace import BpmProcess, Workspace
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
 

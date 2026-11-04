@@ -24,15 +24,15 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from chaeksas.studio.checks import center_status, llm_status  # noqa: E402
-from chaeksas.studio.credentials import (  # noqa: E402
+from bpm.studio.checks import center_status, llm_status  # noqa: E402
+from bpm.studio.credentials import (  # noqa: E402
     CENTER_KEY_NAME,
     ENV_CENTER_API_KEY,
     StudioCredentials,
 )
-from chaeksas.studio.extensions import Extensions, StudioSecrets  # noqa: E402
-from chaeksas.studio.settings import Settings  # noqa: E402
-from chaeksas.studio.settings_dialog import (  # noqa: E402
+from bpm.studio.extensions import Extensions, StudioSecrets  # noqa: E402
+from bpm.studio.settings import Settings  # noqa: E402
+from bpm.studio.settings_dialog import (  # noqa: E402
     CATEGORIES,
     NO_EXTENSION_FIELDS,
     THEMES,
@@ -106,7 +106,7 @@ def dialog(settings: Settings, extensions: Extensions, vault: Vault | None, **kw
 
 def approved(vault: Vault) -> Vault:
     """승인된 Studio 키가 있다 (ADR-0093)."""
-    vault.set_password("chaeksas-studio", "center", "bpm_ctr_studio")
+    vault.set_password("bpm-studio", "center", "bpm_ctr_studio")
     return vault
 
 
@@ -141,7 +141,7 @@ DEMO: dict[str, Any] = {
     "id": "demo-ext",
     "version": "1.0.0",
     "name": "데모 확장",
-    "publisher": "Chaeksas",
+    "publisher": "BPM",
     "tier": "builtin",
     "api": ">=2,<3",
     "contributes": {
@@ -155,7 +155,7 @@ DEMO: dict[str, Any] = {
 
 
 def demo_extensions(**kw: Any) -> Extensions:
-    from chaeksas.core.extensions import ExtensionHost  # noqa: PLC0415
+    from bpm.core.extensions import ExtensionHost  # noqa: PLC0415
 
     host = ExtensionHost()
     assert host.add_installed(json.dumps(DEMO).encode("utf-8"), origin="test", root="demo_ext") is not None
@@ -189,7 +189,7 @@ def test_extension_values_go_to_the_file_and_secrets_to_the_vault(qt: Any, setti
     found.extension_fields[("demo-ext", "token")][1].setText("tok-비밀-1")
     found.save()
     assert found.saved is not None and found.saved.extensions == {"demo-ext": {"region": "서울"}}
-    assert vault.values[("chaeksas-studio", "ext:demo-ext:token")] == "tok-비밀-1"
+    assert vault.values[("bpm-studio", "ext:demo-ext:token")] == "tok-비밀-1"
     raw = settings.path.read_text(encoding="utf-8")
     assert "tok-비밀-1" not in raw and "서울" in raw, "비밀은 설정 파일에 들어가지 않는다"
     again = dialog(Settings.load(settings.path), demo_extensions(), vault)
@@ -205,8 +205,8 @@ def test_extension_values_go_to_the_file_and_secrets_to_the_vault(qt: Any, setti
 def test_runs_see_what_was_put_in(monkeypatch: pytest.MonkeyPatch) -> None:
     """시험 실행·사전 점검이 쓰는 `context()`가 그 값을 본다 — 비밀은 `secrets`로만 (PC 실행기와 같다)."""
     vault = Vault()
-    vault.set_password("chaeksas-studio", "ext:demo-ext:token", "tok-stored")
-    monkeypatch.setattr("chaeksas.studio.credentials.StudioCredentials._keyring", lambda self: vault)
+    vault.set_password("bpm-studio", "ext:demo-ext:token", "tok-stored")
+    monkeypatch.setattr("bpm.studio.credentials.StudioCredentials._keyring", lambda self: vault)
     monkeypatch.delenv("BPM_STUDIO__EXT__DEMO_EXT__TOKEN", raising=False)
     found = demo_extensions(configured={"demo-ext": {"region": "부산"}})
     values = dict(getattr(found.settings_for("demo-ext"), "values", {}))
@@ -227,7 +227,7 @@ def test_the_llm_key_goes_to_the_vault_not_the_file(qt: Any, settings: Settings,
     found.llm_key.setText("sk-개발용-1234")
     found.save()
     assert found.saved is not None and found.saved.llm_model == "qwen2.5:7b"
-    assert vault.values[("chaeksas-studio", "llm")] == "sk-개발용-1234"
+    assert vault.values[("bpm-studio", "llm")] == "sk-개발용-1234"
     raw = settings.path.read_text(encoding="utf-8")
     assert "sk-개발용-1234" not in raw and "qwen2.5:7b" in raw
     assert dialog(settings, extensions, vault).llm_key.placeholderText().startswith("저장됨"), "값은 보이지 않는다"
@@ -247,9 +247,9 @@ def test_without_a_vault_saving_fails_and_the_window_stays(
 @pytest.fixture
 def center(tmp_path: Path) -> Any:
     """진짜 Center (TestClient). 관리자 토큰으로 승인한다 (콘솔이 하는 일)."""
-    from chaeksas.center.app import create_app  # noqa: PLC0415
-    from chaeksas.center.settings import Settings as CenterSettings  # noqa: PLC0415
-    from chaeksas.center.storage import Store  # noqa: PLC0415
+    from bpm.center.app import create_app  # noqa: PLC0415
+    from bpm.center.settings import Settings as CenterSettings  # noqa: PLC0415
+    from bpm.center.storage import Store  # noqa: PLC0415
 
     store = Store(tmp_path / "center.sqlite3")
     app = create_app(
@@ -274,7 +274,7 @@ def approve_studio(center: Any, name: str = "김OO 설계 PC") -> None:
 
 
 def connect_window(settings: Settings, vault: Vault, center: Any, **over: Any) -> Any:
-    from chaeksas.studio.connect_dialog import CenterConnectDialog  # noqa: PLC0415
+    from bpm.studio.connect_dialog import CenterConnectDialog  # noqa: PLC0415
 
     return CenterConnectDialog(settings, credentials=Credentials(vault), client=center, **over)
 
@@ -296,7 +296,7 @@ def test_stu16_lets_studio_in_by_approval(qt: Any, settings: Settings, center: A
     found.poll()
     assert found.connected and not found.timer.isActive()
     assert found.status.text().startswith("연결됨 — 「김OO 설계 PC」으로 들어와 있습니다")
-    key = vault.values[("chaeksas-studio", CENTER_KEY_NAME)]
+    key = vault.values[("bpm-studio", CENTER_KEY_NAME)]
     raw = settings.path.read_text(encoding="utf-8")
     assert key not in raw and "김OO 설계 PC" in raw and "http://center.test" in raw, "「저장」 없이 그 자리에서 적는다"
 
@@ -314,17 +314,17 @@ def test_stu16_later_keeps_the_request_for_next_time(qt: Any, settings: Settings
 
 def test_stu16_refused_key_offers_asking_again(qt: Any, settings: Settings, center: Any) -> None:
     vault = Vault()
-    vault.set_password("chaeksas-studio", CENTER_KEY_NAME, "bpm_ctr_" + "x" * 40)
+    vault.set_password("bpm-studio", CENTER_KEY_NAME, "bpm_ctr_" + "x" * 40)
     found = connect_window(replace(settings, center_url="http://center.test"), vault, center, refused=True)
     assert "키가 거부되었습니다" in found.status.text() and not found.again.isHidden()
     found.ask_again()
-    assert ("chaeksas-studio", CENTER_KEY_NAME) not in vault.values
+    assert ("bpm-studio", CENTER_KEY_NAME) not in vault.values
     assert found.code.text() in found.status.text() and found.again.isHidden()
 
 
 def test_need_at_start(center: Any) -> None:
     """STU-16 「언제 뜨나」 — 키가 없거나 거부됐을 때만 창, 닿지 못함·만료 임박은 한 줄."""
-    from chaeksas.studio import center_enroll as ce  # noqa: PLC0415
+    from bpm.studio import center_enroll as ce  # noqa: PLC0415
 
     base: dict[str, Any] = {"base_url": "http://center.test", "key": None, "from_env": False, "key_expires": ""}
 
@@ -352,7 +352,7 @@ def test_center_tab_hides_ask_again_while_connected(
     tab.test_center()
     assert tab.center_result.text() == "연결됨 — 서비스 앱 0개를 읽었습니다" and tab.center_again.isHidden()
 
-    vault.set_password("chaeksas-studio", CENTER_KEY_NAME, "bpm_ctr_" + "x" * 40)  # 폐기된 키라 치자
+    vault.set_password("bpm-studio", CENTER_KEY_NAME, "bpm_ctr_" + "x" * 40)  # 폐기된 키라 치자
     tab.test_center()
     assert tab.center_result.text() == "키가 거부되었습니다 — 「다시 요청」으로 새로 승인받으세요"
     assert not tab.center_again.isHidden()
@@ -377,7 +377,7 @@ def test_an_empty_center_address_blocks_saving(qt: Any, settings: Settings, exte
 
 def test_the_center_key_env_var_wins(monkeypatch: pytest.MonkeyPatch) -> None:
     vault = Vault()
-    vault.set_password("chaeksas-studio", CENTER_KEY_NAME, "bpm_ctr_stored")
+    vault.set_password("bpm-studio", CENTER_KEY_NAME, "bpm_ctr_stored")
     monkeypatch.delenv(ENV_CENTER_API_KEY, raising=False)
     assert Credentials(vault).center_api_key() == "bpm_ctr_stored"
     monkeypatch.setenv(ENV_CENTER_API_KEY, "bpm_ctr_env")
@@ -453,7 +453,7 @@ def test_the_center_probe_carries_the_key_and_asks_only_for_service_apps() -> No
 def test_runs_resolve_the_call_token_and_extension_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
     """`call_token`은 Studio가 청한 호출 토큰이고(C15), 나머지는 그 확장의 비밀 칸이다."""
     vault = Vault()
-    vault.set_password("chaeksas-studio", "ext:crm:note", "비밀")
+    vault.set_password("bpm-studio", "ext:crm:note", "비밀")
     found = StudioSecrets(credentials=Credentials(vault), extension_id="crm", call_tokens=lambda: "bpm_ctr_x")
     assert found.resolve("call_token") == "bpm_ctr_x"
     assert found.resolve("note") == "비밀"
@@ -462,7 +462,7 @@ def test_runs_resolve_the_call_token_and_extension_secrets(monkeypatch: pytest.M
 
 def test_studio_asks_center_for_a_call_token_and_keeps_it(monkeypatch: pytest.MonkeyPatch) -> None:
     """Studio 키로 `POST /call-tokens` — 받은 것은 만료 2시간 전까지 다시 청하지 않는다 (C15)."""
-    from chaeksas.studio.call_token import PATH, CallTokens  # noqa: PLC0415
+    from bpm.studio.call_token import PATH, CallTokens  # noqa: PLC0415
 
     asked: list[str] = []
 
@@ -477,12 +477,12 @@ def test_studio_asks_center_for_a_call_token_and_keeps_it(monkeypatch: pytest.Mo
 
 
 def test_the_model_key_for_runs_comes_from_the_vault(monkeypatch: pytest.MonkeyPatch) -> None:
-    from chaeksas.studio import runner  # noqa: PLC0415
+    from bpm.studio import runner  # noqa: PLC0415
 
     vault = Vault()
-    vault.set_password("chaeksas-studio", "llm", "sk-stored")
+    vault.set_password("bpm-studio", "llm", "sk-stored")
     monkeypatch.delenv("BPM_STUDIO__LLM__API_KEY", raising=False)
-    monkeypatch.setattr("chaeksas.studio.credentials.StudioCredentials._keyring", lambda self: vault)
+    monkeypatch.setattr("bpm.studio.credentials.StudioCredentials._keyring", lambda self: vault)
     assert runner._llm_key() == "sk-stored"
     monkeypatch.setenv("BPM_STUDIO__LLM__API_KEY", "sk-env")
     assert runner._llm_key() == "sk-env"

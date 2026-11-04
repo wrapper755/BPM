@@ -29,16 +29,16 @@ import center_admin
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center import signer as center_signer
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store, now_iso
-from chaeksas.contracts.hashing import MANIFEST_NAME, content_hash_zip
-from chaeksas.contracts.signing import sign
-from chaeksas.core.packages import CENTER, INSTALL_SOURCE_NAME, SOURCE_LABELS, installed
-from chaeksas.server_runner import agent as agent_mod
-from chaeksas.server_runner.center_client import CenterClient
-from chaeksas.server_runner.settings import Settings
+from bpm.center import signer as center_signer
+from bpm.center.app import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store, now_iso
+from bpm.contracts.hashing import MANIFEST_NAME, content_hash_zip
+from bpm.contracts.signing import sign
+from bpm.core.packages import CENTER, INSTALL_SOURCE_NAME, SOURCE_LABELS, installed
+from bpm.server_runner import agent as agent_mod
+from bpm.server_runner.center_client import CenterClient
+from bpm.server_runner.settings import Settings
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 READ = {"Authorization": "Bearer t-read"}
@@ -54,8 +54,8 @@ def _server_runner_allowed(monkeypatch: pytest.MonkeyPatch) -> None:
     평가된다) 상수를 패치해도 닿지 않는다 — 그래서 부르는 자리를 감싼다. 제품의 스위치는
     그대로 꺼져 있고, 켜는 것은 실행이 붙는 조각의 일이다 (ADR-0016·0047).
     """
-    from chaeksas.center.api import deployments as deployments_api
-    from chaeksas.contracts.center_api import validate_deployment
+    from bpm.center.api import deployments as deployments_api
+    from bpm.contracts.center_api import validate_deployment
 
     def allowed(*args: Any, **kwargs: Any) -> Any:
         return validate_deployment(*args, **{**kwargs, "server_runner_available": True})
@@ -334,8 +334,8 @@ def test_a_revoked_deployment_makes_jobs_not_ready(
     center: TestClient, store: Store, runner: agent_mod.Agent
 ) -> None:
     """철회하면 다음 하트비트에서 「실행 불가」다 — 파일은 남고 작업은 `not_ready` (C12, ADR-0113)."""
-    from chaeksas.contracts.bot_ui import JobDispatch
-    from chaeksas.core.deploy import DEPLOYMENT_WITHDRAWN
+    from bpm.contracts.bot_ui import JobDispatch
+    from bpm.core.deploy import DEPLOYMENT_WITHDRAWN
 
     made = deployed(center, store, runner).json()
     runner.tick()
@@ -354,7 +354,7 @@ def test_a_revoked_deployment_makes_jobs_not_ready(
 
 
 def _public_keys(store: Store) -> list[Any]:
-    from chaeksas.center.api import signing as signing_api
+    from bpm.center.api import signing as signing_api
 
     return list(signing_api.admin_keys(store))
 

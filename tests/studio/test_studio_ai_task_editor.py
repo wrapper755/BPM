@@ -16,8 +16,8 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.bpmn_ext import AiTask, read_process  # noqa: E402
-from chaeksas.studio.ai_task_editor import (  # noqa: E402
+from bpm.contracts.bpmn_ext import AiTask, read_process  # noqa: E402
+from bpm.studio.ai_task_editor import (  # noqa: E402
     GOAL_OUTLINE,
     SERVER_NO_SCREEN,
     AiTaskEditor,
@@ -180,7 +180,7 @@ def test_the_form_says_forbidden_actions_do_not_block() -> None:
     """금지 행동은 **모델에게 주는 말일 뿐**이다 — 화면이 「막아 준다」고 읽히면 안 된다."""
     from PySide6.QtWidgets import QLabel
 
-    from chaeksas.studio.ai_task_editor import CONFIRM_NOTE, FORBIDDEN_NOTE
+    from bpm.studio.ai_task_editor import CONFIRM_NOTE, FORBIDDEN_NOTE
 
     texts = [one.text() for one in loaded(BODY).findChildren(QLabel)]
     assert FORBIDDEN_NOTE in texts and "막지는 않습니다" in FORBIDDEN_NOTE
@@ -262,7 +262,7 @@ def test_on_the_server_web_and_desktop_are_off() -> None:
 
 
 def panel_with(body: dict[str, Any], *, run_location: str | None = None) -> Any:
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
     panel.run_location = run_location
@@ -310,7 +310,7 @@ def test_the_goal_preview_names_what_the_engine_hands_the_model() -> None:
     """엔진과 **같은 함수**다 — 변수 공간을 주면 `_seen_by`가 고르는 것과 미리보기가 같다."""
     from PySide6.QtCore import QStringListModel
 
-    from chaeksas.core.engine import goal_names
+    from bpm.core.engine import goal_names
 
     names = QStringListModel(["청구서", "거래처", "합계"])
     made = AiTaskEditor(names=names, loop_item="건")
@@ -334,7 +334,7 @@ def test_without_named_variables_the_preview_says_so() -> None:
 
 
 def test_the_engine_hands_the_model_what_the_goal_names() -> None:
-    from chaeksas.core.engine import goal_names
+    from bpm.core.engine import goal_names
 
     # 낱말 경계를 보지 않는다 — 엔진이 그렇고 미리보기도 그래야 한다.
     assert goal_names("기간별 합계", ["기간", "합계", "청구서", ""]) == ["기간", "합계"]
@@ -344,8 +344,8 @@ def test_the_engine_hands_the_model_what_the_goal_names() -> None:
 
 
 def _write_specs(folder: Path, *specs: dict[str, Any]) -> None:
-    from chaeksas.contracts.replay import ReplayMemory, ReplaySpec
-    from chaeksas.core.replay import write_memory
+    from bpm.contracts.replay import ReplayMemory, ReplaySpec
+    from bpm.core.replay import write_memory
 
     write_memory(folder, ReplayMemory(schema=1, specs=[ReplaySpec.model_validate(s) for s in specs]))
 
@@ -361,7 +361,7 @@ OTHER = {**SPEC, "node_id": "Task_Other", "steps": []}
 
 
 def with_specs(folder: Path, body: dict[str, Any] = BODY, *, running: bool = False) -> AiTaskEditor:
-    from chaeksas.studio.replay_specs import specs_of
+    from bpm.studio.replay_specs import specs_of
 
     made = AiTaskEditor(specs=specs_of(folder, "Proc_A"), node_id="Task_Ai", running=lambda: running)
     made.load(body)
@@ -383,7 +383,7 @@ def test_the_spec_line_reads_the_package_memory(tmp_path: Path) -> None:
 
 
 def test_no_spec_no_folder_and_a_broken_file_turn_forgetting_off(tmp_path: Path) -> None:
-    from chaeksas.studio.ai_task_editor import SPEC_NO_PROCESS, SPEC_NONE, SPEC_NOT_USED
+    from bpm.studio.ai_task_editor import SPEC_NO_PROCESS, SPEC_NONE, SPEC_NOT_USED
 
     made = with_specs(tmp_path)
     assert made.spec_line.text() == SPEC_NONE and not made.forget_button.isEnabled()
@@ -400,7 +400,7 @@ def test_no_spec_no_folder_and_a_broken_file_turn_forgetting_off(tmp_path: Path)
 def test_forgetting_asks_first_and_removes_only_this_spec(tmp_path: Path, monkeypatch: Any) -> None:
     from PySide6.QtWidgets import QMessageBox
 
-    from chaeksas.core.replay import read_memory
+    from bpm.core.replay import read_memory
 
     _write_specs(tmp_path, SPEC, OTHER)
     made = with_specs(tmp_path)
@@ -427,7 +427,7 @@ def test_forgetting_asks_first_and_removes_only_this_spec(tmp_path: Path, monkey
 def test_forgetting_is_off_while_a_test_run_goes(tmp_path: Path, monkeypatch: Any) -> None:
     from PySide6.QtWidgets import QMessageBox
 
-    from chaeksas.core.replay import read_memory
+    from bpm.core.replay import read_memory
 
     _write_specs(tmp_path, SPEC)
     made = with_specs(tmp_path, running=True)
@@ -439,8 +439,8 @@ def test_forgetting_is_off_while_a_test_run_goes(tmp_path: Path, monkeypatch: An
 
 
 def test_the_panel_hands_the_specs_and_refreshes_after_a_run(tmp_path: Path) -> None:
-    from chaeksas.studio.properties import Properties
-    from chaeksas.studio.replay_specs import specs_of
+    from bpm.studio.properties import Properties
+    from bpm.studio.replay_specs import specs_of
 
     panel = Properties()
     panel.replay_specs = lambda: specs_of(tmp_path, "Proc_A")

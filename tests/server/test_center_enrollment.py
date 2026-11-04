@@ -15,10 +15,10 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.enrollment import (
+from bpm.center import create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
+from bpm.contracts.enrollment import (
     EnrollStatus,
     Sealed,
     SealError,

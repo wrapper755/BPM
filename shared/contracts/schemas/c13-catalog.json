@@ -62,7 +62,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c13-catalog",
+  "$id": "urn:bpm:contracts:c13-catalog",
   "additionalProperties": true,
   "description": "`resources[].catalog_url`의 응답 (§5).\n\n**비밀·셀렉터·업무 값을 넣지 않는다.** 카탈로그는 서버망 안에서만 연다.",
   "properties": {

@@ -18,7 +18,7 @@ import sys
 
 def run(argv: list[str]) -> int:
     """PC 실행기의 `main` (빌드 검사 `--selftest` 포함)."""
-    from chaeksas.bot_ui.app import main as bot_ui  # noqa: PLC0415
+    from bpm.bot_ui.app import main as bot_ui  # noqa: PLC0415
 
     return bot_ui(argv)
 

@@ -388,7 +388,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c12-heartbeat-response",
+  "$id": "urn:bpm:contracts:c12-heartbeat-response",
   "additionalProperties": true,
   "description": "지시는 모두 여기 실려 내려온다 (ADR-0007).\n\n`deployments`는 **저장된 JSON 그대로** 다룬다 — C2 봉투를 모델로 바꿔 다시 직렬화하면\n서명이 깨진다 (C4와 같은 이유로 `dict`다).\n\n`jobs`는 **빈자리만큼만** 실린다 (C12 §Center가 작업을 나누는 규칙).",
   "properties": {

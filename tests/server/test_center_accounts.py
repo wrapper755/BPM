@@ -18,10 +18,10 @@ import pytest
 from fastapi.testclient import TestClient
 from test_center_app import build_package, upload
 
-from chaeksas.center import accounts, create_app, signer
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.signing import Envelope, verify
+from bpm.center import accounts, create_app, signer
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
+from bpm.contracts.signing import Envelope, verify
 
 PASSWORD = "first-admin-2026"
 
@@ -222,14 +222,14 @@ def test_approval_is_signed_by_center_and_names_the_account(client: TestClient, 
     row = store.row("SELECT signature_json FROM packages WHERE id = 'invoice-check'")
     assert row is not None
     envelope = Envelope.model_validate_json(row["signature_json"])
-    from chaeksas.center.api.signing import admin_keys
+    from bpm.center.api.signing import admin_keys
 
     assert verify(envelope, keys=admin_keys(store), expect_kind="package") == []
     assert envelope.payload["content_hash"] == info["content_hash"]
 
 
 def test_rotating_keeps_the_old_key_trusted(store: Store) -> None:
-    from chaeksas.center.api.signing import admin_keys
+    from bpm.center.api.signing import admin_keys
 
     before = signer.current_key_id(store)
     after = signer.rotate(store)

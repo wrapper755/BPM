@@ -48,22 +48,22 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from sample_files import make_samples  # noqa: E402
 
-from chaeksas.center.app import create_app  # noqa: E402
-from chaeksas.center.settings import Settings as CenterSettings  # noqa: E402
-from chaeksas.center.storage import Store  # noqa: E402
-from chaeksas.contracts.bpmn_ext import read_process  # noqa: E402
-from chaeksas.core.senders import WebhookConfig  # noqa: E402
-from chaeksas.mock_apps import catalog  # noqa: E402
-from chaeksas.mock_apps.c11 import build as build_mock  # noqa: E402
-from chaeksas.mock_apps.external import apps as external_apps  # noqa: E402
-from chaeksas.mock_apps.external import definitions as external_definitions  # noqa: E402
-from chaeksas.server_runner import agent as agent_mod  # noqa: E402
-from chaeksas.server_runner.center_client import CenterClient  # noqa: E402
-from chaeksas.server_runner.settings import Settings as RunnerSettings  # noqa: E402
-from chaeksas.studio.packaging import default_name, export  # noqa: E402
-from chaeksas.studio.receiver import Receiver  # noqa: E402
-from chaeksas.studio.runner import resolve_inputs  # noqa: E402
-from chaeksas.studio.workspace import Workspace  # noqa: E402
+from bpm.center.app import create_app  # noqa: E402
+from bpm.center.settings import Settings as CenterSettings  # noqa: E402
+from bpm.center.storage import Store  # noqa: E402
+from bpm.contracts.bpmn_ext import read_process  # noqa: E402
+from bpm.core.senders import WebhookConfig  # noqa: E402
+from bpm.mock_apps import catalog  # noqa: E402
+from bpm.mock_apps.c11 import build as build_mock  # noqa: E402
+from bpm.mock_apps.external import apps as external_apps  # noqa: E402
+from bpm.mock_apps.external import definitions as external_definitions  # noqa: E402
+from bpm.server_runner import agent as agent_mod  # noqa: E402
+from bpm.server_runner.center_client import CenterClient  # noqa: E402
+from bpm.server_runner.settings import Settings as RunnerSettings  # noqa: E402
+from bpm.studio.packaging import default_name, export  # noqa: E402
+from bpm.studio.receiver import Receiver  # noqa: E402
+from bpm.studio.runner import resolve_inputs  # noqa: E402
+from bpm.studio.workspace import Workspace  # noqa: E402
 
 DOCS = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples"
 EXAMPLES = DOCS / "bpmn"
@@ -374,7 +374,7 @@ def approve_delegation_targets(
     # **작업 폴더를 따로 쓴다** — `packaged()`가 쓰는 자리에 또 들이면 같은 id가 둘이 된다.
     space = Workspace(tmp_path / "delegation-targets" / example).ensure()
     made = space.import_example(EXAMPLES, example)
-    from chaeksas.studio.packaging import build_manifest  # noqa: PLC0415
+    from bpm.studio.packaging import build_manifest  # noqa: PLC0415
 
     for pkg in build_manifest(made).requires.delegations:
         target = pkg.replace("-", "_")
@@ -734,7 +734,7 @@ def test_a_timer_example_starts_without_a_job_order(
     """
     from datetime import UTC, timedelta  # noqa: PLC0415
 
-    from chaeksas.center.api import timers  # noqa: PLC0415
+    from bpm.center.api import timers  # noqa: PLC0415
 
     client, store = center
     info = deploy(center, runner, packaged(tmp_path, TIMER_STARTED))
@@ -785,7 +785,7 @@ def register_a_pc(client: Any) -> str:
     보고가 없으면 **배포가 막힌다**, C7 누락 검사). `Agent`를 쓰지 않고 C4를 직접 부른다 —
     여기서 보는 것은 PC 실행기가 아니라 **작업이 만들어지나**다.
     """
-    from chaeksas.core.extensions import load_host
+    from bpm.core.extensions import load_host
 
     key = client.post(
         "/api/v1/center-keys", json={"name": "BX-16 대상 PC", "type": "bot_ui"}, headers=ADMIN

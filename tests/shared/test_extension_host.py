@@ -16,9 +16,9 @@ import fake_extension
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from chaeksas.contracts import AdminKey, definition_hash, key_id_for, sign
-from chaeksas.core import ExtensionHost, load_host, summarize
-from chaeksas.extension_api import (
+from bpm.contracts import AdminKey, definition_hash, key_id_for, sign
+from bpm.core import ExtensionHost, load_host, summarize
+from bpm.extension_api import (
     API_VERSION,
     EntryError,
     PreflightCheck,
@@ -122,12 +122,12 @@ def test_pyinstaller_hook_is_shipped_with_core() -> None:
     """
     from pathlib import Path
 
-    from chaeksas.core.__pyinstaller import get_hook_dirs
+    from bpm.core.__pyinstaller import get_hook_dirs
 
     dirs = [Path(d) for d in get_hook_dirs()]
     assert dirs, "훅 폴더가 없다"
     hooks = [p.name for d in dirs for p in d.glob("hook-*.py")]
-    assert "hook-chaeksas.core.extensions.py" in hooks, hooks
+    assert "hook-bpm.core.extensions.py" in hooks, hooks
 
     # PyInstaller가 훅 폴더를 찾는 길 (`pyinstaller40` 엔트리 포인트).
     #
@@ -136,7 +136,7 @@ def test_pyinstaller_hook_is_shipped_with_core() -> None:
     # 하나가 다른 하나를 덮으므로 **우리 것이 그 안에 있나**로 본다 (처음에는 사전으로 모아
     # 두었고, 빌드를 들이자 그 자리가 깨져 드러났다).
     declared = [ep.value for ep in entry_points(group="pyinstaller40") if ep.name == "hook-dirs"]
-    assert "chaeksas.core.__pyinstaller:get_hook_dirs" in declared, declared
+    assert "bpm.core.__pyinstaller:get_hook_dirs" in declared, declared
 
 
 # ───────────────────── 빌드 검사 (`--selftest`, ADR-0024) ─────────────────────
@@ -144,7 +144,7 @@ def test_pyinstaller_hook_is_shipped_with_core() -> None:
 
 def test_selftest_passes_with_no_extension() -> None:
     """**지금은 묶을 확장이 없다** (ADR-0114) — `--want`를 주지 않으면 확장이 없어도 통과한다."""
-    from chaeksas.core.selftest import check  # noqa: PLC0415
+    from bpm.core.selftest import check  # noqa: PLC0415
 
     found = check()
     assert found["all_ok"], found
@@ -153,7 +153,7 @@ def test_selftest_passes_with_no_extension() -> None:
 
 def test_selftest_sees_an_installed_extension(host: ExtensionHost) -> None:
     """같은 검사가 **확장이 있을 때**도 돈다 — 인스턴스를 만들지 않고 `entry`를 풀기만 한다."""
-    from chaeksas.core.selftest import check  # noqa: PLC0415
+    from bpm.core.selftest import check  # noqa: PLC0415
 
     found = check(host=host, want=[BUILTIN_ID])
     assert found["all_ok"], found
@@ -165,7 +165,7 @@ def test_selftest_fails_when_a_wanted_extension_is_missing(host: ExtensionHost) 
 
     `--want`는 빌드하는 쪽이 「무엇이 들어가야 하는가」를 못 박는 자리다 (ADR-0018 §5 포함 목록).
     """
-    from chaeksas.core.selftest import check  # noqa: PLC0415
+    from bpm.core.selftest import check  # noqa: PLC0415
 
     found = check(host=host, want=[BUILTIN_ID, "없는-확장"])
     assert not found["all_ok"]
@@ -176,7 +176,7 @@ def test_selftest_fails_when_a_wanted_extension_is_missing(host: ExtensionHost) 
 
 def test_selftest_catches_an_entry_that_cannot_be_resolved() -> None:
     """**서브모듈이 빠진 꼴** — 확장은 켜지는데 `entry`가 풀리지 않는다 (ADR-0024의 셋째 증상)."""
-    from chaeksas.core.selftest import check  # noqa: PLC0415
+    from bpm.core.selftest import check  # noqa: PLC0415
 
     broken = ExtensionHost()
     install(
@@ -194,7 +194,7 @@ def test_selftest_catches_an_entry_that_cannot_be_resolved() -> None:
 
 def test_unknown_entry_point_group_loads_nothing() -> None:
     empty = ExtensionHost()
-    assert empty.load_entry_points(group="chaeksas.extensions.none") == []
+    assert empty.load_entry_points(group="bpm.extensions.none") == []
     assert empty.all() == [] and empty.failures == []
 
 
@@ -223,7 +223,7 @@ def test_unknown_task_type_raises(host: ExtensionHost) -> None:
 def test_the_old_utilities_key_is_not_read_but_says_so(caplog: pytest.LogCaptureFixture) -> None:
     """`bot_ui.utilities`는 걷었다 (ADR-0077) — **도구가 되지 않고**, 조용히 사라지지도 않는다."""
     host = ExtensionHost()
-    with caplog.at_level("WARNING", logger="chaeksas.core.extensions"):
+    with caplog.at_level("WARNING", logger="bpm.core.extensions"):
         loaded = install(
             host,
             definition(contributes={"bot_ui.utilities": [{"id": "u", "label": "u", "entry": "x:Y"}]}),

@@ -90,7 +90,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c15-external-task-create",
+  "$id": "urn:bpm:contracts:c15-external-task-create",
   "additionalProperties": true,
   "description": "`POST /api/v1/external-tasks` — 일감 올리기 (C15 §올리기).",
   "properties": {

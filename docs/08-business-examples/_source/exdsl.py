@@ -695,7 +695,7 @@ def to_bpmn(ex: Example) -> str:
          '  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"',
          '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
          f'  xmlns:bpm="{NS_CHK}"',
-         f'  id="Defs_{ex.file}" targetNamespace="urn:chaeksas:examples" exporter="chaeksas-examples" exporterVersion="1">']
+         f'  id="Defs_{ex.file}" targetNamespace="urn:chaeksas:examples" exporter="bpm-examples" exporterVersion="1">']
     for m in sorted(msgs):
         s.append(f'  <bpmn:message id="Msg_{m}" name="{m}" />')
     for g in sorted(sigs):

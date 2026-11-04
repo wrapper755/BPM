@@ -1,4 +1,4 @@
-import type { ManifestInput } from "@chaeksas/api-types/c5-package-info";
+import type { ManifestInput } from "@bpm/api-types/c5-package-info";
 
 /** 부르는 쪽이 넣는 입력만 — **값 출처**(`source`)가 있는 입력은 Center가 넣는다 (C1·C14, ADR-0099).
  *

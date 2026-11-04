@@ -46,7 +46,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c4-register-response",
+  "$id": "urn:bpm:contracts:c4-register-response",
   "additionalProperties": true,
   "properties": {
     "admin_keys": {

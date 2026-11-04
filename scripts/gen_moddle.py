@@ -17,14 +17,14 @@ import json
 import sys
 from pathlib import Path
 
-from chaeksas.contracts.bpmn_ext import BPM_NS, ELEMENT_MODELS
+from bpm.contracts.bpmn_ext import BPM_NS, ELEMENT_MODELS
 
 # Windows 콘솔·파이프의 기본 코드페이지(cp949·cp1252)에서는 한글을 찍다 터진다.
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "studio" / "app" / "src" / "chaeksas" / "studio" / "web" / "bpm-moddle.js"
+OUT = ROOT / "studio" / "app" / "src" / "bpm" / "studio" / "web" / "bpm-moddle.js"
 
 #: XML 속성으로 적는 것 (나머지는 전부 본문 JSON이다). C14 §태스크 종류 표의 `bpm:task`.
 XML_ATTRIBUTES: dict[str, tuple[str, ...]] = {"task": ("type", "extension")}
@@ -53,7 +53,7 @@ def descriptor() -> dict[str, object]:
             }
         )
     return {
-        "name": "Chaeksas",
+        "name": "BPM",
         "uri": BPM_NS,
         "prefix": "bpm",
         "xml": {"tagAlias": "lowerCase"},

@@ -24,8 +24,8 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.extension import ExtensionManifest
-from chaeksas.core.http_adapter import (
+from bpm.contracts.extension import ExtensionManifest
+from bpm.core.http_adapter import (
     AdapterCaller,
     AdapterError,
     fill_body,
@@ -33,7 +33,7 @@ from chaeksas.core.http_adapter import (
     read_path,
     resolve,
 )
-from chaeksas.core.services import OpCall
+from bpm.core.services import OpCall
 
 APP = "ext-ocr"
 

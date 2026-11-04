@@ -17,8 +17,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QMessageBox  # noqa: E402
 
-from chaeksas.studio.dialogs import NewProcessDialog  # noqa: E402
-from chaeksas.studio.workspace import Workspace, WorkspaceError, read_record  # noqa: E402
+from bpm.studio.dialogs import NewProcessDialog  # noqa: E402
+from bpm.studio.workspace import Workspace, WorkspaceError, read_record  # noqa: E402
 
 MINIMAL = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -290,7 +290,7 @@ EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples"
 def test_the_id_rule_is_a_tooltip_not_a_line() -> None:
     from PySide6.QtWidgets import QLabel  # noqa: PLC0415
 
-    from chaeksas.studio.dialogs import HINT  # noqa: PLC0415
+    from bpm.studio.dialogs import HINT  # noqa: PLC0415
 
     dialog = NewProcessDialog(None, Workspace(Path("unused")), examples=EXAMPLES)
     assert dialog.id_box.toolTip() == HINT
@@ -325,7 +325,7 @@ def test_picking_another_example_keeps_what_the_person_typed(space: Workspace) -
 
 
 def test_no_examples_turns_the_line_off(space: Workspace, tmp_path: Path) -> None:
-    from chaeksas.studio.dialogs import NO_EXAMPLES  # noqa: PLC0415
+    from bpm.studio.dialogs import NO_EXAMPLES  # noqa: PLC0415
 
     dialog = NewProcessDialog(None, space, examples=tmp_path / "없음")
     assert not dialog.example_pick.isEnabled() and NO_EXAMPLES in dialog.example_pick.text()

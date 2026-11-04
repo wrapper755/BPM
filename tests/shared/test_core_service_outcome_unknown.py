@@ -18,10 +18,10 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.bpmn_ext import read_process
-from chaeksas.core.engine import DECISION_KEY, ESCALATION_CONTINUE, ESCALATION_STOP, Engine, Run, RunEnv, State
-from chaeksas.core.run_log import RunLog
-from chaeksas.core.services import OpCall, OpOutcome, ServiceCallError, _outcome
+from bpm.contracts.bpmn_ext import read_process
+from bpm.core.engine import DECISION_KEY, ESCALATION_CONTINUE, ESCALATION_STOP, Engine, Run, RunEnv, State
+from bpm.core.run_log import RunLog
+from bpm.core.services import OpCall, OpOutcome, ServiceCallError, _outcome
 
 NOW = datetime(2026, 10, 29, 9, 30, tzinfo=UTC)
 RUN_ID = "run_20261029_093000_abc123"

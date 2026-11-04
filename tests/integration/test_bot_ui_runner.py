@@ -25,12 +25,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from waiting import wait_for  # noqa: E402
 
-from chaeksas.bot_ui.runner import Launcher, new_run_id, runner_args  # noqa: E402
-from chaeksas.core import control  # noqa: E402
-from chaeksas.core.packages import InstallError, find, install, installed  # noqa: E402
-from chaeksas.core.run_log import RunLog, log_path  # noqa: E402
-from chaeksas.studio.packaging import default_name, export  # noqa: E402
-from chaeksas.studio.workspace import Workspace  # noqa: E402
+from bpm.bot_ui.runner import Launcher, new_run_id, runner_args  # noqa: E402
+from bpm.core import control  # noqa: E402
+from bpm.core.packages import InstallError, find, install, installed  # noqa: E402
+from bpm.core.run_log import RunLog, log_path  # noqa: E402
+from bpm.studio.packaging import default_name, export  # noqa: E402
+from bpm.studio.workspace import Workspace  # noqa: E402
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
 
@@ -238,12 +238,12 @@ def test_the_queue_starts_the_next_bot_and_frees_the_slot(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """`pump()` 한 바퀴 — 대기열에서 올리고, 끝나면 자리를 비운다 (ADR-0014)."""
-    from chaeksas.bot_ui.agent import Agent
-    from chaeksas.bot_ui.settings import Settings
-    from chaeksas.bot_ui.store import Store
+    from bpm.bot_ui.agent import Agent
+    from bpm.bot_ui.settings import Settings
+    from bpm.bot_ui.store import Store
 
     data_dir = tmp_path / "botui"
-    monkeypatch.setattr("chaeksas.bot_ui.settings.data_dir", lambda: data_dir)
+    monkeypatch.setattr("bpm.bot_ui.settings.data_dir", lambda: data_dir)
     bot = install(data_dir, packaged(tmp_path, RULE))
 
     agent = Agent(settings=Settings(center_url="http://127.0.0.1:1"), store=Store.load(tmp_path / "s.json"))
@@ -266,11 +266,11 @@ def test_a_bot_that_is_not_installed_is_rejected_not_stuck(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """조용히 두면 대기열이 **영원히 막힌다** — 빼고 이유를 남긴다."""
-    from chaeksas.bot_ui.agent import Agent
-    from chaeksas.bot_ui.settings import Settings
-    from chaeksas.bot_ui.store import Store
+    from bpm.bot_ui.agent import Agent
+    from bpm.bot_ui.settings import Settings
+    from bpm.bot_ui.store import Store
 
-    monkeypatch.setattr("chaeksas.bot_ui.settings.data_dir", lambda: tmp_path / "botui")
+    monkeypatch.setattr("bpm.bot_ui.settings.data_dir", lambda: tmp_path / "botui")
     agent = Agent(settings=Settings(center_url="http://127.0.0.1:1"), store=Store.load(tmp_path / "s.json"))
     agent.enqueue_manual("없는.bot")
     agent.pump()
@@ -287,16 +287,16 @@ def test_the_bot_tab_shows_what_is_installed_and_runs_it(
     """BUI-04 — 목록·「지금 실행...」·「중지」·「결재 창 열기」가 Agent와 맞물린다."""
     from PySide6.QtWidgets import QApplication
 
-    from chaeksas.bot_ui.agent import Agent
-    from chaeksas.bot_ui.main_window import MainWindow
-    from chaeksas.bot_ui.settings import Settings
-    from chaeksas.bot_ui.store import Store
+    from bpm.bot_ui.agent import Agent
+    from bpm.bot_ui.main_window import MainWindow
+    from bpm.bot_ui.settings import Settings
+    from bpm.bot_ui.store import Store
 
     app = QApplication.instance() or QApplication([])
     assert app is not None
 
     data_dir = tmp_path / "botui"
-    monkeypatch.setattr("chaeksas.bot_ui.settings.data_dir", lambda: data_dir)
+    monkeypatch.setattr("bpm.bot_ui.settings.data_dir", lambda: data_dir)
     bot = install(data_dir, packaged(tmp_path, MANUAL))
 
     agent = Agent(settings=Settings(center_url="http://127.0.0.1:1"), store=Store.load(tmp_path / "s.json"))
@@ -339,21 +339,21 @@ def test_installing_a_broken_package_does_not_crash_the_window(
     """설치가 실패해도 창은 산다 — 사람이 읽을 한 줄을 보인다."""
     from PySide6.QtWidgets import QApplication, QMessageBox
 
-    from chaeksas.bot_ui.agent import Agent
-    from chaeksas.bot_ui.main_window import MainWindow
-    from chaeksas.bot_ui.settings import Settings
-    from chaeksas.bot_ui.store import Store
+    from bpm.bot_ui.agent import Agent
+    from bpm.bot_ui.main_window import MainWindow
+    from bpm.bot_ui.settings import Settings
+    from bpm.bot_ui.store import Store
 
     app = QApplication.instance() or QApplication([])
     assert app is not None
 
-    monkeypatch.setattr("chaeksas.bot_ui.settings.data_dir", lambda: tmp_path / "botui")
+    monkeypatch.setattr("bpm.bot_ui.settings.data_dir", lambda: tmp_path / "botui")
     broken = tmp_path / "가짜.zip"
     broken.write_text("zip이 아니다", encoding="utf-8")
 
     said: list[str] = []
     monkeypatch.setattr(
-        "chaeksas.bot_ui.main_window.QFileDialog.getOpenFileName",
+        "bpm.bot_ui.main_window.QFileDialog.getOpenFileName",
         staticmethod(lambda *a, **k: (str(broken), "")),
     )
     monkeypatch.setattr(QMessageBox, "warning", staticmethod(lambda *a, **k: said.append(a[2])))
@@ -367,13 +367,13 @@ def test_the_settings_reach_the_runner(tmp_path: Path, monkeypatch: pytest.Monke
     """BUI-03이 정한 것이 실행 프로세스까지 간다 — **키는 환경변수로**, 주소는 명령줄로 (조각 4c)."""
     from dataclasses import replace as _replace
 
-    from chaeksas.bot_ui.agent import Agent
-    from chaeksas.bot_ui.credentials import ENV_LLM_API_KEY
-    from chaeksas.bot_ui.settings import Settings
-    from chaeksas.bot_ui.store import Store
+    from bpm.bot_ui.agent import Agent
+    from bpm.bot_ui.credentials import ENV_LLM_API_KEY
+    from bpm.bot_ui.settings import Settings
+    from bpm.bot_ui.store import Store
 
     data_dir = tmp_path / "botui"
-    monkeypatch.setattr("chaeksas.bot_ui.settings.data_dir", lambda: data_dir)
+    monkeypatch.setattr("bpm.bot_ui.settings.data_dir", lambda: data_dir)
     monkeypatch.setenv(ENV_LLM_API_KEY, "sk-시험")
 
     shared = tmp_path / "공유"
@@ -435,7 +435,7 @@ def test_the_runner_turns_off_the_same_extensions_as_the_bot_ui() -> None:
 
     그런 BPM 프로세스는 사전 점검이 이미 막지만, 「꺼짐」의 뜻이 앱마다 달라지면 안 된다.
     """
-    from chaeksas.bot_ui.runner_main import extension_tasks
+    from bpm.bot_ui.runner_main import extension_tasks
 
     common: dict[str, Any] = {
         "package": Path("/tmp/pkg"),
@@ -476,7 +476,7 @@ def test_the_sending_settings_ride_the_command_line_but_the_password_does_not() 
 
     자식이 이 PC의 비밀 저장소에서 제 손으로 읽는다 — 서비스 앱 키와 같은 길이다 (ADR-0013).
     """
-    from chaeksas.core.senders import SmtpConfig
+    from bpm.core.senders import SmtpConfig
 
     common: dict[str, Any] = {
         "package": Path("/tmp/pkg"),
@@ -510,11 +510,11 @@ def test_the_child_builds_the_same_sender(tmp_path: Path, monkeypatch: pytest.Mo
 
     비밀번호는 명령줄이 아니라 **환경변수·비밀 저장소**에서 온다.
     """
-    from chaeksas.bot_ui.credentials import ENV_SMTP_PASSWORD
-    from chaeksas.core.senders import SmtpConfig, WebhookConfig, make_sender
+    from bpm.bot_ui.credentials import ENV_SMTP_PASSWORD
+    from bpm.core.senders import SmtpConfig, WebhookConfig, make_sender
 
     monkeypatch.setenv(ENV_SMTP_PASSWORD, "비밀")
-    from chaeksas.bot_ui.credentials import Credentials
+    from bpm.bot_ui.credentials import Credentials
 
     made = make_sender(
         smtp=SmtpConfig(host="smtp.example.com", sender="bot@example.com"),
@@ -624,13 +624,13 @@ def test_the_ack_carries_the_values_and_a_plain_job_does_not(
     거두는 그 자리(`cleanup`)에서 파일을 읽고 **지운다**. 위임이 아니면 파일이 없어 ack가
     비고, Center는 위임이 아닌 작업의 `outputs`를 **버린다**.
     """
-    from chaeksas.bot_ui.agent import Agent
-    from chaeksas.bot_ui.settings import Settings
-    from chaeksas.bot_ui.store import Store
-    from chaeksas.core import outputs
+    from bpm.bot_ui.agent import Agent
+    from bpm.bot_ui.settings import Settings
+    from bpm.bot_ui.store import Store
+    from bpm.core import outputs
 
     data_dir = tmp_path / "botui"
-    monkeypatch.setattr("chaeksas.bot_ui.settings.data_dir", lambda: data_dir)
+    monkeypatch.setattr("bpm.bot_ui.settings.data_dir", lambda: data_dir)
     agent = Agent(settings=Settings(), store=Store.load(tmp_path / "s.json"))
     bot = install(data_dir, packaged(tmp_path, RULE))
 
@@ -665,12 +665,12 @@ def test_the_ack_carries_the_values_and_a_plain_job_does_not(
 
 def test_a_plain_job_acks_without_values(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """위임이 아니면 올릴 값이 없다 — 실행 프로세스가 파일을 쓰지 않았다 (ADR-0062 §4)."""
-    from chaeksas.bot_ui.agent import Agent
-    from chaeksas.bot_ui.settings import Settings
-    from chaeksas.bot_ui.store import Store
+    from bpm.bot_ui.agent import Agent
+    from bpm.bot_ui.settings import Settings
+    from bpm.bot_ui.store import Store
 
     data_dir = tmp_path / "botui"
-    monkeypatch.setattr("chaeksas.bot_ui.settings.data_dir", lambda: data_dir)
+    monkeypatch.setattr("bpm.bot_ui.settings.data_dir", lambda: data_dir)
     agent = Agent(settings=Settings(), store=Store.load(tmp_path / "s.json"))
     bot = install(data_dir, packaged(tmp_path, RULE))
 

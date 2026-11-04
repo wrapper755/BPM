@@ -24,10 +24,10 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.approvals import request_id_for
+from bpm.center.app import create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
+from bpm.contracts.approvals import request_id_for
 
 TOKEN = "t-admin"
 READ = "t-read"
@@ -368,7 +368,7 @@ def test_a_lost_queue_takes_its_approvals_with_it(
     client: TestClient, store: Store, host: dict[str, Any]
 ) -> None:
     """PC 실행기가 대기열을 잃으면 그 실행의 결재도 전달될 곳이 없다 (C6 `host_lost`)."""
-    from chaeksas.center.api import jobs
+    from bpm.center.api import jobs
 
     # 그 실행을 `accepted` 작업으로 만들어 둔다 (작업이 `run_id`를 쥐고 있어야 한다).
     with store.tx() as cur:
@@ -550,7 +550,7 @@ def test_values_are_purged_but_the_record_stays(
     client: TestClient, store: Store, host: dict[str, Any]
 ) -> None:
     """**누가·언제·결과는 남고 값만 지운다** — 거래처 이름과 금액을 영영 둘 이유가 없다."""
-    from chaeksas.center.api import approvals
+    from bpm.center.api import approvals
 
     put(client, host)
     client.post(f"/api/v1/approvals/{REQUEST}/answer", json={"answer": {"approved": True}}, headers=ADMIN)
@@ -569,7 +569,7 @@ def test_open_approvals_keep_their_values(
     client: TestClient, store: Store, host: dict[str, Any]
 ) -> None:
     """아직 답을 기다리는 결재의 값은 **지우지 않는다** (결재자가 봐야 한다)."""
-    from chaeksas.center.api import approvals
+    from bpm.center.api import approvals
 
     put(client, host)
     later = (datetime.now(UTC) + timedelta(days=99)).isoformat()
@@ -712,8 +712,8 @@ def test_requested_by_comes_from_the_job_that_started_the_run(
 def test_the_review_digest_is_set_and_kept_after_the_values_go(
     client: TestClient, store: Store, host: dict[str, Any]
 ) -> None:
-    from chaeksas.center.api import approvals as approvals_api  # noqa: PLC0415
-    from chaeksas.contracts.approvals import review_digest  # noqa: PLC0415
+    from bpm.center.api import approvals as approvals_api  # noqa: PLC0415
+    from bpm.contracts.approvals import review_digest  # noqa: PLC0415
 
     made = put(client, host)
     assert made["review_digest"] == review_digest(REVIEW)
@@ -742,7 +742,7 @@ def test_the_digest_rule_is_the_one_the_request_named() -> None:
     import hashlib  # noqa: PLC0415
     import json  # noqa: PLC0415
 
-    from chaeksas.contracts.approvals import review_digest  # noqa: PLC0415
+    from bpm.contracts.approvals import review_digest  # noqa: PLC0415
 
     review = {"금액": 1100000, "거래처": "주식회사 예시"}
     body = json.dumps(review, sort_keys=True, separators=(",", ":"), ensure_ascii=False)

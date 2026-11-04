@@ -27,15 +27,15 @@ from center_admin import register_extension
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
 
-from chaeksas.bot_ui.center_client import CenterClient, CenterProblem, Unreachable
-from chaeksas.center import signer as center_signer
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.extension import definition_hash
-from chaeksas.contracts.manifest import Manifest
-from chaeksas.contracts.signing import sign
-from chaeksas.core.app_directory import (
+from bpm.bot_ui.center_client import CenterClient, CenterProblem, Unreachable
+from bpm.center import signer as center_signer
+from bpm.center.app import create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
+from bpm.contracts.extension import definition_hash
+from bpm.contracts.manifest import Manifest
+from bpm.contracts.signing import sign
+from bpm.core.app_directory import (
     DirectoryCache,
     build,
     extension_ids,
@@ -43,7 +43,7 @@ from chaeksas.core.app_directory import (
     read_directory,
     to_json_dict,
 )
-from chaeksas.core.services import OpCall
+from bpm.core.services import OpCall
 
 TOKEN = "t-admin"
 ADMIN = {"Authorization": f"Bearer {TOKEN}"}
@@ -84,7 +84,7 @@ def key(store: Store) -> Any:
 
 def public_keys(client: TestClient) -> list[Any]:
     """Center가 믿는 공개키(Center 키) — PC 실행기는 하트비트로 받는다 (C4 `admin_keys`)."""
-    from chaeksas.contracts.signing import AdminKey
+    from bpm.contracts.signing import AdminKey
 
     found = client.get("/api/v1/admin-keys", headers=ADMIN).json()
     return [AdminKey.model_validate(one) for one in found]
@@ -544,14 +544,14 @@ def test_the_runner_calls_the_external_app_through_the_adapter_consumer(
     import httpx  # noqa: PLC0415
     from consumers import enroll, serve, start  # noqa: PLC0415
 
-    from chaeksas.adapter_consumer.adapter import ext_env  # noqa: PLC0415
-    from chaeksas.adapter_consumer.main import service_of  # noqa: PLC0415
-    from chaeksas.bot_ui.runner_main import Runner  # noqa: PLC0415
-    from chaeksas.core.engine import State  # noqa: PLC0415
-    from chaeksas.core.packages import InstalledBot  # noqa: PLC0415
-    from chaeksas.core.run_env import make_env  # noqa: PLC0415
-    from chaeksas.core.run_log import RunLog, log_path  # noqa: PLC0415
-    from chaeksas.core.services import CenterServiceCaller  # noqa: PLC0415
+    from bpm.adapter_consumer.adapter import ext_env  # noqa: PLC0415
+    from bpm.adapter_consumer.main import service_of  # noqa: PLC0415
+    from bpm.bot_ui.runner_main import Runner  # noqa: PLC0415
+    from bpm.core.engine import State  # noqa: PLC0415
+    from bpm.core.packages import InstalledBot  # noqa: PLC0415
+    from bpm.core.run_env import make_env  # noqa: PLC0415
+    from bpm.core.run_log import RunLog, log_path  # noqa: PLC0415
+    from bpm.core.services import CenterServiceCaller  # noqa: PLC0415
 
     port, echo = ocr
     found = definition(port)
@@ -607,9 +607,9 @@ def test_the_runner_refuses_to_start_when_the_definition_changed(
     client: TestClient, key: Any, ocr: tuple[int, type[Ocr]], tmp_path: Path
 ) -> None:
     """**실행 전에** 거절한다 — 중간에 알면 이미 한 일을 되돌릴 수 없다 (C1)."""
-    from chaeksas.bot_ui.runner_main import app_directory, refuse_unusable
-    from chaeksas.core.engine import EngineError
-    from chaeksas.core.packages import InstalledBot
+    from bpm.bot_ui.runner_main import app_directory, refuse_unusable
+    from bpm.core.engine import EngineError
+    from bpm.core.packages import InstalledBot
 
     port, _ = ocr
     approved = definition(port)

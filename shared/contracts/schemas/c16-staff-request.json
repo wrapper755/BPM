@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c16-staff-request",
+  "$id": "urn:bpm:contracts:c16-staff-request",
   "additionalProperties": true,
   "description": "`POST /staff`·`PUT /staff/{id}` — 업무의 주체. 사람인지 가상인지 가르지 않는다.",
   "properties": {

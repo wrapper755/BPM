@@ -25,12 +25,12 @@ import pytest
 from consumers import ADMIN, enroll
 from fastapi.testclient import TestClient
 
-from chaeksas.center.app import create_app as create_center
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.extension import Catalog
-from chaeksas.contracts.service_app import MODE_DETERMINISTIC, OpRequest, ServiceAppManifest, idempotency_key
-from chaeksas.service_kit import (
+from bpm.center.app import create_app as create_center
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store
+from bpm.contracts.extension import Catalog
+from bpm.contracts.service_app import MODE_DETERMINISTIC, OpRequest, ServiceAppManifest, idempotency_key
+from bpm.service_kit import (
     Consumer,
     OpError,
     OpResult,
@@ -230,7 +230,7 @@ def test_a_409_on_finish_is_ignored(
     [task] = consumer.fetch(max_tasks=1, wait_s=0)
     assert center.post(f"/api/v1/external-tasks/{task_id}/cancel", headers=studio).status_code == 200
 
-    with caplog.at_level(logging.WARNING, logger="chaeksas.service_kit.consumer"):
+    with caplog.at_level(logging.WARNING, logger="bpm.service_kit.consumer"):
         consumer.handle(task)
     assert caplog.records == []
     assert seen(center, studio, task_id)["state"] == "cancelled"

@@ -23,12 +23,12 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center import create_app
-from chaeksas.center.api import jobs as jobs_api
-from chaeksas.center.api import server_runner as runner_api
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store, now_iso
-from chaeksas.contracts.server_runner import DEFAULT_PER_BOT_CONCURRENCY
+from bpm.center import create_app
+from bpm.center.api import jobs as jobs_api
+from bpm.center.api import server_runner as runner_api
+from bpm.center.settings import Settings
+from bpm.center.storage import Store, now_iso
+from bpm.contracts.server_runner import DEFAULT_PER_BOT_CONCURRENCY
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 READ = {"Authorization": "Bearer t-read"}

@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     AdminKey,
     DeploymentClaim,
     Envelope,
@@ -262,7 +262,7 @@ def test_revoke_claim_is_readable() -> None:
 
 
 def test_float_in_payload_cannot_be_signed() -> None:
-    from chaeksas.contracts import FloatInPayloadError
+    from bpm.contracts import FloatInPayloadError
 
     private, _ = admin()
     with pytest.raises(FloatInPayloadError):

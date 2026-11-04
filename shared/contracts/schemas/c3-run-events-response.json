@@ -58,7 +58,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c3-run-events-response",
+  "$id": "urn:bpm:contracts:c3-run-events-response",
   "additionalProperties": true,
   "description": "`GET /api/v1/runs/{run_id}/events`의 응답 — **`seq` 차례로** 전부.",
   "properties": {

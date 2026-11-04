@@ -18,10 +18,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from conftest import FakeAutostart, FakeCredentials  # noqa: E402
 
-from chaeksas.bot_ui.agent import Agent  # noqa: E402
-from chaeksas.bot_ui.settings import Settings  # noqa: E402
-from chaeksas.bot_ui.store import Store  # noqa: E402
-from chaeksas.contracts.bot_ui import CurrentRun, JobDispatch  # noqa: E402
+from bpm.bot_ui.agent import Agent  # noqa: E402
+from bpm.bot_ui.settings import Settings  # noqa: E402
+from bpm.bot_ui.store import Store  # noqa: E402
+from bpm.contracts.bot_ui import CurrentRun, JobDispatch  # noqa: E402
 
 AT = "2026-10-03T09:00:00+09:00"
 #: 모양이 맞는 키 (`bpm_ctr_` + 무작위 40자). 모양이 틀리면 설정 창이 막는다.
@@ -47,7 +47,7 @@ def fake_autostart(monkeypatch: Any) -> FakeAutostart:
     부르면 그 PC에 자동 시작이 등록되고, 권한이 없는 PC에서는 경고 창이 응답을 기다리며 시험이 멈춘다
     (이슈 #3). 다른 동작을 보려는 시험은 다시 `monkeypatch.setattr`로 바꾼다.
     """
-    from chaeksas.bot_ui import autostart as autostart_module  # noqa: PLC0415
+    from bpm.bot_ui import autostart as autostart_module  # noqa: PLC0415
 
     fake = FakeAutostart()
     monkeypatch.setattr(autostart_module, "autostart", lambda: fake)
@@ -139,7 +139,7 @@ def test_tray_status_text_follows_the_screen_spec(agent: Agent) -> None:
 
 def test_wire_status_uses_the_contract_words(agent: Agent) -> None:
     """트레이 글과 **하트비트의 `status`는 다르다** — 하나는 사람, 하나는 C4의 값이다."""
-    from chaeksas.contracts.bot_ui import KNOWN_BOT_UI_STATUSES  # noqa: PLC0415
+    from bpm.contracts.bot_ui import KNOWN_BOT_UI_STATUSES  # noqa: PLC0415
 
     agent.store.state.bot_ui_id = "bui_1"
     assert agent.wire_status() == "idle"
@@ -150,7 +150,7 @@ def test_wire_status_uses_the_contract_words(agent: Agent) -> None:
 
 
 def test_tray_icon_has_a_status_dot(app: Any, agent: Agent) -> None:
-    from chaeksas.bot_ui.tray import status_color, tray_icon  # noqa: PLC0415
+    from bpm.bot_ui.tray import status_color, tray_icon  # noqa: PLC0415
 
     agent.store.state.bot_ui_id = "bui_1"
     icon = tray_icon(agent.tray_status())
@@ -161,7 +161,7 @@ def test_tray_icon_has_a_status_dot(app: Any, agent: Agent) -> None:
 
 
 def test_tray_menu_shows_the_information_rows(app: Any, agent: Agent) -> None:
-    from chaeksas.bot_ui.tray import Tray  # noqa: PLC0415
+    from bpm.bot_ui.tray import Tray  # noqa: PLC0415
 
     agent.store.state.bot_ui_id = "bui_1"
     agent.take_job(job())
@@ -173,12 +173,12 @@ def test_tray_menu_shows_the_information_rows(app: Any, agent: Agent) -> None:
     assert any("대기열 1건 — 다음: erp.order-entry" in text for text in texts)
     # 누를 수 있는 것은 이것뿐이다.
     assert {"창 열기", "설정...", "종료"} <= set(texts)
-    assert tray.toolTip() == "Chaeksas PC 실행기 · 대기 · 대기 1건"
+    assert tray.toolTip() == "BPM PC 실행기 · 대기 · 대기 1건"
 
 
 def test_the_tray_menu_is_rebuilt_on_refresh(app: Any, agent: Agent) -> None:
     """BUI-01 — 상태가 바뀔 때마다 다시 만든다."""
-    from chaeksas.bot_ui.tray import Tray  # noqa: PLC0415
+    from bpm.bot_ui.tray import Tray  # noqa: PLC0415
 
     agent.store.state.bot_ui_id = "bui_1"
     tray = Tray(agent, parent=app)
@@ -193,7 +193,7 @@ def test_the_tray_menu_is_rebuilt_on_refresh(app: Any, agent: Agent) -> None:
 
 def test_center_tab_has_no_key_field(app: Any, agent: Agent) -> None:
     """「Center」 탭은 주소 하나다 — 사람은 Center API 키를 보지도 넣지도 않는다 (ADR-0092)."""
-    from chaeksas.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
+    from bpm.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
 
     dialog = SettingsDialog(agent)
     assert not hasattr(dialog, "api_key")
@@ -202,8 +202,8 @@ def test_center_tab_has_no_key_field(app: Any, agent: Agent) -> None:
 
 def test_center_tab_shows_the_request_code_while_waiting(app: Any, tmp_path: Path) -> None:
     """승인을 기다리는 동안 요청 코드를 크게, 「복사」와 함께 보인다 (BUI-03)."""
-    from chaeksas.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
-    from chaeksas.contracts.enrollment import EnrollStatus  # noqa: PLC0415
+    from bpm.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
+    from bpm.contracts.enrollment import EnrollStatus  # noqa: PLC0415
 
     store = Store.load(tmp_path / "state.json")
     store.state.enrollment = EnrollStatus(
@@ -219,7 +219,7 @@ def test_center_tab_shows_the_request_code_while_waiting(app: Any, tmp_path: Pat
 
 
 def test_settings_dialog_saves_to_the_file_without_secrets(app: Any, agent: Agent, tmp_path: Path) -> None:
-    from chaeksas.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
+    from bpm.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
 
     dialog = SettingsDialog(agent)
     dialog.center_url.setText("http://center.example.com:8800")
@@ -243,7 +243,7 @@ def test_the_settings_dialog_fits_the_screen_and_keeps_its_buttons(app: Any, age
     """
     from PySide6.QtWidgets import QDialogButtonBox  # noqa: PLC0415
 
-    from chaeksas.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
+    from bpm.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
 
     dialog = SettingsDialog(agent)
     available = dialog.screen().availableGeometry().height()
@@ -257,7 +257,7 @@ def test_the_settings_dialog_fits_the_screen_and_keeps_its_buttons(app: Any, age
 
 def test_the_settings_dialog_is_split_into_tabs(app: Any, agent: Agent) -> None:
     """BUI-03 — 칸을 아래로 늘어놓지 않고 탭으로 나눈다. 첫 탭은 「Center」다(첫 실행에 할 일)."""
-    from chaeksas.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
+    from bpm.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
 
     dialog = SettingsDialog(agent)
     names = [dialog.tabs.tabText(i) for i in range(dialog.tabs.count())]
@@ -275,8 +275,8 @@ def test_a_failed_autostart_is_not_saved_as_on(app: Any, agent: Agent, monkeypat
     """권한이 없어 등록이 실패하면 경고하고, 칸·설정 파일을 **OS의 실제 상태**로 되돌린다 (BUI-03, 이슈 #3)."""
     from PySide6.QtWidgets import QMessageBox  # noqa: PLC0415
 
-    from chaeksas.bot_ui import autostart as autostart_module  # noqa: PLC0415
-    from chaeksas.bot_ui import settings_dialog  # noqa: PLC0415
+    from bpm.bot_ui import autostart as autostart_module  # noqa: PLC0415
+    from bpm.bot_ui import settings_dialog  # noqa: PLC0415
 
     failing = FakeAutostart(fail="자동 시작을 등록하지 못했습니다: 오류: 액세스가 거부되었습니다.")
     monkeypatch.setattr(autostart_module, "autostart", lambda: failing)
@@ -295,7 +295,7 @@ def test_a_failed_autostart_is_not_saved_as_on(app: Any, agent: Agent, monkeypat
 
 
 def test_settings_dialog_reports_why_a_connection_failed(app: Any, tmp_path: Path) -> None:
-    from chaeksas.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
+    from bpm.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
 
     agent = Agent(
         settings=Settings(center_url="http://127.0.0.1:9"),  # 아무도 듣지 않는 포트
@@ -309,8 +309,8 @@ def test_settings_dialog_reports_why_a_connection_failed(app: Any, tmp_path: Pat
 
 def test_autostart_box_is_off_where_it_cannot_work(app: Any, agent: Agent, monkeypatch: Any) -> None:
     """U3 — 할 수 없는 OS면 끄고 이유를 보인다."""
-    from chaeksas.bot_ui import autostart as autostart_module  # noqa: PLC0415
-    from chaeksas.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
+    from bpm.bot_ui import autostart as autostart_module  # noqa: PLC0415
+    from bpm.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
 
     monkeypatch.setattr(autostart_module, "autostart", lambda: autostart_module.NoAutostart())
     dialog = SettingsDialog(agent)
@@ -323,7 +323,7 @@ def test_autostart_box_is_off_where_it_cannot_work(app: Any, agent: Agent, monke
 
 def test_main_window_shows_the_queue_without_values(app: Any, agent: Agent) -> None:
     """BUI-04 — 「입력 키」는 **이름만** 보인다 (U10)."""
-    from chaeksas.bot_ui.main_window import MainWindow  # noqa: PLC0415
+    from bpm.bot_ui.main_window import MainWindow  # noqa: PLC0415
 
     agent.store.state.bot_ui_id = "bui_1"
     found = job()
@@ -345,7 +345,7 @@ def test_main_window_shows_the_queue_without_values(app: Any, agent: Agent) -> N
 
 
 def test_main_window_empty_queue_disables_cancel(app: Any, agent: Agent) -> None:
-    from chaeksas.bot_ui.main_window import MainWindow  # noqa: PLC0415
+    from bpm.bot_ui.main_window import MainWindow  # noqa: PLC0415
 
     window = MainWindow(agent)
     assert window.running_label.text() == "실행 중인 BPM 프로세스가 없습니다."
@@ -354,7 +354,7 @@ def test_main_window_empty_queue_disables_cancel(app: Any, agent: Agent) -> None
 
 
 def test_main_window_status_bar_matches_the_spec(app: Any, agent: Agent) -> None:
-    from chaeksas.bot_ui.main_window import MainWindow  # noqa: PLC0415
+    from bpm.bot_ui.main_window import MainWindow  # noqa: PLC0415
 
     agent.store.state.bot_ui_id = "bui_1"
     window = MainWindow(agent)
@@ -370,7 +370,7 @@ def test_shutdown_reports_center_jobs_as_rejected(app: Any, tmp_path: Path) -> N
     """
     from PySide6.QtWidgets import QApplication  # noqa: PLC0415
 
-    from chaeksas.bot_ui.app import BotUiApp  # noqa: PLC0415
+    from bpm.bot_ui.app import BotUiApp  # noqa: PLC0415
 
     agent = Agent(
         settings=Settings(center_url="http://127.0.0.1:9"),  # 보고는 닿지 못한다 — 디스크에 남아야 한다
@@ -399,7 +399,7 @@ def test_saving_settings_clears_the_readiness_cache(app: Any, agent: Agent) -> N
 
     안 비우면 갖춘 설정이 바뀌어도 「준비 안 됨」(`settings_missing`)이 계속 올라간다.
     """
-    from chaeksas.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
+    from bpm.bot_ui.settings_dialog import SettingsDialog  # noqa: PLC0415
 
     agent._preflights[("bot", "1.0.0")] = object()  # type: ignore[assignment]  # 묵은 점검 결과
     dialog = SettingsDialog(agent)

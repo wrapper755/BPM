@@ -266,7 +266,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c3-run-listing",
+  "$id": "urn:bpm:contracts:c3-run-listing",
   "additionalProperties": true,
   "description": "`GET /api/v1/runs`의 응답.",
   "properties": {

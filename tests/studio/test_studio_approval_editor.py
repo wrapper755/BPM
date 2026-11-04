@@ -17,8 +17,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtWidgets import QComboBox  # noqa: E402
 
-from chaeksas.contracts.bpmn_ext import Approval  # noqa: E402
-from chaeksas.studio.approval_editor import (  # noqa: E402
+from bpm.contracts.bpmn_ext import Approval  # noqa: E402
+from bpm.studio.approval_editor import (  # noqa: E402
     COL_DEFAULT,
     COL_KEY,
     COL_REQUIRED,
@@ -171,7 +171,7 @@ def test_the_fields_table_shows_three_rows_from_the_start() -> None:
 
 
 def test_the_properties_panel_attaches_it_and_applies_the_whole_body() -> None:
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
     panel.show_element({
@@ -188,7 +188,7 @@ def test_the_properties_panel_attaches_it_and_applies_the_whole_body() -> None:
 
 
 def test_a_manual_task_gets_the_confirmation_tab() -> None:
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
     panel.show_element({"id": "M", "type": "ManualTask", "name": "현장 확인", "chk": {}})

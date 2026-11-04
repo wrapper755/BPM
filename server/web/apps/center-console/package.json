@@ -1,5 +1,5 @@
 {
-  "name": "@chaeksas/center-console",
+  "name": "@bpm/center-console",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,14 +9,14 @@
     "typecheck": "next typegen && tsc --project tsconfig.json"
   },
   "dependencies": {
-    "@chaeksas/api-types": "workspace:*",
-    "@chaeksas/ui": "workspace:*",
+    "@bpm/api-types": "workspace:*",
+    "@bpm/ui": "workspace:*",
     "next": "16.3.8",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@chaeksas/config": "workspace:*",
+    "@bpm/config": "workspace:*",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.6.4",
     "@types/react": "19.3.0",

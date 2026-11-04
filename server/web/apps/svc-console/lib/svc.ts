@@ -1,9 +1,9 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import type { AdminStatus } from "@chaeksas/api-types/c11-admin-status";
-import type { UsagePage } from "@chaeksas/api-types/c11-usage-page";
-import type { ErrorBody } from "@chaeksas/api-types/c5-error-body";
+import type { AdminStatus } from "@bpm/api-types/c11-admin-status";
+import type { UsagePage } from "@bpm/api-types/c11-usage-page";
+import type { ErrorBody } from "@bpm/api-types/c5-error-body";
 import { COOKIE_NAME, open, type Session } from "./session";
 
 /**

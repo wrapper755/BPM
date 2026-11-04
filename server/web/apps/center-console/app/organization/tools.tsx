@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ConfirmDialog, Dialog, ErrorBanner, Field } from "@chaeksas/ui";
+import { Button, ConfirmDialog, Dialog, ErrorBanner, Field } from "@bpm/ui";
 import { createOrgItem, removeOrgItem, updateOrgItem, type ActionResult } from "@/app/actions";
 import { KIND_LABEL, type OrgKind } from "@/lib/organization";
 

@@ -1,6 +1,6 @@
 /* 생성 파일: 계약 스키마에서 만든다 (플랫폼 + 확장이 소유한 것). 직접 고치지 말고
    계약 모델을 고친 뒤 `uv run python scripts/gen_schemas.py`,
-   그다음 `pnpm --filter @chaeksas/api-types generate`. */
+   그다음 `pnpm --filter @bpm/api-types generate`. */
 
 /**
  * 확장 정의 (C13 최상위). 파일 하나 = 확장 하나.
@@ -156,7 +156,7 @@ export interface Service {
 /**
  * C11을 따르지 않는 외부 앱을 **코드 없이** 붙이는 선언 (§4).
  *
- * 해석기는 `chaeksas.core`에 하나뿐이고, 안전 규칙(https만·리다이렉트 금지·사설망 차단·
+ * 해석기는 `bpm.core`에 하나뿐이고, 안전 규칙(https만·리다이렉트 금지·사설망 차단·
  * DNS 고정·크기 상한)을 그 해석기가 지킨다.
  */
 export interface HttpAdapter {

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { Button } from "@chaeksas/ui";
+import { Button } from "@bpm/ui";
 
 /**
  * CON-00 위 막대 「새로 고침」 — 지금 화면을 Center에서 다시 읽는다. 브라우저는 다시 그려 달라고만

@@ -11,9 +11,9 @@ from typing import Any
 
 import pytest
 
-from chaeksas.studio.explorer import Explorer
-from chaeksas.studio.settings import Settings
-from chaeksas.studio.workspace import Workspace
+from bpm.studio.explorer import Explorer
+from bpm.studio.settings import Settings
+from bpm.studio.workspace import Workspace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 

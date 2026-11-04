@@ -300,7 +300,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c4-heartbeat-response",
+  "$id": "urn:bpm:contracts:c4-heartbeat-response",
   "additionalProperties": true,
   "description": "하트비트 응답 — 지시는 모두 여기 실려 내려온다 (ADR-0007).\n\n`deployments`는 **저장된 JSON 그대로** 다룬다. C2 봉투를 모델로 바꿔 다시 직렬화하면\n`canonical_json`이 달라져 서명이 깨지므로, 일부러 `dict`로 둔다.",
   "properties": {

@@ -17,10 +17,10 @@ from pathlib import Path
 import fake_extension
 import pytest
 
-from chaeksas.contracts.bpmn_ext import read_process
-from chaeksas.contracts.hashing import content_hash_zip
-from chaeksas.contracts.manifest import KNOWN_TRIGGER_KINDS, Manifest, validate
-from chaeksas.studio.packaging import (
+from bpm.contracts.bpmn_ext import read_process
+from bpm.contracts.hashing import content_hash_zip
+from bpm.contracts.manifest import KNOWN_TRIGGER_KINDS, Manifest, validate
+from bpm.studio.packaging import (
     EXCLUDED,
     MANIFEST_NAME,
     PackageError,
@@ -37,7 +37,7 @@ from chaeksas.studio.packaging import (
     gather,
     gather_lib,
 )
-from chaeksas.studio.workspace import BpmProcess, Definition, Workspace
+from bpm.studio.workspace import BpmProcess, Definition, Workspace
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
 

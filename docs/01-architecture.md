@@ -75,11 +75,11 @@ contracts ◀── extension_api ◀── core ◀── studio, bot_ui, serve
     ├── service_kit ◀── (확장의 서버 부분 = 서비스 앱), samples/mock_apps
     └── center
 
-llm ◀── core, service_kit   (맨 아래 — chaeksas의 아무것도 import하지 않는다, ADR-0034)
+llm ◀── core, service_kit   (맨 아래 — bpm의 아무것도 import하지 않는다, ADR-0034)
 ```
 
-- **플랫폼은 특정 확장을 import하지 않는다.** `core`와 제품 앱(`server/*`·`studio/app`·`bot/app`)은 `extension_api`를 통해서만 확장을 부르고, 확장은 엔트리 포인트 `chaeksas.extensions`로 찾는다. 확장끼리도 import하지 않는다 ([ADR-0018](decisions/0018-extensions.md)).
-  - 찾아 켜는 것은 `chaeksas.core.extensions`의 **확장 호스트**다 (**있음**). 확장의 `extension.json`(C13)은 그 확장의 파이썬 패키지 안에 있고, 정의가 가리키는 `entry`는 그 패키지 안만 가리킬 수 있다. 검사 규칙에 걸리거나 `api` 범위가 맞지 않는 확장은 켜지 않고 사유와 함께 목록에 남는다.
+- **플랫폼은 특정 확장을 import하지 않는다.** `core`와 제품 앱(`server/*`·`studio/app`·`bot/app`)은 `extension_api`를 통해서만 확장을 부르고, 확장은 엔트리 포인트 `bpm.extensions`로 찾는다. 확장끼리도 import하지 않는다 ([ADR-0018](decisions/0018-extensions.md)).
+  - 찾아 켜는 것은 `bpm.core.extensions`의 **확장 호스트**다 (**있음**). 확장의 `extension.json`(C13)은 그 확장의 파이썬 패키지 안에 있고, 정의가 가리키는 `entry`는 그 패키지 안만 가리킬 수 있다. 검사 규칙에 걸리거나 `api` 범위가 맞지 않는 확장은 켜지 않고 사유와 함께 목록에 남는다.
 
 - `server/web/`은 Python 코드를 import하지 않는다. HTTP로만 부르고, 타입은 `contracts`의 JSON Schema에서 생성한다. 브라우저는 서버 API를 직접 부르지 않는다 (콘솔 서버가 중계, [ADR-0017](decisions/0017-web-nextjs-design-system.md)).
 - `center`와 서비스 앱(확장의 서버 부분)은 `core`를 import하지 않는다.
@@ -98,7 +98,7 @@ llm ◀── core, service_kit   (맨 아래 — chaeksas의 아무것도 impor
 | 자식 프로세스 관리 (PC 실행기 → 실행 프로세스) | 자식마다 Job Object (`KILL_ON_JOB_CLOSE`) | 프로세스 그룹 | 공통 헬퍼 하나로 ([ADR-0023](decisions/0023-bot-ui-process-supervision.md)) |
 | 무인 실행 (로그인 없이) | Windows 서비스 — 현장 확인 불가 | systemd | **나중에 검토** |
 | 비밀 저장 (Center 키, 모델 키) | Windows 자격 증명 관리자 (`keyring`) | Secret Service (`keyring`) | |
-| 사용자 데이터 위치 | `%LOCALAPPDATA%\Chaeksas\` | `~/.local/share/chaeksas/` | `platformdirs` |
+| 사용자 데이터 위치 | `%LOCALAPPDATA%\BPM\` | `~/.local/share/bpm/` | `platformdirs` |
 
 ## 7. 저장소
 
@@ -117,10 +117,10 @@ llm ◀── core, service_kit   (맨 아래 — chaeksas의 아무것도 impor
 
 ## 8. 저장소(코드) 구조
 
-폴더는 아래 그대로, **import 이름은 `chaeksas.<이름>`**(확장은 `chaeksas.ext.<id>`)이다. src 레이아웃이라 멤버마다 `src/chaeksas/<이름>/`이고, `src/chaeksas/`에는 `__init__.py`를 두지 않는다 (PEP 420 네임스페이스, [ADR-0019](decisions/0019-package-names.md)).
+폴더는 아래 그대로, **import 이름은 `bpm.<이름>`**(확장은 `bpm.ext.<id>`)이다. src 레이아웃이라 멤버마다 `src/bpm/<이름>/`이고, `src/bpm/`에는 `__init__.py`를 두지 않는다 (PEP 420 네임스페이스, [ADR-0019](decisions/0019-package-names.md)).
 
 ```
-Chaeksas/
+BPM/
 ├─ pyproject.toml          # uv workspace 루트 (패키지 아님) + ruff·pytest·mypy 설정
 ├─ .python-version         # 3.12 (ADR-0005)
 ├─ uv.lock                 # 워크스페이스 전체 하나

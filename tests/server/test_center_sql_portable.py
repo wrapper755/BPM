@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-CENTER = ROOT / "server" / "center" / "src" / "chaeksas" / "center"
+CENTER = ROOT / "server" / "center" / "src" / "bpm" / "center"
 
 #: 연결·잠금·WAL이 사는 자리 — `sqlite3`를 import해도 되고 `PRAGMA`·`BEGIN IMMEDIATE`를 써도 된다.
 CONNECTION_FILES = {"storage.py", "migrations.py", "repair.py", "__main__.py"}

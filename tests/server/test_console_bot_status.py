@@ -29,10 +29,10 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.hashing import content_hash_zip
+from bpm.center.app import create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
+from bpm.contracts.hashing import content_hash_zip
 
 ROOT = Path(__file__).resolve().parents[2]
 CONSOLE = ROOT / "server" / "web" / "apps" / "center-console"

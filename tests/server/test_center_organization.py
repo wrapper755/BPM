@@ -19,9 +19,9 @@ from center_admin import approve
 from fastapi.testclient import TestClient
 from test_center_app import build_package
 
-from chaeksas.center import accounts, create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
+from bpm.center import accounts, create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 PASSWORD = "first-admin-2026"
@@ -166,7 +166,7 @@ def test_a_pc_deployment_stays_inside_the_company(client: TestClient) -> None:
 
 def test_the_owner_goes_down_with_names(client: TestClient) -> None:
     """작업 행에는 id만 — 이름은 내려줄 때 읽는다 (C12 `JobDispatch.place`)."""
-    from chaeksas.center import organization
+    from bpm.center import organization
 
     organize(client)
     store: Store = client.app.state.store  # type: ignore[attr-defined]
@@ -178,7 +178,7 @@ def test_the_owner_goes_down_with_names(client: TestClient) -> None:
 
 
 def test_a_company_admin_approves_devices_into_its_own_company_only(client: TestClient) -> None:
-    from chaeksas.contracts.enrollment import new_keypair
+    from bpm.contracts.enrollment import new_keypair
 
     organize(client)
     mine = login_as(client, "admin2", "company_admin", "company2")

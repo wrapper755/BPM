@@ -1,6 +1,6 @@
 /** CON-01 「노드 타임라인」·「LLM 단계」의 셈 (`lib/timeline.ts`) — 막대 자리를 **숫자로** 본다. */
 import { describe, expect, it } from "vitest";
-import type { RunEvent } from "@chaeksas/api-types/c3-run-event";
+import type { RunEvent } from "@bpm/api-types/c3-run-event";
 import { resumes } from "./summary";
 import { bars, llmSteps, timeline } from "./timeline";
 

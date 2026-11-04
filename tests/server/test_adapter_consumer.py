@@ -24,11 +24,11 @@ import httpx
 import pytest
 from consumers import serve
 
-from chaeksas.adapter_consumer.adapter import ENV_PREFIX, AdapterService, ext_env, manifest_of
-from chaeksas.contracts.extension import ExtensionManifest
-from chaeksas.contracts.external_task import LockedTask
-from chaeksas.mock_apps.external import apps as external_apps
-from chaeksas.mock_apps.external import definitions
+from bpm.adapter_consumer.adapter import ENV_PREFIX, AdapterService, ext_env, manifest_of
+from bpm.contracts.extension import ExtensionManifest
+from bpm.contracts.external_task import LockedTask
+from bpm.mock_apps.external import apps as external_apps
+from bpm.mock_apps.external import definitions
 
 APP = "ext-credit"
 KEY = "ext-secret-1"
@@ -149,7 +149,7 @@ def test_the_same_slot_with_another_body_conflicts(credit: str, hits: Hits) -> N
 
 def test_a_slot_still_running_is_skipped(credit: str, hits: Hits) -> None:
     one = service(credit, hits)
-    from chaeksas.adapter_consumer.adapter import body_hash_of  # noqa: PLC0415
+    from bpm.adapter_consumer.adapter import body_hash_of  # noqa: PLC0415
 
     found = task()
     slot = found.idempotency

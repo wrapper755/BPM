@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from chaeksas.core import outputs
+from bpm.core import outputs
 
 
 def test_only_the_declared_names_are_picked() -> None:
@@ -54,8 +54,8 @@ def test_a_half_written_file_is_nothing(tmp_path: Path) -> None:
 
 def test_the_shipping_queue_skips_it(tmp_path: Path) -> None:
     """같은 `runs/`에 있지만 **C3가 아니다** — 실행 기록 전송이 건너뛴다 (제어·요청 파일과 같다)."""
-    from chaeksas.core.run_log import RunLog, log_path
-    from chaeksas.core.run_shipping import Queue
+    from bpm.core.run_log import RunLog, log_path
+    from bpm.core.run_shipping import Queue
 
     run_id = "run_20261015_090000_dddddd"
     RunLog(run_id=run_id, path=log_path(tmp_path, run_id)).emit("log", level="info", message="한 줄")

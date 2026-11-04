@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c15-consumer-info",
+  "$id": "urn:bpm:contracts:c15-consumer-info",
   "additionalProperties": true,
   "description": "`GET /api/v1/consumers`의 한 줄 (CON-07 「일꾼」).",
   "properties": {

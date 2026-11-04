@@ -10,7 +10,7 @@
 기동이 느려지고(warm 1.3초 ↔ 3.4초) 자식 프로세스를 띄울 때마다 또 푼다 (스파이크 S5).
 
 **확장 인자를 적지 않는다.** `core`가 주는 PyInstaller 훅(`core/__pyinstaller/`)이 설치된
-엔트리 포인트 `chaeksas.extensions`를 훑어 메타데이터·데이터 파일·서브모듈을 넣는다 — 확장을
+엔트리 포인트 `bpm.extensions`를 훑어 메타데이터·데이터 파일·서브모듈을 넣는다 — 확장을
 더해도 이 파일을 고치지 않는다 (ADR-0018: 플랫폼은 특정 확장을 모른다). **그래서 「무엇이
 들어가는가」는 빌드 환경에 무엇이 설치됐는가로 정해진다** — 사내 확장이 생기면 ADR-0018 §5의
 포함 목록을 설치하는 걸음이 앞에 붙는다.
@@ -25,11 +25,11 @@ OS에서는 PyInstaller가 받지 않는다. 개발 PC(Linux)에서 돌리면 **
 
 **판을 찍는다** ([ADR-0067](../docs/decisions/0067-build-stamp.md)) — `--version`이 이기고, 없으면
 지금 커밋의 `v*` 태그, 그것도 없으면 `<core 판>+g<커밋>`(고치다 만 파일이 있으면 `.dirty`)이다.
-실행 파일 옆 `chaeksas-build.json`에 적고, `--selftest`가 **되읽은 판**이 다르면 빌드를 멈춘다.
+실행 파일 옆 `bpm-build.json`에 적고, `--selftest`가 **되읽은 판**이 다르면 빌드를 멈춘다.
 `core`와 그 앱의 dist-info도 넣는다 — 안 넣으면 묶은 앱이 `core`의 판을 `0.0.0`으로 올린다.
 
 **`--installer`면 설치 파일까지 만든다** ([ADR-0068](../docs/decisions/0068-installer-inno-setup-per-user.md)
-— Inno Setup, 사용자별, Windows에서만). 스크립트는 `installer/chaeksas.iss` 하나이고 앱마다 다른 값을
+— Inno Setup, 사용자별, Windows에서만). 스크립트는 `installer/bpm.iss` 하나이고 앱마다 다른 값을
 여기서 `/D`로 넘긴다. `--check-install`은 그 설치 파일을 **조용히 설치 → 설치된 앱으로 `--selftest` →
 조용히 제거**까지 해 본다 — **같은 `AppId`의 설치를 덮으므로 CI에서만** 쓴다.
 """
@@ -48,8 +48,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from chaeksas.bot_ui.autostart import TASK_NAME
-from chaeksas.core.build_info import STAMP_NAME, Stamp, package_version, valid_version
+from bpm.bot_ui.autostart import TASK_NAME
+from bpm.core.build_info import STAMP_NAME, Stamp, package_version, valid_version
 
 # **한글을 찍는 CLI는 stdout도 UTF-8로 고정한다** (CLAUDE.md §5) — Windows 기본 코드페이지
 # (cp949·cp1252)에서는 `print("── 묶는다")` 한 줄에 `UnicodeEncodeError`로 죽는다. CI가 일부러
@@ -64,7 +64,7 @@ ROOT = HERE.parent
 DIST = ROOT / "build" / "dist"
 WORK = ROOT / "build" / "work"
 INSTALLERS = ROOT / "build" / "installer"
-ISS = HERE / "installer" / "chaeksas.iss"
+ISS = HERE / "installer" / "bpm.iss"
 
 IS_WINDOWS = sys.platform == "win32"
 
@@ -80,7 +80,7 @@ class App:
     #: 설치 파일 (ADR-0068) — **`app_id`는 바꾸지 않는다**(바꾸면 덮어쓰기가 아니라 두 번째 설치다).
     app_id: str = ""
     title: str = ""  # 설치·시작 메뉴에 보이는 이름
-    dir_name: str = ""  # %LOCALAPPDATA%\Programs\Chaeksas\<여기>
+    dir_name: str = ""  # %LOCALAPPDATA%\Programs\BPM\<여기>
     autostart_task: str | None = None  # 제거할 때 지울 작업 스케줄러 이름
 
     @property
@@ -90,17 +90,17 @@ class App:
 
 APPS = (
     App(
-        "bot-ui", "ChaeksasBotUI", "botui_main.py", "chaeksas-bot-ui",
+        "bot-ui", "BPMBot", "botui_main.py", "bpm-bot-ui",
         app_id="2F476024-75DF-4DDE-A28C-A05E0E1909CB",
-        title="Chaeksas PC 실행기",
+        title="BPM PC 실행기",
         dir_name="BotUI",
         # 이름은 앱이 쓰는 그 자리에서 읽는다 — 베끼면 이름을 바꿀 때 지우지 못한 작업이 남는다.
         autostart_task=TASK_NAME,
     ),
     App(
-        "studio", "ChaeksasStudio", "studio_main.py", "chaeksas-studio",
+        "studio", "BPMStudio", "studio_main.py", "bpm-studio",
         app_id="AAAE763A-0A3C-4675-BCFB-16CB6B53C0C3",
-        title="Chaeksas Studio",
+        title="BPM Studio",
         dir_name="Studio",
     ),
 )
@@ -145,7 +145,7 @@ def decide_version(given: str | None) -> str:
             found = tag.removeprefix("v")
         else:
             commit = _git("rev-parse", "--short=12", "HEAD")
-            base = package_version("chaeksas-core")
+            base = package_version("bpm-core")
             if commit is None:
                 found = base
             else:
@@ -178,7 +178,7 @@ def build(app: App) -> float:
         "--name", app.name,
         "--distpath", str(DIST), "--workpath", str(WORK), "--specpath", str(WORK),
         # 판을 읽는 dist-info (ADR-0067) — 훅은 **확장의** 것만 넣는다.
-        "--copy-metadata", "chaeksas-core", "--copy-metadata", app.dist,
+        "--copy-metadata", "bpm-core", "--copy-metadata", app.dist,
     ]
     if IS_WINDOWS:
         # DPI 선언 — Per-Monitor v2 (ADR-0021).

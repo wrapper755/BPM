@@ -69,7 +69,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c15-external-task-result",
+  "$id": "urn:bpm:contracts:c15-external-task-result",
   "additionalProperties": true,
   "description": "`GET /api/v1/external-tasks/{task_id}` — 결과 기다리기 (C15 §결과).",
   "properties": {

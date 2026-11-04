@@ -5,7 +5,7 @@
   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:bpm="urn:chaeksas:bpmn:1"
-  id="Defs_bx13_return_processing" targetNamespace="urn:chaeksas:examples" exporter="chaeksas-examples" exporterVersion="1">
+  id="Defs_bx13_return_processing" targetNamespace="urn:chaeksas:examples" exporter="bpm-examples" exporterVersion="1">
   <bpmn:message id="Msg_return_arrived" name="return_arrived" />
   <bpmn:message id="Msg_return_request" name="return_request" />
   <bpmn:process id="Proc_bx13_return_processing" name="반품 처리" isExecutable="true">

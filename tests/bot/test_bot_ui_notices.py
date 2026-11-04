@@ -26,17 +26,17 @@ from typing import Any
 import pytest
 from conftest import FakeCredentials
 
-from chaeksas.bot_ui import notices as module
-from chaeksas.bot_ui.agent import Agent
-from chaeksas.bot_ui.center_client import KeyRejected, Unreachable
-from chaeksas.bot_ui.notices import Notice, Notices
-from chaeksas.bot_ui.runner import Request, Running
-from chaeksas.bot_ui.settings import Settings, data_dir
-from chaeksas.bot_ui.store import Store
-from chaeksas.contracts.bot_ui import DeploymentResult, HeartbeatResponse, JobDispatch, QueueItem, RegisterResponse
-from chaeksas.contracts.manifest import Manifest
-from chaeksas.core.packages import InstalledBot
-from chaeksas.core.processes import ChildProcess
+from bpm.bot_ui import notices as module
+from bpm.bot_ui.agent import Agent
+from bpm.bot_ui.center_client import KeyRejected, Unreachable
+from bpm.bot_ui.notices import Notice, Notices
+from bpm.bot_ui.runner import Request, Running
+from bpm.bot_ui.settings import Settings, data_dir
+from bpm.bot_ui.store import Store
+from bpm.contracts.bot_ui import DeploymentResult, HeartbeatResponse, JobDispatch, QueueItem, RegisterResponse
+from bpm.contracts.manifest import Manifest
+from bpm.core.packages import InstalledBot
+from bpm.core.processes import ChildProcess
 
 NOW = "2026-10-10T09:00:00+09:00"
 #: **진짜 시계로 열흘 뒤** — `Agent`는 `now_iso()`로 재므로 박아 둔 날짜는 그날이 지나면 「이미
@@ -408,7 +408,7 @@ def test_a_manual_run_that_has_to_wait_says_what_is_running(tmp_path: Path) -> N
     agent.enqueue_manual("fin.invoice")
     assert not agent.notices.pending, "바로 돌 것은 알릴 거리가 아니다"
 
-    from chaeksas.contracts.bot_ui import CurrentRun
+    from bpm.contracts.bot_ui import CurrentRun
 
     agent.current_run = CurrentRun(
         run_id="run_1",
@@ -489,7 +489,7 @@ def test_without_a_tray_the_status_bar_is_the_notice_place(qt_app: Any, tmp_path
     """U15 — 트레이가 없는 환경에서도 알림이 사라지지 않는다 (창의 상태 줄로 간다)."""
     from PySide6.QtWidgets import QSystemTrayIcon
 
-    from chaeksas.bot_ui.app import BotUiApp
+    from bpm.bot_ui.app import BotUiApp
 
     if QSystemTrayIcon.isSystemTrayAvailable():
         pytest.skip("이 환경에는 트레이가 있다 — 풍선 쪽은 Windows 실기에서 본다")
@@ -507,8 +507,8 @@ def test_without_a_tray_the_status_bar_is_the_notice_place(qt_app: Any, tmp_path
 
 def test_clicking_a_notice_opens_what_it_points_at(qt_app: Any, tmp_path: Path, monkeypatch: Any) -> None:
     """누르면 **그 알림이 가리키는 자리**가 열린다 (BUI-05 — 결재는 CMN-01)."""
-    from chaeksas.bot_ui.app import BotUiApp
-    from chaeksas.bot_ui.main_window import MainWindow
+    from bpm.bot_ui.app import BotUiApp
+    from bpm.bot_ui.main_window import MainWindow
 
     agent = agent_with(tmp_path)
     made = BotUiApp(qt_app, agent)
@@ -532,7 +532,7 @@ def test_the_heartbeat_problem_signal_does_not_make_its_own_notice(qt_app: Any, 
 
     전에는 이 자리에서 풍선을 띄워, 닿지 못하는 동안 같은 말이 주기마다 떴다.
     """
-    from chaeksas.bot_ui.app import BotUiApp
+    from bpm.bot_ui.app import BotUiApp
 
     agent = agent_with(tmp_path)
     made = BotUiApp(qt_app, agent)

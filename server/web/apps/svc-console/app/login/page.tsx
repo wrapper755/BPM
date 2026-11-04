@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { BpmMark, Button, ErrorBanner, Field } from "@chaeksas/ui";
+import { BpmMark, Button, ErrorBanner, Field } from "@bpm/ui";
 import { login, type ActionResult } from "@/app/actions";
 
 /**

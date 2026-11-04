@@ -29,11 +29,11 @@ import center_admin
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center.api import messages as messages_api
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store, now_iso
-from chaeksas.contracts.hashing import MANIFEST_NAME, content_hash_zip
+from bpm.center.api import messages as messages_api
+from bpm.center.app import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store, now_iso
+from bpm.contracts.hashing import MANIFEST_NAME, content_hash_zip
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 READ = {"Authorization": "Bearer t-read"}

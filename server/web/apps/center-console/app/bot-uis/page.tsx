@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@chaeksas/ui";
-import type { BotUiInfo } from "@chaeksas/api-types/c5-bot-ui-info";
-import type { CenterKeyInfo } from "@chaeksas/api-types/c7-center-key-info";
+import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
+import type { CenterKeyInfo } from "@bpm/api-types/c7-center-key-info";
 import { STATE_LABEL } from "@/lib/center-keys";
 import { KeyMenu } from "@/components/KeyMenu";
 import { CENTER_PUBLIC_URL, CenterError, center, session } from "@/lib/center";
@@ -11,7 +11,7 @@ import { CenterAddress } from "@/components/CenterAddress";
 import { Shell } from "@/components/Shell";
 import { Enrollments } from "@/components/Enrollments";
 import { lastReportNote } from "@/lib/labels";
-import type { EnrollmentInfo } from "@chaeksas/api-types/c5-enrollment-info";
+import type { EnrollmentInfo } from "@bpm/api-types/c5-enrollment-info";
 
 /**
  * CON-03 앱 — 탭 「Studio」/「Bot」(PC 실행기, ADR-0121). 탭마다 표 하나와 그 위의 「승인 대기」가 있다.

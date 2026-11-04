@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { DataTable, ErrorBanner, StatusBadge, type Column } from "@chaeksas/ui";
-import type { BotUiInfo } from "@chaeksas/api-types/c5-bot-ui-info";
-import type { ScheduleInfo } from "@chaeksas/api-types/c5-schedule-info";
+import { DataTable, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
+import type { ScheduleInfo } from "@bpm/api-types/c5-schedule-info";
 import { CenterError, center } from "@/lib/center";
 import { scheduleResult, schedulesOf, type Place } from "@/lib/summary";
 import { STATE_LABEL } from "@/app/jobs/labels";

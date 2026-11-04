@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.dmn import (
+from bpm.contracts.dmn import (
     Compare,
     Decision,
     DmnError,
@@ -23,7 +23,7 @@ from chaeksas.contracts.dmn import (
     parse_cell,
     read_decisions,
 )
-from chaeksas.studio.dmn_table import (
+from bpm.studio.dmn_table import (
     DmnTableError,
     Table,
     blank,
@@ -341,7 +341,7 @@ def test_my_table_wins_over_a_received_one(tmp_path: Path) -> None:
         folder = tmp_path
 
         def decision_files(self) -> list[tuple[Path, bool]]:
-            from chaeksas.studio.workspace import BpmProcess  # noqa: PLC0415
+            from bpm.studio.workspace import BpmProcess  # noqa: PLC0415
 
             return BpmProcess.decision_files(self)  # type: ignore[arg-type]
 

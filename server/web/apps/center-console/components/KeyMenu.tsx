@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { CenterKeyInfo } from "@chaeksas/api-types/c7-center-key-info";
-import { Button, ConfirmDialog, ErrorBanner } from "@chaeksas/ui";
+import type { CenterKeyInfo } from "@bpm/api-types/c7-center-key-info";
+import { Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
 import { deleteCenterKey, revokeCenterKey, unbindCenterKey, type ActionResult } from "@/app/actions";
 import { keyActions, type KeyAction } from "@/lib/center-keys";
 

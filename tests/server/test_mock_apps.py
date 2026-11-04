@@ -31,17 +31,17 @@ import pytest
 import uvicorn
 from fastapi.testclient import TestClient
 
-from chaeksas.contracts.dmn import Decision, read_decisions
-from chaeksas.contracts.extension import ExtensionManifest, validate
-from chaeksas.contracts.external_task import LockedTask
-from chaeksas.contracts.service_app import OpRequest
-from chaeksas.core.http_adapter import AdapterCaller, AdapterError
-from chaeksas.core.services import OpCall
-from chaeksas.mock_apps import catalog
-from chaeksas.mock_apps.c11 import SCENARIO_PATH, Built, MockApp, build
-from chaeksas.mock_apps.external import apps as external_apps
-from chaeksas.mock_apps.external import definitions
-from chaeksas.service_kit import Outcome, Service
+from bpm.contracts.dmn import Decision, read_decisions
+from bpm.contracts.extension import ExtensionManifest, validate
+from bpm.contracts.external_task import LockedTask
+from bpm.contracts.service_app import OpRequest
+from bpm.core.http_adapter import AdapterCaller, AdapterError
+from bpm.core.services import OpCall
+from bpm.mock_apps import catalog
+from bpm.mock_apps.c11 import SCENARIO_PATH, Built, MockApp, build
+from bpm.mock_apps.external import apps as external_apps
+from bpm.mock_apps.external import definitions
+from bpm.service_kit import Outcome, Service
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples"
 BPMN = EXAMPLES / "bpmn"
@@ -536,7 +536,7 @@ def test_posting_a_reply_is_not_idempotent() -> None:
 
 
 def test_the_cli_lists_every_app(capsys: pytest.CaptureFixture[str]) -> None:
-    from chaeksas.mock_apps.cli import main  # noqa: PLC0415
+    from bpm.mock_apps.cli import main  # noqa: PLC0415
 
     assert main(["list"]) == 0
     printed = capsys.readouterr().out
@@ -546,7 +546,7 @@ def test_the_cli_lists_every_app(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_the_cli_writes_a_definition_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """정의는 주소를 담아 커밋할 수 없다 — CLI가 그 자리에서 쓴다 (C13 E6으로 서명해 등록)."""
-    from chaeksas.mock_apps.cli import main  # noqa: PLC0415
+    from bpm.mock_apps.cli import main  # noqa: PLC0415
 
     out = tmp_path / "ext-credit.json"
     assert main(["definition", "ext-credit", "--base-url", "http://127.0.0.1:8150", "-o", str(out)]) == 0
@@ -557,7 +557,7 @@ def test_the_cli_writes_a_definition_file(tmp_path: Path, capsys: pytest.Capture
 
 
 def test_the_cli_refuses_an_app_that_is_not_external(capsys: pytest.CaptureFixture[str]) -> None:
-    from chaeksas.mock_apps.cli import main  # noqa: PLC0415
+    from bpm.mock_apps.cli import main  # noqa: PLC0415
 
     assert main(["definition", "erp", "--base-url", "http://127.0.0.1:8010"]) == 2
     capsys.readouterr()
@@ -572,7 +572,7 @@ def test_the_cli_survives_a_non_utf8_stdout(encoding: str) -> None:
     """
     root = Path(__file__).resolve().parents[2]
     found = subprocess.run(
-        [sys.executable, "-m", "chaeksas.mock_apps.cli", "list"],
+        [sys.executable, "-m", "bpm.mock_apps.cli", "list"],
         capture_output=True,
         text=True,
         cwd=root,
@@ -624,6 +624,6 @@ def test_handlers_take_the_request_and_the_scenario() -> None:
             "input": {},
         }
     )
-    from chaeksas.mock_apps.c11 import Scenario  # noqa: PLC0415
+    from bpm.mock_apps.c11 import Scenario  # noqa: PLC0415
 
     assert found.answer(request, Scenario())["items"]

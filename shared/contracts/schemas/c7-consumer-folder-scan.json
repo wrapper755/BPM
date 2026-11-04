@@ -81,7 +81,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c7-consumer-folder-scan",
+  "$id": "urn:bpm:contracts:c7-consumer-folder-scan",
   "additionalProperties": true,
   "description": "`GET /resources/consumer-folder` — Center가 **마지막으로 뜰 때** 일꾼 폴더를 읽은 결과 (ADR-0122).",
   "properties": {

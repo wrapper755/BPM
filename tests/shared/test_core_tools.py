@@ -21,10 +21,10 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.bpmn_ext import AiTask
-from chaeksas.core.agent import tool_specs
-from chaeksas.core.files import FileTaskError, PathDenied, Workspace
-from chaeksas.core.tools import (
+from bpm.contracts.bpmn_ext import AiTask
+from bpm.core.agent import tool_specs
+from bpm.core.files import FileTaskError, PathDenied, Workspace
+from bpm.core.tools import (
     CUT,
     HTTP_METHODS,
     MAX_ROWS,
@@ -88,7 +88,7 @@ def sample_pdf(target: Path, lines: list[str]) -> Path:
     fpdf = pytest.importorskip("fpdf", reason="시험용 PDF를 만들 fpdf2가 없다")
     font = (
         Path(__file__).resolve().parents[2]
-        / "shared/qt/src/chaeksas/qt/fonts/Pretendard-Regular.otf"
+        / "shared/qt/src/bpm/qt/fonts/Pretendard-Regular.otf"
     )
     pdf = fpdf.FPDF()
     pdf.add_font("pretendard", "", str(font))

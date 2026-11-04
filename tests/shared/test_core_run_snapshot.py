@@ -14,13 +14,13 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.approvals import Form
-from chaeksas.contracts.bpmn_ext import read_process
-from chaeksas.contracts.replay import ReplaySpec, ReplayStep
-from chaeksas.core.engine import Engine, Run, RunEnv, State
-from chaeksas.core.helpers import bind
-from chaeksas.core.run_log import RunLog
-from chaeksas.core.run_snapshot import (
+from bpm.contracts.approvals import Form
+from bpm.contracts.bpmn_ext import read_process
+from bpm.contracts.replay import ReplaySpec, ReplayStep
+from bpm.core.engine import Engine, Run, RunEnv, State
+from bpm.core.helpers import bind
+from bpm.core.run_log import RunLog
+from bpm.core.run_snapshot import (
     DROPPED,
     REPLUGGED,
     STORED,
@@ -29,8 +29,8 @@ from chaeksas.core.run_snapshot import (
     dump,
     restore,
 )
-from chaeksas.core.run_state import WAIT_DELEGATION, LoopState, Pending, Token, Waiting, new_run_id
-from chaeksas.core.senders import RecordingSender
+from bpm.core.run_state import WAIT_DELEGATION, LoopState, Pending, Token, Waiting, new_run_id
+from bpm.core.senders import RecordingSender
 
 EXAMPLES = Path("docs/08-business-examples/bpmn")
 #: 실행 위치가 `server`이고 결재를 기다리며 경계 타이머가 둘 붙어 있다 (스파이크가 쓴 그림).
@@ -47,7 +47,7 @@ AT = datetime(2026, 10, 13, 9, 0, tzinfo=UTC)
 
 
 def env(tmp_path: Path) -> RunEnv:
-    from chaeksas.core.files import Workspace
+    from bpm.core.files import Workspace
 
     out = tmp_path / "out"
     out.mkdir(parents=True, exist_ok=True)
@@ -357,7 +357,7 @@ def test_a_parallel_loop_survives_a_restart_halfway(tmp_path: Path) -> None:
 
     `Run`에 칸이 늘지 않는다 — 토큰 목록이 이미 담기고 `LoopState`의 칸이 따라간다.
     """
-    from chaeksas.core.delegation import RecordingDelegator
+    from bpm.core.delegation import RecordingDelegator
 
     call = (
         '{"delegate": {"bpm_process_id": "ops.item"}, "input": {"번호": "건"}, "output": {"답": "결과"}}'

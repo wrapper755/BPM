@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pytest
 
-from chaeksas.core.senders import (
+from bpm.core.senders import (
     DEFAULT_PORTS,
     SECURITY_NONE,
     SECURITY_SSL,

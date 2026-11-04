@@ -29,18 +29,18 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QTableWidgetItem  # noqa: E402
 
-from chaeksas.contracts import (  # noqa: E402
+from bpm.contracts import (  # noqa: E402
     AdminKey,
     definition_hash,
     key_id_for,
     sign,
 )
-from chaeksas.contracts.bpmn_ext import ProcessInfo  # noqa: E402
-from chaeksas.contracts.resources import ExtensionResource  # noqa: E402
-from chaeksas.core.extensions import ExtensionHost  # noqa: E402
-from chaeksas.qt.theme import tokens  # noqa: E402
-from chaeksas.studio import services  # noqa: E402
-from chaeksas.studio.extension_dialog import (  # noqa: E402
+from bpm.contracts.bpmn_ext import ProcessInfo  # noqa: E402
+from bpm.contracts.resources import ExtensionResource  # noqa: E402
+from bpm.core.extensions import ExtensionHost  # noqa: E402
+from bpm.qt.theme import tokens  # noqa: E402
+from bpm.studio import services  # noqa: E402
+from bpm.studio.extension_dialog import (  # noqa: E402
     NAME,
     NO_PIN_INTERNAL,
     NO_PIN_NOT_DECLARED,
@@ -60,8 +60,8 @@ from chaeksas.studio.extension_dialog import (  # noqa: E402
     pin_patch,
     state_of,
 )
-from chaeksas.studio.extensions import Extensions  # noqa: E402
-from chaeksas.studio.settings import Settings  # noqa: E402
+from bpm.studio.extensions import Extensions  # noqa: E402
+from bpm.studio.settings import Settings  # noqa: E402
 
 NOW = "2026-10-10T09:00:00+09:00"
 
@@ -73,7 +73,7 @@ def builtin(**over: Any) -> dict[str, Any]:
         "id": "doc-ocr",
         "version": "1.2.0",
         "name": "문서 인식",
-        "publisher": "Chaeksas",
+        "publisher": "BPM",
         "tier": "builtin",
         "api": ">=2,<3",
         "contributes": {
@@ -440,7 +440,7 @@ def test_opening_a_definition_file_shows_the_result(tmp_path: Path, monkeypatch:
     path.write_text(json.dumps(external()), encoding="utf-8")
     window = dialog(host_with(builtin()))
     monkeypatch.setattr(
-        "chaeksas.studio.extension_dialog.QFileDialog.getOpenFileName",
+        "bpm.studio.extension_dialog.QFileDialog.getOpenFileName",
         staticmethod(lambda *a, **k: (str(path), "")),
     )
     window.open_definition()
@@ -455,7 +455,7 @@ def test_cancelling_the_file_dialog_changes_nothing(monkeypatch: pytest.MonkeyPa
     window = dialog(host_with(builtin()))
     before = window.detail.toPlainText()
     monkeypatch.setattr(
-        "chaeksas.studio.extension_dialog.QFileDialog.getOpenFileName",
+        "bpm.studio.extension_dialog.QFileDialog.getOpenFileName",
         staticmethod(lambda *a, **k: ("", "")),
     )
     window.open_definition()
@@ -545,7 +545,7 @@ def test_external_rows_cannot_be_toggled_here() -> None:
 
 def test_each_state_gets_its_own_colour() -> None:
     """「꺼짐」에 「호환 안 됨」의 색을 쓰면 꺼 둔 것이 고장처럼 보인다 (스타일 가이드 §2-2)."""
-    from chaeksas.qt.theme import status_color  # noqa: PLC0415
+    from bpm.qt.theme import status_color  # noqa: PLC0415
 
     off = dialog(host_with(builtin(), off=("doc-ocr",)))
     broken = dialog(host_with(builtin(api=">=1,<2"), api_version="2.0.0"))

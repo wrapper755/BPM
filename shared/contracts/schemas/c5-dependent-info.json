@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c5-dependent-info",
+  "$id": "urn:bpm:contracts:c5-dependent-info",
   "additionalProperties": true,
   "description": "`GET /packages/{id}/{version}/dependents`의 한 줄 — 이 패키지를 쓰는 패키지 하나.\n\n**읽을 때 센다** (참조 그래프를 저장하지 않는다 — `missing_resources`와 같은 결).",
   "properties": {

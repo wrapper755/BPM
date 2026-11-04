@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     ExtensionResource,
     Manifest,
     Operation,
@@ -20,7 +20,7 @@ from chaeksas.contracts import (
     blocking_at_deploy,
     missing,
 )
-from chaeksas.contracts._semver import InvalidVersion, compare, satisfies
+from bpm.contracts._semver import InvalidVersion, compare, satisfies
 
 NOW = "2026-10-01T10:00:00+09:00"
 HASH = "sha256:" + "ab" * 32

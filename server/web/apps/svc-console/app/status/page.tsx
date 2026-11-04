@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@chaeksas/ui";
-import type { OperationStatus } from "@chaeksas/api-types/c11-admin-status";
-import type { Dependency } from "@chaeksas/api-types/c11-admin-status";
+import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { OperationStatus } from "@bpm/api-types/c11-admin-status";
+import type { Dependency } from "@bpm/api-types/c11-admin-status";
 import { APP_URL, load } from "@/lib/page";
 import { Shell } from "@/components/Shell";
 

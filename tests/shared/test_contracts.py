@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     Built,
     HeartbeatRequest,
     HumanNeeds,
@@ -26,7 +26,7 @@ from chaeksas.contracts import (
     missing_keys,
     validate,
 )
-from chaeksas.contracts.manifest import KNOWN_BUILT_BY, KNOWN_SETTINGS, KNOWN_TRIGGER_KINDS
+from bpm.contracts.manifest import KNOWN_BUILT_BY, KNOWN_SETTINGS, KNOWN_TRIGGER_KINDS
 
 HASH = "sha256:" + "ab" * 32
 TS = "2026-10-01T10:00:00+09:00"
@@ -288,7 +288,7 @@ def test_r6_with_real_package_hash(tmp_path: Any) -> None:
     import json
     from pathlib import Path
 
-    from chaeksas.contracts import content_hash_dir
+    from bpm.contracts import content_hash_dir
 
     root = Path(tmp_path) / "pkg"
     (root / "process").mkdir(parents=True)

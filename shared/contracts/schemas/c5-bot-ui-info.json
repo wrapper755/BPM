@@ -395,7 +395,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c5-bot-ui-info",
+  "$id": "urn:bpm:contracts:c5-bot-ui-info",
   "additionalProperties": true,
   "description": "`GET /bot-uis`의 한 줄 (CON-03).\n\n상태 값은 **PC 실행기가 하트비트로 보고한 그대로**다 (C4). Center가 더하는 것은 온라인\n판정(`online`)과 키 정보(`key`)뿐이다.",
   "properties": {

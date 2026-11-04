@@ -110,7 +110,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c14-case-file",
+  "$id": "urn:bpm:contracts:c14-case-file",
   "additionalProperties": true,
   "description": "케이스 파일 (`cases/*.json`).",
   "properties": {

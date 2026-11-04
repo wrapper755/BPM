@@ -45,7 +45,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c5-enrollment-info",
+  "$id": "urn:bpm:contracts:c5-enrollment-info",
   "additionalProperties": true,
   "description": "`GET /enrollments`의 한 줄 (C5 §등록 승인, CON-03·CON-12 「승인 대기」).",
   "properties": {

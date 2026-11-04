@@ -9,7 +9,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from chaeksas.center.storage import Store
+from bpm.center.storage import Store
 
 
 def test_many_threads_can_read_and_write_one_store(tmp_path: Path) -> None:

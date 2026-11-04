@@ -41,22 +41,22 @@ from stub_model import StubModel
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.center.app import create_app  # noqa: E402
-from chaeksas.center.settings import Settings as CenterSettings  # noqa: E402
-from chaeksas.center.storage import Store  # noqa: E402
-from chaeksas.contracts.bpmn_ext import Case  # noqa: E402
-from chaeksas.core.app_directory import AppDirectory  # noqa: E402
-from chaeksas.core.services import CenterServiceCaller  # noqa: E402
-from chaeksas.mock_apps import catalog  # noqa: E402
-from chaeksas.mock_apps.c11 import build as build_mock
-from chaeksas.mock_apps.external import apps as external_apps  # noqa: E402
-from chaeksas.mock_apps.external import definitions as external_defs  # noqa: E402
-from chaeksas.studio.receiver import Receiver  # noqa: E402
-from chaeksas.studio.run_dialog import AUTONOMOUS  # noqa: E402
-from chaeksas.studio.runner import NO_EXPECT, PASS, CaseRun, Outcome, Plan, read_cases  # noqa: E402
-from chaeksas.studio.services import CenterReader, Services  # noqa: E402
-from chaeksas.studio.settings import Settings  # noqa: E402
-from chaeksas.studio.workspace import BpmProcess, Workspace  # noqa: E402
+from bpm.center.app import create_app  # noqa: E402
+from bpm.center.settings import Settings as CenterSettings  # noqa: E402
+from bpm.center.storage import Store  # noqa: E402
+from bpm.contracts.bpmn_ext import Case  # noqa: E402
+from bpm.core.app_directory import AppDirectory  # noqa: E402
+from bpm.core.services import CenterServiceCaller  # noqa: E402
+from bpm.mock_apps import catalog  # noqa: E402
+from bpm.mock_apps.c11 import build as build_mock
+from bpm.mock_apps.external import apps as external_apps  # noqa: E402
+from bpm.mock_apps.external import definitions as external_defs  # noqa: E402
+from bpm.studio.receiver import Receiver  # noqa: E402
+from bpm.studio.run_dialog import AUTONOMOUS  # noqa: E402
+from bpm.studio.runner import NO_EXPECT, PASS, CaseRun, Outcome, Plan, read_cases  # noqa: E402
+from bpm.studio.services import CenterReader, Services  # noqa: E402
+from bpm.studio.settings import Settings  # noqa: E402
+from bpm.studio.workspace import BpmProcess, Workspace  # noqa: E402
 
 DOCS = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples"
 EXAMPLES = DOCS / "bpmn"
@@ -252,7 +252,7 @@ def test_bx16_delegates_to_the_pc_bot_that_declares_the_outputs() -> None:
 
     여기서 보는 것은 **글자로만 가리키는 자리**다 — 패키지 id는 틀려도 실행할 때까지 숨는다.
     """
-    from chaeksas.contracts.bpmn_ext import read_process  # noqa: PLC0415
+    from bpm.contracts.bpmn_ext import read_process  # noqa: PLC0415
 
     caller = read_process((EXAMPLES / "bx16_reorder_proposal.bpmn").read_text(encoding="utf-8"))
     node = next(one for one in caller.nodes if one.id == "Call_Print")

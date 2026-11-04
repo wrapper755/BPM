@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c5-account-create-request",
+  "$id": "urn:bpm:contracts:c5-account-create-request",
   "additionalProperties": true,
   "description": "`POST /accounts` — 관리자만.",
   "properties": {

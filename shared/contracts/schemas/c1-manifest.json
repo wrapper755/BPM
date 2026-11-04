@@ -505,7 +505,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c1-manifest",
+  "$id": "urn:bpm:contracts:c1-manifest",
   "additionalProperties": true,
   "description": "패키지 매니페스트 (C1 최상위).\n\n`kind=\"bpm_process\"`이고 `run_location`이 없으면 **`server`로 채운다** (서버 우선, 호환 규칙).",
   "properties": {

@@ -34,18 +34,18 @@ import center_admin
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store as CenterStore
-from chaeksas.center.storage import now_iso
-from chaeksas.contracts.hashing import MANIFEST_NAME, content_hash_zip
-from chaeksas.contracts.server_runner import MessageDispatch
-from chaeksas.core import seen as seen_mod
-from chaeksas.core.run_log import RunLog, log_path
-from chaeksas.server_runner import agent as agent_mod
-from chaeksas.server_runner.center_client import Unreachable
-from chaeksas.server_runner.settings import Settings
-from chaeksas.server_runner.store import Store
+from bpm.center.app import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store as CenterStore
+from bpm.center.storage import now_iso
+from bpm.contracts.hashing import MANIFEST_NAME, content_hash_zip
+from bpm.contracts.server_runner import MessageDispatch
+from bpm.core import seen as seen_mod
+from bpm.core.run_log import RunLog, log_path
+from bpm.server_runner import agent as agent_mod
+from bpm.server_runner.center_client import Unreachable
+from bpm.server_runner.settings import Settings
+from bpm.server_runner.store import Store
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 AT = "2026-10-13T09:00:00+09:00"
@@ -720,7 +720,7 @@ def test_a_message_waits_while_the_run_is_still_being_pushed(
     make_job(center)
     run_id = until_waiting_for_message(runner)
 
-    from chaeksas.server_runner.worker import Worker  # noqa: PLC0415
+    from bpm.server_runner.worker import Worker  # noqa: PLC0415
 
     monkeypatch.setattr(Worker, "alive", property(lambda self: True))
     put_message(center, name="bid_quote", correlation=BID, payload=quote("가나상사"))

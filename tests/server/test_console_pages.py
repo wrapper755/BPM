@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from chaeksas.contracts.service_app import AdminStatus
-from chaeksas.core.extensions import load_host
+from bpm.contracts.service_app import AdminStatus
+from bpm.core.extensions import load_host
 
 ROOT = Path(__file__).resolve().parents[2]
 CONSOLE = ROOT / "server" / "web" / "apps" / "svc-console"

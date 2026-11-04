@@ -18,8 +18,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.contracts.external_task import LockedTask
-from chaeksas.contracts.service_app import (
+from bpm.contracts.external_task import LockedTask
+from bpm.contracts.service_app import (
     CenterRegistration,
     Dependency,
     ExtensionRef,
@@ -27,7 +27,7 @@ from chaeksas.contracts.service_app import (
     ServiceAppManifest,
     UsageRecord,
 )
-from chaeksas.service_kit import InMemoryUsageLog, create_app
+from bpm.service_kit import InMemoryUsageLog, create_app
 
 ADMIN = {"Authorization": "Bearer t-svc-admin"}
 

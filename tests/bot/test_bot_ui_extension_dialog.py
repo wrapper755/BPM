@@ -30,8 +30,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QMessageBox, QTableWidgetItem  # noqa: E402
 
-from chaeksas.bot_ui.agent import Agent  # noqa: E402
-from chaeksas.bot_ui.extension_dialog import (  # noqa: E402
+from bpm.bot_ui.agent import Agent  # noqa: E402
+from bpm.bot_ui.extension_dialog import (  # noqa: E402
     EXTERNAL_SUMMARY,
     NAME,
     NO_TOGGLE_ABSENT,
@@ -49,21 +49,21 @@ from chaeksas.bot_ui.extension_dialog import (  # noqa: E402
     ExtensionsDialog,
     state_of,
 )
-from chaeksas.bot_ui.main_window import EXTENSION_OFF, NO_EXTENSION, readiness_label  # noqa: E402
-from chaeksas.bot_ui.settings import Settings, data_dir  # noqa: E402
-from chaeksas.bot_ui.store import Store  # noqa: E402
-from chaeksas.contracts import AdminKey, definition_hash, key_id_for, sign  # noqa: E402
-from chaeksas.contracts.manifest import (  # noqa: E402
+from bpm.bot_ui.main_window import EXTENSION_OFF, NO_EXTENSION, readiness_label  # noqa: E402
+from bpm.bot_ui.settings import Settings, data_dir  # noqa: E402
+from bpm.bot_ui.store import Store  # noqa: E402
+from bpm.contracts import AdminKey, definition_hash, key_id_for, sign  # noqa: E402
+from bpm.contracts.manifest import (  # noqa: E402
     ExtensionNeed,
     Manifest,
     Requires,
     TaskTypeNeed,
 )
-from chaeksas.contracts.resources import ExtensionResource  # noqa: E402
-from chaeksas.core.app_directory import CACHE_NAME  # noqa: E402
-from chaeksas.core.extensions import ExtensionHost  # noqa: E402
-from chaeksas.core.preflight import EXTENSION_TURNED_OFF  # noqa: E402
-from chaeksas.qt.theme import tokens  # noqa: E402
+from bpm.contracts.resources import ExtensionResource  # noqa: E402
+from bpm.core.app_directory import CACHE_NAME  # noqa: E402
+from bpm.core.extensions import ExtensionHost  # noqa: E402
+from bpm.core.preflight import EXTENSION_TURNED_OFF  # noqa: E402
+from bpm.qt.theme import tokens  # noqa: E402
 
 NOW = "2026-10-10T09:00:00+09:00"
 
@@ -78,7 +78,7 @@ def builtin(**over: Any) -> dict[str, Any]:
         "id": "doc-ocr",
         "version": "1.2.0",
         "name": "문서 인식",
-        "publisher": "Chaeksas",
+        "publisher": "BPM",
         "tier": "builtin",
         "api": ">=2,<3",
         "service": {"protocol": "bpm-c11", "base_url": "http://svc-ocr:8000"},
@@ -347,7 +347,7 @@ def test_the_detail_says_the_server_part_and_who_watches_it(tmp_path: Path) -> N
 
 
 def _row(definition: dict[str, Any], *, off: tuple[str, ...] = ()) -> Any:
-    from chaeksas.bot_ui.extension_dialog import ExtensionRow
+    from bpm.bot_ui.extension_dialog import ExtensionRow
 
     host = host_with(definition, off=off)
     return ExtensionRow(loaded=host.all()[0])
@@ -565,8 +565,8 @@ def test_the_tools_menu_opens_this_window(tmp_path: Path) -> None:
     """BUI-01·BUI-02 「도구」 → 「확장...」. **붙기 전까지 꺼져 있던 항목이다.**"""
     from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
-    from chaeksas.bot_ui.main_window import MainWindow
-    from chaeksas.bot_ui.tray import Tray
+    from bpm.bot_ui.main_window import MainWindow
+    from bpm.bot_ui.tray import Tray
 
     agent = make_agent(host_with(builtin()), tmp_path=tmp_path)
     window = MainWindow(agent)
@@ -599,7 +599,7 @@ def test_the_ready_column_says_turned_off_not_missing() -> None:
 
     「사전 점검 실행 불가」로 떨어지면 더 나쁘다 — 점검은 잘 돌았고 답이 「꺼져 있다」다.
     """
-    from chaeksas.core.preflight import check as run_preflight
+    from bpm.core.preflight import check as run_preflight
 
     m = install_bot(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr", run_locations=["pc"])])
 

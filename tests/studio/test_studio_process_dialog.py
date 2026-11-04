@@ -23,17 +23,17 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.bpmn_ext import read_process, server_blockers  # noqa: E402
-from chaeksas.contracts.bpmn_ext import validate as validate_bpmn  # noqa: E402
-from chaeksas.studio import process_dialog as module  # noqa: E402
-from chaeksas.studio.packaging import build_manifest  # noqa: E402
-from chaeksas.studio.process_dialog import (  # noqa: E402
+from bpm.contracts.bpmn_ext import read_process, server_blockers  # noqa: E402
+from bpm.contracts.bpmn_ext import validate as validate_bpmn  # noqa: E402
+from bpm.studio import process_dialog as module  # noqa: E402
+from bpm.studio.packaging import build_manifest  # noqa: E402
+from bpm.studio.process_dialog import (  # noqa: E402
     ProcessInfoDialog,
     check,
     learning,
     server_warning,
 )
-from chaeksas.studio.workspace import BpmProcess, Workspace, read_record  # noqa: E402
+from bpm.studio.workspace import BpmProcess, Workspace, read_record  # noqa: E402
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
 

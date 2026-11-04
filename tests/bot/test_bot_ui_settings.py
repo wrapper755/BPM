@@ -16,13 +16,13 @@ from typing import Any
 
 import pytest
 
-from chaeksas.bot_ui import autostart as autostart_module
-from chaeksas.bot_ui.credentials import ENV_CENTER_API_KEY, Credentials, SecretsUnavailable
-from chaeksas.bot_ui.settings import (
+from bpm.bot_ui import autostart as autostart_module
+from bpm.bot_ui.credentials import ENV_CENTER_API_KEY, Credentials, SecretsUnavailable
+from bpm.bot_ui.settings import (
     DEFAULT_QUEUE_MAX,
     Settings,
 )
-from chaeksas.core import machine
+from bpm.core import machine
 
 # ─────────────────────────── 설정 ───────────────────────────
 
@@ -147,9 +147,9 @@ def test_saving_without_a_store_fails_loudly(monkeypatch: Any) -> None:
 
 
 def test_the_launch_command_can_start_the_app() -> None:
-    """등록할 명령은 `python -m chaeksas.bot_ui`다 (묶으면 실행 파일 하나)."""
+    """등록할 명령은 `python -m bpm.bot_ui`다 (묶으면 실행 파일 하나)."""
     command = autostart_module.launch_command()
-    assert command[1:] == ["-m", "chaeksas.bot_ui"]
+    assert command[1:] == ["-m", "bpm.bot_ui"]
     if sys.platform == "win32":
         # 콘솔 창 없이 뜨게 `pythonw.exe` (이슈 #3) — 같은 가상환경의 것이다.
         assert command[0] == str(Path(sys.executable).with_name("pythonw.exe"))
@@ -167,7 +167,7 @@ def task_xml(command: list[str], user: str = "PC-03\\홍길동") -> Any:
 
 def test_windows_task_scheduler_arguments() -> None:
     """실제 등록은 Windows에서만 — 여기서는 **무엇을 부르려 하는가**를 본다 (ADR-0023)."""
-    found = autostart_module.WindowsTaskScheduler(command=["C:\\Program Files\\Chaeksas\\bot-ui.exe"])
+    found = autostart_module.WindowsTaskScheduler(command=["C:\\Program Files\\BPM\\bot-ui.exe"])
     args = found.create_args(Path("task.xml"))
     assert args == ["/Create", "/TN", autostart_module.TASK_NAME, "/XML", "task.xml", "/F"]
     # `/SC ONLOGON`은 「모든 사용자의 로그온」이라 관리자가 아니면 거부된다 (이슈 #3).
@@ -176,7 +176,7 @@ def test_windows_task_scheduler_arguments() -> None:
 
 def test_the_task_starts_at_this_users_logon_without_elevation() -> None:
     """일반 권한으로 등록되려면 트리거와 실행 사용자가 **이 사용자**여야 한다 (이슈 #3)."""
-    root = task_xml(["C:\\Program Files\\Chaeksas\\bot-ui.exe"])
+    root = task_xml(["C:\\Program Files\\BPM\\bot-ui.exe"])
     assert root.findtext("t:Triggers/t:LogonTrigger/t:UserId", namespaces=TASK_NS) == "PC-03\\홍길동"
     principal = root.find("t:Principals/t:Principal", TASK_NS)
     assert principal is not None
@@ -197,13 +197,13 @@ def test_the_task_is_not_stopped_by_time_or_battery() -> None:
 
 
 def test_windows_arguments_quote_a_command_with_spaces() -> None:
-    root = task_xml(["C:\\Program Files\\Py & Co\\python.exe", "-m", "chaeksas.bot_ui"])
+    root = task_xml(["C:\\Program Files\\Py & Co\\python.exe", "-m", "bpm.bot_ui"])
     assert root.findtext("t:Actions/t:Exec/t:Command", namespaces=TASK_NS) == "C:\\Program Files\\Py & Co\\python.exe"
-    assert root.findtext("t:Actions/t:Exec/t:Arguments", namespaces=TASK_NS) == "-m chaeksas.bot_ui"
+    assert root.findtext("t:Actions/t:Exec/t:Arguments", namespaces=TASK_NS) == "-m bpm.bot_ui"
 
 
 def test_an_installed_exe_has_no_arguments_element() -> None:
-    root = task_xml(["C:\\Program Files\\Chaeksas\\bot-ui.exe"])
+    root = task_xml(["C:\\Program Files\\BPM\\bot-ui.exe"])
     assert root.find("t:Actions/t:Exec/t:Arguments", TASK_NS) is None
 
 
@@ -217,7 +217,7 @@ def test_windows_autostart_really_registers() -> None:  # pragma: no cover - 실
     기본으로 돌리지 않는다 — CI 러너는 작업 등록이 막혀 있을 수 있고(실제로 막혔다), 시험이
     그 PC의 설정을 바꾸게 두어서도 안 된다. Windows PC에서 확인할 때 `BPM_TEST_AUTOSTART=1`로 켠다.
     """
-    found = autostart_module.WindowsTaskScheduler(task_name="Chaeksas PC 실행기 시험")
+    found = autostart_module.WindowsTaskScheduler(task_name="BPM PC 실행기 시험")
     try:
         found.enable()
         assert found.enabled()
@@ -276,7 +276,7 @@ def test_the_model_key_goes_to_the_secret_store_and_an_env_var_wins(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """읽기는 환경변수가 먼저다 (개발·CI). 실행 프로세스에는 환경변수로 건넨다."""
-    from chaeksas.bot_ui.credentials import ENV_LLM_API_KEY, Credentials
+    from bpm.bot_ui.credentials import ENV_LLM_API_KEY, Credentials
 
     monkeypatch.setenv(ENV_LLM_API_KEY, "sk-from-env")
     assert Credentials().llm_api_key() == "sk-from-env"

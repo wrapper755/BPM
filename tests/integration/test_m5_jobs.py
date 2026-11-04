@@ -28,15 +28,15 @@ from center_admin import AdminCenter as Center
 from center_admin import CenterProblem
 from fastapi.testclient import TestClient
 
-from chaeksas.bot_ui.agent import Agent
-from chaeksas.bot_ui.center_client import CenterClient
-from chaeksas.bot_ui.settings import Settings as BotSettings
-from chaeksas.bot_ui.store import Store as BotStore
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.bot_ui import HeartbeatResponse
-from chaeksas.contracts.hashing import content_hash_zip
+from bpm.bot_ui.agent import Agent
+from bpm.bot_ui.center_client import CenterClient
+from bpm.bot_ui.settings import Settings as BotSettings
+from bpm.bot_ui.store import Store as BotStore
+from bpm.center.app import create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
+from bpm.contracts.bot_ui import HeartbeatResponse
+from bpm.contracts.hashing import content_hash_zip
 
 TOKEN = "t-admin"
 READ = "t-read"

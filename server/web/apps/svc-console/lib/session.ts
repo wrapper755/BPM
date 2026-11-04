@@ -28,7 +28,7 @@ function key(): Buffer {
     // 비밀이 없으면 세션을 만들 수 없다 — 약한 기본값을 쓰지 않는다 (CLAUDE.md §5).
     throw new Error("BPM_SVC_CONSOLE__SESSION_SECRET이 없거나 너무 짧다 (16자 이상)");
   }
-  return scryptSync(secret, "chaeksas-svc-console", 32);
+  return scryptSync(secret, "bpm-svc-console", 32);
 }
 
 export function seal(session: Session): string {

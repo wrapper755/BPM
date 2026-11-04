@@ -13,8 +13,8 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.extension import ExtensionManifest
-from chaeksas.contracts.extension import validate as validate_extension
+from bpm.contracts.extension import ExtensionManifest
+from bpm.contracts.extension import validate as validate_extension
 
 APP = "ext-credit"
 

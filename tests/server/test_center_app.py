@@ -1,4 +1,4 @@
-"""Center 앱 (`chaeksas.center`) — 실제로 띄워 부르는 시험 (M2 완료 기준).
+"""Center 앱 (`bpm.center`) — 실제로 띄워 부르는 시험 (M2 완료 기준).
 
 계약 **모델·검사 함수**의 시험은 `test_center_api.py`에 있다. 이 파일은 그 계약을 지키는
 **앱**을 TestClient로 두드린다.
@@ -25,10 +25,10 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.hashing import canonical_json, content_hash_zip, sha256_hex
+from bpm.center import create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
+from bpm.contracts.hashing import canonical_json, content_hash_zip, sha256_hex
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 READ = {"Authorization": "Bearer t-read"}

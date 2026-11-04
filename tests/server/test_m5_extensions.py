@@ -23,12 +23,12 @@ import pytest
 from center_admin import register_extension, revoke_extension
 from fastapi.testclient import TestClient
 
-from chaeksas.center import signer as center_signer
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.extension import definition_hash, verify_external
-from chaeksas.contracts.signing import AdminKey
+from bpm.center import signer as center_signer
+from bpm.center.app import create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
+from bpm.contracts.extension import definition_hash, verify_external
+from bpm.contracts.signing import AdminKey
 
 TOKEN = "t-admin"
 READ = "t-read"
@@ -135,7 +135,7 @@ def test_a_signed_definition_registers(client: TestClient) -> None:
 
 def test_the_definition_and_envelope_are_kept_as_is(client: TestClient, store: Store) -> None:
     """실행하는 쪽이 **받아서 다시 검증한다** (C13 전송·E6) — Center 키로 서명한 봉투가 남는다."""
-    from chaeksas.contracts.signing import Envelope  # noqa: PLC0415
+    from bpm.contracts.signing import Envelope  # noqa: PLC0415
 
     found = definition()
     register(client, found)
@@ -267,7 +267,7 @@ def test_a_revoked_version_never_comes_back(client: TestClient) -> None:
 
 
 def test_revoking_something_unregistered_is_404(client: TestClient) -> None:
-    from chaeksas.center.errors import ApiError  # noqa: PLC0415
+    from bpm.center.errors import ApiError  # noqa: PLC0415
 
     with pytest.raises(ApiError) as caught:
         revoke_extension(client, "없는것", "1.0.0")

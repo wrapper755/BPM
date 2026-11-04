@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c2-claim-package",
+  "$id": "urn:bpm:contracts:c2-claim-package",
   "additionalProperties": true,
   "description": "`kind: \"package\"` — 패키지 승인.",
   "properties": {

@@ -34,16 +34,16 @@ import center_admin
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store as CenterStore
-from chaeksas.contracts.hashing import MANIFEST_NAME, content_hash_zip
-from chaeksas.contracts.server_runner import DelegationResult
-from chaeksas.core.run_log import RunLog, log_path
-from chaeksas.server_runner import agent as agent_mod
-from chaeksas.server_runner.center_client import Unreachable
-from chaeksas.server_runner.settings import Settings
-from chaeksas.server_runner.store import Store
+from bpm.center.app import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store as CenterStore
+from bpm.contracts.hashing import MANIFEST_NAME, content_hash_zip
+from bpm.contracts.server_runner import DelegationResult
+from bpm.core.run_log import RunLog, log_path
+from bpm.server_runner import agent as agent_mod
+from bpm.server_runner.center_client import Unreachable
+from bpm.server_runner.settings import Settings
+from bpm.server_runner.store import Store
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 AT = "2026-10-13T09:00:00+09:00"
@@ -642,8 +642,8 @@ def test_the_field_outputs_reach_the_server_variables(
     """
     from waiting import wait_for
 
-    from chaeksas.bot_ui.runner import Launcher
-    from chaeksas.core.packages import install
+    from bpm.bot_ui.runner import Launcher
+    from bpm.core.packages import install
 
     bot_ui_id = ready(center, runner)
     make_job(center)

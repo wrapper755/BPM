@@ -16,8 +16,8 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.bpmn_ext import Loop  # noqa: E402
-from chaeksas.studio.loop_editor import (  # noqa: E402
+from bpm.contracts.bpmn_ext import Loop  # noqa: E402
+from bpm.studio.loop_editor import (  # noqa: E402
     MODE_NONE,
     MODE_PARALLEL,
     MODE_SEQUENTIAL,
@@ -81,7 +81,7 @@ def test_a_plain_task_opens_without_a_loop() -> None:
 
 def test_every_example_loop_round_trips() -> None:
     """업무 예제의 반복이 **손대지 않으면 같은 뜻으로** 돌아온다 — 표시(차례로·함께)까지."""
-    from chaeksas.contracts.bpmn_ext import read_process  # noqa: PLC0415
+    from bpm.contracts.bpmn_ext import read_process  # noqa: PLC0415
 
     seen = set()
     for path in sorted(Path("docs/08-business-examples/bpmn").glob("*.bpmn")):
@@ -163,7 +163,7 @@ def test_turning_it_off_drops_the_body_and_ignores_the_fields() -> None:
 
 
 def panel_with(bpmn_type: str, chk: dict[str, Any], mode: str = "", *, run_location: str | None = None) -> Any:
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
     panel.run_location = run_location

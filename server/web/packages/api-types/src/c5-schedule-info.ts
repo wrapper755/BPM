@@ -1,6 +1,6 @@
 /* 생성 파일: 계약 스키마에서 만든다 (플랫폼 + 확장이 소유한 것). 직접 고치지 말고
    계약 모델을 고친 뒤 `uv run python scripts/gen_schemas.py`,
-   그다음 `pnpm --filter @chaeksas/api-types generate`. */
+   그다음 `pnpm --filter @bpm/api-types generate`. */
 
 /**
  * `GET /schedules`의 한 줄 — 타이머로 시작하는 배포 하나의 일정 (C5 §일정, CON-02 「일정」, ADR-0110).

@@ -95,7 +95,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c16-department-info",
+  "$id": "urn:bpm:contracts:c16-department-info",
   "additionalProperties": true,
   "properties": {
     "company": {

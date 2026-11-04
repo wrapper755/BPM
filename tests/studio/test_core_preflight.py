@@ -13,16 +13,16 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.manifest import (
+from bpm.contracts.manifest import (
     ExtensionNeed,
     Manifest,
     Requires,
     ServiceAppNeed,
     TaskTypeNeed,
 )
-from chaeksas.core import preflight
-from chaeksas.core.extensions import ExtensionHost
-from chaeksas.extension_api import SEVERITY_BLOCK, SEVERITY_WARN, Finding, PreflightTarget
+from bpm.core import preflight
+from bpm.core.extensions import ExtensionHost
+from bpm.extension_api import SEVERITY_BLOCK, SEVERITY_WARN, Finding, PreflightTarget
 
 #: 매니페스트의 나머지 필수 칸 — 점검은 이것들을 보지 않는다.
 BASE: dict[str, Any] = {
@@ -126,7 +126,7 @@ class FakeHost(ExtensionHost):
         self._checks = checks
 
     def preflight_checks(self) -> Any:
-        from chaeksas.core.extensions import Contribution  # noqa: PLC0415
+        from bpm.core.extensions import Contribution  # noqa: PLC0415
 
         return [
             Contribution(extension_id=f"ext-{at}", extension_version="1.0.0", value=one)
@@ -188,9 +188,9 @@ def test_a_real_example_is_not_blocked(example: str, tmp_path: Path) -> None:
     서비스 앱 키는 없어졌고(ADR-0102) 코드 없는 확장이 깔려 있지 않다고 막지 않는다. 이것이 깨지면
     거짓 차단이 생긴 것이다 — 올바른 BPM 프로세스가 「실행 불가」가 된다.
     """
-    from chaeksas.core.extensions import load_host  # noqa: PLC0415
-    from chaeksas.studio.packaging import export  # noqa: PLC0415
-    from chaeksas.studio.workspace import Workspace  # noqa: PLC0415
+    from bpm.core.extensions import load_host  # noqa: PLC0415
+    from bpm.studio.packaging import export  # noqa: PLC0415
+    from bpm.studio.workspace import Workspace  # noqa: PLC0415
 
     made = Workspace(tmp_path / "studio").ensure().import_example(EXAMPLES, example)
     package = export(made, tmp_path / "bot.zip")
@@ -217,7 +217,7 @@ OCR = {
     "id": "doc-ocr",
     "version": "1.0.0",
     "name": "문서 인식",
-    "publisher": "Chaeksas",
+    "publisher": "BPM",
     "tier": "builtin",
     "api": ">=2,<3",
     "contributes": {

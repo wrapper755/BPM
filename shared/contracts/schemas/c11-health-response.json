@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c11-health-response",
+  "$id": "urn:bpm:contracts:c11-health-response",
   "additionalProperties": true,
   "description": "`GET /healthz` — 인증 없음.",
   "properties": {

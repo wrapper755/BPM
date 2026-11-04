@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c5-deployment-info",
+  "$id": "urn:bpm:contracts:c5-deployment-info",
   "additionalProperties": true,
   "description": "`GET /deployments`의 한 줄. 봉투 자체가 아니라 Center가 정리한 모양이다.\n\n실행하는 쪽에 내려갈 때는 **저장된 봉투 그대로** 간다 (C4 `deployments[]`).",
   "properties": {

@@ -6,7 +6,7 @@
 (작업 **29개**), 그 앱이 하나도 없으면 M5 인수 시험을 돌릴 수 없다. 여기에 거짓 데이터로
 답하는 앱을 둔다.
 
-멤버는 하나다 — `samples/mock_apps` (import 이름 `chaeksas.mock_apps`). 앱 열다섯 개를
+멤버는 하나다 — `samples/mock_apps` (import 이름 `bpm.mock_apps`). 앱 열다섯 개를
 `pyproject.toml` 열다섯 개로 쪼개지 않는다.
 
 **아무 멤버도 `samples/`를 의존하지 않는다** (`tests/integration/test_import_direction.py`가 막는다).
@@ -141,7 +141,7 @@ PC 위임(`bpm:call.delegate`)으로 그 공백을 닫아 BX-16이 더 이상 �
 ## 파일
 
 ```
-samples/mock_apps/src/chaeksas/mock_apps/
+samples/mock_apps/src/bpm/mock_apps/
 ├─ c11.py          # MockApp·Op → service_kit 앱 하나 (+ /mock/v1/scenario)
 ├─ catalog.py      # 무엇이 있나, 기본 포트
 ├─ cli.py          # bpm-mock-apps

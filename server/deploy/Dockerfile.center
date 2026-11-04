@@ -31,12 +31,12 @@ COPY bot/app/pyproject.toml bot/app/
 COPY server/server_runner/pyproject.toml server/server_runner/
 
 # Center가 쓰는 것만 설치한다 (Qt·PySide6는 서버에 필요 없다).
-RUN uv sync --frozen --no-install-workspace --package chaeksas-center
+RUN uv sync --frozen --no-install-workspace --package bpm-center
 
 COPY shared/ shared/
 COPY server/service_kit/ server/service_kit/
 COPY server/center/ server/center/
-RUN uv sync --frozen --package chaeksas-center
+RUN uv sync --frozen --package bpm-center
 
 # 데이터는 볼륨에 둔다 (DB·패키지 파일).
 ENV BPM_CENTER__DATA_DIR=/data
@@ -44,10 +44,10 @@ VOLUME ["/data"]
 EXPOSE 8800
 
 # 컨테이너 안에서는 비관리자로 돈다.
-RUN useradd --create-home --uid 10001 chaeksas && mkdir -p /data && chown -R chaeksas /data /app
-USER chaeksas
+RUN useradd --create-home --uid 10001 bpm && mkdir -p /data && chown -R bpm /data /app
+USER bpm
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
   CMD python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8800/healthz')"
 
-CMD ["uv", "run", "--frozen", "--package", "chaeksas-center", "bpm-center"]
+CMD ["uv", "run", "--frozen", "--package", "bpm-center", "bpm-center"]

@@ -12,20 +12,20 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 MEMBERS = {
-    "shared/contracts": "chaeksas.contracts",
-    "shared/extension_api": "chaeksas.extension_api",
-    "shared/core": "chaeksas.core",
-    "shared/llm": "chaeksas.llm",
-    "shared/qt": "chaeksas.qt",
-    "server/service_kit": "chaeksas.service_kit",
-    "studio/app": "chaeksas.studio",
-    "bot/app": "chaeksas.bot_ui",
-    "server/server_runner": "chaeksas.server_runner",
+    "shared/contracts": "bpm.contracts",
+    "shared/extension_api": "bpm.extension_api",
+    "shared/core": "bpm.core",
+    "shared/llm": "bpm.llm",
+    "shared/qt": "bpm.qt",
+    "server/service_kit": "bpm.service_kit",
+    "studio/app": "bpm.studio",
+    "bot/app": "bpm.bot_ui",
+    "server/server_runner": "bpm.server_runner",
     # 외부 앱을 부르는 범용 일꾼 (C13 §4·C15, ADR-0102).
-    "server/adapter_consumer": "chaeksas.adapter_consumer",
-    "server/center": "chaeksas.center",
+    "server/adapter_consumer": "bpm.adapter_consumer",
+    "server/center": "bpm.center",
     # 제품이 아니다 — 업무 예제가 부르는 모의 앱 (01-architecture §8).
-    "samples/mock_apps": "chaeksas.mock_apps",
+    "samples/mock_apps": "bpm.mock_apps",
 }
 
 #: 멤버를 찾는 자리. `pyproject.toml`의 `[tool.uv.workspace].members`와 같아야 한다.
@@ -69,13 +69,13 @@ def test_member_is_importable(module: str) -> None:
     assert importlib.import_module(module).__name__ == module
 
 
-def test_chaeksas_is_namespace_package() -> None:
-    """chaeksas는 PEP 420 네임스페이스 — __init__.py를 두면 멤버 하나만 보인다."""
-    import chaeksas
+def test_bpm_is_namespace_package() -> None:
+    """bpm는 PEP 420 네임스페이스 — __init__.py를 두면 멤버 하나만 보인다."""
+    import bpm
 
-    assert chaeksas.__file__ is None, "chaeksas/__init__.py가 생겼다 — 지워야 한다"
-    # 멤버마다 src/chaeksas를 하나씩 더한다.
-    assert len(chaeksas.__path__) == len(MEMBERS)
+    assert bpm.__file__ is None, "bpm/__init__.py가 생겼다 — 지워야 한다"
+    # 멤버마다 src/bpm를 하나씩 더한다.
+    assert len(bpm.__path__) == len(MEMBERS)
 
 
 @pytest.mark.parametrize("rel", sorted(MEMBERS))

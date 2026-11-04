@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button, ErrorBanner, Field } from "@chaeksas/ui";
+import { Button, ErrorBanner, Field } from "@bpm/ui";
 import { login, type ActionResult } from "@/app/actions";
 
 /** 아이디·비밀번호 두 칸과 「로그인」 하나 (CON-00). 역할은 계정이 정한다. */

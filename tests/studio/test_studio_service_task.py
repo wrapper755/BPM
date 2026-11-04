@@ -21,9 +21,9 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.extension import ExtensionManifest  # noqa: E402
-from chaeksas.contracts.resources import ExtensionResource, ServiceAppResource  # noqa: E402
-from chaeksas.studio.service_catalog import (  # noqa: E402
+from bpm.contracts.extension import ExtensionManifest  # noqa: E402
+from bpm.contracts.resources import ExtensionResource, ServiceAppResource  # noqa: E402
+from bpm.studio.service_catalog import (  # noqa: E402
     KIND_C11,
     KIND_EXTERNAL,
     Catalog,
@@ -191,7 +191,7 @@ def test_an_empty_catalog_is_falsy() -> None:
 
 
 def test_unreachable_center_keeps_the_problems() -> None:
-    from chaeksas.studio.service_catalog import from_center  # noqa: PLC0415
+    from bpm.studio.service_catalog import from_center  # noqa: PLC0415
 
     found = from_center(None)
     assert not found
@@ -244,7 +244,7 @@ def test_a_missing_required_input_is_named(catalog: Catalog) -> None:
 
 
 def editor(app: Any, catalog: Catalog, call: dict[str, Any] | None = None) -> Any:
-    from chaeksas.studio.service_editor import ServiceTaskEditor  # noqa: PLC0415
+    from bpm.studio.service_editor import ServiceTaskEditor  # noqa: PLC0415
 
     made = ServiceTaskEditor(catalog)
     made.load(dict(call) if call is not None else {})
@@ -291,7 +291,7 @@ def test_there_is_no_key_choice_and_a_written_reference_is_kept(app: Any, catalo
 
 
 def test_the_tables_show_three_rows_from_the_start(app: Any, catalog: Catalog) -> None:
-    from chaeksas.studio.service_editor import VISIBLE_ROWS  # noqa: PLC0415
+    from bpm.studio.service_editor import VISIBLE_ROWS  # noqa: PLC0415
 
     made = editor(app, catalog, CALL)
     for table in (made.inputs, made.outputs):
@@ -366,7 +366,7 @@ def test_an_empty_catalog_says_so_instead_of_an_empty_combo(app: Any) -> None:
 def test_an_app_not_in_the_list_is_shown_as_written_not_swapped(app: Any, catalog: Catalog) -> None:
     """그림이 부르는 앱이 목록에 없으면 **첫 줄을 고른 척하지 않는다** — 이 탭과 「JSON」 탭이
     다른 것을 말하면 사람이 무엇이 맞는지 모른다 (STU-14)."""
-    from chaeksas.studio.service_editor import NOT_LISTED  # noqa: PLC0415
+    from bpm.studio.service_editor import NOT_LISTED  # noqa: PLC0415
 
     call = {"app_id": "nowview.sc01", "operation": "validate_source", "input": {"a": "b"}}
     made = editor(app, catalog, call)
@@ -403,8 +403,8 @@ def test_the_properties_panel_attaches_the_editor_for_a_service_call(app: Any, c
     """STU-04가 `bpm:serviceCall`을 만나면 STU-14 편집기를 탭으로 끼운다."""
     import json  # noqa: PLC0415
 
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
-    from chaeksas.studio.service_editor import TAB_LABEL  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.service_editor import TAB_LABEL  # noqa: PLC0415
 
     panel = Properties()
     panel.catalog = catalog
@@ -432,7 +432,7 @@ def test_the_properties_panel_attaches_the_editor_for_a_service_call(app: Any, c
 def test_the_panel_blocks_apply_when_the_editor_blocks(app: Any, catalog: Catalog) -> None:
     import json  # noqa: PLC0415
 
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
     panel.catalog = catalog
@@ -453,7 +453,7 @@ def test_the_panel_blocks_apply_when_the_editor_blocks(app: Any, catalog: Catalo
 def package(bot: str, *, version: str = "1.0.0", outputs: list[str] | None = None,
             manifest: bool = True) -> Any:
     """C5 패키지 한 줄 — `manifest=False`면 **매니페스트가 없는 줄**이다 (옛 업로드)."""
-    from chaeksas.contracts.center_api import PackageInfo
+    from bpm.contracts.center_api import PackageInfo
 
     body: dict[str, Any] = {
         "id": bot,
@@ -486,7 +486,7 @@ def package(bot: str, *, version: str = "1.0.0", outputs: list[str] | None = Non
 
 def test_the_declared_outputs_come_from_the_manifest() -> None:
     """**그 BPM 프로세스가 선언한 `outputs`**가 곧 「부르는 쪽이 받을 것」이다 (C1)."""
-    from chaeksas.studio.service_catalog import declared_outputs
+    from bpm.studio.service_catalog import declared_outputs
 
     found = declared_outputs([package("fin.erp-input", outputs=["결과코드"])])
     assert found == {"fin.erp-input": ("결과코드",)}
@@ -498,7 +498,7 @@ def test_versions_are_merged_so_a_good_graph_is_not_blocked() -> None:
     그림이 판을 적지 않으면 「배포된 판」이라는 뜻이고(C14) 어느 판이 배포될지는 Studio가
     알 수 없다. 그래서 **어느 판도 선언하지 않은 이름**만 걸린다.
     """
-    from chaeksas.studio.service_catalog import declared_outputs
+    from bpm.studio.service_catalog import declared_outputs
 
     found = declared_outputs(
         [
@@ -511,7 +511,7 @@ def test_versions_are_merged_so_a_good_graph_is_not_blocked() -> None:
 
 def test_a_row_without_a_manifest_is_not_counted_as_declaring_nothing() -> None:
     """매니페스트가 없는 줄은 **건너뛴다** — 「선언한 것이 없다」로 보면 멀쩡한 호출이 막힌다."""
-    from chaeksas.studio.service_catalog import declared_outputs
+    from bpm.studio.service_catalog import declared_outputs
 
     assert declared_outputs([package("fin.erp-input", manifest=False)]) == {}
 
@@ -521,8 +521,8 @@ def test_the_preflight_sees_a_value_the_bot_does_not_return() -> None:
 
     받아 둔 것을 **부르는 쪽이** 넘긴다 — 검사는 서버를 부르지 않는다.
     """
-    from chaeksas.contracts.bpmn_ext import read_process
-    from chaeksas.studio.preflight import inspect
+    from bpm.contracts.bpmn_ext import read_process
+    from bpm.studio.preflight import inspect
 
     xml = DELEGATING_XML.replace('"입력결과": "결과코드"', '"입력결과": "없는칸"')
     found = inspect(read_process(xml), delegated_outputs={"fin.erp-input": ("결과코드",)})
@@ -539,8 +539,8 @@ def test_without_the_center_answer_the_check_is_skipped() -> None:
 
     빈 것을 그대로 넘기면 멀쩡한 위임이 **모두** 막힌다 (Center에 닿지 못한 날 Studio가 멈춘다).
     """
-    from chaeksas.contracts.bpmn_ext import read_process
-    from chaeksas.studio.preflight import inspect
+    from bpm.contracts.bpmn_ext import read_process
+    from bpm.studio.preflight import inspect
 
     process = read_process(DELEGATING_XML)
     assert [v for v in inspect(process) if v.rule == "B14"] == []

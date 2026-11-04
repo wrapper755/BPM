@@ -23,9 +23,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QComboBox  # noqa: E402
 
-from chaeksas.contracts.bpmn_ext import Case, CaseMessage  # noqa: E402
-from chaeksas.studio.case_dialog import CaseDialog  # noqa: E402
-from chaeksas.studio.cases import (  # noqa: E402
+from bpm.contracts.bpmn_ext import Case, CaseMessage  # noqa: E402
+from bpm.studio.case_dialog import CaseDialog  # noqa: E402
+from bpm.studio.cases import (  # noqa: E402
     approvals_of,
     check_cases,
     declared_inputs,
@@ -37,7 +37,7 @@ from chaeksas.studio.cases import (  # noqa: E402
     unpack_value,
     write,
 )
-from chaeksas.studio.workspace import BpmProcess, Definition, Workspace  # noqa: E402
+from bpm.studio.workspace import BpmProcess, Definition, Workspace  # noqa: E402
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
 
@@ -334,7 +334,7 @@ def test_closing_with_changes_asks_first(app: Any, tmp_path: Path, monkeypatch: 
 
     closed: list[str] = []
     dialog.rejected.connect(lambda: closed.append("닫혔다"))
-    monkeypatch.setattr("chaeksas.studio.case_dialog.ask_unsaved", answer)
+    monkeypatch.setattr("bpm.studio.case_dialog.ask_unsaved", answer)
     dialog.reject()
 
     assert asked, "저장 안 한 변경이 있는데 묻지 않았다"
@@ -375,7 +375,7 @@ def test_adding_a_row_keeps_the_rows_already_there_alive(app: Any, tmp_path: Pat
 
 def test_the_four_tables_are_tabs_that_show_three_rows_and_their_count(app: Any, tmp_path: Path) -> None:
     """STU-07 — 표 넷은 탭이고, 탭 이름에 줄 수가 붙고, 표는 줄 셋이 보이는 높이다."""
-    from chaeksas.studio.case_dialog import VISIBLE_ROWS  # noqa: PLC0415
+    from bpm.studio.case_dialog import VISIBLE_ROWS  # noqa: PLC0415
 
     made, definition = imported(tmp_path, RECONCILIATION)
     dialog = CaseDialog(None, made, definition)

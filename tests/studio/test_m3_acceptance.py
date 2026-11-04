@@ -24,10 +24,10 @@ from stub_model import StubModel
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.bpmn_ext import Case, read_process  # noqa: E402
-from chaeksas.studio.receiver import Receiver  # noqa: E402
-from chaeksas.studio.run_dialog import AUTONOMOUS, DETERMINISTIC  # noqa: E402
-from chaeksas.studio.runner import (  # noqa: E402
+from bpm.contracts.bpmn_ext import Case, read_process  # noqa: E402
+from bpm.studio.receiver import Receiver  # noqa: E402
+from bpm.studio.run_dialog import AUTONOMOUS, DETERMINISTIC  # noqa: E402
+from bpm.studio.runner import (  # noqa: E402
     NO_EXPECT,
     PASS,
     CaseRun,
@@ -35,8 +35,8 @@ from chaeksas.studio.runner import (  # noqa: E402
     Plan,
     read_cases,
 )
-from chaeksas.studio.settings import Settings  # noqa: E402
-from chaeksas.studio.workspace import BpmProcess, Workspace  # noqa: E402
+from bpm.studio.settings import Settings  # noqa: E402
+from bpm.studio.workspace import BpmProcess, Workspace  # noqa: E402
 
 DOCS = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples"
 EXAMPLES = DOCS / "bpmn"

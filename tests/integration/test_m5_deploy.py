@@ -26,12 +26,12 @@ from center_admin import AdminCenter as Center
 from center_admin import CenterProblem
 from fastapi.testclient import TestClient
 
-from chaeksas.center import signer as center_signer
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.contracts.hashing import content_hash_zip
-from chaeksas.core.deploy import APPLIED, REJECTED, Deployer, read_signature
-from chaeksas.core.packages import (
+from bpm.center import signer as center_signer
+from bpm.center.app import create_app
+from bpm.center.settings import Settings
+from bpm.contracts.hashing import content_hash_zip
+from bpm.core.deploy import APPLIED, REJECTED, Deployer, read_signature
+from bpm.core.packages import (
     CENTER,
     INSTALL_SOURCE_NAME,
     MANUAL,
@@ -68,7 +68,7 @@ def register_pc(
     /bot-ui/register`를 부른다. 고정하지 않으면 봉투에 적을 id를 아래 모든 시험에 실어
     날라야 한다.
     """
-    from chaeksas.center.api import bot_ui as bot_ui_api
+    from bpm.center.api import bot_ui as bot_ui_api
 
     # **이번 등록에만** 고정한다 — 뒤에 다른 PC가 등록하면 진짜 길로 제 id를 받는다
     # (하나로 고정해 두면 둘째 PC가 같은 id로 들어온다).
@@ -262,7 +262,7 @@ def test_a_deprecated_package_keeps_running_where_it_is_deployed(center: Center)
     고르는 자리가 모두 `approved` 하나로 걸러, 누르는 순간 봉투가 하트비트에서 사라지고 작업·
     위임·내려받기가 그 판을 「배포되지 않음」으로 봤다. 고르는 조건은 이제 `live_sql` 하나다.
     """
-    from chaeksas.center.api import deployments as deployments_api
+    from bpm.center.api import deployments as deployments_api
 
     store = center.client.app.state.store
     pc = approved(center)
@@ -346,7 +346,7 @@ def test_a_wildcard_row_already_in_the_database_still_goes_nowhere(
     `create`가 막기 전에 들어간 행이 있을 수 있다. 고르는 네 자리가 **같은 `_target_sql`**을
     쓰므로 하나만 새 보다가 어긋나는 일이 없다 — 여기서 그 셋을 함께 본다.
     """
-    from chaeksas.center.api.deployments import downloadable_by, envelopes_for, versions_for
+    from bpm.center.api.deployments import downloadable_by, envelopes_for, versions_for
 
     info = approved(center)
     store = center.client.app.state.store
@@ -383,7 +383,7 @@ def test_the_server_runner_still_matches_everything_with_a_wildcard(center: Cent
     서버 배포는 M7이라 `create`로는 만들 수 없다 — 그래서 고르는 조건 자체를 본다. 이것이
     깨지면 ADR-0046이 지우려던 것보다 많이 지운 것이다.
     """
-    from chaeksas.center.api.deployments import WILDCARD_TARGETS, _target_sql
+    from bpm.center.api.deployments import WILDCARD_TARGETS, _target_sql
 
     assert WILDCARD_TARGETS == {"server_runner"}
     where, args = _target_sql("server_runner", "srv_1")
@@ -396,7 +396,7 @@ def test_the_server_runner_still_matches_everything_with_a_wildcard(center: Cent
 
 def listing_of(center: Center, target_id: str) -> list[Any]:
     """`GET /deployments?target_id=` — CON-03의 「배포」가 읽는 것."""
-    from chaeksas.center.api.deployments import listing
+    from bpm.center.api.deployments import listing
 
     return listing(center.client.app.state.store, target_id=target_id)
 
@@ -475,8 +475,8 @@ def test_center_refuses_exactly_what_the_contract_refuses(center: Center) -> Non
     이었고 서버 배포 관문은 계약에만 있었다. 베낀 것이 아니라 **같은 함수**를 부르는지 보려고
     Center가 지을 것과 같은 봉투를 계약에게도 물어 본다.
     """
-    from chaeksas.center.api import bot_ui as bot_ui_api
-    from chaeksas.contracts.center_api import (
+    from bpm.center.api import bot_ui as bot_ui_api
+    from bpm.contracts.center_api import (
         DEPLOYMENT_REFUSAL_STATUS,
         PackageInfo,
         deployment_refusal,
@@ -542,7 +542,7 @@ def test_the_listing_answers_in_the_contract_shape(center: Center) -> None:
 
     CON-03 「배포」가 유효 기간을 그리려면 이것이 있어야 한다.
     """
-    from chaeksas.contracts.center_api import DeploymentInfo
+    from bpm.contracts.center_api import DeploymentInfo
 
     info = approved(center)
     until = "2027-01-01T00:00:00+09:00"
@@ -883,14 +883,14 @@ def test_the_mark_does_not_make_the_bot_unreadable(tmp_path: Path) -> None:
 
 def _envelopes(center: Center) -> list[dict[str, Any]]:
     """이 PC 실행기에게 내려갈 배포 봉투 (C4) — Center가 고른 그대로."""
-    from chaeksas.center.api.deployments import envelopes_for
+    from bpm.center.api.deployments import envelopes_for
 
     return envelopes_for(center.client.app.state.store, target_type="bot_ui", target_id=BOT_UI)
 
 
 def _all_envelopes(center: Center) -> list[dict[str, Any]]:
     """남의 것까지 — V6을 보려고 일부러 넘긴다."""
-    from chaeksas.center.api.deployments import listing
+    from bpm.center.api.deployments import listing
 
     store = center.client.app.state.store
     out = []
@@ -912,10 +912,10 @@ def test_the_heartbeat_carries_the_envelope_and_keys(center: Center, tmp_path: P
     """
     from conftest import FakeCredentials
 
-    from chaeksas.bot_ui.agent import Agent
-    from chaeksas.bot_ui.settings import Settings as BotSettings
-    from chaeksas.bot_ui.store import Store as BotStore
-    from chaeksas.contracts.bot_ui import HeartbeatResponse
+    from bpm.bot_ui.agent import Agent
+    from bpm.bot_ui.settings import Settings as BotSettings
+    from bpm.bot_ui.store import Store as BotStore
+    from bpm.contracts.bot_ui import HeartbeatResponse
 
     info = approved(center)
     made = deploy(center, info)
@@ -951,10 +951,10 @@ def test_the_results_ride_the_next_heartbeat(center: Center, tmp_path: Path) -> 
     """**거부도 보고한다** — 보내고 나면 지운다 (C4 `deployment_results`)."""
     from conftest import FakeCredentials
 
-    from chaeksas.bot_ui.agent import Agent
-    from chaeksas.bot_ui.settings import Settings as BotSettings
-    from chaeksas.bot_ui.store import Store as BotStore
-    from chaeksas.contracts.bot_ui import DeploymentResult
+    from bpm.bot_ui.agent import Agent
+    from bpm.bot_ui.settings import Settings as BotSettings
+    from bpm.bot_ui.store import Store as BotStore
+    from bpm.contracts.bot_ui import DeploymentResult
 
     agent = Agent(
         settings=BotSettings(),
@@ -992,7 +992,7 @@ def _installed_one(center: Center, tmp_path: Path, **extra: Any) -> tuple[Deploy
 
 
 def _finding(field: Deployer, *, now: str | None = None) -> str | None:
-    from chaeksas.core.deploy import deployment_finding
+    from bpm.core.deploy import deployment_finding
 
     [bot] = installed(field.data_dir)
     found = deployment_finding(bot, now=now or AT)
@@ -1001,7 +1001,7 @@ def _finding(field: Deployer, *, now: str | None = None) -> str | None:
 
 def test_a_revoked_deployment_turns_the_install_off(center: Center, tmp_path: Path) -> None:
     """배포를 철회하면 **다음 하트비트에서** 「실행 불가」다 — 파일은 그대로다 (C2 §검증 규칙)."""
-    from chaeksas.core.deploy import DEPLOYMENT_WITHDRAWN, read_standing
+    from bpm.core.deploy import DEPLOYMENT_WITHDRAWN, read_standing
 
     field, _, made = _installed_one(center, tmp_path)
     assert _finding(field) is None
@@ -1017,7 +1017,7 @@ def test_a_revoked_deployment_turns_the_install_off(center: Center, tmp_path: Pa
 
 
 def test_a_revoked_approval_turns_the_install_off_too(center: Center, tmp_path: Path) -> None:
-    from chaeksas.core.deploy import DEPLOYMENT_WITHDRAWN
+    from bpm.core.deploy import DEPLOYMENT_WITHDRAWN
 
     field, info, _ = _installed_one(center, tmp_path)
     center.revoke_package(info["id"], info["version"], reason="결함")
@@ -1027,7 +1027,7 @@ def test_a_revoked_approval_turns_the_install_off_too(center: Center, tmp_path: 
 
 def test_a_retired_signing_key_turns_the_install_off(center: Center, tmp_path: Path) -> None:
     """서명 키를 버린 것도 같은 길이다 — 봉투가 목록에 있어도 V2로 덮지 못한다 (C2)."""
-    from chaeksas.core.deploy import DEPLOYMENT_WITHDRAWN
+    from bpm.core.deploy import DEPLOYMENT_WITHDRAWN
 
     field, _, _ = _installed_one(center, tmp_path)
     store = center.client.app.state.store
@@ -1067,7 +1067,7 @@ def test_without_keys_nothing_is_reconciled(center: Center, tmp_path: Path) -> N
 
 def test_the_field_sees_the_expiry_without_center(center: Center, tmp_path: Path) -> None:
     """기한은 표식으로 **현장이 혼자** 본다 — Center에 닿지 않아도 지나면 「실행 불가」다."""
-    from chaeksas.core.deploy import DEPLOYMENT_EXPIRED
+    from bpm.core.deploy import DEPLOYMENT_EXPIRED
 
     ends = (datetime.now(UTC) + timedelta(days=30)).isoformat()
     field, _, _ = _installed_one(center, tmp_path, expires_at=ends)
@@ -1089,14 +1089,14 @@ def test_the_pc_runner_refuses_a_withdrawn_bot_and_says_so(center: Center, tmp_p
     """한 바퀴 — 하트비트가 **답한** 빈 목록 → 알림 · `readiness` · BUI-04 「지금 실행...」 거절."""
     from conftest import FakeCredentials
 
-    from chaeksas.bot_ui.agent import Agent
-    from chaeksas.bot_ui.main_window import readiness_label
-    from chaeksas.bot_ui.notices import DEPLOYMENT_WITHDRAWN as NOTICE
-    from chaeksas.bot_ui.settings import Settings as BotSettings
-    from chaeksas.bot_ui.settings import data_dir
-    from chaeksas.bot_ui.store import Store as BotStore
-    from chaeksas.contracts.bot_ui import HeartbeatResponse
-    from chaeksas.core.deploy import DEPLOYMENT_WITHDRAWN
+    from bpm.bot_ui.agent import Agent
+    from bpm.bot_ui.main_window import readiness_label
+    from bpm.bot_ui.notices import DEPLOYMENT_WITHDRAWN as NOTICE
+    from bpm.bot_ui.settings import Settings as BotSettings
+    from bpm.bot_ui.settings import data_dir
+    from bpm.bot_ui.store import Store as BotStore
+    from bpm.contracts.bot_ui import HeartbeatResponse
+    from bpm.core.deploy import DEPLOYMENT_WITHDRAWN
 
     info = approved(center)
     made = deploy(center, info)

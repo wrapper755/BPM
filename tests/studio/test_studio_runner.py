@@ -24,11 +24,11 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.bpmn_ext import CASE_ANSWERER, Case  # noqa: E402
-from chaeksas.core.senders import EmailMessage, SendError, WebhookRequest  # noqa: E402
-from chaeksas.studio.receiver import Receiver  # noqa: E402
-from chaeksas.studio.run_dialog import AUTONOMOUS, describe, unlearned  # noqa: E402
-from chaeksas.studio.runner import (  # noqa: E402
+from bpm.contracts.bpmn_ext import CASE_ANSWERER, Case  # noqa: E402
+from bpm.core.senders import EmailMessage, SendError, WebhookRequest  # noqa: E402
+from bpm.studio.receiver import Receiver  # noqa: E402
+from bpm.studio.run_dialog import AUTONOMOUS, describe, unlearned  # noqa: E402
+from bpm.studio.runner import (  # noqa: E402
     ERROR,
     FAIL,
     NO_EXPECT,
@@ -41,8 +41,8 @@ from chaeksas.studio.runner import (  # noqa: E402
     resolve_inputs,
     summarize,
 )
-from chaeksas.studio.settings import Settings  # noqa: E402
-from chaeksas.studio.workspace import Workspace  # noqa: E402
+from bpm.studio.settings import Settings  # noqa: E402
+from bpm.studio.workspace import Workspace  # noqa: E402
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
 
@@ -101,7 +101,7 @@ def test_a_plain_value_is_left_alone() -> None:
 
 
 def test_test_receiver_needs_the_receiver_running() -> None:
-    from chaeksas.core.engine import EngineError
+    from bpm.core.engine import EngineError
 
     with pytest.raises(EngineError, match="시험 수신기가 꺼져"):
         resolve_inputs({"주소": {"$test_receiver": "reply"}}, now=datetime.now(UTC), receiver=None)
@@ -327,7 +327,7 @@ def test_a_missing_required_input_is_said_plainly(app: Any, tmp_path: Path) -> N
 
 def test_the_run_dialog_stops_a_caseless_run_that_lacks_required_inputs(app: Any, tmp_path: Path) -> None:
     """STU-08 — 엔진이 거부할 실행을 보내지 않고 창에서 까닭을 말한다 (U3)."""
-    from chaeksas.studio.run_dialog import NO_CASE, RunDialog, required_inputs  # noqa: PLC0415
+    from bpm.studio.run_dialog import NO_CASE, RunDialog, required_inputs  # noqa: PLC0415
 
     made, settings = studio(tmp_path, "fx06_document_read")
     definition = made.entry_definition
@@ -343,7 +343,7 @@ def test_the_run_dialog_stops_a_caseless_run_that_lacks_required_inputs(app: Any
 
 
 def test_a_caseless_run_without_required_inputs_is_allowed(app: Any, tmp_path: Path) -> None:
-    from chaeksas.studio.run_dialog import NO_CASE, RunDialog  # noqa: PLC0415
+    from bpm.studio.run_dialog import NO_CASE, RunDialog  # noqa: PLC0415
 
     made, settings = studio(tmp_path, "fx12_daily_report")
     definition = made.entry_definition
@@ -531,8 +531,8 @@ def test_without_a_case_a_delegation_says_what_to_write() -> None:
 
     창도 엔진도 필요 없는 자리라 포트만 직접 부른다.
     """
-    from chaeksas.core.delegation import DelegationCall, DelegationError
-    from chaeksas.studio.runner import CaseDelegator
+    from bpm.core.delegation import DelegationCall, DelegationError
+    from bpm.studio.runner import CaseDelegator
 
     call = DelegationCall(
         run_id="test_20261015_090000_aaaaaa",
@@ -552,8 +552,8 @@ def test_without_a_case_a_delegation_says_what_to_write() -> None:
 
 def test_what_the_autonomous_run_learned_is_written_into_the_package(app: Any, tmp_path: Path) -> None:
     """엔진은 파일을 쓰지 않는다 — **Studio가** 패키지 안 `memory/specs.json`에 적는다."""
-    from chaeksas.core.llm import RecordingLlm, Reply
-    from chaeksas.core.replay import read_memory
+    from bpm.core.llm import RecordingLlm, Reply
+    from bpm.core.replay import read_memory
 
     made, settings = studio(tmp_path, "fx06_document_read")
     definition = made.entry_definition
@@ -591,7 +591,7 @@ def test_the_replay_menu_preselects_the_mode_only_when_it_can_be_chosen(
     **끈 라디오는 고르지 않는다** — 고르면 「실행」을 눌러도 어느 모드도 아니게 된다. 메뉴를
     끄지 않는 까닭이 여기 있다: 못 하는 사정은 창이 말한다 (U3).
     """
-    from chaeksas.studio.run_dialog import DETERMINISTIC, RunDialog
+    from bpm.studio.run_dialog import DETERMINISTIC, RunDialog
 
     rules, settings = studio(tmp_path, "fx02_business_rule")  # AI 태스크가 없다 — 끌 이유가 없다
     definition = rules.entry_definition
@@ -628,10 +628,10 @@ def escalated_run(case_run: CaseRun, tmp_path: Path, *, boundary: bool) -> Any:
     """
     from test_core_extension_tasks import PROCESS, RUN, WITH_BOUNDARY, FakeExecutor, Host  # noqa: PLC0415
 
-    from chaeksas.contracts.bpmn_ext import read_process  # noqa: PLC0415
-    from chaeksas.core.engine import RunEnv, State  # noqa: PLC0415
-    from chaeksas.core.run_log import RunLog  # noqa: PLC0415
-    from chaeksas.extension_api import TaskFailed  # noqa: PLC0415
+    from bpm.contracts.bpmn_ext import read_process  # noqa: PLC0415
+    from bpm.core.engine import RunEnv, State  # noqa: PLC0415
+    from bpm.core.run_log import RunLog  # noqa: PLC0415
+    from bpm.extension_api import TaskFailed  # noqa: PLC0415
 
     executor = FakeExecutor(fail=TaskFailed("ui_escalated", "화면을 확인해 주세요", escalate="confirmation"))
     run = case_run.engine.start(

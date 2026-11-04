@@ -12,7 +12,7 @@ import sys
 
 import PySide6.QtWebEngineWidgets  # noqa: F401 — 묶을 때 함께 들어가게 하는 import
 
-from chaeksas.studio.app import main
+from bpm.studio.app import main
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
