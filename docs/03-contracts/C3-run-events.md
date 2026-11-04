@@ -5,7 +5,7 @@
 | 상태 | **구현됨** (2026-10-09). 모델·전송·보여 주기와 선택 칸까지 부르는 쪽이 있다 |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | PC 실행기(실행 중 BPM 프로세스)·서버 실행기·Studio(선택) → Center |
-| 코드 위치 | `packages/contracts/src/chaeksas/contracts/events.py` (import `chaeksas.contracts.events`, [ADR-0019](../decisions/0019-package-names.md)) |
+| 코드 위치 | `shared/contracts/src/chaeksas/contracts/events.py` (import `chaeksas.contracts.events`, [ADR-0019](../decisions/0019-package-names.md)) |
 | JSON Schema | [`c3-run-event.json`](../../packages/contracts/schemas/c3-run-event.json) · [`c3-event-batch-response.json`](../../packages/contracts/schemas/c3-event-batch-response.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
 | 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0014](../decisions/0014-one-bot-per-pc.md), [0015](../decisions/0015-run-location.md), [0041](../decisions/0041-extension-run-events.md), [0114](../decisions/0114-remove-ui-automation.md) |
 

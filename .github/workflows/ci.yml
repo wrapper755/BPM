@@ -118,27 +118,23 @@ jobs:
       fail-fast: false
       matrix:
         os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest", "windows-latest"]') }}
-    defaults:
-      run:
-        working-directory: web
 
+    # pnpm 워크스페이스의 뿌리는 저장소 맨 위다 (ADR-0129 — server/web와 studio/canvas를 함께 묶는다).
     steps:
       - uses: actions/checkout@v7
 
-      # pnpm 버전은 web/package.json의 packageManager가 정한다 (한 곳에서만 올린다).
-      # `defaults.run.working-directory`는 `run` 단계에만 걸리고 **액션 입력에는 걸리지 않는다** —
-      # 경로를 적지 않으면 저장소 루트의 package.json을 찾다가 멈춘다.
+      # pnpm 버전은 package.json의 packageManager가 정한다 (한 곳에서만 올린다).
       - name: pnpm 설치
         uses: pnpm/action-setup@v4
         with:
-          package_json_file: web/package.json
+          package_json_file: package.json
 
       - name: Node.js LTS
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       # --frozen-lockfile: lock이 package.json과 어긋나면 여기서 멈춘다 (uv --frozen과 같은 뜻).
       - name: 의존성

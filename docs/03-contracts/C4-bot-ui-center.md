@@ -5,7 +5,7 @@
 | 상태 | **구현됨** (2026-10-10, [09-gaps](../09-gaps.md) §1 대조 — 등록·하트비트·배포·작업·결재·`readiness`까지 양쪽이 쓴다) — **§등록 요청과 승인·키 회전도 양쪽이 쓴다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | PC 실행기 ↔ Center |
-| 코드 위치 | `packages/contracts/src/chaeksas/contracts/bot_ui.py` (import `chaeksas.contracts.bot_ui`, [ADR-0019](../decisions/0019-package-names.md)) |
+| 코드 위치 | `shared/contracts/src/chaeksas/contracts/bot_ui.py` (import `chaeksas.contracts.bot_ui`, [ADR-0019](../decisions/0019-package-names.md)) |
 | JSON Schema | [`c4-register-request.json`](../../packages/contracts/schemas/c4-register-request.json) · [`c4-register-response.json`](../../packages/contracts/schemas/c4-register-response.json) · [`c4-heartbeat-request.json`](../../packages/contracts/schemas/c4-heartbeat-request.json) · [`c4-heartbeat-response.json`](../../packages/contracts/schemas/c4-heartbeat-response.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
 | 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0012](../decisions/0012-bot-ui.md), [0013](../decisions/0013-api-keys.md), [0014](../decisions/0014-one-bot-per-pc.md), [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md), [0094](../decisions/0094-service-app-keys-ride-the-deployment.md), [0114](../decisions/0114-remove-ui-automation.md) |
 | 관련 화면 | BUI-01·03·04·05, CON-03·05·11 |

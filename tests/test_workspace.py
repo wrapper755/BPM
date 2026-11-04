@@ -12,25 +12,34 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 
 MEMBERS = {
-    "packages/contracts": "chaeksas.contracts",
-    "packages/extension_api": "chaeksas.extension_api",
-    "packages/core": "chaeksas.core",
-    "packages/llm": "chaeksas.llm",
-    "packages/qt": "chaeksas.qt",
-    "packages/service_kit": "chaeksas.service_kit",
-    "apps/studio": "chaeksas.studio",
-    "apps/bot_ui": "chaeksas.bot_ui",
-    "apps/server_runner": "chaeksas.server_runner",
+    "shared/contracts": "chaeksas.contracts",
+    "shared/extension_api": "chaeksas.extension_api",
+    "shared/core": "chaeksas.core",
+    "shared/llm": "chaeksas.llm",
+    "shared/qt": "chaeksas.qt",
+    "server/service_kit": "chaeksas.service_kit",
+    "studio/app": "chaeksas.studio",
+    "bot/app": "chaeksas.bot_ui",
+    "server/server_runner": "chaeksas.server_runner",
     # 외부 앱을 부르는 범용 일꾼 (C13 §4·C15, ADR-0102).
-    "apps/adapter_consumer": "chaeksas.adapter_consumer",
-    "apps/center": "chaeksas.center",
+    "server/adapter_consumer": "chaeksas.adapter_consumer",
+    "server/center": "chaeksas.center",
     # 제품이 아니다 — 업무 예제가 부르는 모의 앱 (01-architecture §8).
     "samples/mock_apps": "chaeksas.mock_apps",
 }
 
 #: 멤버를 찾는 자리. `pyproject.toml`의 `[tool.uv.workspace].members`와 같아야 한다.
 #: 확장(`extensions/*`)은 지금 없다 — 들일 때 다시 더한다 (ADR-0114).
-MEMBER_GLOBS = ("packages/*", "apps/*", "samples/*")
+MEMBER_GLOBS = (
+    "shared/*",
+    "server/center",
+    "server/server_runner",
+    "server/adapter_consumer",
+    "server/service_kit",
+    "studio/app",
+    "bot/app",
+    "samples/*",
+)
 
 
 def test_interpreter_is_312() -> None:

@@ -15,7 +15,17 @@ from typing import TypedDict
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-MEMBER_GLOBS = ("packages/*", "apps/*", "extensions/*", "samples/*")
+MEMBER_GLOBS = (
+    "shared/*",
+    "server/center",
+    "server/server_runner",
+    "server/adapter_consumer",
+    "server/service_kit",
+    "studio/app",
+    "bot/app",
+    "samples/*",
+    "extensions/*",
+)
 
 
 class Member(TypedDict):
@@ -111,17 +121,34 @@ def test_extensions_do_not_depend_on_each_other() -> None:
 
 # (경로 글롭, 금지 import 접두사, 근거)
 FORBIDDEN_IMPORTS = [
-    ("packages/core", "chaeksas.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
-    ("apps/*", "chaeksas.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
-    ("apps/center", "chaeksas.core", "§5"),
+    ("shared/core", "chaeksas.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
+    ("server/*", "chaeksas.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
+    ("studio/app", "chaeksas.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
+    ("bot/app", "chaeksas.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
+    ("server/center", "chaeksas.core", "§5"),
     ("extensions/*", "chaeksas.core", "§5 — 확장의 service·worker는 core를 모른다"),
-    ("packages/core", "PySide6", "§5 — core는 Qt를 import하지 않는다"),
-    ("packages/llm", "chaeksas.", "ADR-0034 — llm은 맨 아래다 (chaeksas의 아무것도 모른다)"),
-    ("apps/server_runner", "PySide6", "§2 — 화면 없음"),
-    ("apps/center", "PySide6", "§2 — 서버"),
-    ("packages/*", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
-    ("apps/*", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
+    ("shared/core", "PySide6", "§5 — core는 Qt를 import하지 않는다"),
+    ("shared/llm", "chaeksas.", "ADR-0034 — llm은 맨 아래다 (chaeksas의 아무것도 모른다)"),
+    ("server/server_runner", "PySide6", "§2 — 화면 없음"),
+    ("server/center", "PySide6", "§2 — 서버"),
+    ("shared/*", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
+    ("server/*", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
+    ("studio/app", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
+    ("bot/app", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
     ("extensions/*", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
+    # ADR-0129 — 제품끼리 import하지 않는다. 함께 쓰는 것은 shared/로 내린다.
+    ("server/*", "chaeksas.studio", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("server/*", "chaeksas.bot_ui", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("studio/app", "chaeksas.bot_ui", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("studio/app", "chaeksas.center", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("studio/app", "chaeksas.server_runner", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("studio/app", "chaeksas.adapter_consumer", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("studio/app", "chaeksas.service_kit", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("bot/app", "chaeksas.studio", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("bot/app", "chaeksas.center", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("bot/app", "chaeksas.server_runner", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("bot/app", "chaeksas.adapter_consumer", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("bot/app", "chaeksas.service_kit", "ADR-0129 — 제품끼리 import하지 않는다"),
 ]
 
 

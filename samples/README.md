@@ -17,7 +17,7 @@
 | | C11 앱 열셋 (`apps/`) | 외부 앱 둘 (`external/`) |
 | --- | --- | --- |
 | 무엇인가 | 사내 확장의 **서버 부분** | 우리 계약을 모르는 **남의 API** 흉내 |
-| 뼈대 | `packages/service_kit` (C11) | 없다 — 평범한 FastAPI |
+| 뼈대 | `server/service_kit` (C11) | 없다 — 평범한 FastAPI |
 | 붙는 길 | **일꾼**으로 Center에서 일감을 가져간다 (C15, `service_kit.consumer`) | **어댑터 일꾼**(`bpm-adapter-consumer`)이 HTTP 어댑터로 부른다 (C13 §4·C15) |
 | Center에 어떻게 아는가 | 일꾼이 뜰 때 **manifest를 올린다** (C15 — 일꾼은 Center 일꾼 폴더의 파일로 들어온다) | **어댑터 일꾼이 정의를 올리고** Center가 서명한다 (C13 E6, ADR-0122) |
 | 키 | 없다 — 「불러도 되나」는 Center가 배포로 가린다 (ADR-0102) | 어댑터 일꾼 설정의 키를 받아서 확인만 한다 (`BPM_MOCK_EXT_<앱>__TOKEN`을 주면 그 값만 받는다) |

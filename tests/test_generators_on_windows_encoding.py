@@ -79,7 +79,7 @@ def test_the_child_encoding_wins_over_a_cp1252_environment() -> None:
     `PYTHONIOENCODING`은 `PYTHONUTF8`을 **이긴다**(이 시험을 쓰다 확인했다) — 그래서 빌드가
     그 값을 **못 박는다**. 훅이 찍는 한글을 같은 모양으로 흘려 본다.
     """
-    hook = ROOT / "packages/core/src/chaeksas/core/__pyinstaller/hook-chaeksas.core.extensions.py"
+    hook = ROOT / "shared/core/src/chaeksas/core/__pyinstaller/hook-chaeksas.core.extensions.py"
     assert hook.is_file(), hook
     말 = "print('[hook] 확장 1개, hiddenimports 35개, datas 8개')"
 

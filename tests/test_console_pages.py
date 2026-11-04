@@ -15,7 +15,7 @@ from chaeksas.contracts.service_app import AdminStatus
 from chaeksas.core.extensions import load_host
 
 ROOT = Path(__file__).resolve().parent.parent
-CONSOLE = ROOT / "web" / "apps" / "svc-console"
+CONSOLE = ROOT / "server" / "web" / "apps" / "svc-console"
 REGISTRY = CONSOLE / "lib" / "console-pages.generated.ts"
 SHELL = CONSOLE / "components" / "Shell.tsx"
 

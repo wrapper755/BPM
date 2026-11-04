@@ -414,7 +414,8 @@ def test_standard_buttons_speak_korean(app: Any, monkeypatch: pytest.MonkeyPatch
     assert sorted(seen) == sorted(["저장", DISCARD_LABEL, "취소"])
 
 
-ROLE_SOURCES = ("apps", "packages", "extensions")
+#: 파이썬 멤버의 소스 자리 (ADR-0129). 없는 자리를 적으면 조용히 아무것도 보지 않으니 시험이 막는다.
+ROLE_SOURCES = ("shared/*/src", "server/*/src", "studio/app/src", "bot/app/src", "extensions/*/src")
 
 
 def roles_in_code() -> set[str]:
@@ -425,7 +426,7 @@ def roles_in_code() -> set[str]:
     root = Path(__file__).resolve().parent.parent
     found: set[str] = set()
     for top in ROLE_SOURCES:
-        for path in (root / top).rglob("*.py"):
+        for path in root.glob(f"{top}/**/*.py"):
             text = path.read_text(encoding="utf-8")
             found |= set(re.findall(r'setProperty\(\s*"role",\s*"([a-z0-9_]+)"', text))
             found |= set(re.findall(r'set_role\(\s*[\w.]+,\s*"([a-z0-9_]+)"', text))
@@ -486,11 +487,11 @@ def test_roles_are_given_through_set_role() -> None:
     from pathlib import Path  # noqa: PLC0415
 
     root = Path(__file__).resolve().parent.parent
-    theme = root / "packages" / "qt" / "src" / "chaeksas" / "qt" / "theme" / "__init__.py"
+    theme = root / "shared" / "qt" / "src" / "chaeksas" / "qt" / "theme" / "__init__.py"
     raw = [
         f"{path.relative_to(root).as_posix()}"
-        for top in ("apps", "packages")
-        for path in (root / top).rglob("*.py")
+        for top in ROLE_SOURCES
+        for path in root.glob(f"{top}/**/*.py")
         if path != theme and 'setProperty("role"' in path.read_text(encoding="utf-8")
     ]
     assert not raw, f"set_role 대신 setProperty로 role을 준다: {raw}"

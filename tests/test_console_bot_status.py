@@ -35,7 +35,7 @@ from chaeksas.center.storage import Store
 from chaeksas.contracts.hashing import content_hash_zip
 
 ROOT = Path(__file__).resolve().parent.parent
-CONSOLE = ROOT / "web" / "apps" / "center-console"
+CONSOLE = ROOT / "server" / "web" / "apps" / "center-console"
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 READ = {"Authorization": "Bearer t-read"}

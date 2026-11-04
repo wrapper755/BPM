@@ -31,16 +31,17 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "design" / "tokens.json"
 
 #: ADR-0017이 정한 생성물.
-WEB_SRC = ROOT / "web" / "packages" / "ui" / "src"
+WEB_SRC = ROOT / "server" / "web" / "packages" / "ui" / "src"
 WEB_CSS = WEB_SRC / "tokens.css"
 WEB_THEME = WEB_SRC / "theme.css"
 WEB_STATUS_MAP = WEB_SRC / "status-map.ts"
-QT_DIR = ROOT / "packages" / "qt" / "src" / "chaeksas" / "qt" / "theme"
+QT_DIR = ROOT / "shared" / "qt" / "src" / "chaeksas" / "qt" / "theme"
 PREVIEW = ROOT / "design" / "preview.html"
 #: BPM 흐름 마크 (ADR-0118) — 원본 하나, 웹 구성요소 하나, 콘솔마다 탭 아이콘 하나.
 MARK_SOURCE = ROOT / "design" / "bpm-mark.svg"
 WEB_MARK = WEB_SRC / "bpm-mark.tsx"
-CONSOLE_ICONS = [ROOT / "web" / "apps" / app / "app" / "icon.svg" for app in ("center-console", "svc-console")]
+CONSOLE_APPS = ROOT / "server" / "web" / "apps"
+CONSOLE_ICONS = [CONSOLE_APPS / app / "app" / "icon.svg" for app in ("center-console", "svc-console")]
 
 BANNER = "생성 파일: design/tokens.json에서 만든다. 직접 고치지 말고 원본을 고친 뒤 scripts/gen_tokens.py"
 

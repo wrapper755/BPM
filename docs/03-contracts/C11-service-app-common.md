@@ -5,7 +5,7 @@
 | 상태 | **구현됨** (2026-10-09, [09-gaps](../09-gaps.md) §1 대조) — 2026-10-29부터 **일꾼**이다 ([ADR-0102](../decisions/0102-calling-outside-is-pull.md)): 앱은 C15로 Center에서 일감을 가져가고 HTTP로 업무 호출을 받지 않는다 |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 서비스 앱(일꾼) → Center (C15 가져가기·끝내기). 업무 호출의 모양은 부르는 쪽이 C15로 Center에 올린 것이다 |
-| 코드 위치 | 모델 `packages/contracts/src/chaeksas/contracts/service_app.py`, 받는 쪽 뼈대 `packages/service_kit/` (`service_kit.consumer` — 가져가기 루프), **부르는 쪽 `chaeksas.core.services`** (`CenterServiceCaller` — 멱등 칸·재시도·C3 `service_call` 기록). 보기: 업무 예제가 부르는 **모의 앱 열셋**은 [`samples/`](../../samples/README.md) |
+| 코드 위치 | 모델 `shared/contracts/src/chaeksas/contracts/service_app.py`, 받는 쪽 뼈대 `server/service_kit/` (`service_kit.consumer` — 가져가기 루프), **부르는 쪽 `chaeksas.core.services`** (`CenterServiceCaller` — 멱등 칸·재시도·C3 `service_call` 기록). 보기: 업무 예제가 부르는 **모의 앱 열셋**은 [`samples/`](../../samples/README.md) |
 | JSON Schema | [`c11-service-app-manifest.json`](../../packages/contracts/schemas/c11-service-app-manifest.json) · [`c11-op-request.json`](../../packages/contracts/schemas/c11-op-request.json) · [`c11-op-response.json`](../../packages/contracts/schemas/c11-op-response.json) · [`c11-health-response.json`](../../packages/contracts/schemas/c11-health-response.json) |
 | 관련 ADR | [0010](../decisions/0010-service-apps.md), [0015](../decisions/0015-run-location.md), [0102](../decisions/0102-calling-outside-is-pull.md) |
 | 관련 화면 | STU-14, SVC-00·01·03 |
@@ -105,7 +105,7 @@
 
 ## 관리 API (`/admin/v1/*`, SVC-00·01·03)
 
-관리 콘솔이 쓰는 API. 앱 설정의 **관리자 토큰**으로만 부른다 (`Authorization: Bearer <관리자 토큰>`). 화면은 `web/apps/svc-console` 한 벌이 그린다 (ADR-0017).
+관리 콘솔이 쓰는 API. 앱 설정의 **관리자 토큰**으로만 부른다 (`Authorization: Bearer <관리자 토큰>`). 화면은 `server/web/apps/svc-console` 한 벌이 그린다 (ADR-0017).
 
 | 메서드·경로 | 뜻 | 화면 |
 | --- | --- | --- |

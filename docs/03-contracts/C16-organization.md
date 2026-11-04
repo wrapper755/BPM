@@ -2,10 +2,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **합의** (2026-11-01) — 모델·판정(`packages/contracts/organization.py`, C1 R14)과 **Center 쪽이 돈다**: 조직 API(`center/organization.py`·`api/organization.py`), 등록 승인의 회사, 올릴 때 회사·업무 자리 검사, PC 배포의 `company_mismatch`, 작업의 주인·`owner_stopped`·`JobDispatch.place`, `RunInfo`·`JobInfo`·결재의 회사, 회사 관리자 거르기. 서버 실행기가 `place`를 값 출처로 푼다. Studio는 STU-12b에서 자리를 고르고, 콘솔은 승인 창에 자리를 보이고 등록 승인·계정에 회사를 고른다. 콘솔 조직 화면(CON-13)·CON-01의 자리 열도 돈다. **남은 것**: PC 작업에 `place` 나르기(> 미정), 연동용·대리 답용 키의 회사(> 미정) |
+| 상태 | **합의** (2026-11-01) — 모델·판정(`shared/contracts/organization.py`, C1 R14)과 **Center 쪽이 돈다**: 조직 API(`center/organization.py`·`api/organization.py`), 등록 승인의 회사, 올릴 때 회사·업무 자리 검사, PC 배포의 `company_mismatch`, 작업의 주인·`owner_stopped`·`JobDispatch.place`, `RunInfo`·`JobInfo`·결재의 회사, 회사 관리자 거르기. 서버 실행기가 `place`를 값 출처로 푼다. Studio는 STU-12b에서 자리를 고르고, 콘솔은 승인 창에 자리를 보이고 등록 승인·계정에 회사를 고른다. 콘솔 조직 화면(CON-13)·CON-01의 자리 열도 돈다. **남은 것**: PC 작업에 `place` 나르기(> 미정), 연동용·대리 답용 키의 회사(> 미정) |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 콘솔(Center 관리자·회사 관리자)·연동용 키 ↔ Center (조직·업무 자리), Center → 서버 실행기 (작업의 자리) |
-| 코드 위치 | `packages/contracts/organization.py`, Center `migrations.py` 22판 · (예정) `api/organization.py`·`api/packages.py`·`enrollments.py`·`accounts.py` |
+| 코드 위치 | `shared/contracts/organization.py`, Center `migrations.py` 22판 · (예정) `api/organization.py`·`api/packages.py`·`enrollments.py`·`accounts.py` |
 | 관련 ADR | [0125](../decisions/0125-organization-and-work-placement.md), [0127](../decisions/0127-studio-picks-the-work-place.md), [0090](../decisions/0090-center-admin-accounts.md), [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md), [0093](../decisions/0093-studio-is-let-in-by-approval.md), [0099](../decisions/0099-input-value-source.md) |
 | 관련 화면 | CON-13 조직, STU-12 「Center로 올리기」(자리 고르기), CON-02·CON-06 승인(자리 보이기), CON-03 승인 대기(회사 고르기), CON-14 관리자 계정(회사 관리자), CON-01 (회사·부서·직원 열) |
 

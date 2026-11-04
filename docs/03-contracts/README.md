@@ -1,15 +1,15 @@
 # 03. 계약
 
 구성요소 사이에 오가는 모든 데이터·API의 명세. **코드보다 먼저 여기를 고친다.**
-코드의 단일 원본은 `packages/contracts/`이고, 이 문서는 그 모델의 뜻·규칙·예시를 설명한다.
+코드의 단일 원본은 `shared/contracts/`이고, 이 문서는 그 모델의 뜻·규칙·예시를 설명한다.
 
 ## 원칙
 
-1. **원본은 하나.** 플랫폼 계약 모델은 `packages/contracts/`에, 확장 하나가 소유하는 계약은 그 확장의 `extensions/<id>/contracts/`에 둔다(지금은 없다 — [ADR-0114](../decisions/0114-remove-ui-automation.md)). 다른 앱은 import한다. 복사본·드리프트 테스트를 두지 않는다 (프로토타입 UI 자동화 서버 ↔ Worker의 교훈).
+1. **원본은 하나.** 플랫폼 계약 모델은 `shared/contracts/`에, 확장 하나가 소유하는 계약은 그 확장의 `extensions/<id>/contracts/`에 둔다(지금은 없다 — [ADR-0114](../decisions/0114-remove-ui-automation.md)). 다른 앱은 import한다. 복사본·드리프트 테스트를 두지 않는다 (프로토타입 UI 자동화 서버 ↔ Worker의 교훈).
 2. **스키마 버전을 명시한다.** 계약마다 `schema` 정수를 가진다. 필드 **추가**는 같은 번호에서, 필드 **변경·삭제**는 번호를 올린다.
 3. **받는 쪽은 관대하게.** 모르는 이벤트 종류·선택 필드는 거부하지 않고 저장·무시한다. 필수 필드 누락만 거부한다.
 4. **보내는 쪽은 엄격하게.** 보낼 때는 모델로 만들고 검증한다.
-5. **JSON Schema를 내보낸다.** 모델에서 `packages/contracts/schemas/*.json`을 생성해 문서에 링크한다 — `uv run python scripts/gen_schemas.py` (`--check`는 생성물이 모델과 다르면 1로 끝난다). 다른 언어 도구도 같은 명세를 쓸 수 있다. 스키마는 **생성물이니 직접 고치지 않는다.**
+5. **JSON Schema를 내보낸다.** 모델에서 `shared/contracts/schemas/*.json`을 생성해 문서에 링크한다 — `uv run python scripts/gen_schemas.py` (`--check`는 생성물이 모델과 다르면 1로 끝난다). 다른 언어 도구도 같은 명세를 쓸 수 있다. 스키마는 **생성물이니 직접 고치지 않는다.**
 6. **값은 기록하지 않는다.** 실행 기록·보고에 업무 값, 결재 답, 비밀, 스크린샷을 넣지 않는다 (기본값). 필요하면 명시적 옵션으로.
 7. **수행 모드를 싣는다.** 서비스 앱에 가는 요청은 `mode`(autonomous / deterministic)를 가진다. 받는 쪽은 모드를 바꾸지 않는다. 유일한 예외는 C11의 폴백이며, 호출한 키가 자율 수행을 허용할 때만 일어나고 응답 `mode_used`로 드러난다.
 8. **식별자로 서로를 잇는다.** 실행(`run_id`) ↔ 결재·확인(`request_id`) ↔ 서비스 앱 호출(`run_id`, `node_id`) 연결은 계약 필드로 한다.
@@ -24,7 +24,7 @@
 | 상태 | 뜻 | 올리는 조건 |
 | --- | --- | --- |
 | **초안** | 글이 먼저 있다 (코드보다 먼저 고치는 자리다) | — |
-| **합의** | 모양이 정해졌고 **모델·검사가 코드로 있다**. 쓰는 쪽이 아직 다 붙지 않았다 | `packages/contracts/`(또는 그 확장의 `contracts/`)에 모델과 검사 규칙이 있다 |
+| **합의** | 모양이 정해졌고 **모델·검사가 코드로 있다**. 쓰는 쪽이 아직 다 붙지 않았다 | `shared/contracts/`(또는 그 확장의 `contracts/`)에 모델과 검사 규칙이 있다 |
 | **구현됨** | **양쪽이 코드로 쓰고 시험이 지킨다** — 보내는 쪽과 받는 쪽이 다 있다 | 위 + 오가는 양쪽에 부르는 코드가 있고, 그것을 보는 시험이 있다 |
 
 **「상태」는 각 계약 문서의 머리말이 원본이다** (원칙 1). 아래 표는 그것을 모아 보여 주는
@@ -76,7 +76,7 @@
 | C13 | `chaeksas.contracts.extension` | `validate()` — E1·E2·E3 + 모양. `task_type_conflicts()`(E4), `check_api()`(E5), `verify_external()`(E6), `check_size()`, `definition_hash()` | `tests/test_contract_examples.py` |
 | C13 | **`chaeksas.core.extensions`** | 확장 호스트 — 엔트리 포인트로 찾기, 검사 규칙 적용, 기여 지점별 목록, `entry` 해석(그 확장 패키지 안으로 제한). 인터페이스는 `chaeksas.extension_api` | `tests/test_extension_host.py` |
 | C14 | `chaeksas.contracts.bpmn_ext` | `read_process()`(BPMN 읽기, 표준 라이브러리만), `validate()` — B1~B16(오류·경고), `matches()` — 기대 결과 비교, `available_vars()` — 변수 흐름 | `tests/test_contracts_bpmn_ext.py` (업무 예제 48개를 읽고 검사한다) |
-| C15 | `chaeksas.contracts.external_task` + Center `api/external_tasks.py` | `task_id_for()`(멱등 칸 → 같은 일감 id), `body_hash()`(같은 칸·다른 본문 → 409), `missing_outputs()`(출력 검사). 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`apps/adapter_consumer` | `tests/test_center_external_tasks.py`·`tests/test_c15_round_trip.py`·`tests/test_adapter_consumer.py` |
+| C15 | `chaeksas.contracts.external_task` + Center `api/external_tasks.py` | `task_id_for()`(멱등 칸 → 같은 일감 id), `body_hash()`(같은 칸·다른 본문 → 409), `missing_outputs()`(출력 검사). 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`server/adapter_consumer` | `tests/test_center_external_tasks.py`·`tests/test_c15_round_trip.py`·`tests/test_adapter_consumer.py` |
 
 V5~V8은 **역할에 따라 누가 검사하는지가 다르므로** 함수를 나눠 뒀다. Center는 `verify_time(..., check_not_before=False)`로 예약 배포를 받아 두고, 실행하는 쪽만 `not_before`를 본다.
 

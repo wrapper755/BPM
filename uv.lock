@@ -147,7 +147,7 @@ wheels = [
 [[package]]
 name = "chaeksas-adapter-consumer"
 version = "0.1.0"
-source = { editable = "apps/adapter_consumer" }
+source = { editable = "server/adapter_consumer" }
 dependencies = [
     { name = "chaeksas-contracts" },
     { name = "chaeksas-core" },
@@ -157,16 +157,16 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "packages/contracts" },
-    { name = "chaeksas-core", editable = "packages/core" },
-    { name = "chaeksas-service-kit", editable = "packages/service_kit" },
+    { name = "chaeksas-contracts", editable = "shared/contracts" },
+    { name = "chaeksas-core", editable = "shared/core" },
+    { name = "chaeksas-service-kit", editable = "server/service_kit" },
     { name = "httpx", specifier = ">=0.27" },
 ]
 
 [[package]]
 name = "chaeksas-bot-ui"
 version = "0.1.0"
-source = { editable = "apps/bot_ui" }
+source = { editable = "bot/app" }
 dependencies = [
     { name = "chaeksas-contracts" },
     { name = "chaeksas-core" },
@@ -178,9 +178,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "packages/contracts" },
-    { name = "chaeksas-core", editable = "packages/core" },
-    { name = "chaeksas-qt", editable = "packages/qt" },
+    { name = "chaeksas-contracts", editable = "shared/contracts" },
+    { name = "chaeksas-core", editable = "shared/core" },
+    { name = "chaeksas-qt", editable = "shared/qt" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "keyring", specifier = ">=25.4" },
     { name = "platformdirs", specifier = ">=4.3" },
@@ -189,7 +189,7 @@ requires-dist = [
 [[package]]
 name = "chaeksas-center"
 version = "0.1.0"
-source = { editable = "apps/center" }
+source = { editable = "server/center" }
 dependencies = [
     { name = "chaeksas-contracts" },
     { name = "fastapi" },
@@ -201,7 +201,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "packages/contracts" },
+    { name = "chaeksas-contracts", editable = "shared/contracts" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "platformdirs", specifier = ">=4.3" },
     { name = "python-multipart", specifier = ">=0.0.12" },
@@ -212,7 +212,7 @@ requires-dist = [
 [[package]]
 name = "chaeksas-contracts"
 version = "0.1.0"
-source = { editable = "packages/contracts" }
+source = { editable = "shared/contracts" }
 dependencies = [
     { name = "cryptography" },
     { name = "pydantic" },
@@ -227,7 +227,7 @@ requires-dist = [
 [[package]]
 name = "chaeksas-core"
 version = "0.1.0"
-source = { editable = "packages/core" }
+source = { editable = "shared/core" }
 dependencies = [
     { name = "chaeksas-extension-api" },
     { name = "chaeksas-llm" },
@@ -238,8 +238,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-extension-api", editable = "packages/extension_api" },
-    { name = "chaeksas-llm", editable = "packages/llm" },
+    { name = "chaeksas-extension-api", editable = "shared/extension_api" },
+    { name = "chaeksas-llm", editable = "shared/llm" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "openpyxl", specifier = ">=3.1" },
     { name = "pypdf", specifier = ">=5.1" },
@@ -248,18 +248,18 @@ requires-dist = [
 [[package]]
 name = "chaeksas-extension-api"
 version = "0.1.0"
-source = { editable = "packages/extension_api" }
+source = { editable = "shared/extension_api" }
 dependencies = [
     { name = "chaeksas-contracts" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "chaeksas-contracts", editable = "packages/contracts" }]
+requires-dist = [{ name = "chaeksas-contracts", editable = "shared/contracts" }]
 
 [[package]]
 name = "chaeksas-llm"
 version = "0.1.0"
-source = { editable = "packages/llm" }
+source = { editable = "shared/llm" }
 dependencies = [
     { name = "httpx" },
 ]
@@ -279,7 +279,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-service-kit", editable = "packages/service_kit" },
+    { name = "chaeksas-service-kit", editable = "server/service_kit" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "uvicorn", specifier = ">=0.32" },
 ]
@@ -287,7 +287,7 @@ requires-dist = [
 [[package]]
 name = "chaeksas-qt"
 version = "0.1.0"
-source = { editable = "packages/qt" }
+source = { editable = "shared/qt" }
 dependencies = [
     { name = "chaeksas-contracts" },
     { name = "pyside6-essentials" },
@@ -295,14 +295,14 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "packages/contracts" },
+    { name = "chaeksas-contracts", editable = "shared/contracts" },
     { name = "pyside6-essentials", specifier = "==6.11.2" },
 ]
 
 [[package]]
 name = "chaeksas-server-runner"
 version = "0.1.0"
-source = { editable = "apps/server_runner" }
+source = { editable = "server/server_runner" }
 dependencies = [
     { name = "chaeksas-contracts" },
     { name = "chaeksas-core" },
@@ -313,8 +313,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "packages/contracts" },
-    { name = "chaeksas-core", editable = "packages/core" },
+    { name = "chaeksas-contracts", editable = "shared/contracts" },
+    { name = "chaeksas-core", editable = "shared/core" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "keyring", specifier = ">=25.4" },
     { name = "platformdirs", specifier = ">=4.3" },
@@ -323,7 +323,7 @@ requires-dist = [
 [[package]]
 name = "chaeksas-service-kit"
 version = "0.1.0"
-source = { editable = "packages/service_kit" }
+source = { editable = "server/service_kit" }
 dependencies = [
     { name = "chaeksas-contracts" },
     { name = "chaeksas-llm" },
@@ -333,8 +333,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "packages/contracts" },
-    { name = "chaeksas-llm", editable = "packages/llm" },
+    { name = "chaeksas-contracts", editable = "shared/contracts" },
+    { name = "chaeksas-llm", editable = "shared/llm" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
 ]
@@ -342,7 +342,7 @@ requires-dist = [
 [[package]]
 name = "chaeksas-studio"
 version = "0.1.0"
-source = { editable = "apps/studio" }
+source = { editable = "studio/app" }
 dependencies = [
     { name = "chaeksas-core" },
     { name = "chaeksas-qt" },
@@ -353,8 +353,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-core", editable = "packages/core" },
-    { name = "chaeksas-qt", editable = "packages/qt" },
+    { name = "chaeksas-core", editable = "shared/core" },
+    { name = "chaeksas-qt", editable = "shared/qt" },
     { name = "keyring", specifier = ">=25.4" },
     { name = "platformdirs", specifier = ">=4.3" },
     { name = "pyside6-addons", specifier = ">=6.8" },

@@ -40,7 +40,7 @@ Windows 데스크톱 앱 (PySide6 + bpmn-js in QtWebEngine). 사용자: BPM 프�
 
 모든 영역은 접을 수 있고 크기·위치를 기억한다. 보기 → 「레이아웃 초기화」로 되돌린다.
 
-> 상태: **돈다** (`apps/studio/layout.py`). 창 크기·위치, 독의 자리, 분할자 비율, 「속성 패널
+> 상태: **돈다** (`studio/app/layout.py`). 창 크기·위치, 독의 자리, 분할자 비율, 「속성 패널
 > 접기」가 **설정과 따로 `layout.json`**에 담긴다 — 사람이 읽고 고치는 설정(주소·참조 이름)에
 > Qt의 바이트 뭉치를 섞지 않고, 지워도 되는 파일이라 「초기화」가 **파일 지우기 + 지금 창
 > 되돌리기**로 끝난다. **깨진 파일은 없는 것으로 보고** 기본 배치로 뜬다 (배치 하나 때문에
@@ -95,7 +95,7 @@ Windows 데스크톱 앱 (PySide6 + bpmn-js in QtWebEngine). 사용자: BPM 프�
 
 ### 「변수」 탭 — 입력·출력 정의와 지금 값
 
-> 상태: **돈다** (`apps/studio/variables.py` — 값 다루기, Qt 없음 · `variables_tab.py` — 탭).
+> 상태: **돈다** (`studio/app/variables.py` — 값 다루기, Qt 없음 · `variables_tab.py` — 탭).
 
 이 BPM 프로세스가 **받는 것(입력)·내놓는 것(출력)을 정의하는 자리**이고, 시험 실행 중에는 같은 표가 **지금 값**을 보인다. 정의는 그림의 `bpm:process.inputs`·`outputs`(C14)다 — 「BPM 프로세스 정보」(STU-06)가 아니라 **캔버스 쪽**에 둔다(그림에 사는 값이라서다).
 
@@ -168,7 +168,7 @@ Windows 데스크톱 앱 (PySide6 + bpmn-js in QtWebEngine). 사용자: BPM 프�
 
 ## STU-03 리소스 탐색기
 
-> 상태: **돈다** (`apps/studio/resources.py`). 뿌리 셋, 둘째 단계(「서비스 앱 → 작업」), 문맥 메뉴, 「캔버스에 추가」, **끌어다 놓기**, 공유 BPM 프로세스의 **부르기·보기·복사**가 돈다.
+> 상태: **돈다** (`studio/app/resources.py`). 뿌리 셋, 둘째 단계(「서비스 앱 → 작업」), 문맥 메뉴, 「캔버스에 추가」, **끌어다 놓기**, 공유 BPM 프로세스의 **부르기·보기·복사**가 돈다.
 >
 > - **끌어다 놓기와 「캔버스에 추가」는 같은 길이다** ([ADR-0044](../decisions/0044-canvas-drag-and-drop.md)) — 둘 다 캔버스 명령 하나(`createTask`)로 만들어 **실행 취소가 한 걸음**이고, 다른 것은 **자리뿐**이다(놓은 점이 노드의 가운데가 된다. 메뉴·더블클릭은 보이는 자리의 빈 곳을 찾는다). **만들 것이 없는 줄은 아예 끌리지 않는다** — 끌고 가서 놓았는데 아무 일도 없는 것보다 낫다. 열린 정의가 없으면 메뉴와 **같은 한 줄**을 말한다.
 > - 캔버스는 `QWebEngineView`라 드롭을 **내부 렌더 위젯에서 가로챈다** (뷰의 `dropEvent`는 불리지 않는다 — ADR-0044, 스파이크 `spikes/s9-canvas-drop/`). **우리 MIME 형식일 때만** 받으므로 페이지 안의 bpmn-js 팔레트 드래그와 바깥에서 끌어 온 파일은 그대로 간다. **캔버스는 무엇이 떨어졌는지 모른다** — 글과 자리만 올려 보내고 뜻은 메인 창이 푼다.
@@ -308,7 +308,7 @@ id 규칙(「id는 소문자·숫자·`.`·`_`·`-`만 쓰고 소문자나 숫�
 
 ## STU-06 BPM 프로세스 정보
 
-> 상태: **돈다** (`apps/studio/process_dialog.py`). 파일 메뉴 「BPM 프로세스 정보...」로 연다.
+> 상태: **돈다** (`studio/app/process_dialog.py`). 파일 메뉴 「BPM 프로세스 정보...」로 연다.
 >
 > **고치는 것이 두 곳에 산다.** 이름·버전·설명·담당자·태그는 작업 폴더 기록(`process.json` — Studio 안에서만 쓰는 기록이라 계약이 아니다)이고, **실행 위치는 그림**(`bpm:process`, C14)이다. 그림은 **캔버스를 거쳐야** 고칠 수 있으므로([ADR-0022](../decisions/0022-studio-canvas.md) — XML을 파이썬이 만지면 실행 취소와 「저장 안 한 변경」이 깨진다) **진입 정의가 열려 있을 때만** 그 칸이 켜지고, 아니면 끄고 까닭을 적는다 (U3). 켜져 있으면 「적용」이 `bpm:process`를 **한 걸음**으로 적용한다(실행 취소도 한 걸음). **외부 확장의 「정의 고정」은 여기서 하지 않는다** — 해시를 보여 주는 자리가 STU-15이고, 같은 값을 고치는 자리를 두 곳에 두지 않는다 ([ADR-0060](../decisions/0060-pinning-external-definitions.md)).
 >
@@ -316,7 +316,7 @@ id 규칙(「id는 소문자·숫자·`.`·`_`·`-`만 쓰고 소문자나 숫�
 > - **읽고 쓰는 것은 진입 정의 하나다.** 저장할 때 **읽은 `bpm:process`를 통째로 되돌려 쓴다** — `inputs`·`outputs`·`extensions`처럼 창이 다루지 않는 칸이 사라지지 않게.
 > - **「서버에서 실행할 수 없는 태스크」는 그림 검사와 같은 함수로 센다** (`contracts.server_blockers` — B6이 쓰는 것). 어긋나면 창이 「바꿔도 된다」고 하고 F6이 막는 일이 생긴다. **확장 태스크도 센다** — 실행 위치는 확장 정의만 아니(C13 `task_types[].run_locations`, [ADR-0018](../decisions/0018-extensions.md)) 메인 창이 확장 호스트의 표를 넘긴다. **F6·패키지 매니페스트가 같은 표를 쓴다.** 표에 없는 종류(그 확장을 깔지 않았거나 꺼 뒀다 — [ADR-0043](../decisions/0043-turned-off-extensions.md))는 **세지 않는다**: 모르는 것을 막으면 올바른 그림이 「서버에서 안 된다」가 된다.
 > - **그림 쪽은 캔버스에만 적용된다** — 파일로 가는 것은 「저장」(Ctrl+S)이다 (STU-04의 「적용」과 같은 결). 상태 줄이 그렇게 말한다.
-> - **「이 부분을 PC BPM 프로세스로 나누기...」가 돈다** ([ADR-0071](../decisions/0071-splitting-a-task-into-a-pc-bot.md), `apps/studio/split_actions.py`·`split_dialog.py`) — 단위는 **서버에서 못 하는 노드 하나**다. 그 노드를 새 PC BPM 프로세스(시작 → 노드 → 끝)로 옮기고 원래 자리는 **위임 호출로 바뀐다**(흐름·경계 이벤트는 그대로, 실행 취소 한 걸음). 그림은 둘 다 **캔버스가 짓는다**(`appendChain`·`delegateNode`). 아래 「STU-06a」.
+> - **「이 부분을 PC BPM 프로세스로 나누기...」가 돈다** ([ADR-0071](../decisions/0071-splitting-a-task-into-a-pc-bot.md), `studio/app/split_actions.py`·`split_dialog.py`) — 단위는 **서버에서 못 하는 노드 하나**다. 그 노드를 새 PC BPM 프로세스(시작 → 노드 → 끝)로 옮기고 원래 자리는 **위임 호출로 바뀐다**(흐름·경계 이벤트는 그대로, 실행 취소 한 걸음). 그림은 둘 다 **캔버스가 짓는다**(`appendChain`·`delegateNode`). 아래 「STU-06a」.
 
 읽기 전용: id, 폴더, 학습 상태 요약. 편집: 이름(중복 검사 — **바꿀 때만** 보고, 겹친 상대의 id를 함께 적는다. 목록에서 닫힌 것일 수 있다), 버전, 설명, 담당자, 태그(쉼표), **「실행 위치」**(PC / 서버, 신규). 「적용」/「취소」.
 
@@ -412,7 +412,7 @@ id 규칙(「id는 소문자·숫자·`.`·`_`·`-`만 쓰고 소문자나 숫�
 
 ## STU-10 설정
 
-> 상태: **분류 넷이 모두 돈다** (`apps/studio/settings_dialog.py`) — 「외형」·「LLM」·「Center」·「확장별 설정」. **「서비스 앱」 분류는 없다** — 서비스 앱 키·Studio 개발 키·외부 앱 시험용 키가 없어졌다([ADR-0102](../decisions/0102-calling-outside-is-pull.md)). 옛 설정 파일의 `service_keys`는 읽지 않고 다음 저장에서 빠진다(비밀 저장소의 옛 값은 지우지 않는다 — BUI-10과 같다). 시험 실행의 서비스 앱 태스크도 Center에 일감으로 올라가고(`origin: test`) 시험 쪽으로 보낼지는 일꾼이 정한다. **쓰는 곳이 있는 칸만 둔다** ([ADR-0073](../decisions/0073-studio-settings-only-what-is-used.md)) — 「메일」(시험 실행은 메일을 담아 두기만 한다, C14)·「비밀」(툴팩이 없다, ADR-0050)과 「LLM」의 공급자(OpenAI 호환 하나, ADR-0027)·temperature(현장에 그 칸이 없어 시험만 다른 답을 낸다)·화면 인식 모델, 「외형」의 캔버스 팔레트(bpmn-js가 스스로 접는다)는 **두지 않는다**. 다시 넣으려면 읽는 곳을 먼저 만든다.
+> 상태: **분류 넷이 모두 돈다** (`studio/app/settings_dialog.py`) — 「외형」·「LLM」·「Center」·「확장별 설정」. **「서비스 앱」 분류는 없다** — 서비스 앱 키·Studio 개발 키·외부 앱 시험용 키가 없어졌다([ADR-0102](../decisions/0102-calling-outside-is-pull.md)). 옛 설정 파일의 `service_keys`는 읽지 않고 다음 저장에서 빠진다(비밀 저장소의 옛 값은 지우지 않는다 — BUI-10과 같다). 시험 실행의 서비스 앱 태스크도 Center에 일감으로 올라가고(`origin: test`) 시험 쪽으로 보낼지는 일꾼이 정한다. **쓰는 곳이 있는 칸만 둔다** ([ADR-0073](../decisions/0073-studio-settings-only-what-is-used.md)) — 「메일」(시험 실행은 메일을 담아 두기만 한다, C14)·「비밀」(툴팩이 없다, ADR-0050)과 「LLM」의 공급자(OpenAI 호환 하나, ADR-0027)·temperature(현장에 그 칸이 없어 시험만 다른 답을 낸다)·화면 인식 모델, 「외형」의 캔버스 팔레트(bpmn-js가 스스로 접는다)는 **두지 않는다**. 다시 넣으려면 읽는 곳을 먼저 만든다.
 
 > 「Center」 분류가 **이 모양으로 돈다** ([ADR-0093](../decisions/0093-studio-is-let-in-by-approval.md) — 들어오는 일은 STU-16 `connect_dialog.py`, 요청·키 받기는 `center_enroll.py`).
 
@@ -429,7 +429,7 @@ id 규칙(「id는 소문자·숫자·`.`·`_`·`-`만 쓰고 소문자나 숫�
 
 ## STU-11 Center 공유 자원
 
-> 상태: **돈다 — 남은 기능이 없다** (`apps/studio/center_resources.py` + `install.py`). 열 다섯·「새로 고침」·아래 상태 줄과 **공유 BPM 프로세스 설치·갱신·제거**가 돈다. 목록은 **C5 패키지 표**에서 온다 (`GET /packages?kind=process_lib`) — C7 리소스 목록에 `process_lib` 갈래가 없고, 「상태」가 **패키지 상태**라서다 (CON-06이 같은 것을 읽는다).
+> 상태: **돈다 — 남은 기능이 없다** (`studio/app/center_resources.py` + `install.py`). 열 다섯·「새로 고침」·아래 상태 줄과 **공유 BPM 프로세스 설치·갱신·제거**가 돈다. 목록은 **C5 패키지 표**에서 온다 (`GET /packages?kind=process_lib`) — C7 리소스 목록에 `process_lib` 갈래가 없고, 「상태」가 **패키지 상태**라서다 (CON-06이 같은 것을 읽는다).
 >
 > - **공유 BPM 프로세스의 「설치」·「갱신」·「제거」가 돈다** (`install.py` + `workspace.py`, [ADR-0048](../decisions/0048-installing-shared-packages.md)). 받은 것은 **그 BPM 프로세스 작업 폴더의 `libs/`**로 가고 거기서 호출이 찾는다 — 실행기(`libs/*.bpmn`)와 **같은 자리**라 시험 실행·F6과 현장이 같은 파일을 본다. 「설치본」·「(갱신 있음)」·「로컬만」도 돈다.
 > - **설치는 BPM 프로세스 하나에 하는 일이다** — 그래서 「설치본」은 **열린 BPM 프로세스 기준**이고, 열린 것이 없으면 표는 그대로 보이고 **단추만** 꺼진다 (읽기는 되는 자리다). 판은 작업 폴더 기록(`process.json`)에 남고 **패키지로는 가지 않는다**(내보낼 때 `requires.libs`에 `<id>@<version>`으로 적힌다).
@@ -458,7 +458,7 @@ id 규칙(「id는 소문자·숫자·`.`·`_`·`-`만 쓰고 소문자나 숫�
 
 ## STU-12 공유 BPM 프로세스 내보내기·올리기
 
-> 상태: **내보내기와 올리기가 모두 돈다** (`dialogs.py`의 `ShareDefinitionsDialog` + `packaging.export_lib` + `apps/studio/upload.py`). 고른 정의가 `kind=process_lib` 패키지가 되고 **매니페스트의 `provides.processes`를 그림에서 모은다** (C1 — CON-06 「제공 정의」가 읽는다). 창에 「만들 폴더」 대신 파일 고르기를 쓴다 (「패키지로 내보내기...」와 같은 모양).
+> 상태: **내보내기와 올리기가 모두 돈다** (`dialogs.py`의 `ShareDefinitionsDialog` + `packaging.export_lib` + `studio/app/upload.py`). 고른 정의가 `kind=process_lib` 패키지가 되고 **매니페스트의 `provides.processes`를 그림에서 모은다** (C1 — CON-06 「제공 정의」가 읽는다). 창에 「만들 폴더」 대신 파일 고르기를 쓴다 (「패키지로 내보내기...」와 같은 모양).
 >
 > **「올리기」는 내보내는 것과 같은 zip을 보낸다** — 새로 짓지 않고 `export`·`export_lib`가 만든 것을 그대로 올리므로 둘이 다른 것을 낼 일이 없다. 파일은 남기지 않는다(올리기는 내보내기가 아니다 — 파일이 필요하면 「내보내기」가 그 일을 한다). **설정을 먼저 묻는다** — 패키지를 만든 뒤에 「Center 설정이 없습니다」라고 하면 사람이 한 일이 버려진다. 「설명」·「올리기 안내」는 창에 아직 없다.
 >
@@ -505,7 +505,7 @@ UI 태스크 편집기는 UI 자동화 확장과 함께 없어졌다 ([ADR-0114]
 
 ## STU-14 서비스 앱 태스크 편집기 (신규)
 
-> 상태: **돈다** (`apps/studio/service_editor.py` + 고를 거리 `service_catalog.py`). 확장이 기여한 편집기(`studio.editors`)와 **같은 규약**이라 속성 패널은 어느 쪽인지 모른다. 리소스 탐색기(STU-03)의 「서비스 앱」 뿌리에서 작업을 **캔버스에 추가**해 태스크를 만들고, 「작업 설명 보기」 창도 그쪽에 있다. 탐색기에서 **끌어다 놓아도** 같은 태스크가 생긴다 (「캔버스에 추가」와 같은 명령이다, [ADR-0044](../decisions/0044-canvas-drag-and-drop.md)).
+> 상태: **돈다** (`studio/app/service_editor.py` + 고를 거리 `service_catalog.py`). 확장이 기여한 편집기(`studio.editors`)와 **같은 규약**이라 속성 패널은 어느 쪽인지 모른다. 리소스 탐색기(STU-03)의 「서비스 앱」 뿌리에서 작업을 **캔버스에 추가**해 태스크를 만들고, 「작업 설명 보기」 창도 그쪽에 있다. 탐색기에서 **끌어다 놓아도** 같은 태스크가 생긴다 (「캔버스에 추가」와 같은 명령이다, [ADR-0044](../decisions/0044-canvas-drag-and-drop.md)).
 
 속성 패널에서 서비스 앱 태스크를 골랐을 때의 편집기. 서비스 앱의 manifest(C11) 또는 외부 확장 정의의 어댑터 작업(C13 §4)을 읽어 입력·출력 칸을 자동으로 만든다. 확장이 자기 편집기를 기여하지 않은 작업은 모두 이 편집기를 쓴다.
 
@@ -532,7 +532,7 @@ UI 태스크 편집기는 UI 자동화 확장과 함께 없어졌다 ([ADR-0114]
 
 ## STU-15 확장 (신규)
 
-> 상태: **돈다** (`apps/studio/extension_dialog.py`). 목록·상세·「켜기」/「끄기」·「새로 고침」·「정의 파일 열기...」가 모두 돈다. 끈 목록은 **Studio 설정**에 있다 ([ADR-0043](../decisions/0043-turned-off-extensions.md)) — PC 실행기(BUI-11)는 제 설정에 따로 둔다. 외부 확장은 여기서 끄지 않는다 (Center에 등록된 정의다, C13 E6).
+> 상태: **돈다** (`studio/app/extension_dialog.py`). 목록·상세·「켜기」/「끄기」·「새로 고침」·「정의 파일 열기...」가 모두 돈다. 끈 목록은 **Studio 설정**에 있다 ([ADR-0043](../decisions/0043-turned-off-extensions.md)) — PC 실행기(BUI-11)는 제 설정에 따로 둔다. 외부 확장은 여기서 끄지 않는다 (Center에 등록된 정의다, C13 E6).
 
 Studio에 켜진 확장과 각 확장이 더한 것을 본다 ([ADR-0018](../decisions/0018-extensions.md), C13). 「도구」 → 「확장...」. 600×480.
 
@@ -556,7 +556,7 @@ Studio에 켜진 확장과 각 확장이 더한 것을 본다 ([ADR-0018](../dec
 
 ## STU-16 Center에 연결 (신규, [ADR-0093](../decisions/0093-studio-is-let-in-by-approval.md))
 
-> 상태: **돈다** (`apps/studio/connect_dialog.py`) — 켤 때 판단은 `center_enroll.need_at_start`(Qt를 모른다), 메인 창이 뜬 뒤 `MainWindow.check_center_at_start`가 한 번 부른다. 올리기는 `MainWindow.ensure_center`로 이 창을 연다.
+> 상태: **돈다** (`studio/app/connect_dialog.py`) — 켤 때 판단은 `center_enroll.need_at_start`(Qt를 모른다), 메인 창이 뜬 뒤 `MainWindow.check_center_at_start`가 한 번 부른다. 올리기는 `MainWindow.ensure_center`로 이 창을 연다.
 
 Studio가 Center에 들어오는 창이다 — PC 실행기를 처음 켜면 BUI-03이 먼저 뜨는 것과 같은 자리. **아이디·비밀번호는 없고** 요청 코드를 관리자가 승인한다 (C5 §Studio 등록 요청과 승인). 480×260, 모달.
 

@@ -6,7 +6,7 @@ Center의 웹 화면. 운영자·결재자·관리자가 쓴다 — 승인·배�
 
 > **화면 글에서는 「BPM 프로세스」를 「프로세스」로, 「PC 실행기」를 「Bot」으로 쓴다** ([ADR-0121](../decisions/0121-center-console-says-process.md)) — Center 콘솔에서 프로세스는 BPM 프로세스뿐이다. 이 문서의 설명 글은 뜻을 분명히 하려고 「BPM 프로세스」를 그대로 쓰고, 「」 안의 화면 글·표의 열 이름은 화면에 「프로세스」·「Bot」으로 보인다(사람에게 그 프로그램의 설정·단추를 가리킬 때만 「PC 실행기」). 상태 묶음 이름(`status_map`의 「BPM 프로세스 준비」 같은 것)은 코드의 열쇠라 그대로다.
 
-> 구현: **Next.js** (`web/apps/center-console`), 모양은 [스타일 가이드](../07-style-guide.md) ([ADR-0017](../decisions/0017-web-nextjs-design-system.md)). 브라우저는 Center API를 직접 부르지 않고 콘솔 서버(BFF)가 부른다. 이 문서는 화면 구성만 정한다.
+> 구현: **Next.js** (`server/web/apps/center-console`), 모양은 [스타일 가이드](../07-style-guide.md) ([ADR-0017](../decisions/0017-web-nextjs-design-system.md)). 브라우저는 Center API를 직접 부르지 않고 콘솔 서버(BFF)가 부른다. 이 문서는 화면 구성만 정한다.
 
 ## CON-00 공통 틀
 

@@ -453,7 +453,7 @@ def test_the_domain_lists_are_defined_in_one_place_only() -> None:
     """
     from chaeksas.contracts.manifest import KNOWN_DOMAINS, PC_ONLY_DOMAINS
 
-    src = ROOT / "packages" / "contracts" / "src" / "chaeksas" / "contracts"
+    src = ROOT / "shared" / "contracts" / "src" / "chaeksas" / "contracts"
     where = {p.name: p.read_text(encoding="utf-8") for p in sorted(src.glob("*.py"))}
     for name in ("KNOWN_DOMAINS", "PC_ONLY_DOMAINS"):
         files = [f for f, text in where.items() if re.search(rf"^{name} = ", text, re.M)]

@@ -34,7 +34,7 @@
 | 확장 API (`extension_api`) | 패키지 | 모든 클라이언트·실행하는 쪽 | 확장이 구현하는 안정 인터페이스: 태스크 종류·수행기, Studio 편집기, 사전 점검, HTTP 어댑터 해석 규격 ([ADR-0018](decisions/0018-extensions.md)) | 특정 확장의 로직 |
 | 확장 (내장·사내는 파이썬 패키지, 외부는 정의 파일) | 확장 | 곳곳 (기여 지점) | BPM 프로세스에 공통 기능을 더함. 서버 부분(서비스 앱) + 클라이언트 기여. 확장 정의 C13. **지금 깔린 내장 확장은 없다** ([ADR-0114](decisions/0114-remove-ui-automation.md)) | 플랫폼 흐름 |
 | 모델 클라이언트 (`llm`) | 패키지 | 모델을 부르는 모든 곳 (`core`, 서비스 앱) | OpenAI 호환 `/v1/chat/completions` 어댑터와 그 모양(`Reply`·`ToolSpec`·`LlmError`). **맨 아래** — 우리 멤버를 하나도 모른다 ([ADR-0034](decisions/0034-service-app-model-connection.md)) | 도구 루프·결과 검증·궤적(`core.agent`), 주소·키 보관 |
-| 서비스 앱 뼈대 (`service_kit`) | 패키지 | 서비스 앱 | **일꾼**(`service_kit.consumer` — Center 들이기·가져가기 루프·manifest·카탈로그 올리기, C15), 작업 틀(수행 모드·멱등·오류 형식), 관리 API(상태·사용 기록 — 화면은 `web/apps/svc-console`), `/healthz`, 로깅 | 업무 로직, 업무 호출을 받는 포트 |
+| 서비스 앱 뼈대 (`service_kit`) | 패키지 | 서비스 앱 | **일꾼**(`service_kit.consumer` — Center 들이기·가져가기 루프·manifest·카탈로그 올리기, C15), 작업 틀(수행 모드·멱등·오류 형식), 관리 API(상태·사용 기록 — 화면은 `server/web/apps/svc-console`), `/healthz`, 로깅 | 업무 로직, 업무 호출을 받는 포트 |
 | 어댑터 일꾼 (`adapter_consumer`, `bpm-adapter-consumer`) | 프로세스 (서버) | 서버 또는 외부 앱이 있는 망 | 외부 확장 정의(C13)의 HTTP 어댑터를 C15 일꾼으로 돌린다. **외부 앱의 주소·키는 이 일꾼의 설정에만** 있다 ([ADR-0102](decisions/0102-calling-outside-is-pull.md) §4) | 정의 등록(Center) |
 | Studio | 화면 | 설계자 PC | BPM 프로세스 편집(BPMN), 시험 실행(자율 수행·재생), 학습, 패키지 빌드·업로드 | 배포 결정 |
 | **PC 실행기** | 화면 (트레이) | 현장 PC, 설계자 PC | Center 등록·하트비트(Center API 키), **BPM 프로세스 다운로드·설치·실행**(결정 수행, 실행 자리 하나 + 대기열), 로컬 결재·확인 창, C15 호출 토큰 받기(메모리에만 두고 실행 프로세스에 넘긴다), 확장 켜기·끄기(BUI-11) | 화면 조작 자체 |
@@ -78,10 +78,10 @@ contracts ◀── extension_api ◀── core ◀── studio, bot_ui, serve
 llm ◀── core, service_kit   (맨 아래 — chaeksas의 아무것도 import하지 않는다, ADR-0034)
 ```
 
-- **플랫폼은 특정 확장을 import하지 않는다.** `core`·`apps/*`는 `extension_api`를 통해서만 확장을 부르고, 확장은 엔트리 포인트 `chaeksas.extensions`로 찾는다. 확장끼리도 import하지 않는다 ([ADR-0018](decisions/0018-extensions.md)).
+- **플랫폼은 특정 확장을 import하지 않는다.** `core`와 제품 앱(`server/*`·`studio/app`·`bot/app`)은 `extension_api`를 통해서만 확장을 부르고, 확장은 엔트리 포인트 `chaeksas.extensions`로 찾는다. 확장끼리도 import하지 않는다 ([ADR-0018](decisions/0018-extensions.md)).
   - 찾아 켜는 것은 `chaeksas.core.extensions`의 **확장 호스트**다 (**있음**). 확장의 `extension.json`(C13)은 그 확장의 파이썬 패키지 안에 있고, 정의가 가리키는 `entry`는 그 패키지 안만 가리킬 수 있다. 검사 규칙에 걸리거나 `api` 범위가 맞지 않는 확장은 켜지 않고 사유와 함께 목록에 남는다.
 
-- `web/`은 Python 코드를 import하지 않는다. HTTP로만 부르고, 타입은 `contracts`의 JSON Schema에서 생성한다. 브라우저는 서버 API를 직접 부르지 않는다 (콘솔 서버가 중계, [ADR-0017](decisions/0017-web-nextjs-design-system.md)).
+- `server/web/`은 Python 코드를 import하지 않는다. HTTP로만 부르고, 타입은 `contracts`의 JSON Schema에서 생성한다. 브라우저는 서버 API를 직접 부르지 않는다 (콘솔 서버가 중계, [ADR-0017](decisions/0017-web-nextjs-design-system.md)).
 - `center`와 서비스 앱(확장의 서버 부분)은 `core`를 import하지 않는다.
 - **Studio는 Center를 읽는다** (`studio/services.py` — C7 리소스 목록·믿는 서명 키). 쓰지 않는다. 실행기는 Center를 부르지 않는다 ([ADR-0031](decisions/0031-runner-control-file.md)) — Studio는 실행기가 아니라 제 안에서 엔진을 돌리는 쪽이라 다르다.
 - 서비스 앱끼리 서로 import하지 않는다. 필요하면 HTTP로 부른다.
@@ -124,23 +124,30 @@ Chaeksas/
 ├─ pyproject.toml          # uv workspace 루트 (패키지 아님) + ruff·pytest·mypy 설정
 ├─ .python-version         # 3.12 (ADR-0005)
 ├─ uv.lock                 # 워크스페이스 전체 하나
-├─ packages/
+├─ package.json            # pnpm 워크스페이스 뿌리 (server/web/*, studio/canvas — ADR-0017·ADR-0129)
+├─ pnpm-workspace.yaml, pnpm-lock.yaml
+├─ shared/                 # 둘 이상의 제품이 쓰는 것
 │  ├─ contracts/           # 공통 계약
 │  ├─ extension_api/       # 확장이 구현하는 인터페이스 (ADR-0018)
 │  ├─ core/                # 런타임 코어 + 확장 호스트
 │  ├─ llm/                 # 모델 클라이언트 (맨 아래, ADR-0034)
-│  ├─ qt/                  # 공용 PySide6 위젯·테마·결재 창
-│  └─ service_kit/         # 서비스 앱 공통 뼈대 + 관리 API
-├─ apps/
-│  ├─ studio/
-│  ├─ bot_ui/              # PC 실행기 (트레이 GUI) + 실행 프로세스
+│  └─ qt/                  # 공용 PySide6 위젯·테마·결재 창 (Studio·PC 실행기)
+├─ server/                 # 서버 (Linux 주)
+│  ├─ center/              # Center API (콘솔은 server/web/apps/center-console)
 │  ├─ server_runner/       # 서버 실행기 (화면 없음, core 사용)
 │  ├─ adapter_consumer/    # 어댑터 일꾼 (외부 확장의 HTTP 어댑터, C15)
-│  └─ center/              # Center API (콘솔은 web/apps/center-console)
-├─ web/                    # 웹 화면 (Next.js, pnpm 워크스페이스, ADR-0017)
-│  ├─ apps/center-console/ # Center 콘솔
-│  ├─ apps/svc-console/    # 서비스 앱 관리 콘솔 (앱마다 하나씩 띄움)
-│  └─ packages/            # ui(구성요소+토큰 CSS), api-types(계약에서 생성), config
+│  ├─ service_kit/         # 서비스 앱 공통 뼈대 + 관리 API
+│  ├─ web/                 # 웹 화면 (Next.js, ADR-0017)
+│  │  ├─ apps/center-console/ # Center 콘솔
+│  │  ├─ apps/svc-console/    # 서비스 앱 관리 콘솔 (앱마다 하나씩 띄움)
+│  │  └─ packages/         # ui(구성요소+토큰 CSS), api-types(계약에서 생성), config
+│  └─ deploy/              # docker compose, Dockerfile
+├─ studio/
+│  ├─ app/                 # Studio
+│  └─ canvas/              # bpmn-js 배포본을 고정해 Studio 안으로 복사한다 (ADR-0029)
+├─ bot/
+│  └─ app/                 # PC 실행기 (트레이 GUI) + 실행 프로세스
+├─ packaging/              # Studio·PC 실행기 묶기와 설치 파일 (ADR-0024·0068)
 ├─ design/                 # tokens.json (디자인 토큰 원본), preview.html
 ├─ samples/                # 제품이 아니다 — 업무 예제가 부르는 모의 앱 (워크스페이스 멤버)
 │  └─ mock_apps/           # C11 앱 13 + 외부 앱 2 + 그 C13 어댑터 정의. bpm-mock-apps
@@ -149,6 +156,6 @@ Chaeksas/
 └─ docs/
 ```
 
-> 상태: 위 Python 멤버 12개(`packages/*` 여섯·`apps/*` 다섯·`samples/mock_apps`)가 돈다 (`uv sync --all-packages` → `uv run pytest`). 내장 확장을 두는 `extensions/<id>/`는 지금 없다 — 확장을 다시 들일 때 워크스페이스 멤버 목록에 `extensions/*`를 함께 더한다 ([ADR-0114](decisions/0114-remove-ui-automation.md)). `web/`은 pnpm 워크스페이스다 (`apps/center-console`·`apps/svc-console`, `packages/ui`·`api-types`·`config`).
+> 상태: 위 Python 멤버 12개(`shared/*` 다섯·`server/*` 넷·`studio/app`·`bot/app`·`samples/mock_apps`)가 돈다 (`uv sync --all-packages` → `uv run pytest`). **제품(`server/`·`studio/`·`bot/`)끼리는 import하지 않는다** — 함께 쓰는 것은 `shared/`로 내린다 ([ADR-0129](decisions/0129-product-folders.md), `test_import_direction.py`). 내장 확장을 두는 `extensions/<id>/`는 지금 없다 — 확장을 다시 들일 때 워크스페이스 멤버 목록에 `extensions/*`를 함께 더한다 ([ADR-0114](decisions/0114-remove-ui-automation.md)). pnpm 명령은 저장소 맨 위에서 부른다.
 
-근거: [ADR-0114](decisions/0114-remove-ui-automation.md), [ADR-0018](decisions/0018-extensions.md), [ADR-0017](decisions/0017-web-nextjs-design-system.md), [ADR-0015](decisions/0015-run-location.md), [ADR-0004](decisions/0004-monorepo-uv-workspace.md), [ADR-0010](decisions/0010-service-apps.md), [ADR-0012](decisions/0012-bot-ui.md), [ADR-0013](decisions/0013-api-keys.md).
+근거: [ADR-0129](decisions/0129-product-folders.md), [ADR-0114](decisions/0114-remove-ui-automation.md), [ADR-0018](decisions/0018-extensions.md), [ADR-0017](decisions/0017-web-nextjs-design-system.md), [ADR-0015](decisions/0015-run-location.md), [ADR-0004](decisions/0004-monorepo-uv-workspace.md), [ADR-0010](decisions/0010-service-apps.md), [ADR-0012](decisions/0012-bot-ui.md), [ADR-0013](decisions/0013-api-keys.md).

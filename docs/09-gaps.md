@@ -32,7 +32,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 | C12 | **구현됨** (M7) | `contracts.server_runner`·`core.run_snapshot` + **양쪽** — 등록·하트비트·운영 API·배포 설치·작업 실행·저장·재개·결재·**메시지**가 돈다 | — (닫았다). 「기한은 간다」는 [ADR-0061](decisions/0061-waking-runs-whose-timer-is-due.md)이 코드로도 사실로 만들었다 (주기만큼 늦을 수 있다고 C12에 적었다). **PC 위임도 본문이 되어 양쪽이 돈다** ([ADR-0062](decisions/0062-pc-delegation.md) — §3-13). 담고 되살리는 모양은 [ADR-0054](decisions/0054-server-run-state-and-concurrency.md)가 정했고, **재시작을 건너 메시지가 두 번 들어가던 자리**는 [ADR-0058](decisions/0058-absorbed-messages-travel-with-the-snapshot.md)이 닫았다 (ADR-0056이 「재 보지 않았다」고 적어 둔 것 — 재 보니 정말 두 번이었다) |
 | C13 | **구현됨** | `contracts.extension`·`core.extensions` | — (닫았다 — 기여 지점마다 읽는 쪽이 있다: 호스트·Studio·PC 실행기·콘솔·Center) |
 | C14 | **구현됨** | `contracts.bpmn_ext` B1~B16 + `contracts.dmn` | — (닫았다 — 엔진이 수행하고 Studio가 편집·검사하고 예제 48개가 이 형식이다. schema 1에서 **쓰지 않기로 적은 것**은 범위 결정이다) |
-| C15 | **구현됨** | `contracts.external_task`, Center `api/external_tasks.py` (15판) + **양쪽** — 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`apps/adapter_consumer` | — (조각 2~4가 닫았고 긴 작업은 [ADR-0103](decisions/0103-long-external-tasks.md)이 닫았다, §3-17) |
+| C15 | **구현됨** | `contracts.external_task`, Center `api/external_tasks.py` (15판) + **양쪽** — 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`server/adapter_consumer` | — (조각 2~4가 닫았고 긴 작업은 [ADR-0103](decisions/0103-long-external-tasks.md)이 닫았다, §3-17) |
 
 **열둘이 모두 「구현됨」이다** (C12가 M7 다섯째 조각에서, C15가 ADR-0102 조각 4에서 올라왔다). C8·C9·C10은 UI 자동화 확장과 함께 지웠다 ([ADR-0114](decisions/0114-remove-ui-automation.md) — §3-28). 상태 셋의 뜻은 [03-contracts/README](03-contracts/README.md) §상태에 적었다 — 적혀 있지 않아 올릴 때마다 사람이 다시 물었다.
 
@@ -80,7 +80,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 ### 3-25. 종료(terminate) 끝 이벤트를 엔진이 일반 끝으로 돈다
 
-**무엇이 없나.** BX-11(`bx11_bid_collection.bpmn:173`)이 `terminateEventDefinition`을 쓰고 커버리지 표가 「끝 — 종료(terminate) | BX-11」로 센다. 그런데 엔진의 `handle_end`(`core/nodes.py:108-118`)는 그 토큰만 지운다 — **다른 가지의 토큰이 살아 있으면 실행이 끝나지 않는다.** `packages/core`·`packages/contracts`에 `terminat`가 없고(OS 프로세스 끄기뿐) C14 §이벤트에도 이 요소가 없다. 「모르는 노드는 실패」 규칙도 못 잡는다(요소가 `endEvent`라서다). 시험이 없다.
+**무엇이 없나.** BX-11(`bx11_bid_collection.bpmn:173`)이 `terminateEventDefinition`을 쓰고 커버리지 표가 「끝 — 종료(terminate) | BX-11」로 센다. 그런데 엔진의 `handle_end`(`core/nodes.py:108-118`)는 그 토큰만 지운다 — **다른 가지의 토큰이 살아 있으면 실행이 끝나지 않는다.** `shared/core`·`shared/contracts`에 `terminat`가 없고(OS 프로세스 끄기뿐) C14 §이벤트에도 이 요소가 없다. 「모르는 노드는 실패」 규칙도 못 잡는다(요소가 `endEvent`라서다). 시험이 없다.
 
 **먼저 정할 것.** 엔진이 짓나(남은 토큰·기다림을 걷고 `success`로 끝낸다 — 경계·위임·외부 작업을 걷는 길은 취소가 이미 갖고 있다), 아니면 C14 schema 1에서 쓰지 않기로 하고 B 검사로 막나. BX-11은 그림에 가지가 하나라 지금도 결과가 같다.
 
@@ -284,9 +284,9 @@ CON-07 상세 「서버 주소」에서 넣고 **정의의 허용 호스트 안�
 
 ### 4-5. 「설치」 (올리기·STU-11·STU-06·STU-03과 **공유 BPM 프로세스 설치·부르기·보기·복사**는 닫았다)
 
-**올리기 둘과 STU-11 읽기는 닫았다** (`apps/studio/upload.py` + `center_resources.py`, Center 쪽 권한 관문은 `center/auth.py`·`api/package_access.py`). Studio 키로 올리고, 올라온 공유 BPM 프로세스·툴팩을 STU-11과 STU-03이 **같은 출처**(C5 패키지 표)에서 본다. **STU-06도 닫았다** (`process_dialog.py` — 그림 쪽은 캔버스를 거친다. 확장 태스크의 실행 위치는 확장 호스트의 표로 센다 — F6·매니페스트가 같은 표를 쓴다). **STU-15도 닫았다** ([ADR-0043](decisions/0043-turned-off-extensions.md)). **STU-03도 닫았다** (`resources.py` — 뿌리 넷·둘째 단계·문맥 메뉴·「캔버스에 추가」·끌어다 놓기. 드래그는 [ADR-0044](decisions/0044-canvas-drag-and-drop.md), 기여 뿌리의 둘째 단계를 **두지 않기로** 한 것은 [ADR-0045](decisions/0045-contributed-resource-children.md)다).
+**올리기 둘과 STU-11 읽기는 닫았다** (`studio/app/upload.py` + `center_resources.py`, Center 쪽 권한 관문은 `center/auth.py`·`api/package_access.py`). Studio 키로 올리고, 올라온 공유 BPM 프로세스·툴팩을 STU-11과 STU-03이 **같은 출처**(C5 패키지 표)에서 본다. **STU-06도 닫았다** (`process_dialog.py` — 그림 쪽은 캔버스를 거친다. 확장 태스크의 실행 위치는 확장 호스트의 표로 센다 — F6·매니페스트가 같은 표를 쓴다). **STU-15도 닫았다** ([ADR-0043](decisions/0043-turned-off-extensions.md)). **STU-03도 닫았다** (`resources.py` — 뿌리 넷·둘째 단계·문맥 메뉴·「캔버스에 추가」·끌어다 놓기. 드래그는 [ADR-0044](decisions/0044-canvas-drag-and-drop.md), 기여 뿌리의 둘째 단계를 **두지 않기로** 한 것은 [ADR-0045](decisions/0045-contributed-resource-children.md)다).
 
-**공유 BPM 프로세스 「설치」는 닫았다** ([ADR-0048](decisions/0048-installing-shared-packages.md) — `apps/studio/install.py` + `workspace.py`·`packaging.py`·STU-11). 받은 것이 그 BPM 프로세스 작업 폴더의 `libs/`로 가고, **호출이 거기서 찾는다**(실행기가 이미 읽는 자리라 내보내기·실행기는 바뀌지 않았다) — 그래서 설치 뒤에는 시험 실행도 **C14 B14도** 그 호출을 받아들이고, 내보낼 때 `requires.libs`에 **판이 붙는다**(C1 `<id>@<version>` — 전에는 id만 적혀 R3·CON-06의 참조 셈이 어긋났다). **결정표(DMN)도 함께 온다** — 정의가 쓰는 `.dmn`을 같이 풀고 **Studio와 실행기가 둘 다** `libs/*.dmn`을 읽어, lib 안의 규칙 태스크가 **진짜로 돈다**(엔진으로 본다. 결정표를 지우면 멈추는 것도 함께).
+**공유 BPM 프로세스 「설치」는 닫았다** ([ADR-0048](decisions/0048-installing-shared-packages.md) — `studio/app/install.py` + `workspace.py`·`packaging.py`·STU-11). 받은 것이 그 BPM 프로세스 작업 폴더의 `libs/`로 가고, **호출이 거기서 찾는다**(실행기가 이미 읽는 자리라 내보내기·실행기는 바뀌지 않았다) — 그래서 설치 뒤에는 시험 실행도 **C14 B14도** 그 호출을 받아들이고, 내보낼 때 `requires.libs`에 **판이 붙는다**(C1 `<id>@<version>` — 전에는 id만 적혀 R3·CON-06의 참조 셈이 어긋났다). **결정표(DMN)도 함께 온다** — 정의가 쓰는 `.dmn`을 같이 풀고 **Studio와 실행기가 둘 다** `libs/*.dmn`을 읽어, lib 안의 규칙 태스크가 **진짜로 돈다**(엔진으로 본다. 결정표를 지우면 멈추는 것도 함께).
 
 **STU-03의 편의 셋도 닫았다** ([ADR-0051](decisions/0051-shared-process-conveniences.md) — `resources.py`·`install.py`·`center_actions.py`·`viewer.py`). 적혀 있던 「먼저 정할 것」(**줄마다 설치 여부를 알지 못한다**)은 **틀렸다** — 재료(`BpmProcess.libs`)가 다 있었고 **STU-11이 바로 그 C5 목록에 설치 여부를 덧붙여** 그리고 있었다. 그래서 적어 둔 두 선택지가 **셋째를 빠뜨렸다**: 멤버십은 Center 목록 그대로 두고 **설치 여부만 줄에 덧붙인다**(줄이 늘거나 줄지 않는다). 설치 여부를 읽는 함수는 **STU-11과 하나**(`install.installed_of`)이고, 셋은 **설치된 판의 정의에서만** 켜진다(아니면 끄고 까닭을 적어 STU-11로 보낸다 — 설치되지 않은 호출은 B14가 막는다). 「열기 (읽기 전용)」은 **bpmn-js 뷰어 한 벌을 더 실어**(+190 KB) 지킨다 — 팔레트만 가린 편집기를 「읽기 전용」이라 부르지 않는다. 「복사」는 `process/`로 가 그때부터 **내 것이 이기고** `requires.libs`에서 저절로 빠진다.
 
@@ -351,7 +351,7 @@ CON-07 상세 「서버 주소」에서 넣고 **정의의 허용 호스트 안�
 | 8-21 | BUI-01·04 「감시」 | 「감시 시작」↔「감시 중지」, 상태 「감시 중」, 대기열 출처 「감시 트리거」 (`bot-ui.md:13`·`42`·`124`·`127`) | PC 실행기에 감시가 없다 — 남은 것은 표기 하나(`main_window.py:132`) | **걷는 쪽으로 보인다** — 일정은 Center가 쥐고(ADR-0110), 폴더 감시인 조건 시작은 schema 1에서 쓰지 않는다(C14). 걷으면 C3·C4 `source: watch`도 함께(§3-26) |
 | 8-22 | BUI-03 「나중에」 | 「메시지 수신 포트」·「툴팩 비밀」을 끈 채 보인다 | `settings_dialog.py:502-512` — 툴팩은 [ADR-0050](decisions/0050-no-toolpack-kind.md)으로 없어졌고(Studio는 ADR-0073으로 걷었다) 메시지 수신은 §3-21에 달렸다 | §3-21 |
 | 8-23 | BUI-11 | 「필요한 키」·서버 부분 「주소」 줄 | 화면 문서가 「아직 보인다」고 적었다(`bot-ui.md:215`, 코드 `extension_dialog.py:103`·`:290`·`:326`). 같은 문서 `:213`(「주소는 보이지 않는다」)과 `:228`(「상세의 서버 부분은 주소만 말한다」)이 서로 다르다 | ADR-0102 뒤라 걷는 쪽 — 문서 둘을 한 가지로 |
-| 8-26 | CMN-01 확인 | 한 줄 「응답 입력」, 「직접 처리했음」, 시간 초과 기록 「결재 요청이 시간 초과로 취소되었습니다.」 | `packages/qt/…/approval.py:205-209`는 「계속」·「중단」 둘뿐 | 「직접 처리했음」이 엔진에서 무엇인가(「계속」과 다른가) — ADR-0106은 둘만 정했다 |
+| 8-26 | CMN-01 확인 | 한 줄 「응답 입력」, 「직접 처리했음」, 시간 초과 기록 「결재 요청이 시간 초과로 취소되었습니다.」 | `shared/qt/…/approval.py:205-209`는 「계속」·「중단」 둘뿐 | 「직접 처리했음」이 엔진에서 무엇인가(「계속」과 다른가) — ADR-0106은 둘만 정했다 |
 
 ## 9. 업무 예제가 밟지 않는 기능 (2026-10-31 대조)
 

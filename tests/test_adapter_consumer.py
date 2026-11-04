@@ -1,4 +1,4 @@
-"""어댑터 일꾼 (`apps/adapter_consumer`) — 외부 확장 하나를 일꾼의 토픽으로 돌린다 (C13 §4·C15, ADR-0102).
+"""어댑터 일꾼 (`server/adapter_consumer`) — 외부 확장 하나를 일꾼의 토픽으로 돌린다 (C13 §4·C15, ADR-0102).
 
 모의 외부 앱 `ext-credit`을 **진짜 소켓**에 띄우고 `AdapterService.execute()`가 그 정의의 어댑터로 부르게
 한다 (어댑터는 호스트를 IP로 풀어 그 IP로 접속하므로 ASGI로 끼울 수 없다). 설정은 환경변수 대신
