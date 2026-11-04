@@ -1,3 +1,6 @@
+# Node — pnpm 워크스페이스 뿌리가 저장소 맨 위다 (ADR-0129). 콘솔이 만드는 것은 server/web/.gitignore
+node_modules/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -11,11 +14,11 @@ build/
 
 # 비밀·로컬 설정
 .env
-deploy/.env
+server/deploy/.env
 configs/*.local.yaml
 
 # 실행 산출물 — **맨 앞의 `/`를 지우지 않는다.** 뿌리에서만 막는다는 뜻이다.
-# (`runs/`로 적었더니 콘솔 화면 폴더 `web/.../app/runs/`까지 삼켜, 로컬에서는 돌고 CI에서만
+# (`runs/`로 적었더니 콘솔 화면 폴더 `server/web/.../app/runs/`까지 삼켜, 로컬에서는 돌고 CI에서만
 #  「그런 길이 없다」로 깨졌다.)
 /logs/
 /runs/

@@ -5,7 +5,7 @@
 | 상태 | **구현됨** (2026-10-12). 모델·검사 규칙(E1~E7)과 **기여 지점마다 읽는 쪽**이 있다 — 확장 호스트(`core.extensions`), Studio(팔레트·편집기·`studio.resource_views`), PC 실행기(확장별 설정·사전 점검), 콘솔(`console.pages` 생성물), Center(외부 확장 등록). **지금 설치 파일에 든 내장 확장은 없다** — 호스트 규칙은 시험용 가짜 확장으로 본다 ([ADR-0114](../decisions/0114-remove-ui-automation.md)) |
 | schema | 2 (1은 옛 기여 지점의 명령 배열을 쓰던 것 — 아래 변경 이력) |
 | 보내는 쪽 → 받는 쪽 | 확장 작성자 → Studio·PC 실행기·실행기·서버 실행기(확장 호스트), Center(리소스 목록·검사), 관리 콘솔 |
-| 코드 위치 | `chaeksas.contracts.extension`, 인터페이스 `packages/extension_api/`, 호스트 `chaeksas.core.extensions` |
+| 코드 위치 | `chaeksas.contracts.extension`, 인터페이스 `shared/extension_api/`, 호스트 `chaeksas.core.extensions` |
 | 관련 ADR | [0018](../decisions/0018-extensions.md), [0010](../decisions/0010-service-apps.md), [0013](../decisions/0013-api-keys.md), [0041](../decisions/0041-extension-run-events.md), [0042](../decisions/0042-extension-contributed-panels.md), [0112](../decisions/0112-escalation-review-from-extensions.md), [0114](../decisions/0114-remove-ui-automation.md) |
 | 관련 화면 | BUI-03·11, STU-03·14·15, SVC-00 |
 
@@ -17,7 +17,7 @@
 >
 > **실행하는 쪽은 정의만 본다** ([ADR-0102](../decisions/0102-calling-outside-is-pull.md)) — 외부 앱을 **부르는 것은 어댑터 일꾼**이고 실행하는 쪽은 C15로 올린다. 그래도 PC 실행기·서버 실행기·Studio는 BPM 프로세스를 띄우기 **전에** `GET /resources/extensions/{id}`(정의·봉투)를 받아 `chaeksas.core.app_directory`로 **봉투를 다시 검증하고**(E6) **패키지가 고정한 `definition_hash`와 대조해**(C1) 다르면 **시작조차 하지 않는다** — 중간에 알면 이미 한 일을 되돌릴 수 없다. 닿지 못하면 들고 있던 것을 쓰고(ADR-0007), 404는 버린다(철회는 보안 동작이다). 묻는 대상은 매니페스트의 `requires.extensions` **전부**이고 어느 것이 외부인가는 Center의 답이 말해 준다. **서비스 앱 주소는 받지 않는다** — 누구도 들지 않는다.
 >
-> **어댑터 일꾼**(`bpm-adapter-consumer`, `apps/adapter_consumer`)은 같은 정의를 일꾼 토큰으로 받아 봉투를 다시 검증하고 §4를 돌린다. **주소·키는 그 일꾼의 설정이 쥔다** — 확장마다 `BPM_ADAPTER__EXT__<확장>__BASE_URL`(없으면 정의의 `base_url`)·`…__KEY`(키를 받는 앱만)·`…__TEST_BASE_URL`·`…__TEST_KEY`(시험 일감 — `origin: test` — 에 쓴다, 없으면 운영 쪽)·`BPM_ADAPTER__ALLOW_PRIVATE_NETWORK`(정의가 허용해도 일꾼 설정이 또 열어야 사설 IP로 나간다 — 기본 닫힘). OAuth·mTLS 같은 인증을 늘리는 일도 이 일꾼 안의 일이다.
+> **어댑터 일꾼**(`bpm-adapter-consumer`, `server/adapter_consumer`)은 같은 정의를 일꾼 토큰으로 받아 봉투를 다시 검증하고 §4를 돌린다. **주소·키는 그 일꾼의 설정이 쥔다** — 확장마다 `BPM_ADAPTER__EXT__<확장>__BASE_URL`(없으면 정의의 `base_url`)·`…__KEY`(키를 받는 앱만)·`…__TEST_BASE_URL`·`…__TEST_KEY`(시험 일감 — `origin: test` — 에 쓴다, 없으면 운영 쪽)·`BPM_ADAPTER__ALLOW_PRIVATE_NETWORK`(정의가 허용해도 일꾼 설정이 또 열어야 사설 IP로 나간다 — 기본 닫힘). OAuth·mTLS 같은 인증을 늘리는 일도 이 일꾼 안의 일이다.
 
 
 
@@ -130,7 +130,7 @@
 - **`entry` 형식: `"<모듈>:<이름>"`.** 모듈은 확장 이름 공간(`chaeksas.ext`) 밑에서 찾는다 — `seal_check.client:SealCheckExecutor`는 `chaeksas.ext.seal_check.client.SealCheckExecutor`다 ([ADR-0019](../decisions/0019-package-names.md)). 가리키는 것은 **인자 없이 만들 수 있는 클래스**(또는 이미 만들어진 객체)이고, 확장 호스트가 만들어 `extension_api`의 모양인지 확인한 뒤 켠다.
   - 확장 호스트는 **그 확장의 패키지 안**만 허용한다. 정의가 다른 모듈(`os:getcwd` 같은 것)을 가리켜 import시킬 수 없다.
 - `console.pages`: 그 서비스 앱 관리 콘솔(SVC-00 왼쪽 탐색)에 붙는 **앱 고유 화면**이다. 콘솔은 접속한 앱의 `app_id`(C11 `/admin/v1/status`)로 어느 확장의 기여인지 고른다 — 콘솔 한 벌이 모든 서비스 앱을 그리기 때문이다.
-  - `module`: **`web/` 워크스페이스 안의 화면 모듈 이름.** 콘솔이 **빌드 시점 레지스트리**로 잇는다 (바깥 주소로 동적 `import()`를 열지 않는다 — [ADR-0017](../decisions/0017-web-nextjs-design-system.md)의 「브라우저가 토큰·주소를 모른다」).
+  - `module`: **`server/web/` 워크스페이스 안의 화면 모듈 이름.** 콘솔이 **빌드 시점 레지스트리**로 잇는다 (바깥 주소로 동적 `import()`를 열지 않는다 — [ADR-0017](../decisions/0017-web-nextjs-design-system.md)의 「브라우저가 토큰·주소를 모른다」).
   - 그래서 화면 모듈은 **모노레포 안 내장·사내 확장만** 올릴 수 있다 (Next.js 번들에 들어가야 한다). 외부 확장은 코드를 기여할 수 없고(E1) 자기 콘솔 **링크만** CON-07에 보인다.
   - 레지스트리에 그 `module`이 없으면 콘솔은 **줄을 끄고 이유를 가까이에 적는다** (U3 — 없는 것은 끈다). 줄 자체는 기여에서 오므로 **확장을 더하면 줄이 생긴다.**
 - `resources[].catalog_url`: 상대 경로(서버 부분 기준) 또는 `allowed_hosts` 안의 주소. 응답은 §5 공통 카탈로그 형식이다.

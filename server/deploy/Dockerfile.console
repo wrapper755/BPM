@@ -1,0 +1,51 @@
+# 콘솔 컨테이너 (Next.js). **콘솔 둘이 같은 Dockerfile을 쓴다** — 어느 앱인지는 `APP`으로 정한다.
+#
+#   docker build --build-arg APP=center-console -f server/deploy/Dockerfile.console .
+#
+# 계약 타입(`server/web/packages/api-types/src`)은 저장소에 들어 있으므로 여기서 만들지 않는다.
+# 스키마에서 다시 만드는 일은 `scripts/gen_schemas.py` → `pnpm gen:api-types`이고, CI가 최신인지 본다.
+ARG NODE_VERSION=22-slim
+
+FROM node:${NODE_VERSION} AS deps
+ENV PNPM_HOME=/pnpm CI=1
+# pnpm 워크스페이스 뿌리가 저장소 맨 위라 컨테이너 안에서도 저장소의 자리를 그대로 쓴다 (ADR-0129).
+WORKDIR /repo
+# pnpm 버전은 package.json의 `packageManager`가 정한다 (corepack이 읽는다).
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY server/web/packages/api-types/package.json server/web/packages/api-types/
+COPY server/web/packages/config/package.json server/web/packages/config/
+COPY server/web/packages/ui/package.json server/web/packages/ui/
+COPY server/web/apps/center-console/package.json server/web/apps/center-console/
+COPY server/web/apps/svc-console/package.json server/web/apps/svc-console/
+# 콘솔은 캔버스를 쓰지 않지만 같은 워크스페이스라 잠금 파일이 그 자리를 요구한다 (--frozen-lockfile).
+COPY studio/canvas/package.json studio/canvas/
+RUN corepack enable && pnpm install --frozen-lockfile
+
+FROM node:${NODE_VERSION} AS build
+ARG APP
+ENV CI=1 NEXT_TELEMETRY_DISABLED=1
+WORKDIR /repo
+COPY --from=deps /repo/ ./
+COPY server/web/ server/web/
+RUN corepack enable && pnpm --filter "@chaeksas/${APP}" build \
+ && mkdir -p server/web/apps/${APP}/public
+
+FROM node:${NODE_VERSION} AS runtime
+ARG APP
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
+WORKDIR /web
+# `output: standalone`이 필요한 것만 모아 준다. 추적 뿌리가 잠금 파일 자리(저장소 맨 위)라 앱 경로가 그대로 남는다.
+COPY --from=build /repo/server/web/apps/${APP}/.next/standalone ./
+COPY --from=build /repo/server/web/apps/${APP}/.next/static ./server/web/apps/${APP}/.next/static
+# `standalone`은 `public/`을 담지 않는다 — 옮기지 않으면 로고·배경 그림이 404다. 없는 앱도 있어 빌드 단계가 빈 폴더를 만든다.
+COPY --from=build /repo/server/web/apps/${APP}/public ./server/web/apps/${APP}/public
+# 서버 진입점 경로에 APP이 들어가므로 환경변수로 옮겨 CMD를 고정한다.
+ENV BPM_CONSOLE_SERVER=/web/server/web/apps/${APP}/server.js
+
+# 컨테이너 안에서는 비관리자로 돈다 (node 이미지의 `node` 사용자, uid 1000).
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/login').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+
+CMD ["sh", "-c", "exec node \"$BPM_CONSOLE_SERVER\""]

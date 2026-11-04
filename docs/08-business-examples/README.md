@@ -40,7 +40,7 @@ python docs/08-business-examples/_source/build.py --check  # CI: 정의와 생�
 | XML 파싱 | BPMN 50, DMN 7 통과 |
 | bpmn-js 17 가져오기 (Chromium, Playwright) | 50개 모두 경고 없이 열림, 그림 육안 확인 |
 | SpiffWorkflow 3 파서 | BPMN 43개 통과. **규칙 태스크가 있는 7개는 실패** — 기본 파서가 `camunda:decisionRef`를 기대한다. M3에서 `bpm:rule`을 읽는 파서 확장이 필요하다. DMN 7개는 모두 통과 |
-| 실행 | 그때는 없었다(엔진은 M3). **지금은** `tests/test_core_engine.py`가 예제 전부를 엔진으로 돌리고, M3·M4·M5·M7 인수 시험 묶음이 케이스 기대값을 대조한다 |
+| 실행 | 그때는 없었다(엔진은 M3). **지금은** `tests/shared/test_core_engine.py`가 예제 전부를 엔진으로 돌리고, M3·M4·M5·M7 인수 시험 묶음이 케이스 기대값을 대조한다 |
 
 ## 아직 정하지 않은 것 (예제가 드러낸 공백)
 

@@ -7,15 +7,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ci_scope import SERVER_SIDE
+from ci_scope import is_server_side
 
 from chaeksas.bot_ui.credentials import Credentials
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """서버 쪽 파일의 시험에 `server` 표시를 붙인다 — Windows CI가 뺀다 (`ci_scope.py`, ADR-0104)."""
+    """`tests/server/`의 시험에 `server` 표시를 붙인다 — Windows CI가 뺀다 (`ci_scope.py`, ADR-0104·0129)."""
     for item in items:
-        if item.path.stem in SERVER_SIDE:
+        if is_server_side(item.path):
             item.add_marker(pytest.mark.server)
 
 

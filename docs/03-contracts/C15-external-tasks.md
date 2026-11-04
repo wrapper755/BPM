@@ -2,10 +2,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **구현됨** (2026-10-29) — Center(`api/external_tasks.py`, 15판)와 양쪽이 돈다: 부르는 쪽은 `core.services.CenterServiceCaller`(서버 실행기·실행 프로세스·Studio), 일꾼은 `service_kit.consumer`(서비스 앱·모의 앱)와 어댑터 일꾼 `bpm-adapter-consumer`(`apps/adapter_consumer`). `tests/test_center_external_tasks.py`·`test_c15_round_trip.py`·`test_service_kit_consumer.py`·`test_adapter_consumer.py`가 지킨다. 서버 실행기는 긴 작업을 기다림으로 넘긴다(ADR-0103) |
+| 상태 | **구현됨** (2026-10-29) — Center(`api/external_tasks.py`, 15판)와 양쪽이 돈다: 부르는 쪽은 `core.services.CenterServiceCaller`(서버 실행기·실행 프로세스·Studio), 일꾼은 `service_kit.consumer`(서비스 앱·모의 앱)와 어댑터 일꾼 `bpm-adapter-consumer`(`server/adapter_consumer`). `tests/server/test_center_external_tasks.py`·`test_c15_round_trip.py`·`test_service_kit_consumer.py`·`test_adapter_consumer.py`가 지킨다. 서버 실행기는 긴 작업을 기다림으로 넘긴다(ADR-0103) |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 서버 실행기·실행 프로세스·Studio → Center (올리기·기다리기), 일꾼 → Center (들이기·가져가기·끝내기) |
-| 코드 위치 | `packages/contracts/external_task.py`, Center `api/external_tasks.py` |
+| 코드 위치 | `shared/contracts/external_task.py`, Center `api/external_tasks.py` |
 | 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0062](../decisions/0062-pc-delegation.md), [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md), [0102](../decisions/0102-calling-outside-is-pull.md), [0107](../decisions/0107-outcome-unknown-asks-a-person.md), [0114](../decisions/0114-remove-ui-automation.md) |
 | 관련 화면 | CON-01 (실행 상세의 「외부 작업」) |
 

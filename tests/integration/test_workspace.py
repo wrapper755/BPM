@@ -1,0 +1,92 @@
+"""워크스페이스 뼈대가 성립하는지 — 멤버가 모두 import되고, 인터프리터가 3.12인가."""
+
+from __future__ import annotations
+
+import importlib
+import sys
+import tomllib
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+
+MEMBERS = {
+    "shared/contracts": "chaeksas.contracts",
+    "shared/extension_api": "chaeksas.extension_api",
+    "shared/core": "chaeksas.core",
+    "shared/llm": "chaeksas.llm",
+    "shared/qt": "chaeksas.qt",
+    "server/service_kit": "chaeksas.service_kit",
+    "studio/app": "chaeksas.studio",
+    "bot/app": "chaeksas.bot_ui",
+    "server/server_runner": "chaeksas.server_runner",
+    # 외부 앱을 부르는 범용 일꾼 (C13 §4·C15, ADR-0102).
+    "server/adapter_consumer": "chaeksas.adapter_consumer",
+    "server/center": "chaeksas.center",
+    # 제품이 아니다 — 업무 예제가 부르는 모의 앱 (01-architecture §8).
+    "samples/mock_apps": "chaeksas.mock_apps",
+}
+
+#: 멤버를 찾는 자리. `pyproject.toml`의 `[tool.uv.workspace].members`와 같아야 한다.
+#: 확장(`extensions/*`)은 지금 없다 — 들일 때 다시 더한다 (ADR-0114).
+MEMBER_GLOBS = (
+    "shared/*",
+    "server/center",
+    "server/server_runner",
+    "server/adapter_consumer",
+    "server/service_kit",
+    "studio/app",
+    "bot/app",
+    "samples/*",
+)
+
+
+def test_interpreter_is_312() -> None:
+    """ADR-0005: 3.12로 통일. uv가 관리하는 인터프리터를 쓴다."""
+    assert sys.version_info[:2] == (3, 12), f"3.12가 아니다: {sys.version}"
+
+
+def test_workspace_members_match_disk() -> None:
+    """이 표가 실제 멤버 목록과 같은가 (멤버를 더하면 표도 고쳐야 한다)."""
+    # as_posix(): Windows에서 `str()`은 `apps\admin`을 주므로 표와 비교할 수 없다.
+    found = {
+        p.parent.relative_to(ROOT).as_posix()
+        for pattern in MEMBER_GLOBS
+        for p in ROOT.glob(f"{pattern}/pyproject.toml")
+    }
+    assert found == set(MEMBERS), f"표에 없음: {found - set(MEMBERS)}, 디스크에 없음: {set(MEMBERS) - found}"
+
+
+def test_workspace_globs_match_the_root_pyproject() -> None:
+    """위 표와 루트의 멤버 글롭이 어긋나면 새 멤버가 조용히 빠진다."""
+    data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert set(data["tool"]["uv"]["workspace"]["members"]) == set(MEMBER_GLOBS)
+
+
+@pytest.mark.parametrize("module", sorted(MEMBERS.values()))
+def test_member_is_importable(module: str) -> None:
+    assert importlib.import_module(module).__name__ == module
+
+
+def test_chaeksas_is_namespace_package() -> None:
+    """chaeksas는 PEP 420 네임스페이스 — __init__.py를 두면 멤버 하나만 보인다."""
+    import chaeksas
+
+    assert chaeksas.__file__ is None, "chaeksas/__init__.py가 생겼다 — 지워야 한다"
+    # 멤버마다 src/chaeksas를 하나씩 더한다.
+    assert len(chaeksas.__path__) == len(MEMBERS)
+
+
+@pytest.mark.parametrize("rel", sorted(MEMBERS))
+def test_member_pins_python_312(rel: str) -> None:
+    """멤버마다 requires-python이 같아야 한다 (lock 파일 하나, ADR-0005)."""
+    data = tomllib.loads((ROOT / rel / "pyproject.toml").read_text(encoding="utf-8"))
+    assert data["project"]["requires-python"] == ">=3.12,<3.13"
+
+
+def test_root_is_not_a_package() -> None:
+    """루트는 워크스페이스 루트일 뿐 패키지가 아니다 (01-architecture §8)."""
+    data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert "project" not in data
+    assert data["tool"]["uv"]["python-preference"] == "only-managed"

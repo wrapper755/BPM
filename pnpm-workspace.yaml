@@ -1,0 +1,5 @@
+# pnpm 워크스페이스 (ADR-0017 §4, 자리는 ADR-0129). 파이썬 쪽은 uv 워크스페이스(같은 자리의 pyproject.toml).
+packages:
+  - server/web/apps/*
+  - server/web/packages/*
+  - studio/canvas

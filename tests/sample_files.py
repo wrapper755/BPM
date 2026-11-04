@@ -73,7 +73,7 @@ def write_pdf(target: Path, lines: list[str]) -> None:
         fpdf = pytest.importorskip("fpdf", reason="표본 PDF를 만들 fpdf2가 없다")
         font = (
             Path(__file__).resolve().parent.parent
-            / "packages/qt/src/chaeksas/qt/fonts/Pretendard-Regular.otf"
+            / "shared/qt/src/chaeksas/qt/fonts/Pretendard-Regular.otf"
         )
         pdf = fpdf.FPDF()
         pdf.add_font("pretendard", "", str(font))

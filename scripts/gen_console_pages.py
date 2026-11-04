@@ -27,7 +27,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 ROOT = Path(__file__).resolve().parent.parent
 EXTENSIONS = ROOT / "extensions"
-OUT = ROOT / "web" / "apps" / "svc-console" / "lib" / "console-pages.generated.ts"
+OUT = ROOT / "server" / "web" / "apps" / "svc-console" / "lib" / "console-pages.generated.ts"
 
 BANNER = (
     "// 생성 파일: 확장 정의(C13 `console.pages`)에서 만든다.\n"

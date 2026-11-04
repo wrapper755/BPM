@@ -5,7 +5,7 @@
 | 상태 | **구현됨** (2026-10-15) — 등록·하트비트·운영 API·배포 설치·작업 실행·기다리는 실행의 저장·재개·결재·메시지·**PC 위임**이 양쪽에서 돌고 시험이 지킨다. **§등록 요청과 승인·키 회전도 돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 서버 실행기 ↔ Center, 외부 시스템 → Center (메시지) |
-| 코드 위치 | `packages/contracts/server_runner.py` |
+| 코드 위치 | `shared/contracts/server_runner.py` |
 | 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0014](../decisions/0014-one-bot-per-pc.md), [0015](../decisions/0015-run-location.md), [0016](../decisions/0016-server-first.md), [0038](../decisions/0038-approval-request-channel.md), [0054](../decisions/0054-server-run-state-and-concurrency.md), [0056](../decisions/0056-bounded-seen-maps.md), [0057](../decisions/0058-absorbed-messages-travel-with-the-snapshot.md), [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md), [0117](../decisions/0117-bundled-server-runner-joins-by-shared-secret.md) |
 | 관련 화면 | CON-12 서버 실행, CON-05, CON-04, CON-11 |
 
@@ -80,7 +80,7 @@ ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 
 
 ### 등록 요청과 승인
 
-> 상태: **돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) — `server_runner/enroll.py`(요청·묻기·받기, 보낸 요청은 데이터 폴더의 `enrollment.json` — 키도 봉함도 담지 않는다)와 Center의 C4와 같은 코드다. 시험: `tests/test_server_runner_agent.py`·`tests/test_center_enrollment.py`.
+> 상태: **돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) — `server_runner/enroll.py`(요청·묻기·받기, 보낸 요청은 데이터 폴더의 `enrollment.json` — 키도 봉함도 담지 않는다)와 Center의 C4와 같은 코드다. 시험: `tests/server/test_server_runner_agent.py`·`tests/server/test_center_enrollment.py`.
 
 **C4 §등록 요청과 승인과 같다** — 같은 요청 코드·같은 봉함·같은 24시간·같은 막기이고, 다른 것은 아래뿐이다. 규칙은 코드로도 한 자리에 둔다(키 묶기의 `center/host_keys.py`와 같은 결).
 
@@ -92,9 +92,9 @@ ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 
 | 만드는 키 | 「PC 실행기용」 | 「서버 실행기용」 |
 | 받은 키를 두는 곳 | OS 비밀 저장소 | OS 비밀 저장소(`chaeksas-server-runner`, 이름 `center_api_key`). **운영자가 비밀 폴더 `BPM_SERVER_RUNNER__SECRETS_DIR`를 적으면 그 폴더의 `secrets.json`**(컨테이너 — [ADR-0100](../decisions/0100-server-runner-secrets-dir.md)) |
 
-- **함께 배포된 실행기는 들이기 비밀로 바로 승인된다** ([ADR-0117](../decisions/0117-bundled-server-runner-joins-by-shared-secret.md)). 운영자가 같은 값을 Center(`BPM_CENTER__SERVER_RUNNER_JOIN_TOKEN`)와 실행기(`BPM_SERVER_RUNNER__JOIN_TOKEN`)에 주면 실행기가 등록 요청에 헤더 `X-BPM-Join-Token`을 싣고, Center는 값이 맞으면 그 요청을 **받는 자리에서 승인**해 응답에 봉한 키(`state: approved`, `sealed_key`)를 바로 싣는다. 승인한 사람은 `decided_by: "join_token"`이다. 비밀은 요청 본문·저장된 요청에 들어가지 않는다(헤더다). **헤더가 있는데 Center에 값이 없거나 다르면 403 `join_token_invalid`**이고 대기 줄을 만들지 않는다 — 틀린 설정이 조용히 「승인 대기」로 떨어지면 운영자가 왜 안 들어오는지 모른다. 비밀은 길고 무작위여야 한다(틀린 시도는 줄을 남기지 않아 막기 수에 들지 않는다). 헤더가 없으면 지금처럼 승인을 기다린다(다른 호스트에 따로 띄운 실행기). `deploy/compose.yaml`의 실행기는 이 길이다.
+- **함께 배포된 실행기는 들이기 비밀로 바로 승인된다** ([ADR-0117](../decisions/0117-bundled-server-runner-joins-by-shared-secret.md)). 운영자가 같은 값을 Center(`BPM_CENTER__SERVER_RUNNER_JOIN_TOKEN`)와 실행기(`BPM_SERVER_RUNNER__JOIN_TOKEN`)에 주면 실행기가 등록 요청에 헤더 `X-BPM-Join-Token`을 싣고, Center는 값이 맞으면 그 요청을 **받는 자리에서 승인**해 응답에 봉한 키(`state: approved`, `sealed_key`)를 바로 싣는다. 승인한 사람은 `decided_by: "join_token"`이다. 비밀은 요청 본문·저장된 요청에 들어가지 않는다(헤더다). **헤더가 있는데 Center에 값이 없거나 다르면 403 `join_token_invalid`**이고 대기 줄을 만들지 않는다 — 틀린 설정이 조용히 「승인 대기」로 떨어지면 운영자가 왜 안 들어오는지 모른다. 비밀은 길고 무작위여야 한다(틀린 시도는 줄을 남기지 않아 막기 수에 들지 않는다). 헤더가 없으면 지금처럼 승인을 기다린다(다른 호스트에 따로 띄운 실행기). `server/deploy/compose.yaml`의 실행기는 이 길이다.
 - **환경변수로 키가 오면** 등록 요청을 보내지 않는다 (CI·자동화의 길이다).
-- **비밀 폴더를 적으면 그것이 비밀 저장소다** (ADR-0100) — 폴더 0700·파일 0600, 깨진 파일은 덮지 않는다. 적었으면 OS 비밀 저장소가 있어도 그 폴더가 이긴다. `deploy/compose.yaml`의 실행기는 이 길이다(볼륨 `server-runner-secrets`).
+- **비밀 폴더를 적으면 그것이 비밀 저장소다** (ADR-0100) — 폴더 0700·파일 0600, 깨진 파일은 덮지 않는다. 적었으면 OS 비밀 저장소가 있어도 그 폴더가 이긴다. `server/deploy/compose.yaml`의 실행기는 이 길이다(볼륨 `server-runner-secrets`).
 - **비밀 폴더도 OS 비밀 저장소도 없으면 등록 요청을 보내지 않는다.** 받은 키를 둘 곳이 없어서다 — 사람이 자리를 정해 주지 않은 평문 파일로 흘리지 않는다 (CLAUDE.md §5). 로그에 그 둘(`BPM_SERVER_RUNNER__SECRETS_DIR`·`BPM_SERVER_RUNNER__CENTER_API_KEY`)을 적은 한 줄을 찍고 끝 코드 2다.
 - 키 회전도 C4 §키 회전과 같다 — 하트비트 답의 `rotated_key`. 환경변수로 받은 키는 회전하지 않는다.
 
@@ -390,7 +390,7 @@ C4와 같다 (401, 403 `key_revoked`·`wrong_key_type`, 409 `machine_mismatch`·
 | 2026-10-01 | 1 | 초안 (M7) | 0015, 0016 |
 | 2026-10-01 | 1 | 화면 검토 반영: 운영 API(목록·일시 중지·유실 처리), `readiness` | — |
 | 2026-10-13 | 1 | 스파이크 s10 뒤 **합의**로 올림. 모델·검사가 코드로 생겼다(`validate_heartbeat`·`free_slots`·`pick_jobs`·`restorable`). §재시작과 유실을 다시 썼다 — 적는 때 둘·그림은 담지 않음·마지막 기다림 이후를 다시 함(멱등 키가 같은 값으로 다시 만들어지므로 호출 전 저장이 필요 없다)·기다린 적 없는 실행은 되살리지 않음·**기한은 Center가 꺼져 있어도 간다** | 0054 |
-| 2026-10-13 | 1 | **등록·하트비트가 양쪽에서 돈다** — `apps/server_runner`(등록·하트비트·SIGTERM)와 Center(`api/server_runner.py` + 운영 API 셋). 키 묶기 규칙을 C4와 **한 코드로** 모았고(`center/host_keys.py`), `machine_id`도 한 자리다(`core.machine`). 작업 나누기(`free_slots`·`pick_jobs`)가 붙었고 **`waiting[]`의 작업은 `run_id`로 되짚는다**(그 칸에 `job_id`가 없다 — 안 되짚으면 결재를 기다리는 실행을 `runner_lost`로 닫는다). 남은 것은 메시지 API와 실행이다 | 0054 |
+| 2026-10-13 | 1 | **등록·하트비트가 양쪽에서 돈다** — `server/server_runner`(등록·하트비트·SIGTERM)와 Center(`api/server_runner.py` + 운영 API 셋). 키 묶기 규칙을 C4와 **한 코드로** 모았고(`center/host_keys.py`), `machine_id`도 한 자리다(`core.machine`). 작업 나누기(`free_slots`·`pick_jobs`)가 붙었고 **`waiting[]`의 작업은 `run_id`로 되짚는다**(그 칸에 `job_id`가 없다 — 안 되짚으면 결재를 기다리는 실행을 `runner_lost`로 닫는다). 남은 것은 메시지 API와 실행이다 | 0054 |
 | 2026-10-13 | 1 | **배포 설치와 준비 상태가 돈다** — 설치는 Bot UI와 **같은 코드**로 모았고(`core.deploy`·`core.packages` — `host_kind`만 다르다) 실행기가 `deployment_results`·`readiness`를 보고한다. `ServerRunnerInfo`에 그 셋(+확장)이 생겨 CON-12가 읽을 자리가 찼다. **내려받기 관문이 서버 실행기를 알아본다** — 「등록은 M7부터다」로 막고 있었는데 등록은 지난 조각에서 생겼다 | 0054 |
 | 2026-10-13 | 1 | **작업 실행이 돈다** — 받은 작업을 스레드 하나로 돌려(ADR-0054 §5) 실행 기록을 하트비트 뒤에 보낸다. **`SERVER_RUNNER_AVAILABLE`을 켰다** — 서버 대상 배포·작업이 만들어진다. `id`를 비운 작업은 Center가 고르고(`server_versions`) 고른 뒤엔 그 실행기에 머문다 | 0054 |
 | 2026-10-13 | 1 | **기다리는 실행을 담고 되살리고 결재로 이어 간다** (M7 기준 셋째) — 담는 길은 `core.run_snapshot`(칸을 셋으로 가르고 **칸이 늘면 시험이 묻는다**), 저장소는 실행기의 SQLite 한 파일. 결재를 C6으로 올리고 하트비트 답으로 잇는다. 붙이다 드러난 것 둘: **`_host_of`가 서버 실행기를 몰라** 답이 영영 내려가지 않았고(`host_id`가 키 id였다), 하트비트의 `running[]`·`waiting[]`이 **빈 채로 나가고 있었다**(#109) — 그러면 CON-12가 못 보이고 Center가 상한을 넘겨 보내고 맞추기가 멀쩡한 실행을 닫는다. 남은 것은 §메시지 하나다 | 0054 |

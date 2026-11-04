@@ -1100,7 +1100,7 @@ import ast as _ast
 #:
 #: **`core.helpers`의 서명과 같아야 한다.** 생성기는 표준 라이브러리만 쓰므로(CLAUDE.md §3)
 #: 구현을 import하지 못해 여기 베껴 둔다. 둘이 어긋나면
-#: `tests/test_core_expr.py::test_the_example_arity_table_matches_the_helpers`가 잡는다.
+#: `tests/shared/test_core_expr.py::test_the_example_arity_table_matches_the_helpers`가 잡는다.
 #: 도우미를 늘릴 때 고치는 곳은 셋이다 — ADR-0025의 표, `core.helpers`, 이 표.
 HELPER_ARITY: dict[str, tuple[tuple[str, ...], int, tuple[str, ...]]] = {
     "sorted": (("목록", "열"), 1, ("거꾸로",)),
@@ -1159,7 +1159,7 @@ def _call_errors(source: str, *, script: bool) -> list[str]:
     """식 하나(또는 스크립트 한 덩어리)의 도우미 호출을 본다.
 
     `*목록`·`**사전` 펼치기는 건너뛴다 — 몇 개를 넘기는지 글로는 알 수 없다. 문법이 틀린 것은
-    여기서 말하지 않는다 (`tests/test_core_expr.py`가 예제의 모든 식을 파싱한다).
+    여기서 말하지 않는다 (`tests/shared/test_core_expr.py`가 예제의 모든 식을 파싱한다).
     """
     try:
         tree = _ast.parse((source or "").strip(), mode="exec" if script else "eval")

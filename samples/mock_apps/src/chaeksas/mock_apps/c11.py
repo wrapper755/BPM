@@ -99,7 +99,7 @@ class MockApp:
     """모의 앱 하나.
 
     `app_id`는 **예제 BPMN의 `bpm:serviceCall.app_id` 그대로**여야 한다 — 그렇지 않으면
-    예제가 부를 수 없다. `tests/test_mock_apps.py`가 예제에서 읽어 대조한다.
+    예제가 부를 수 없다. `tests/server/test_mock_apps.py`가 예제에서 읽어 대조한다.
     """
 
     app_id: str

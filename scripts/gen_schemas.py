@@ -121,7 +121,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT_DIR = ROOT / "packages" / "contracts" / "schemas"
+OUT_DIR = ROOT / "shared" / "contracts" / "schemas"
 
 #: 확장을 찾는 엔트리 포인트 (확장 호스트와 같은 것).
 EXTENSION_GROUP = "chaeksas.extensions"

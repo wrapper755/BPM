@@ -66,8 +66,8 @@
 
 - 숫자 열은 `font-variant-numeric: tabular-nums` + 오른쪽 정렬.
 - 글꼴 파일은 저장소에 포함한다 (Windows 현장 PC에 Pretendard가 없으므로). **외부 CDN 금지** — 사내망이다.
-  - 웹: `web/packages/ui/src/fonts/`의 가변 woff2(`GeistVariable-latin` — 라틴 부분 집합, `PretendardVariable`)를 `@font-face`로 자체 호스팅한다. 패밀리 이름을 토큰의 글꼴 스택에 적힌 이름(`Geist`, `Pretendard Variable`)과 **같게** 선언해, 화면 코드가 토큰만 보면 되게 한다.
-  - 데스크톱: `packages/qt/src/chaeksas/qt/fonts/`의 **굵기별 정적 OTF**를 `load_fonts()`가 등록한다 (Qt는 가변 글꼴의 굵기 축을 고르게 다루지 못한다).
+  - 웹: `server/web/packages/ui/src/fonts/`의 가변 woff2(`GeistVariable-latin` — 라틴 부분 집합, `PretendardVariable`)를 `@font-face`로 자체 호스팅한다. 패밀리 이름을 토큰의 글꼴 스택에 적힌 이름(`Geist`, `Pretendard Variable`)과 **같게** 선언해, 화면 코드가 토큰만 보면 되게 한다.
+  - 데스크톱: `shared/qt/src/chaeksas/qt/fonts/`의 **굵기별 정적 OTF**를 `load_fonts()`가 등록한다 (Qt는 가변 글꼴의 굵기 축을 고르게 다루지 못한다).
   - 라이선스 파일(SIL OFL 1.1)을 글꼴과 함께 둔다.
 
 ### 2-4. 간격·크기·모양
@@ -84,7 +84,7 @@
 
 ## 3. 구성요소
 
-웹은 `web/packages/ui`(shadcn/ui를 우리 토큰으로 맞춘 것), 데스크톱은 `packages/qt`(같은 이름의 위젯). **이름을 같게** 해서 화면 설계서가 둘 다를 가리킬 수 있게 한다.
+웹은 `server/web/packages/ui`(shadcn/ui를 우리 토큰으로 맞춘 것), 데스크톱은 `shared/qt`(같은 이름의 위젯). **이름을 같게** 해서 화면 설계서가 둘 다를 가리킬 수 있게 한다.
 
 | 구성요소 | 규칙 | 웹 | Qt |
 | --- | --- | --- | --- |
@@ -162,7 +162,7 @@
 
 ## 6. 아이콘
 
-- **Lucide** 한 벌만 (ISC). 웹은 `lucide-react`, Qt는 같은 판의 SVG를 `packages/qt`의 테마 폴더(`icon-<이름>.svg`)에 옮겨 두고 `chaeksas.qt.theme.icon(이름, 색)`이 `currentColor`를 토큰 색(팔레트)으로 칠한다. 테마가 바뀌면 다시 칠한다.
+- **Lucide** 한 벌만 (ISC). 웹은 `lucide-react`, Qt는 같은 판의 SVG를 `shared/qt`의 테마 폴더(`icon-<이름>.svg`)에 옮겨 두고 `chaeksas.qt.theme.icon(이름, 색)`이 `currentColor`를 토큰 색(팔레트)으로 칠한다. 테마가 바뀌면 다시 칠한다.
 - 크기 16 (본문 옆), 20 (단추·탐색). 선 굵기 기본(2)을 바꾸지 않는다.
 - 아이콘만 있는 단추는 툴팁·`aria-label` 필수.
 
@@ -170,7 +170,7 @@
 
 화면에 제품 이름을 쓰지 않는다 — 「Chaeksas」는 저장소 이름이다 ([ADR-0118](decisions/0118-no-product-name-on-screens.md)). 그 자리(웹 콘솔 탐색 맨 위·로그인 제목 위·브라우저 탭)에는 **BPM 흐름 마크**를 둔다: 시작 이벤트(빈 원) → 태스크(채운 둥근 네모) → 배타 게이트웨이(빈 마름모) → 끝 이벤트(굵은 원), 색은 `primary` 하나.
 
-- 원본은 `design/bpm-mark.svg` 하나(`currentColor`)다. `scripts/gen_tokens.py`가 웹 구성요소 `BpmMark`(`web/packages/ui/src/bpm-mark.tsx`)와 콘솔마다 탭 아이콘 `app/icon.svg`(밝게·어둡게 `primary`)를 짓는다 — **생성물이니 직접 고치지 않는다**.
+- 원본은 `design/bpm-mark.svg` 하나(`currentColor`)다. `scripts/gen_tokens.py`가 웹 구성요소 `BpmMark`(`server/web/packages/ui/src/bpm-mark.tsx`)와 콘솔마다 탭 아이콘 `app/icon.svg`(밝게·어둡게 `primary`)를 짓는다 — **생성물이니 직접 고치지 않는다**.
 - 그림만 있는 자리에는 툴팁·`aria-label`로 이름을 준다(「Center 콘솔」, 서비스 앱 이름). 글 옆에 붙는 자리(로그인 제목)는 장식이라 읽지 않는다.
 - 데스크톱(Studio·PC 실행기·Tool UI) 아이콘은 아직 이것으로 바꾸지 않았다.
 
@@ -187,6 +187,6 @@
 ## 8. 바꾸는 법
 
 1. `design/tokens.json`을 고친다 (새 토큰은 이름 규칙 `<분류>.<이름>[.<변형>]`).
-2. 생성기를 돌린다 (`uv run python scripts/gen_tokens.py`) → `web/packages/ui/src/tokens.css`, `packages/qt/…/theme/{tokens.py,theme-light.qss,theme-dark.qss}`, `design/preview.html`, BPM 흐름 마크(§6-1)가 바뀐다. **모두 생성물이니 직접 고치지 않는다.**
+2. 생성기를 돌린다 (`uv run python scripts/gen_tokens.py`) → `server/web/packages/ui/src/tokens.css`, `shared/qt/…/theme/{tokens.py,theme-light.qss,theme-dark.qss}`, `design/preview.html`, BPM 흐름 마크(§6-1)가 바뀐다. **모두 생성물이니 직접 고치지 않는다.**
 3. 명암비 검사가 통과해야 한다 (생성기가 §2의 기준으로 검사하고, 실패하면 **아무것도 쓰지 않고** 멈춘다). `--check`가 CI와 pytest에 들어 있다.
 4. 이 문서의 표를 함께 고친다.

@@ -5,7 +5,7 @@
 | 상태 | 초안 / 합의 / 구현됨 |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | |
-| 코드 위치 | `packages/contracts/<모듈>.py` |
+| 코드 위치 | `shared/contracts/<모듈>.py` |
 | 관련 ADR | |
 
 ## 목적
