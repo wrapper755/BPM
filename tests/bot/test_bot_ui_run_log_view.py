@@ -13,8 +13,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from chaeksas.bot_ui import run_log_view
-from chaeksas.core.run_log import run_dir
+from bpm.bot_ui import run_log_view
+from bpm.core.run_log import run_dir
 
 
 def write(data_dir: Path, run_id: str, events: list[dict[str, object]]) -> Path:
@@ -144,7 +144,7 @@ def test_the_bot_table_shows_the_last_run(tmp_path: Path) -> None:
     _os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from PySide6.QtWidgets import QApplication  # noqa: PLC0415
 
-    from chaeksas.bot_ui.main_window import NO_ENDING, last_run_item  # noqa: PLC0415
+    from bpm.bot_ui.main_window import NO_ENDING, last_run_item  # noqa: PLC0415
 
     QApplication.instance() or QApplication([])
     assert last_run_item(None, None).text() == "", "한 번도 안 돌았으면 빈칸이다"

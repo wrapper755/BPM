@@ -15,7 +15,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.studio.gateway_editor import (  # noqa: E402
+from bpm.studio.gateway_editor import (  # noqa: E402
     ALWAYS,
     HAS_CONDITION,
     PARALLEL_NOTE,
@@ -104,7 +104,7 @@ def test_a_parallel_gateway_has_no_default_and_ignores_conditions() -> None:
 
 def test_every_example_gateway_opens_without_problems() -> None:
     """예제 그림은 B3를 지나간다 — 손대지 않으면 막을 것도 경고할 것도 없고 기본 흐름이 그대로다."""
-    from chaeksas.contracts.bpmn_ext import read_process  # noqa: PLC0415
+    from bpm.contracts.bpmn_ext import read_process  # noqa: PLC0415
 
     seen = 0
     for path in sorted(EXAMPLES.glob("*.bpmn")):
@@ -134,7 +134,7 @@ def test_every_example_gateway_opens_without_problems() -> None:
 
 
 def panel_with(bpmn_type: str, found: dict[str, Any]) -> Any:
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
     panel.show_element({"id": "Gw_1", "type": bpmn_type, "name": "금액?", "gateway": found, "chk": {}})

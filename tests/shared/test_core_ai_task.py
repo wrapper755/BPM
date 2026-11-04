@@ -17,11 +17,11 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.bpmn_ext import AiTask, read_process
-from chaeksas.contracts.events import REQUIRED_DATA_KEYS
-from chaeksas.core.agent import AgentError, check_results, opening_messages, run_agent, tool_specs
-from chaeksas.core.engine import Context, Engine, Run, RunEnv, State
-from chaeksas.core.llm import (
+from bpm.contracts.bpmn_ext import AiTask, read_process
+from bpm.contracts.events import REQUIRED_DATA_KEYS
+from bpm.core.agent import AgentError, check_results, opening_messages, run_agent, tool_specs
+from bpm.core.engine import Context, Engine, Run, RunEnv, State
+from bpm.core.llm import (
     LlmError,
     NoLlm,
     OpenAiCompatibleLlm,
@@ -30,7 +30,7 @@ from chaeksas.core.llm import (
     ToolCall,
     parse_reply,
 )
-from chaeksas.core.run_log import RunLog
+from bpm.core.run_log import RunLog
 
 NOW = datetime(2026, 10, 4, 9, 30, tzinfo=UTC)
 RUN_ID = "run_20261004_093000_abc123"
@@ -366,7 +366,7 @@ def test_a_model_without_a_key_sends_no_authorization_header() -> None:
     `Bearer `(빈 값)는 **잘못된 헤더 값**이라 보내는 쪽 라이브러리가 요청 자체를 거부한다
     (`LocalProtocolError`) — 인수 시험에서 모든 AI 태스크가 여기서 막혔다.
     """
-    from chaeksas.core.llm import OpenAiCompatibleLlm
+    from bpm.core.llm import OpenAiCompatibleLlm
 
     없는키 = OpenAiCompatibleLlm(base_url="http://127.0.0.1:1", api_key="", model="m")
     assert "Authorization" not in 없는키.headers()
@@ -382,7 +382,7 @@ def test_the_model_sees_the_values_the_goal_names() -> None:
     주지 않으면 「`청구서`는 PDF 한 장의 경로다」라고 해 놓고 경로를 안 주는 꼴이다 (인수
     시험에서 실제로 그랬다). **모든 변수를 주지는 않는다** — 목표에 쓴 것만 간다 (원칙 6).
     """
-    from chaeksas.core.nodes import _seen_by
+    from bpm.core.nodes import _seen_by
 
     spec = AiTask(
         goal="`청구서`를 읽어 금액을 꺼낸다.",
@@ -464,8 +464,8 @@ def test_defaults_reach_every_ai_task_and_the_task_wins() -> None:
 
 
 def test_limits_merge_field_by_field() -> None:
-    from chaeksas.contracts.bpmn_ext import Defaults
-    from chaeksas.core.nodes import with_ai_defaults
+    from bpm.contracts.bpmn_ext import Defaults
+    from bpm.core.nodes import with_ai_defaults
 
     merged = with_ai_defaults(
         spec(limits={"max_steps": 3}), Defaults.model_validate({"limits": {"timeout_s": 60, "max_steps": 9}})
@@ -519,7 +519,7 @@ def test_the_confirm_key_means_nothing_without_triggers() -> None:
 
 def test_the_plan_replay_hears_the_same_triggers() -> None:
     """재생 `plan`의 마지막 추출도 **같은 물음**이다 — 같은 답(전환)을 받는다."""
-    from chaeksas.core.agent import Trace, finish_from
+    from bpm.core.agent import Trace, finish_from
 
     model = RecordingLlm(replies=[answer(_confirm=1)])
     with pytest.raises(AgentError) as caught:
@@ -547,7 +547,7 @@ def test_the_time_limit_is_a_business_failure_and_does_not_cut_a_call() -> None:
 
 
 def test_the_time_limit_reaches_the_error_boundary_from_the_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
-    import chaeksas.core.agent as agent_module
+    import bpm.core.agent as agent_module
 
     ticks = iter(range(0, 10_000, 100))
     monkeypatch.setattr(agent_module, "_monotonic", lambda: float(next(ticks)))

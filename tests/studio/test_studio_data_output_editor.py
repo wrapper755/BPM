@@ -16,8 +16,8 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.bpmn_ext import FILE_FORMATS, DataOutput, read_process  # noqa: E402
-from chaeksas.studio.data_output_editor import (  # noqa: E402
+from bpm.contracts.bpmn_ext import FILE_FORMATS, DataOutput, read_process  # noqa: E402
+from bpm.studio.data_output_editor import (  # noqa: E402
     BOTH_WRITTEN,
     CONTENT_TEMPLATE,
     CONTENT_VARIABLES,
@@ -160,7 +160,7 @@ def test_append_is_written_only_when_on_or_already_there() -> None:
 
 
 def panel_with(chk: dict[str, Any]) -> Any:
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
     panel.show_element({

@@ -24,8 +24,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.contracts.external_task import LockedTask
-from chaeksas.contracts.service_app import (
+from bpm.contracts.external_task import LockedTask
+from bpm.contracts.service_app import (
     MODE_AUTONOMOUS,
     MODE_DETERMINISTIC,
     OpRequest,
@@ -33,7 +33,7 @@ from chaeksas.contracts.service_app import (
     Usage,
     idempotency_key,
 )
-from chaeksas.service_kit import (
+from bpm.service_kit import (
     InMemoryIdempotencyStore,
     InMemoryUsageLog,
     OpError,

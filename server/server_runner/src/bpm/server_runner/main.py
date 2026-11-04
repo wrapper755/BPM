@@ -1,0 +1,135 @@
+"""`bpm-server-runner` — 서버 실행기를 띄운다 (화면 없음, C12).
+
+서버에서는 systemd·compose가 이것을 돌린다. **SIGTERM을 받으면 곱게 끝낸다** — 컨테이너가
+멈출 때 반쯤 쓴 상태를 남기지 않는다.
+
+`--once`는 **등록하고 하트비트까지 한 번** 해 보고 상태 한 줄을 찍는다 (설치·설정을 확인할 때,
+그리고 CI). 끝 코드는 0(됐다)·1(사람이 고쳐야 한다)·3(닿지 못했다)이다 — 셋을 가르는 까닭은
+`systemd`·설치 스크립트가 **무엇을 할지가 다르기** 때문이다. **작업은 받지 않는다** (곧 끝나는
+프로세스가 실행 스레드를 버리면 안 된다).
+
+기다리는 실행은 **다시 떠도 이어진다** (ADR-0054) — 담아 둔 것을 등록 직후에 훑어 되살린다.
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import signal
+import sys
+import threading
+from types import FrameType
+
+from bpm.server_runner import agent as agent_mod
+from bpm.server_runner import enroll
+from bpm.server_runner.center_client import CenterProblem
+from bpm.server_runner.credentials import (
+    ENV_CENTER_API_KEY,
+    ENV_JOIN_TOKEN,
+    Credentials,
+    SecretsUnavailable,
+)
+from bpm.server_runner.settings import Settings
+
+# 한글을 찍는 CLI는 stdout을 UTF-8로 고정한다 (Windows 기본 코드페이지에서 죽는다 — CLAUDE.md §5).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
+log = logging.getLogger(__name__)
+
+#: 키가 없을 때 사람에게 할 말. **어디에 넣어야 하는지까지** 적는다.
+NO_KEY = (
+    "Center API 키가 아직 없습니다 — 등록 요청을 보냈으니 Center 콘솔 「BPM 프로세스」 → 「서버」 탭의 "
+    "「승인 대기」에서 로그의 요청 코드와 같은 줄을 승인하세요 "
+    f"(들이기 비밀 {ENV_JOIN_TOKEN}을 Center와 같게 주면 승인 없이 들어옵니다. "
+    f"또는 환경변수 {ENV_CENTER_API_KEY}로 키를 주세요)"
+)
+
+
+def _parser() -> argparse.ArgumentParser:
+    found = argparse.ArgumentParser(prog="bpm-server-runner", description="서버 실행기 (C12)")
+    found.add_argument(
+        "--once", action="store_true", help="등록하고 하트비트를 한 번 보낸 뒤 상태를 찍는다"
+    )
+    found.add_argument("--verbose", action="store_true", help="자세한 로그")
+    return found
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+    settings = Settings.from_env()
+    api_key = Credentials().center_api_key()
+    settings.data_path.mkdir(parents=True, exist_ok=True)
+    settings.runs_dir.mkdir(parents=True, exist_ok=True)
+    found = agent_mod.build(settings, api_key or "")
+    if not api_key:
+        # **키가 없다 — 등록 요청을 보내고 승인을 기다린다** (C12 §등록 요청과 승인, ADR-0092).
+        try:
+            api_key = enroll.obtain_key(found, once=args.once)
+        except SecretsUnavailable as e:
+            print(e)
+            return 2
+        except CenterProblem as e:
+            print(e)
+            return 1
+        if not api_key:
+            # `--once`이고 아직 승인되지 않았다 — 사람이 할 일(승인)이 있다.
+            print(NO_KEY)
+            return 1
+        found.client.api_key = api_key
+
+    if args.once:
+        # **등록하고 하트비트까지** 한 번 (`Agent.once`) — 등록만 하면 콘솔에 오프라인으로 남는다.
+        beat = found.once()
+        print(found.status_line())
+        if found.blocked_by:
+            return 1
+        return 0 if beat else 3
+    return _loop(found, settings)
+
+
+def _loop(found: agent_mod.Agent, settings: Settings) -> int:
+    """주기마다 한 걸음. **스레드를 만들지 않는다** — 기다리는 것은 `Event.wait()`다.
+
+    `sleep()`이 아니라 `Event`인 까닭은 **SIGTERM이 왔을 때 바로 깨어나야** 해서다. 10초를
+    자고 있으면 컨테이너 종료가 그만큼 늦는다.
+    """
+    stop = threading.Event()
+
+    def _asked_to_stop(signum: int, frame: FrameType | None) -> None:
+        log.info("%s를 받았다 — 곱게 끝낸다", signal.Signals(signum).name)
+        stop.set()
+
+    for one in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(one, _asked_to_stop)
+
+    log.info(
+        "서버 실행기를 시작한다 (Center %s, 상한 %d, 저장소 %s)",
+        settings.center_url,
+        settings.max_concurrency,
+        settings.state_db,
+    )
+    while not stop.is_set():
+        found.tick()
+        if found.restart_ready():
+            # 콘솔 「재시작」 (ADR-0117) — **다시 띄우는 것은 감독하는 쪽**(compose·systemd)이다.
+            log.info("재시작하려고 끝낸다 (도는 실행 없음)")
+            return 0
+        if found.blocked_by:
+            # 사람이 고쳐야 하는 문제다 — 두드려도 같다. 끝내는 쪽이 운영자에게 더 분명하다
+            # (systemd가 다시 띄우면 로그에 같은 줄이 쌓인다).
+            log.error("%s", found.blocked_by)
+            return 1
+        # 닿지 못했으면 주기 대신 재시도 간격을 쓴다 (ADR-0007 — 부르는 쪽이 다시 온다).
+        wait_s = found.next_in_s if found.online else settings.retry_s
+        stop.wait(max(1, wait_s))
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover - 실행 진입점
+    raise SystemExit(main())

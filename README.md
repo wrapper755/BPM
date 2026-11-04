@@ -1,4 +1,4 @@
-# Chaeksas
+# BPM
 
 [![CI](https://github.com/wrapper755/Chaeksas/actions/workflows/ci.yml/badge.svg)](https://github.com/wrapper755/Chaeksas/actions/workflows/ci.yml)
 

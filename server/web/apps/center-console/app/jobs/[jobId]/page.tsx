@@ -1,9 +1,9 @@
 import { timerRequester } from "@/lib/summary";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ErrorBanner, StatusBadge } from "@chaeksas/ui";
-import type { JobInfo } from "@chaeksas/api-types/c5-job-info";
-import type { BotUiInfo } from "@chaeksas/api-types/c5-bot-ui-info";
+import { ErrorBanner, StatusBadge } from "@bpm/ui";
+import type { JobInfo } from "@bpm/api-types/c5-job-info";
+import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { cancelControl } from "@/lib/jobs";

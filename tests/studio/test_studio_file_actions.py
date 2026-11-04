@@ -14,9 +14,9 @@ from typing import Any
 import pytest
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
-from chaeksas.studio import file_actions
-from chaeksas.studio.dialogs import NewProcessDialog
-from chaeksas.studio.workspace import BpmProcess, Definition, Workspace, read_record
+from bpm.studio import file_actions
+from bpm.studio.dialogs import NewProcessDialog
+from bpm.studio.workspace import BpmProcess, Definition, Workspace, read_record
 
 MINIMAL = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"

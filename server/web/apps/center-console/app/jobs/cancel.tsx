@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, ConfirmDialog, ErrorBanner } from "@chaeksas/ui";
+import { Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
 import { cancelJob } from "@/app/actions";
 import { PC_RUNNING_REASON, STOP_CONFIRM, type CancelControl } from "@/lib/jobs";
 

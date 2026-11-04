@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 from pydantic import TypeAdapter
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     ApprovalCreateRequest,
     Catalog,
     ConsumerFolderScan,
@@ -99,7 +99,7 @@ def test_every_json_example_is_covered() -> None:
 
 def test_c6_table_example_reads_as_a_table() -> None:
     """C6 「표 값」 예시는 `as_table`이 표로 읽는다 — 문서와 코드가 같은 모양을 말한다 (ADR-0112)."""
-    from chaeksas.contracts.approvals import as_table
+    from bpm.contracts.approvals import as_table
 
     review = json.loads(json_blocks("C6-approvals")[1])
     assert as_table(review["요소"]) is None
@@ -109,7 +109,7 @@ def test_c6_table_example_reads_as_a_table() -> None:
 
 def test_c1_example_passes_validate() -> None:
     """C1 예시 두 개는 검사 규칙을 통과해야 한다 (R1·R2·R4·R7)."""
-    from chaeksas.contracts import validate
+    from bpm.contracts import validate
 
     for index in (0, 1):
         m = Manifest.model_validate(json.loads(expand_abbreviations(json_blocks("C1-package-manifest")[index])))
@@ -118,7 +118,7 @@ def test_c1_example_passes_validate() -> None:
 
 def test_c2_example_payload_reads_as_a_deployment_claim() -> None:
     """봉투 예시의 `payload`가 claim 모델과 맞는지 (`target`·`not_before: null` 포함)."""
-    from chaeksas.contracts import DeploymentClaim, parse_claim
+    from bpm.contracts import DeploymentClaim, parse_claim
 
     env = Envelope.model_validate(json.loads(expand_abbreviations(json_blocks("C2-signing-envelope")[0])))
     claim = parse_claim(env)
@@ -129,8 +129,8 @@ def test_c2_example_payload_reads_as_a_deployment_claim() -> None:
 
 def test_c13_examples_pass_validate() -> None:
     """C13 예시 둘은 검사 규칙(E1·E3·모양)을 통과하고, 내장 쪽은 api 범위도 맞아야 한다."""
-    from chaeksas.contracts import check_extension_api, validate_extension
-    from chaeksas.extension_api import API_VERSION
+    from bpm.contracts import check_extension_api, validate_extension
+    from bpm.extension_api import API_VERSION
 
     blocks = json_blocks("C13-extension-manifest")
     builtin = ExtensionManifest.model_validate(json.loads(expand_abbreviations(blocks[1])))
@@ -152,7 +152,7 @@ def test_c12_example_heartbeat_is_self_consistent() -> None:
 
 def test_c3_example_data_keys_are_complete() -> None:
     """C3 예시의 이벤트는 종류별 `data` 필수 키를 모두 갖고 있어야 한다."""
-    from chaeksas.contracts import missing_data_keys
+    from bpm.contracts import missing_data_keys
 
     events = TypeAdapter(list[RunEvent]).validate_python(json.loads(json_blocks("C3-run-events")[0]))
     for e in events:

@@ -15,7 +15,7 @@ import { createRequire } from "node:module";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "../..");
-const OUT = join(ROOT, "studio/app/src/chaeksas/studio/web/vendor");
+const OUT = join(ROOT, "studio/app/src/bpm/studio/web/vendor");
 const require = createRequire(import.meta.url);
 const DIST = join(dirname(require.resolve("bpmn-js/package.json")), "dist");
 
@@ -78,7 +78,7 @@ async function outputs() {
       `bpmn-js ${version}\n` +
         `bpmn-auto-layout ${layoutVersion} (src/auto-layout.mjs를 esbuild로 묶었다, ADR-0088)\n` +
         "이 폴더는 생성물이다 (ADR-0029). 직접 고치지 말고 studio/canvas의\n" +
-        "package.json에서 판을 올린 뒤 `pnpm --filter @chaeksas/bpmn-canvas build`.\n",
+        "package.json에서 판을 올린 뒤 `pnpm --filter @bpm/bpmn-canvas build`.\n",
       "utf8",
     ),
   );

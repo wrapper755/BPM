@@ -27,10 +27,10 @@ import pytest
 from consumers import enroll
 from fastapi.testclient import TestClient
 
-from chaeksas.center.api import resources
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
+from bpm.center.api import resources
+from bpm.center.app import create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
 
 TOKEN = "t-admin"
 READ = "t-read"
@@ -121,7 +121,7 @@ def contributed(client: TestClient) -> list[dict[str, Any]]:
 def package_zip(requires: dict[str, Any] | None = None) -> bytes:
     import tempfile
 
-    from chaeksas.contracts.hashing import content_hash_zip
+    from bpm.contracts.hashing import content_hash_zip
 
     manifest: dict[str, Any] = {
         "schema": 1,
@@ -253,10 +253,10 @@ def test_the_consumer_publishes_through_the_same_path(
     client: TestClient, tmp_path: Path, worker: dict[str, str]
 ) -> None:
     """제품의 `Consumer.publish()`가 같은 길로 올린다 — 시험이 손으로 부른 것과 결과가 같다."""
-    from chaeksas.contracts.extension import Catalog  # noqa: PLC0415
-    from chaeksas.contracts.service_app import ServiceAppManifest  # noqa: PLC0415
-    from chaeksas.service_kit import Consumer, TokenFile  # noqa: PLC0415
-    from chaeksas.service_kit import create_app as create_service_app
+    from bpm.contracts.extension import Catalog  # noqa: PLC0415
+    from bpm.contracts.service_app import ServiceAppManifest  # noqa: PLC0415
+    from bpm.service_kit import Consumer, TokenFile  # noqa: PLC0415
+    from bpm.service_kit import create_app as create_service_app
 
     service = create_service_app(
         ServiceAppManifest.model_validate(MANIFEST),
@@ -285,8 +285,8 @@ def test_a_missing_page_is_warned_then_cleared(client: TestClient, worker: dict[
 
 def test_a_missing_page_does_not_block_deployment(client: TestClient, store: Store) -> None:
     """기여 자원 누락은 **배포를 막지 않는다** (C7 — 막는 것은 확장 누락·해시 불일치와 R8)."""
-    from chaeksas.contracts.manifest import Manifest  # noqa: PLC0415
-    from chaeksas.contracts.resources import blocking_at_deploy, missing  # noqa: PLC0415
+    from bpm.contracts.manifest import Manifest  # noqa: PLC0415
+    from bpm.contracts.resources import blocking_at_deploy, missing  # noqa: PLC0415
 
     info = upload(client, package_zip(requires={"resources": [NEEDS_PAGE]}))
     row = store.row("SELECT manifest_json FROM packages WHERE id = ? AND version = ?", (info["id"], info["version"]))

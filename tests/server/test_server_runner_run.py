@@ -26,19 +26,19 @@ import center_admin
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.extension import definition_hash
-from chaeksas.contracts.hashing import MANIFEST_NAME, content_hash_zip
-from chaeksas.core import seen as seen_mod
-from chaeksas.core.app_directory import CACHE_NAME
-from chaeksas.core.run_log import RunLog, log_path
-from chaeksas.mock_apps.external import definitions as external_definitions
-from chaeksas.server_runner import agent as agent_mod
-from chaeksas.server_runner.center_client import CenterClient, Unreachable
-from chaeksas.server_runner.settings import Settings
-from chaeksas.server_runner.worker import Worker
+from bpm.center.app import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store
+from bpm.contracts.extension import definition_hash
+from bpm.contracts.hashing import MANIFEST_NAME, content_hash_zip
+from bpm.core import seen as seen_mod
+from bpm.core.app_directory import CACHE_NAME
+from bpm.core.run_log import RunLog, log_path
+from bpm.mock_apps.external import definitions as external_definitions
+from bpm.server_runner import agent as agent_mod
+from bpm.server_runner.center_client import CenterClient, Unreachable
+from bpm.server_runner.settings import Settings
+from bpm.server_runner.worker import Worker
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 READ = {"Authorization": "Bearer t-read"}

@@ -48,7 +48,7 @@ NOTE = """
 def manifests() -> list[tuple[str, dict[str, Any]]]:
     """모노레포 안 확장 정의들 — `(파일 경로 글, 정의)`. 경로 순서로 읽는다 (생성물이 흔들리지 않게)."""
     out: list[tuple[str, dict[str, Any]]] = []
-    for path in sorted(EXTENSIONS.glob("*/src/chaeksas/ext/*/extension.json")):
+    for path in sorted(EXTENSIONS.glob("*/src/bpm/ext/*/extension.json")):
         found = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(found, dict):
             out.append((path.relative_to(ROOT).as_posix(), found))

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@chaeksas/ui";
+import { Button } from "@bpm/ui";
 
 /**
  * 「<누가> 설정에 적을 Center 주소」 한 줄과 「복사」 (CON-00) — 주소를 적어 넣을 사람이 보는

@@ -1,10 +1,10 @@
 import { Enrollments } from "@/components/Enrollments";
-import type { EnrollmentInfo } from "@chaeksas/api-types/c5-enrollment-info";
+import type { EnrollmentInfo } from "@bpm/api-types/c5-enrollment-info";
 import Link from "next/link";
-import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@chaeksas/ui";
-import type { DeploymentInfo } from "@chaeksas/api-types/c5-deployment-info";
-import type { JobInfo } from "@chaeksas/api-types/c5-job-info";
-import type { ServerRunnerInfo } from "@chaeksas/api-types/c12-server-runner-info";
+import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
+import type { JobInfo } from "@bpm/api-types/c5-job-info";
+import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import { CenterError, center } from "@/lib/center";
 import { queueReason, runnerStatus, serverDeployments } from "@/lib/summary";
 import { fullTime, time } from "@/app/bot-uis/page";

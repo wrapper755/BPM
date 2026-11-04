@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { DataTable, ErrorBanner, StatusBadge, type Column } from "@chaeksas/ui";
-import type { PackageInfo } from "@chaeksas/api-types/c5-package-info";
-import type { DependentInfo } from "@chaeksas/api-types/c5-dependent-info";
-import type { ProvidedProcess } from "@chaeksas/api-types/c1-manifest";
+import { DataTable, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { PackageInfo } from "@bpm/api-types/c5-package-info";
+import type { DependentInfo } from "@bpm/api-types/c5-dependent-info";
+import type { ProvidedProcess } from "@bpm/api-types/c1-manifest";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { PackageActions } from "@/components/PackageActions";

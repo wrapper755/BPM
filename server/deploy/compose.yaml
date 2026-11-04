@@ -6,7 +6,7 @@
 #
 # 서비스 앱과 그 관리 콘솔(`svc-console`, 서비스 앱마다 하나)은 여기 없다 — 띄울 서비스 앱이
 # 생기면 그 앱과 함께 더한다 (ADR-0114).
-name: chaeksas
+name: bpm
 
 services:
   center:
@@ -110,7 +110,12 @@ services:
       - center
     restart: unless-stopped
 
+# 볼륨 이름은 **옛 프로젝트 이름(chaeksas) 그대로 고정한다** (ADR-0130) — 프로젝트 이름만 바꾸면 compose가
+# `bpm_…` 새 볼륨을 만들어 Center가 빈 DB로 뜬다.
 volumes:
   center-data:
+    name: chaeksas_center-data
   server-runner-data:
+    name: chaeksas_server-runner-data
   server-runner-secrets:
+    name: chaeksas_server-runner-secrets

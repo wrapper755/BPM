@@ -25,13 +25,13 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.bpmn_ext import read_process
-from chaeksas.contracts.hashing import content_hash_zip
-from chaeksas.studio import center_resources, install, packaging, services, upload
-from chaeksas.studio.workspace import LIBS_DIR, BpmProcess, Workspace
+from bpm.center.app import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store
+from bpm.contracts.bpmn_ext import read_process
+from bpm.contracts.hashing import content_hash_zip
+from bpm.studio import center_resources, install, packaging, services, upload
+from bpm.studio.workspace import LIBS_DIR, BpmProcess, Workspace
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 
@@ -252,7 +252,7 @@ def test_the_check_accepts_the_call_once_it_is_installed(
 
     실행 전 검사(F6)와 시험 실행이 **같은 사전**을 쓰므로(`processes()`) 둘이 함께 열린다.
     """
-    from chaeksas.studio.preflight import inspect
+    from bpm.studio.preflight import inspect
 
     opened = process.definitions[0].process
     assert opened is not None
@@ -424,7 +424,7 @@ def test_the_runner_reads_the_same_two_places(
 
     내보낸 패키지를 **실행기 쪽 코드로** 읽어 본다 (`core.packages.InstalledBot`).
     """
-    from chaeksas.core.packages import InstalledBot
+    from bpm.core.packages import InstalledBot
 
     upload_lib(center, studio_key, lib_zip(files=rule_lib()), tmp_path)
     install.install(workspace, process, reader, package_id=LIB_ID, version=LIB_VERSION)
@@ -581,8 +581,8 @@ class FakeReader(services.CenterReader):
         self.files = packages
 
     def packages(self, kind: str) -> list[Any]:
-        from chaeksas.contracts.center_api import PackageInfo
-        from chaeksas.contracts.manifest import Manifest
+        from bpm.contracts.center_api import PackageInfo
+        from bpm.contracts.manifest import Manifest
 
         out = []
         for (package_id, version), raw in sorted(self.files.items()):
@@ -728,8 +728,8 @@ CALLER_WITH_INPUT = """<?xml version="1.0" encoding="UTF-8"?>
 
 def run_it(found: BpmProcess) -> Any:
     """진입 정의를 끝까지 민다 — `RunEnv`는 **작업 폴더가 주는 것**이다 (시험 실행과 같은 둘)."""
-    from chaeksas.core.engine import Engine, RunEnv
-    from chaeksas.core.run_log import RunLog
+    from bpm.core.engine import Engine, RunEnv
+    from bpm.core.run_log import RunLog
 
     entry = found.definitions[0].process
     assert entry is not None
@@ -748,7 +748,7 @@ def run_it(found: BpmProcess) -> Any:
 
 def test_a_rule_task_inside_a_lib_really_runs(workspace: Workspace) -> None:
     """**설치하면 lib의 규칙 태스크가 돈다** (ADR-0048) — 결정표가 함께 왔기 때문이다."""
-    from chaeksas.core.run_state import State
+    from bpm.core.run_state import State
 
     made = workspace.create("erp.grade", name="등급")
     workspace.save_definition(made, "main.bpmn", CALLER_WITH_INPUT.format(called=CALLED))
@@ -775,7 +775,7 @@ def test_without_the_decision_table_the_rule_task_fails(workspace: Workspace) ->
 
     결정표만 지우고 같은 그림을 돌린다 (전에는 설치가 늘 이 꼴이었다).
     """
-    from chaeksas.core.run_state import State
+    from bpm.core.run_state import State
 
     made = workspace.create("erp.grade", name="등급")
     workspace.save_definition(made, "main.bpmn", CALLER_WITH_INPUT.format(called=CALLED))

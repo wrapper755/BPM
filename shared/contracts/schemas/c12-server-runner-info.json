@@ -324,7 +324,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c12-server-runner-info",
+  "$id": "urn:bpm:contracts:c12-server-runner-info",
   "additionalProperties": true,
   "description": "`GET /api/v1/server-runners` 한 줄 (CON-12).\n\n`queued`는 **Center의 대기열**이다 — 실행기가 보내는 값이 아니라 Center가 센 것이다\n(C12 — 서버 쪽 대기열은 Center가 가진다).",
   "properties": {

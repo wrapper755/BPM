@@ -1,5 +1,5 @@
-import type { CenterKeyInfo } from "@chaeksas/api-types/c7-center-key-info";
-import { StatusBadge } from "@chaeksas/ui";
+import type { CenterKeyInfo } from "@bpm/api-types/c7-center-key-info";
+import { StatusBadge } from "@bpm/ui";
 import { STATE_LABEL } from "@/lib/center-keys";
 import { KeyMenu } from "./KeyMenu";
 

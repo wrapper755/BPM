@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c7-center-key-create-request",
+  "$id": "urn:bpm:contracts:c7-center-key-create-request",
   "additionalProperties": true,
   "description": "`POST /center-keys` — 관리자 토큰으로만.",
   "properties": {

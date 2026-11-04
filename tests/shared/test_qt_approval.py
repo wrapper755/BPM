@@ -17,8 +17,8 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.approvals import Form, FormField, as_table, review_table  # noqa: E402
-from chaeksas.qt.approval import (  # noqa: E402
+from bpm.contracts.approvals import Form, FormField, as_table, review_table  # noqa: E402
+from bpm.qt.approval import (  # noqa: E402
     APPROVE,
     CONFIRMATION,
     REJECT,

@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
-from chaeksas.contracts.bot_ui import JobAck
-from chaeksas.core.seen import CAP, GRACE_CYCLES, Seen
+from bpm.contracts.bot_ui import JobAck
+from bpm.core.seen import CAP, GRACE_CYCLES, Seen
 
 
 def ack(job_id: str, result: str = "started") -> JobAck:

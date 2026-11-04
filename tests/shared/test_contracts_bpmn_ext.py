@@ -13,8 +13,8 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts._base import SEVERITY_WARNING
-from chaeksas.contracts.bpmn_ext import (
+from bpm.contracts._base import SEVERITY_WARNING
+from bpm.contracts.bpmn_ext import (
     BUILTIN_VARS,
     BpmnReadError,
     CaseFile,
@@ -451,9 +451,9 @@ def test_the_domain_lists_are_defined_in_one_place_only() -> None:
     `bpmn_ext`·`core`가 import해 쓴다 (`bpmn_ext`가 `manifest`를 import하므로 거꾸로는 순환이다).
     베껴 쓰면 **여기가 깨진다** — mypy도 막는다(`bpmn_ext`는 이 이름을 다시 내보내지 않는다).
     """
-    from chaeksas.contracts.manifest import KNOWN_DOMAINS, PC_ONLY_DOMAINS
+    from bpm.contracts.manifest import KNOWN_DOMAINS, PC_ONLY_DOMAINS
 
-    src = ROOT / "shared" / "contracts" / "src" / "chaeksas" / "contracts"
+    src = ROOT / "shared" / "contracts" / "src" / "bpm" / "contracts"
     where = {p.name: p.read_text(encoding="utf-8") for p in sorted(src.glob("*.py"))}
     for name in ("KNOWN_DOMAINS", "PC_ONLY_DOMAINS"):
         files = [f for f, text in where.items() if re.search(rf"^{name} = ", text, re.M)]
@@ -473,7 +473,7 @@ def test_the_domain_list_is_the_one_the_contract_documents_list() -> None:
 
     두 문서가 같은 값을 적고 있으니 한쪽만 늘리는 것도 갈라짐이다.
     """
-    from chaeksas.contracts.manifest import KNOWN_DOMAINS
+    from bpm.contracts.manifest import KNOWN_DOMAINS
 
     docs = Path(__file__).resolve().parents[2] / "docs" / "03-contracts"
     c14 = next(
@@ -902,7 +902,7 @@ def test_an_inclusive_join_counts_the_branches_that_always_run() -> None:
 
 def test_a_default_flow_is_not_always_taken() -> None:
     """기본 흐름은 **다른 조건이 하나도 맞지 않을 때만** 지나간다 — 보장이 아니다."""
-    from chaeksas.contracts.bpmn_ext import ALWAYS_TRUE, _always_taken  # noqa: PLC0415
+    from bpm.contracts.bpmn_ext import ALWAYS_TRUE, _always_taken  # noqa: PLC0415
 
     assert "true" in ALWAYS_TRUE
     found = _process("bx10_vendor_onboarding_review")

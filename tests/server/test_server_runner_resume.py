@@ -29,16 +29,16 @@ import center_admin
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store as CenterStore
-from chaeksas.contracts.events import KNOWN_RESUME_REASONS
-from chaeksas.contracts.hashing import MANIFEST_NAME, content_hash_zip
-from chaeksas.core.run_log import RunLog, log_path
-from chaeksas.server_runner import agent as agent_mod
-from chaeksas.server_runner import worker as worker_mod
-from chaeksas.server_runner.settings import Settings
-from chaeksas.server_runner.store import WAITING, Store
+from bpm.center.app import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store as CenterStore
+from bpm.contracts.events import KNOWN_RESUME_REASONS
+from bpm.contracts.hashing import MANIFEST_NAME, content_hash_zip
+from bpm.core.run_log import RunLog, log_path
+from bpm.server_runner import agent as agent_mod
+from bpm.server_runner import worker as worker_mod
+from bpm.server_runner.settings import Settings
+from bpm.server_runner.store import WAITING, Store
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 READ = {"Authorization": "Bearer t-read"}
@@ -562,7 +562,7 @@ def test_cancelling_a_waiting_run_really_closes_it(
     그리고 **취소는 실패가 아니다** (C3) — 끝난 방식은 **기록에서 읽는다**. 엔진은 성공만
     `DONE`으로 앉히고 취소도 `FAILED`라, 상태만 보면 작업 ack가 `cancelled`를 잃는다 (C4).
     """
-    from chaeksas.server_runner.worker import ACK_CANCELLED
+    from bpm.server_runner.worker import ACK_CANCELLED
 
     found = runner_of(settings, key, center, store)
     ready(center, center_store, found)
@@ -598,9 +598,9 @@ def test_an_answer_waits_for_a_free_slot_instead_of_being_refused(
     **답을 지우므로** 사람이 답한 결재가 버려진다. ack하지 않으면 Center가 다음 주기에
     **그대로 다시 내려 준다**.
     """
-    from chaeksas.contracts.server_runner import validate_heartbeat
-    from chaeksas.core.packages import find
-    from chaeksas.server_runner.worker import Worker
+    from bpm.contracts.server_runner import validate_heartbeat
+    from bpm.core.packages import find
+    from bpm.server_runner.worker import Worker
 
     runner = runner_of(settings, key, center, store)
     ready(center, center_store, runner)

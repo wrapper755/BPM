@@ -18,14 +18,14 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.bpmn_ext import AiTask, read_process
-from chaeksas.contracts.bpmn_ext import validate as validate_bpmn
-from chaeksas.contracts.replay import ReplayMemory, ReplaySpec, ReplayStep
-from chaeksas.core.agent import Trace, run_agent
-from chaeksas.core.engine import Engine, Run, RunEnv, State
-from chaeksas.core.llm import RecordingLlm, Reply, ToolCall
-from chaeksas.core.replay import filled, read_memory, templated, to_spec, write_memory
-from chaeksas.core.run_log import RunLog
+from bpm.contracts.bpmn_ext import AiTask, read_process
+from bpm.contracts.bpmn_ext import validate as validate_bpmn
+from bpm.contracts.replay import ReplayMemory, ReplaySpec, ReplayStep
+from bpm.core.agent import Trace, run_agent
+from bpm.core.engine import Engine, Run, RunEnv, State
+from bpm.core.llm import RecordingLlm, Reply, ToolCall
+from bpm.core.replay import filled, read_memory, templated, to_spec, write_memory
+from bpm.core.run_log import RunLog
 
 NOW = datetime(2026, 10, 4, 9, 30, tzinfo=UTC)
 RUN_ID = "run_20261004_093000_abc123"

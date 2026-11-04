@@ -1,4 +1,4 @@
 {
-  "extends": "@chaeksas/config/tsconfig.base.json",
+  "extends": "@bpm/config/tsconfig.base.json",
   "include": ["src"]
 }

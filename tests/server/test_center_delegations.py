@@ -28,11 +28,11 @@ from center_admin import approve as approve_package
 from center_admin import deploy
 from fastapi.testclient import TestClient
 
-from chaeksas.center.api import delegations as api
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store, now_iso
-from chaeksas.contracts.hashing import MANIFEST_NAME, content_hash_zip
+from bpm.center.api import delegations as api
+from bpm.center.app import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store, now_iso
+from bpm.contracts.hashing import MANIFEST_NAME, content_hash_zip
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 AT = "2026-10-13T09:00:00+09:00"
@@ -602,7 +602,7 @@ def test_values_nobody_received_are_purged_after_the_idempotency_window(
     """
     from datetime import UTC, datetime, timedelta
 
-    from chaeksas.center.api import delegations as api_mod
+    from bpm.center.api import delegations as api_mod
 
     job_id = ask(center, runner_key).json()["job_id"]
     pc_beat(center, ready, job_acks=[{"job_id": job_id, "result": "started", "run_id": "run_20261015_100000_bbbbbb"}])
@@ -640,7 +640,7 @@ def test_the_purge_leaves_what_the_runner_has_not_seen_yet(
         job_acks=[{"job_id": job_id, "result": "finished", "run_id": "run_20261015_100000_bbbbbb",
                    "outputs": {"결과코드": "OK"}}],
     )
-    from chaeksas.center.api import delegations as api_mod
+    from bpm.center.api import delegations as api_mod
 
     assert api_mod.purge_values(store) == 0
     assert beat(center, runner_key)["delegations"][0]["outputs"] == {"결과코드": "OK"}
@@ -763,7 +763,7 @@ def test_each_loop_turn_is_its_own_job_and_comes_back_the_same(
 
 def test_no_loop_index_keeps_the_old_key(center: TestClient, runner_key: str, ready: str) -> None:
     """반복이 아니면 **옛 키 그대로** — 이미 맡겨 둔 위임이 같은 작업을 받는다."""
-    from chaeksas.center.api.delegations import key_prefix  # noqa: PLC0415
+    from bpm.center.api.delegations import key_prefix  # noqa: PLC0415
 
     assert key_prefix(RUN, "Call_Erp", 1) == f"dlg_{RUN}_Call_Erp_1"
     assert key_prefix(RUN, "Call_Erp", 1, 0) == f"dlg_{RUN}_Call_Erp_1_0"

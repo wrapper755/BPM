@@ -1,5 +1,5 @@
-import type { DeploymentInfo } from "@chaeksas/api-types/c5-deployment-info";
-import type { JobInfo } from "@chaeksas/api-types/c5-job-info";
+import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
+import type { JobInfo } from "@bpm/api-types/c5-job-info";
 
 /**
  * CON-05 작업 지시의 판단 — 「새 작업」이 어디에 보낼지, 「취소」·「중지」를 보일지.

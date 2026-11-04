@@ -9,13 +9,13 @@
  * CON-01의 「이어 돈 기록」은 C3 `run_waiting`·`run_resumed` **두 줄을 짝지은** 것이다.
  */
 
-import type { DeploymentInfo } from "@chaeksas/api-types/c5-deployment-info";
-import type { RunEvent } from "@chaeksas/api-types/c3-run-event";
-import type { RunInfo } from "@chaeksas/api-types/c3-run-info";
-import type { JobInfo } from "@chaeksas/api-types/c5-job-info";
-import type { ServerRunnerInfo } from "@chaeksas/api-types/c12-server-runner-info";
-import type { ScheduleInfo } from "@chaeksas/api-types/c5-schedule-info";
-import type { ExternalTaskInfo } from "@chaeksas/api-types/c15-external-task-info";
+import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
+import type { RunEvent } from "@bpm/api-types/c3-run-event";
+import type { RunInfo } from "@bpm/api-types/c3-run-info";
+import type { JobInfo } from "@bpm/api-types/c5-job-info";
+import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
+import type { ScheduleInfo } from "@bpm/api-types/c5-schedule-info";
+import type { ExternalTaskInfo } from "@bpm/api-types/c15-external-task-info";
 
 /** 준비도를 재는 표본 (화면 문서 — 「최근 20회 실행 기준」). */
 export const SAMPLE = 20;

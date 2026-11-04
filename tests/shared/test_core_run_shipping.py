@@ -16,9 +16,9 @@ from pathlib import Path
 
 import pytest
 
-from chaeksas.contracts.events import EventBatchResponse, RejectedLine, RunEvent
-from chaeksas.core.run_log import RunLog, log_path, run_dir
-from chaeksas.core.run_shipping import (
+from bpm.contracts.events import EventBatchResponse, RejectedLine, RunEvent
+from bpm.core.run_log import RunLog, log_path, run_dir
+from bpm.core.run_shipping import (
     HttpUploader,
     Queue,
     ShipError,

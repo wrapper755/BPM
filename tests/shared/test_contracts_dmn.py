@@ -1,4 +1,4 @@
-"""C14 §규칙 태스크와 DMN — 결정표를 읽고 판정한다 (`chaeksas.contracts.dmn`).
+"""C14 §규칙 태스크와 DMN — 결정표를 읽고 판정한다 (`bpm.contracts.dmn`).
 
 예제의 `.dmn` 9개가 **그대로 읽히고 판정되는지**가 가장 중요한 시험이다. 규칙 태스크의
 `input`·`output`이 결정표와 맞는지도 B14로 함께 본다 (같은 이름을 두 곳에 적으니까).
@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from chaeksas.contracts.bpmn_ext import read_process
-from chaeksas.contracts.bpmn_ext import validate as validate_bpmn
-from chaeksas.contracts.dmn import (
+from bpm.contracts.bpmn_ext import read_process
+from bpm.contracts.bpmn_ext import validate as validate_bpmn
+from bpm.contracts.dmn import (
     HIT_POLICIES,
     Decision,
     DmnError,

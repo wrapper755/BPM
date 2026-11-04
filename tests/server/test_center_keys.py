@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     CenterKeyCreated,
     CenterKeyCreateRequest,
     CenterKeyInfo,
@@ -18,7 +18,7 @@ from chaeksas.contracts import (
     expires_soon,
     validate_center_key_create,
 )
-from chaeksas.contracts.center_keys import (
+from bpm.contracts.center_keys import (
     DEFAULT_EXPIRY_DAYS,
     EXPIRY_WARNING_DAYS,
     ISSUABLE_KEY_TYPES,
@@ -144,7 +144,7 @@ def test_unknown_state_is_accepted() -> None:
 
 
 def test_a_real_key_shape_passes() -> None:
-    from chaeksas.contracts.center_keys import KEY_PREFIX, KEY_RANDOM_LEN, looks_like_key
+    from bpm.contracts.center_keys import KEY_PREFIX, KEY_RANDOM_LEN, looks_like_key
 
     assert looks_like_key(KEY_PREFIX + "A" * KEY_RANDOM_LEN)
     # 앞뒤 공백은 붙여 넣기에서 흔하다 — 깎아서 본다.
@@ -153,7 +153,7 @@ def test_a_real_key_shape_passes() -> None:
 
 def test_things_people_actually_paste_are_refused() -> None:
     """이슈 #3 — curl 명령 한 줄이 그대로 키로 저장돼 등록이 401로만 실패했다."""
-    from chaeksas.contracts.center_keys import KEY_PREFIX, KEY_RANDOM_LEN, looks_like_key
+    from bpm.contracts.center_keys import KEY_PREFIX, KEY_RANDOM_LEN, looks_like_key
 
     for pasted in (
         "",

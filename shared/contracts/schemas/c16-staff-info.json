@@ -95,7 +95,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c16-staff-info",
+  "$id": "urn:bpm:contracts:c16-staff-info",
   "additionalProperties": true,
   "properties": {
     "company": {

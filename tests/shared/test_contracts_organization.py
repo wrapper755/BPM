@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     INPUT_SOURCE_TYPES,
     OrgRef,
     Place,
@@ -14,15 +14,15 @@ from chaeksas.contracts import (
     place_violation,
     staff_principal,
 )
-from chaeksas.contracts.accounts import KNOWN_ROLES, ROLE_COMPANY_ADMIN
-from chaeksas.contracts.bot_ui import JobDispatch
-from chaeksas.contracts.bpmn_ext import InputDecl, ProcessInfo
-from chaeksas.contracts.organization import (
+from bpm.contracts.accounts import KNOWN_ROLES, ROLE_COMPANY_ADMIN
+from bpm.contracts.bot_ui import JobDispatch
+from bpm.contracts.bpmn_ext import InputDecl, ProcessInfo
+from bpm.contracts.organization import (
     CODE_PLACE_NOT_FOR_LIB,
     CODE_PLACE_OUTSIDE_COMPANY,
     StaffRequest,
 )
-from chaeksas.core.engine import sourced_inputs
+from bpm.core.engine import sourced_inputs
 
 DEPARTMENTS = {"sales": "company1", "other-sales": "company2"}
 STAFF = {"kim": "company1", "lee": "company2"}
@@ -98,7 +98,7 @@ def _manifest(**over: object) -> dict[str, object]:
 
 def test_r14_the_place_rides_the_manifest_of_a_bpm_process_only() -> None:
     """업무 자리는 Studio가 고르고 매니페스트에 실린다 (C1 R14, ADR-0127)."""
-    from chaeksas.contracts.manifest import Manifest, validate
+    from bpm.contracts.manifest import Manifest, validate
 
     def rules(**over: object) -> set[str]:
         return {one.rule for one in validate(Manifest.model_validate(_manifest(**over)))}

@@ -16,10 +16,10 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.contracts.external_task import LockedTask
-from chaeksas.contracts.service_app import MODE_DETERMINISTIC, Operation, OpRequest, ServiceAppManifest
-from chaeksas.llm import LlmError, OpenAiCompatibleLlm, RecordingLlm, Reply
-from chaeksas.service_kit import (
+from bpm.contracts.external_task import LockedTask
+from bpm.contracts.service_app import MODE_DETERMINISTIC, Operation, OpRequest, ServiceAppManifest
+from bpm.llm import LlmError, OpenAiCompatibleLlm, RecordingLlm, Reply
+from bpm.service_kit import (
     LLM_UNAVAILABLE,
     LlmSettings,
     OpResult,

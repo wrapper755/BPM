@@ -13,7 +13,7 @@ from typing import Any, cast
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     AdminKey,
     Catalog,
     ExtensionManifest,
@@ -26,7 +26,7 @@ from chaeksas.contracts import (
     validate_extension,
     verify_external,
 )
-from chaeksas.contracts.extension import MAX_DEFINITION_BYTES
+from bpm.contracts.extension import MAX_DEFINITION_BYTES
 
 NOW = "2026-10-02T09:00:00+09:00"
 
@@ -38,7 +38,7 @@ def builtin(**over: Any) -> dict[str, Any]:
         "id": "doc-ocr",
         "version": "1.2.0",
         "name": "문서 인식",
-        "publisher": "Chaeksas",
+        "publisher": "BPM",
         "tier": "builtin",
         "api": ">=2,<3",
         "contributes": {

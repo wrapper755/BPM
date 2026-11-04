@@ -20,13 +20,13 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.bpmn_ext import read_process
-from chaeksas.contracts.events import REQUIRED_DATA_KEYS
-from chaeksas.core.engine import Engine, EngineError, Run, RunEnv, State
-from chaeksas.core.run_log import RunLog
-from chaeksas.core.run_snapshot import dump, restore
-from chaeksas.core.run_state import WAIT_EXTERNAL_TASK
-from chaeksas.core.services import (
+from bpm.contracts.bpmn_ext import read_process
+from bpm.contracts.events import REQUIRED_DATA_KEYS
+from bpm.core.engine import Engine, EngineError, Run, RunEnv, State
+from bpm.core.run_log import RunLog
+from bpm.core.run_snapshot import dump, restore
+from bpm.core.run_state import WAIT_EXTERNAL_TASK
+from bpm.core.services import (
     CenterServiceCaller,
     NoServiceCaller,
     OpCall,
@@ -374,7 +374,7 @@ def test_an_unreachable_center_is_worth_trying_again() -> None:
 
 def test_a_task_that_never_finishes_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
     """기한(+여유)이 지나도 끝나지 않으면 `timeout`으로 실패한다 — 영원히 기다리지 않는다."""
-    import chaeksas.core.services as services  # noqa: PLC0415
+    import bpm.core.services as services  # noqa: PLC0415
 
     clock = iter([0.0, 10.0, 1000.0, 1000.0, 1000.0])
 
@@ -417,11 +417,11 @@ def test_the_engine_calls_through_center_to_a_consumer(tmp_path: Any) -> None:
     from consumers import ADMIN, enroll  # noqa: PLC0415
     from fastapi.testclient import TestClient  # noqa: PLC0415
 
-    from chaeksas.center.app import create_app as create_center  # noqa: PLC0415
-    from chaeksas.center.settings import Settings as CenterSettings  # noqa: PLC0415
-    from chaeksas.center.storage import Store  # noqa: PLC0415
-    from chaeksas.contracts.service_app import ServiceAppManifest  # noqa: PLC0415
-    from chaeksas.service_kit import Consumer, create_app  # noqa: PLC0415
+    from bpm.center.app import create_app as create_center  # noqa: PLC0415
+    from bpm.center.settings import Settings as CenterSettings  # noqa: PLC0415
+    from bpm.center.storage import Store  # noqa: PLC0415
+    from bpm.contracts.service_app import ServiceAppManifest  # noqa: PLC0415
+    from bpm.service_kit import Consumer, create_app  # noqa: PLC0415
 
     manifest = ServiceAppManifest.model_validate(
         {"schema": 1, "app_id": "erp", "name": "ERP", "version": "1.0.0", "category": "business",

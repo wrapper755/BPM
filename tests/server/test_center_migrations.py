@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from chaeksas.center.migrations import (
+from bpm.center.migrations import (
     BASELINE,
     MIGRATIONS,
     MigrationError,
@@ -30,7 +30,7 @@ from chaeksas.center.migrations import (
     migrate,
     statements_of,
 )
-from chaeksas.center.storage import SCHEMA, Store
+from bpm.center.storage import SCHEMA, Store
 
 #: 끝 판까지의 모든 판.
 ALL = list(range(BASELINE, latest() + 1))
@@ -309,7 +309,7 @@ def test_duplicate_hosts_stop_the_step_and_say_what_to_do(tmp_path: Path) -> Non
 
 def test_the_person_picks_the_row_and_the_step_goes_through(tmp_path: Path) -> None:
     """**고르는 것은 사람**이고 도구는 은퇴시키기만 한다 — 지우지 않는다(이력이 그 id를 가리킨다)."""
-    from chaeksas.center.repair import RETIRED, RepairError, duplicates, retire  # noqa: PLC0415
+    from bpm.center.repair import RETIRED, RepairError, duplicates, retire  # noqa: PLC0415
 
     db = tmp_path / "center.sqlite3"
     _database_at_two_with(
@@ -343,7 +343,7 @@ def test_the_person_picks_the_row_and_the_step_goes_through(tmp_path: Path) -> N
 
 def test_a_server_runner_is_retired_by_pausing(tmp_path: Path) -> None:
     """서버 실행기에는 `disabled`가 없다 — **일시 중지**로 다시 쓰이지 않게 한다."""
-    from chaeksas.center.repair import retire  # noqa: PLC0415
+    from bpm.center.repair import retire  # noqa: PLC0415
 
     db = tmp_path / "center.sqlite3"
     _database_at_two_with(
@@ -366,7 +366,7 @@ def test_the_cli_does_not_open_the_store(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """**지킴에 걸린 DB에서도 돈다** — `Store`를 열면 옮기기가 돌아 그 지킴에 다시 걸린다."""
-    from chaeksas.center.__main__ import hosts  # noqa: PLC0415
+    from bpm.center.__main__ import hosts  # noqa: PLC0415
 
     db = tmp_path / "center.sqlite3"
     _database_at_two_with(

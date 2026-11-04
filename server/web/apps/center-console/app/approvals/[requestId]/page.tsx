@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button, ErrorBanner, StatusBadge } from "@chaeksas/ui";
-import type { ApprovalInfo, FormField } from "@chaeksas/api-types/c6-approval-info";
+import { Button, ErrorBanner, StatusBadge } from "@bpm/ui";
+import type { ApprovalInfo, FormField } from "@bpm/api-types/c6-approval-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { answerApproval } from "@/app/actions";

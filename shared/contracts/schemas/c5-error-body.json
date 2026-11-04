@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c5-error-body",
+  "$id": "urn:bpm:contracts:c5-error-body",
   "additionalProperties": true,
   "description": "오류 응답 본문. C11과 같은 형식이다.",
   "properties": {

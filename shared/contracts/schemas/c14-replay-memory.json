@@ -63,7 +63,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c14-replay-memory",
+  "$id": "urn:bpm:contracts:c14-replay-memory",
   "additionalProperties": true,
   "description": "`memory/specs.json` 한 벌.",
   "properties": {

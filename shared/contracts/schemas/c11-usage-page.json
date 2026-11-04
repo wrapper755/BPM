@@ -101,7 +101,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c11-usage-page",
+  "$id": "urn:bpm:contracts:c11-usage-page",
   "additionalProperties": true,
   "description": "`GET /admin/v1/usage` (SVC-03). 최근 것부터. **입력·출력 값은 없다** (계약 원칙 6).",
   "properties": {

@@ -24,16 +24,16 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import Qt  # noqa: E402
 
-from chaeksas.contracts.center_api import PackageInfo  # noqa: E402
-from chaeksas.contracts.extension import ResourceView  # noqa: E402
-from chaeksas.contracts.resources import (  # noqa: E402
+from bpm.contracts.center_api import PackageInfo  # noqa: E402
+from bpm.contracts.extension import ResourceView  # noqa: E402
+from bpm.contracts.resources import (  # noqa: E402
     ContributedResource,
     ServiceAppResource,
 )
-from chaeksas.contracts.service_app import Operation as C11Operation  # noqa: E402
-from chaeksas.core.extensions import Contribution  # noqa: E402
-from chaeksas.studio import center_actions, resources, service_catalog, services  # noqa: E402
-from chaeksas.studio.workspace import InstalledLib  # noqa: E402
+from bpm.contracts.service_app import Operation as C11Operation  # noqa: E402
+from bpm.core.extensions import Contribution  # noqa: E402
+from bpm.studio import center_actions, resources, service_catalog, services  # noqa: E402
+from bpm.studio.workspace import InstalledLib  # noqa: E402
 
 NOW = "2026-10-10T09:00:00+09:00"
 
@@ -755,8 +755,8 @@ def webengine(_app: Any) -> Any:
 @pytest.fixture
 def window(tmp_path: Any, webengine: Any) -> Any:
     """STU-01 메인 창 하나. 캔버스가 뜨기를 **기다리지 않는다** — 여기서 보는 것은 붙은 자리다."""
-    from chaeksas.studio.main_window import MainWindow
-    from chaeksas.studio.settings import Settings
+    from bpm.studio.main_window import MainWindow
+    from bpm.studio.settings import Settings
 
     return MainWindow(Settings(data_dir=tmp_path))
 
@@ -791,7 +791,7 @@ def test_the_toolbar_holds_the_everyday_actions(window: Any) -> None:
 
 def test_the_run_button_turns_into_a_stop_button_while_running(window: Any) -> None:
     """U5 — 실행 중에는 수행 모드에 맞는 중지 글이 되고 강조색 속성이 붙는다."""
-    from chaeksas.studio import run_dialog
+    from bpm.studio import run_dialog
 
     button = window.toolbar.widgetForAction(window.run_tool_action)
     window.show_running(run_dialog.DETERMINISTIC)
@@ -890,8 +890,8 @@ def test_the_read_only_window_draws_the_diagram_and_says_it_cannot_be_edited(
 
     from PySide6.QtCore import QEventLoop, QTimer
 
-    from chaeksas.studio.canvas import VIEW_PAGE
-    from chaeksas.studio.viewer import DiagramViewer
+    from bpm.studio.canvas import VIEW_PAGE
+    from bpm.studio.viewer import DiagramViewer
 
     examples = _Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
     xml = (examples / "fx02_business_rule.bpmn").read_text(encoding="utf-8")

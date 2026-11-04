@@ -4,7 +4,7 @@
  * 화면을 모르는 함수라 vitest가 잰다. 판정은 Center도 한다(폐기되지 않은 키는 409 `not_revoked`) —
  * 여기는 「할 수 없는 일을 보이지 않게」 하는 자리다. 어느 줄이든 할 일이 하나는 있다.
  */
-import type { CenterKeyInfo } from "@chaeksas/api-types/c7-center-key-info";
+import type { CenterKeyInfo } from "@bpm/api-types/c7-center-key-info";
 
 export type KeyAction = "revoke" | "unbind" | "delete";
 

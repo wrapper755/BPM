@@ -422,7 +422,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c4-heartbeat-request",
+  "$id": "urn:bpm:contracts:c4-heartbeat-request",
   "additionalProperties": true,
   "description": "`POST /api/v1/bot-ui/heartbeat` — 30초마다 (응답의 `next_heartbeat_s`를 따름).",
   "properties": {

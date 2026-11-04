@@ -136,7 +136,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c11-service-app-manifest",
+  "$id": "urn:bpm:contracts:c11-service-app-manifest",
   "additionalProperties": true,
   "description": "앱이 하는 일 — 일꾼이 `PUT /consumers/self/manifest`로 올리고 Center가 리소스 목록·작업 대조에 쓴다 (C7·C15).",
   "properties": {

@@ -95,7 +95,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c16-company-info",
+  "$id": "urn:bpm:contracts:c16-company-info",
   "additionalProperties": true,
   "description": "`GET /companies…` — 셈은 읽을 때 센다.",
   "properties": {

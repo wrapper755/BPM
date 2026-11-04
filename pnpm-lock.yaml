@@ -14,10 +14,10 @@ importers:
 
   server/web/apps/center-console:
     dependencies:
-      '@chaeksas/api-types':
+      '@bpm/api-types':
         specifier: workspace:*
         version: link:../../packages/api-types
-      '@chaeksas/ui':
+      '@bpm/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       next:
@@ -30,7 +30,7 @@ importers:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
     devDependencies:
-      '@chaeksas/config':
+      '@bpm/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@tailwindcss/postcss':
@@ -54,10 +54,10 @@ importers:
 
   server/web/apps/svc-console:
     dependencies:
-      '@chaeksas/api-types':
+      '@bpm/api-types':
         specifier: workspace:*
         version: link:../../packages/api-types
-      '@chaeksas/ui':
+      '@bpm/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       next:
@@ -70,7 +70,7 @@ importers:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
     devDependencies:
-      '@chaeksas/config':
+      '@bpm/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@tailwindcss/postcss':
@@ -94,7 +94,7 @@ importers:
 
   server/web/packages/api-types:
     devDependencies:
-      '@chaeksas/config':
+      '@bpm/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':
@@ -121,7 +121,7 @@ importers:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
     devDependencies:
-      '@chaeksas/config':
+      '@bpm/config':
         specifier: workspace:*
         version: link:../config
       '@types/react':

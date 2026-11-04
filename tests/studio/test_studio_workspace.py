@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from chaeksas.studio.workspace import (
+from bpm.studio.workspace import (
     DEFAULT_GROUP,
     Workspace,
     WorkspaceError,

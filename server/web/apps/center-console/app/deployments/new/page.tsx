@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { Button, ErrorBanner } from "@chaeksas/ui";
-import type { BotUiInfo } from "@chaeksas/api-types/c5-bot-ui-info";
-import type { PackageInfo } from "@chaeksas/api-types/c5-package-info";
-import type { ServerRunnerInfo } from "@chaeksas/api-types/c12-server-runner-info";
+import { Button, ErrorBanner } from "@bpm/ui";
+import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
+import type { PackageInfo } from "@bpm/api-types/c5-package-info";
+import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { createDeployment } from "@/app/actions";

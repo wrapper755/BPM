@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     ApprovalCreateRequest,
     ApprovalInfo,
     Form,
@@ -22,13 +22,13 @@ from chaeksas.contracts import (
     validate_answer,
     validate_approval_create,
 )
-from chaeksas.contracts.approvals import (
+from bpm.contracts.approvals import (
     AUTO_WITHDRAW_REASONS,
     VALUE_RETENTION_DAYS,
     normalize_assignees,
     normalize_name,
 )
-from chaeksas.contracts.center_api import MAX_ON_BEHALF_CHARS, delegation_requester, on_behalf_violation
+from bpm.contracts.center_api import MAX_ON_BEHALF_CHARS, delegation_requester, on_behalf_violation
 
 RUN = "run_20261001_103000_d4e5f6"
 NOW = "2026-10-01T10:30:00+09:00"

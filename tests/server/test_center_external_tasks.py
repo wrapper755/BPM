@@ -31,15 +31,15 @@ from center_admin import approve as approve_package
 from center_admin import deploy
 from fastapi.testclient import TestClient
 
-from chaeksas.center import keys
-from chaeksas.center.api import external_tasks as api
-from chaeksas.center.app import create_app
-from chaeksas.center.auth import Caller
-from chaeksas.center.errors import ApiError
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.external_task import FetchRequest
-from chaeksas.contracts.hashing import MANIFEST_NAME, content_hash_zip
+from bpm.center import keys
+from bpm.center.api import external_tasks as api
+from bpm.center.app import create_app
+from bpm.center.auth import Caller
+from bpm.center.errors import ApiError
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store
+from bpm.contracts.external_task import FetchRequest
+from bpm.contracts.hashing import MANIFEST_NAME, content_hash_zip
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 AT = "2026-10-28T09:00:00+09:00"

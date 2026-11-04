@@ -17,15 +17,15 @@ from typing import Any
 
 import pytest
 
-from chaeksas.core.extensions import ExtensionHost
-from chaeksas.core.packages import bots_dir
-from chaeksas.core.preflight import TASK_TYPES_WRONG_LOCATION
-from chaeksas.extension_api import HOST_SERVER_RUNNER
-from chaeksas.server_runner import agent as agent_mod
-from chaeksas.server_runner import extensions as ext_mod
-from chaeksas.server_runner.center_client import CenterClient
-from chaeksas.server_runner.credentials import Credentials, extension_config_env
-from chaeksas.server_runner.settings import Settings
+from bpm.core.extensions import ExtensionHost
+from bpm.core.packages import bots_dir
+from bpm.core.preflight import TASK_TYPES_WRONG_LOCATION
+from bpm.extension_api import HOST_SERVER_RUNNER
+from bpm.server_runner import agent as agent_mod
+from bpm.server_runner import extensions as ext_mod
+from bpm.server_runner.center_client import CenterClient
+from bpm.server_runner.credentials import Credentials, extension_config_env
+from bpm.server_runner.settings import Settings
 
 #: 서버에서 돌 수 있다고 적은 종류 하나와 PC 전용 하나 — 둘을 한 확장이 기여한다.
 DEFINITION: dict[str, Any] = {

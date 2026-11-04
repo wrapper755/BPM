@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c16-company-request",
+  "$id": "urn:bpm:contracts:c16-company-request",
   "additionalProperties": true,
   "description": "`POST /companies`·`PUT /companies/{id}` — Center 관리자만.",
   "properties": {

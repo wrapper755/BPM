@@ -4,18 +4,18 @@ requires-python = "==3.12.*"
 
 [manifest]
 members = [
-    "chaeksas-adapter-consumer",
-    "chaeksas-bot-ui",
-    "chaeksas-center",
-    "chaeksas-contracts",
-    "chaeksas-core",
-    "chaeksas-extension-api",
-    "chaeksas-llm",
-    "chaeksas-mock-apps",
-    "chaeksas-qt",
-    "chaeksas-server-runner",
-    "chaeksas-service-kit",
-    "chaeksas-studio",
+    "bpm-adapter-consumer",
+    "bpm-bot-ui",
+    "bpm-center",
+    "bpm-contracts",
+    "bpm-core",
+    "bpm-extension-api",
+    "bpm-llm",
+    "bpm-mock-apps",
+    "bpm-qt",
+    "bpm-server-runner",
+    "bpm-service-kit",
+    "bpm-studio",
 ]
 
 [manifest.dependency-groups]
@@ -145,32 +145,32 @@ wheels = [
 ]
 
 [[package]]
-name = "chaeksas-adapter-consumer"
+name = "bpm-adapter-consumer"
 version = "0.1.0"
 source = { editable = "server/adapter_consumer" }
 dependencies = [
-    { name = "chaeksas-contracts" },
-    { name = "chaeksas-core" },
-    { name = "chaeksas-service-kit" },
+    { name = "bpm-contracts" },
+    { name = "bpm-core" },
+    { name = "bpm-service-kit" },
     { name = "httpx" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "shared/contracts" },
-    { name = "chaeksas-core", editable = "shared/core" },
-    { name = "chaeksas-service-kit", editable = "server/service_kit" },
+    { name = "bpm-contracts", editable = "shared/contracts" },
+    { name = "bpm-core", editable = "shared/core" },
+    { name = "bpm-service-kit", editable = "server/service_kit" },
     { name = "httpx", specifier = ">=0.27" },
 ]
 
 [[package]]
-name = "chaeksas-bot-ui"
+name = "bpm-bot-ui"
 version = "0.1.0"
 source = { editable = "bot/app" }
 dependencies = [
-    { name = "chaeksas-contracts" },
-    { name = "chaeksas-core" },
-    { name = "chaeksas-qt" },
+    { name = "bpm-contracts" },
+    { name = "bpm-core" },
+    { name = "bpm-qt" },
     { name = "httpx" },
     { name = "keyring" },
     { name = "platformdirs" },
@@ -178,20 +178,20 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "shared/contracts" },
-    { name = "chaeksas-core", editable = "shared/core" },
-    { name = "chaeksas-qt", editable = "shared/qt" },
+    { name = "bpm-contracts", editable = "shared/contracts" },
+    { name = "bpm-core", editable = "shared/core" },
+    { name = "bpm-qt", editable = "shared/qt" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "keyring", specifier = ">=25.4" },
     { name = "platformdirs", specifier = ">=4.3" },
 ]
 
 [[package]]
-name = "chaeksas-center"
+name = "bpm-center"
 version = "0.1.0"
 source = { editable = "server/center" }
 dependencies = [
-    { name = "chaeksas-contracts" },
+    { name = "bpm-contracts" },
     { name = "fastapi" },
     { name = "platformdirs" },
     { name = "python-multipart" },
@@ -201,7 +201,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "shared/contracts" },
+    { name = "bpm-contracts", editable = "shared/contracts" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "platformdirs", specifier = ">=4.3" },
     { name = "python-multipart", specifier = ">=0.0.12" },
@@ -210,7 +210,7 @@ requires-dist = [
 ]
 
 [[package]]
-name = "chaeksas-contracts"
+name = "bpm-contracts"
 version = "0.1.0"
 source = { editable = "shared/contracts" }
 dependencies = [
@@ -225,12 +225,12 @@ requires-dist = [
 ]
 
 [[package]]
-name = "chaeksas-core"
+name = "bpm-core"
 version = "0.1.0"
 source = { editable = "shared/core" }
 dependencies = [
-    { name = "chaeksas-extension-api" },
-    { name = "chaeksas-llm" },
+    { name = "bpm-extension-api" },
+    { name = "bpm-llm" },
     { name = "httpx" },
     { name = "openpyxl" },
     { name = "pypdf" },
@@ -238,26 +238,26 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-extension-api", editable = "shared/extension_api" },
-    { name = "chaeksas-llm", editable = "shared/llm" },
+    { name = "bpm-extension-api", editable = "shared/extension_api" },
+    { name = "bpm-llm", editable = "shared/llm" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "openpyxl", specifier = ">=3.1" },
     { name = "pypdf", specifier = ">=5.1" },
 ]
 
 [[package]]
-name = "chaeksas-extension-api"
+name = "bpm-extension-api"
 version = "0.1.0"
 source = { editable = "shared/extension_api" }
 dependencies = [
-    { name = "chaeksas-contracts" },
+    { name = "bpm-contracts" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "chaeksas-contracts", editable = "shared/contracts" }]
+requires-dist = [{ name = "bpm-contracts", editable = "shared/contracts" }]
 
 [[package]]
-name = "chaeksas-llm"
+name = "bpm-llm"
 version = "0.1.0"
 source = { editable = "shared/llm" }
 dependencies = [
@@ -268,44 +268,44 @@ dependencies = [
 requires-dist = [{ name = "httpx", specifier = ">=0.27" }]
 
 [[package]]
-name = "chaeksas-mock-apps"
+name = "bpm-mock-apps"
 version = "0.1.0"
 source = { editable = "samples/mock_apps" }
 dependencies = [
-    { name = "chaeksas-service-kit" },
+    { name = "bpm-service-kit" },
     { name = "fastapi" },
     { name = "uvicorn" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-service-kit", editable = "server/service_kit" },
+    { name = "bpm-service-kit", editable = "server/service_kit" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "uvicorn", specifier = ">=0.32" },
 ]
 
 [[package]]
-name = "chaeksas-qt"
+name = "bpm-qt"
 version = "0.1.0"
 source = { editable = "shared/qt" }
 dependencies = [
-    { name = "chaeksas-contracts" },
+    { name = "bpm-contracts" },
     { name = "pyside6-essentials" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "shared/contracts" },
+    { name = "bpm-contracts", editable = "shared/contracts" },
     { name = "pyside6-essentials", specifier = "==6.11.2" },
 ]
 
 [[package]]
-name = "chaeksas-server-runner"
+name = "bpm-server-runner"
 version = "0.1.0"
 source = { editable = "server/server_runner" }
 dependencies = [
-    { name = "chaeksas-contracts" },
-    { name = "chaeksas-core" },
+    { name = "bpm-contracts" },
+    { name = "bpm-core" },
     { name = "httpx" },
     { name = "keyring" },
     { name = "platformdirs" },
@@ -313,39 +313,39 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "shared/contracts" },
-    { name = "chaeksas-core", editable = "shared/core" },
+    { name = "bpm-contracts", editable = "shared/contracts" },
+    { name = "bpm-core", editable = "shared/core" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "keyring", specifier = ">=25.4" },
     { name = "platformdirs", specifier = ">=4.3" },
 ]
 
 [[package]]
-name = "chaeksas-service-kit"
+name = "bpm-service-kit"
 version = "0.1.0"
 source = { editable = "server/service_kit" }
 dependencies = [
-    { name = "chaeksas-contracts" },
-    { name = "chaeksas-llm" },
+    { name = "bpm-contracts" },
+    { name = "bpm-llm" },
     { name = "fastapi" },
     { name = "httpx" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-contracts", editable = "shared/contracts" },
-    { name = "chaeksas-llm", editable = "shared/llm" },
+    { name = "bpm-contracts", editable = "shared/contracts" },
+    { name = "bpm-llm", editable = "shared/llm" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
 ]
 
 [[package]]
-name = "chaeksas-studio"
+name = "bpm-studio"
 version = "0.1.0"
 source = { editable = "studio/app" }
 dependencies = [
-    { name = "chaeksas-core" },
-    { name = "chaeksas-qt" },
+    { name = "bpm-core" },
+    { name = "bpm-qt" },
     { name = "keyring" },
     { name = "platformdirs" },
     { name = "pyside6-addons" },
@@ -353,8 +353,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chaeksas-core", editable = "shared/core" },
-    { name = "chaeksas-qt", editable = "shared/qt" },
+    { name = "bpm-core", editable = "shared/core" },
+    { name = "bpm-qt", editable = "shared/qt" },
     { name = "keyring", specifier = ">=25.4" },
     { name = "platformdirs", specifier = ">=4.3" },
     { name = "pyside6-addons", specifier = ">=6.8" },

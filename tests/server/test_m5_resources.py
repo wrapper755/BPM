@@ -29,10 +29,10 @@ import pytest
 from consumers import enroll
 from fastapi.testclient import TestClient
 
-from chaeksas.center.api import resources
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
+from bpm.center.api import resources
+from bpm.center.app import create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
 
 TOKEN = "t-admin"
 READ = "t-read"
@@ -122,7 +122,7 @@ def package_zip(
 ) -> bytes:
     import tempfile
 
-    from chaeksas.contracts.hashing import content_hash_zip
+    from bpm.contracts.hashing import content_hash_zip
 
     manifest: dict[str, Any] = {
         "schema": 1,
@@ -431,8 +431,8 @@ def test_a_missing_operation_is_noticed(client: TestClient, tmp_path: Path) -> N
 
 def test_a_quiet_consumer_does_not_block_deployment(client: TestClient, tmp_path: Path, store: Store) -> None:
     """서비스 앱이 잠시 조용한 것으로는 막지 않는다 — 막는 것은 확장 누락·해시 불일치와 R8뿐이다 (C7)."""
-    from chaeksas.contracts.manifest import Manifest  # noqa: PLC0415
-    from chaeksas.contracts.resources import blocking_at_deploy, missing  # noqa: PLC0415
+    from bpm.contracts.manifest import Manifest  # noqa: PLC0415
+    from bpm.contracts.resources import blocking_at_deploy, missing  # noqa: PLC0415
 
     consumer(client, tmp_path)  # 들었지만 한 번도 가져가지 않았다 — `unreachable`
     info = upload(client, package_zip(requires={"service_apps": [NEEDS_DEMO]}))

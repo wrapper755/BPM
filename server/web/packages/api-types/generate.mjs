@@ -6,12 +6,12 @@
 // 원본은 `shared/contracts/schemas/*.json`이고, 그것도 생성물이다
 // (`uv run python scripts/gen_schemas.py`). **손으로 타입을 쓰지 않는다.**
 //
-// **확장이 소유한 계약도 읽는다** — `extensions/*/src/chaeksas/ext/*/schemas/*.json`.
+// **확장이 소유한 계약도 읽는다** — `extensions/*/src/bpm/ext/*/schemas/*.json`.
 // 확장의 콘솔 화면(C13 `console.pages`)이 그 앱의 모양을 알아야 하고, 계약은 그 확장 폴더에
 // 있어야 한다 (ADR-0018, 계약 README 원칙 1). 폴더를 훑으므로 **확장 이름이 여기 없다**.
 //
 // 열쇠 이름이 겹치는 타입이 있어(C5·C7의 `MissingResource`) 묶음 하나로 내보내지 않는다.
-// 쓰는 쪽은 계약별 경로로 가져온다: `import type { Manifest } from "@chaeksas/api-types/c1-manifest"`.
+// 쓰는 쪽은 계약별 경로로 가져온다: `import type { Manifest } from "@bpm/api-types/c1-manifest"`.
 
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -26,7 +26,7 @@ const OUT_DIR = join(HERE, "src");
 const BANNER = [
   "/* 생성 파일: 계약 스키마에서 만든다 (플랫폼 + 확장이 소유한 것). 직접 고치지 말고",
   "   계약 모델을 고친 뒤 `uv run python scripts/gen_schemas.py`,",
-  "   그다음 `pnpm --filter @chaeksas/api-types generate`. */",
+  "   그다음 `pnpm --filter @bpm/api-types generate`. */",
 ].join("\n");
 
 /**
@@ -72,7 +72,7 @@ function moduleName(stem) {
     .join("");
 }
 
-/** 확장이 소유한 계약 스키마 폴더들 (`extensions/<id>/src/chaeksas/ext/<pkg>/schemas`). */
+/** 확장이 소유한 계약 스키마 폴더들 (`extensions/<id>/src/bpm/ext/<pkg>/schemas`). */
 async function extensionSchemaDirs() {
   const out = [];
   let members = [];
@@ -82,7 +82,7 @@ async function extensionSchemaDirs() {
     return out; // 확장이 없는 작업 트리
   }
   for (const member of members.filter((one) => one.isDirectory()).sort((a, b) => a.name.localeCompare(b.name))) {
-    const root = join(EXTENSIONS_DIR, member.name, "src/chaeksas/ext");
+    const root = join(EXTENSIONS_DIR, member.name, "src/bpm/ext");
     let packages = [];
     try {
       packages = await readdir(root, { withFileTypes: true });

@@ -40,20 +40,20 @@ from center_admin import approve, deploy_id  # noqa: E402
 from consumers import enroll  # noqa: E402
 from waiting import wait_for  # noqa: E402
 
-from chaeksas.bot_ui.agent import Agent, load_extensions  # noqa: E402
-from chaeksas.bot_ui.center_client import CenterClient  # noqa: E402
-from chaeksas.bot_ui.settings import Settings as BotUiSettings  # noqa: E402
-from chaeksas.bot_ui.store import Store as BotUiStore  # noqa: E402
-from chaeksas.center.app import create_app  # noqa: E402
-from chaeksas.center.settings import Settings as CenterSettings  # noqa: E402
-from chaeksas.center.storage import Store  # noqa: E402
-from chaeksas.contracts.bpmn_ext import read_process  # noqa: E402
-from chaeksas.core.packages import installed  # noqa: E402
-from chaeksas.core.run_log import RunLog, log_path  # noqa: E402
-from chaeksas.mock_apps import catalog  # noqa: E402
-from chaeksas.mock_apps.c11 import build as build_mock  # noqa: E402
-from chaeksas.studio.packaging import default_name, export  # noqa: E402
-from chaeksas.studio.workspace import Workspace  # noqa: E402
+from bpm.bot_ui.agent import Agent, load_extensions  # noqa: E402
+from bpm.bot_ui.center_client import CenterClient  # noqa: E402
+from bpm.bot_ui.settings import Settings as BotUiSettings  # noqa: E402
+from bpm.bot_ui.store import Store as BotUiStore  # noqa: E402
+from bpm.center.app import create_app  # noqa: E402
+from bpm.center.settings import Settings as CenterSettings  # noqa: E402
+from bpm.center.storage import Store  # noqa: E402
+from bpm.contracts.bpmn_ext import read_process  # noqa: E402
+from bpm.core.packages import installed  # noqa: E402
+from bpm.core.run_log import RunLog, log_path  # noqa: E402
+from bpm.mock_apps import catalog  # noqa: E402
+from bpm.mock_apps.c11 import build as build_mock  # noqa: E402
+from bpm.studio.packaging import default_name, export  # noqa: E402
+from bpm.studio.workspace import Workspace  # noqa: E402
 
 DOCS = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples"
 EXAMPLES = DOCS / "bpmn"
@@ -146,7 +146,7 @@ def agent(
     """진짜 PC 실행기 — Center는 in-process, 실행기는 **진짜 자식 프로세스**다."""
     client = center
     data_dir = tmp_path / "botui"
-    monkeypatch.setattr("chaeksas.bot_ui.settings.data_dir", lambda: data_dir)
+    monkeypatch.setattr("bpm.bot_ui.settings.data_dir", lambda: data_dir)
     key = client.post(
         "/api/v1/center-keys", json={"name": "시험 PC", "type": "bot_ui"}, headers=ADMIN
     ).json()["key"]
@@ -211,7 +211,7 @@ def deploy(center: TestClient, agent: Agent, zip_path: Path) -> dict[str, Any]:
     )
 
     agent.beat()  # 배포가 내려와 설치된다
-    from chaeksas.bot_ui.settings import data_dir  # noqa: PLC0415
+    from bpm.bot_ui.settings import data_dir  # noqa: PLC0415
 
     found = [one for one in installed(data_dir()) if one.id == info["id"]]
     assert found, f"{info['id']}가 설치되지 않았다 (배치 결정: {agent.store.state.pending_deployments})"
@@ -286,7 +286,7 @@ def finished(agent: Agent, running: Any, *, timeout_s: float = 90.0) -> tuple[st
     **손잡이를 부르는 쪽이 준다** — 여기서 `agent.runner().running`을 다시 꺼내면 이미 거둬진
     실행에서 `None`을 받는다 (답하는 동안 `pump()`가 거둔다). CI의 Linux가 FX-19에서 잡았다.
     """
-    from chaeksas.bot_ui.settings import data_dir  # noqa: PLC0415
+    from bpm.bot_ui.settings import data_dir  # noqa: PLC0415
 
     assert wait_for(lambda: not running.alive, timeout_s=timeout_s), "실행기가 끝나지 않았다"
     agent.pump()

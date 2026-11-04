@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c7-contributed-resource",
+  "$id": "urn:bpm:contracts:c7-contributed-resource",
   "additionalProperties": true,
   "description": "확장이 기여한 자원 하나 (C13 §5 공통 카탈로그 항목).",
   "properties": {

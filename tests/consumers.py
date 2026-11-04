@@ -19,10 +19,10 @@ from typing import Any
 
 import uvicorn
 
-from chaeksas.center.consumer_folder import admit, new_token, token_sha256
-from chaeksas.center.storage import Store
-from chaeksas.contracts.external_task import FolderConsumer
-from chaeksas.service_kit import Consumer, TokenFile, TopicService
+from bpm.center.consumer_folder import admit, new_token, token_sha256
+from bpm.center.storage import Store
+from bpm.contracts.external_task import FolderConsumer
+from bpm.service_kit import Consumer, TokenFile, TopicService
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 
@@ -112,8 +112,8 @@ def mock_fleet(
 
     돌려주는 것은 멈추는 이벤트들이다 — 시험이 끝나면 모두 `set()`.
     """
-    from chaeksas.adapter_consumer.adapter import ext_env  # noqa: PLC0415
-    from chaeksas.adapter_consumer.main import service_of  # noqa: PLC0415
+    from bpm.adapter_consumer.adapter import ext_env  # noqa: PLC0415
+    from bpm.adapter_consumer.main import service_of  # noqa: PLC0415
 
     stops: list[threading.Event] = []
     services = [one.service for one in built]

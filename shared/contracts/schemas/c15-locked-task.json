@@ -90,7 +90,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c15-locked-task",
+  "$id": "urn:bpm:contracts:c15-locked-task",
   "additionalProperties": true,
   "description": "일꾼이 받은 일감 하나.",
   "properties": {

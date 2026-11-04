@@ -11,7 +11,7 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.studio.dialogs import EXAMPLES_DIR, example_ids  # noqa: E402
+from bpm.studio.dialogs import EXAMPLES_DIR, example_ids  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 

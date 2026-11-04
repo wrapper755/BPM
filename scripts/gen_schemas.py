@@ -22,7 +22,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     AccountCreateRequest,
     AccountInfo,
     AccountUpdateRequest,
@@ -124,7 +124,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "shared" / "contracts" / "schemas"
 
 #: 확장을 찾는 엔트리 포인트 (확장 호스트와 같은 것).
-EXTENSION_GROUP = "chaeksas.extensions"
+EXTENSION_GROUP = "bpm.extensions"
 #: 확장 패키지 안에서 스키마를 둘 폴더 이름.
 EXTENSION_SCHEMA_DIR = "schemas"
 
@@ -226,7 +226,7 @@ MODELS: list[tuple[str, Any]] = [
 
 def rendered(name: str, model: Any) -> str:
     schema = model.model_json_schema(by_alias=True)
-    schema["$id"] = f"urn:chaeksas:contracts:{name}"
+    schema["$id"] = f"urn:bpm:contracts:{name}"
     return json.dumps(schema, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
 
 

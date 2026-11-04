@@ -714,7 +714,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c5-package-info",
+  "$id": "urn:bpm:contracts:c5-package-info",
   "additionalProperties": true,
   "description": "`GET /packages`의 한 줄, `POST /packages`의 응답.",
   "properties": {

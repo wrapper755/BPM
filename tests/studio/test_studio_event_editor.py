@@ -16,8 +16,8 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.bpmn_ext import Receive  # noqa: E402
-from chaeksas.studio.event_editor import (  # noqa: E402
+from bpm.contracts.bpmn_ext import Receive  # noqa: E402
+from bpm.studio.event_editor import (  # noqa: E402
     CATCH_UNDEFINED,
     CONDITIONAL,
     ERROR_CODES,
@@ -87,7 +87,7 @@ def canvas_event(process: Any, node: Any) -> tuple[str, dict[str, Any], dict[str
 
 
 def example_events() -> list[tuple[str, Any, Any]]:
-    from chaeksas.contracts.bpmn_ext import read_process  # noqa: PLC0415
+    from bpm.contracts.bpmn_ext import read_process  # noqa: PLC0415
 
     out = []
     for path in sorted(EXAMPLES.glob("*.bpmn")):
@@ -304,7 +304,7 @@ def test_a_plain_end_says_nothing() -> None:
 
 
 def panel_with(bpmn_type: str, found: dict[str, Any], chk: dict[str, Any] | None = None) -> Any:
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
     panel.show_element({

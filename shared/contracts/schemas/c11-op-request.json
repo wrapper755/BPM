@@ -52,7 +52,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c11-op-request",
+  "$id": "urn:bpm:contracts:c11-op-request",
   "additionalProperties": true,
   "description": "작업 함수가 받는 요청 — 일꾼 뼈대가 C15 `LockedTask`에서 짓는다 (C11 §OpRequest).",
   "properties": {

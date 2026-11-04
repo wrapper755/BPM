@@ -27,22 +27,22 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from waiting import wait_for  # noqa: E402
 
-from chaeksas.bot_ui.agent import Agent  # noqa: E402
-from chaeksas.bot_ui.center_client import CenterClient  # noqa: E402
-from chaeksas.bot_ui.runner import runner_args  # noqa: E402
-from chaeksas.bot_ui.settings import Settings  # noqa: E402
-from chaeksas.bot_ui.store import Store  # noqa: E402
-from chaeksas.center.app import create_app  # noqa: E402
-from chaeksas.center.settings import Settings as CenterSettings  # noqa: E402
-from chaeksas.contracts.approvals import ApprovalCreateRequest  # noqa: E402
-from chaeksas.contracts.bot_ui import ApprovalDispatch  # noqa: E402
-from chaeksas.contracts.bpmn_ext import read_process, validate  # noqa: E402
-from chaeksas.core import control, requests  # noqa: E402
-from chaeksas.core.engine import Engine, EngineError, Run, RunEnv, State  # noqa: E402
-from chaeksas.core.packages import install  # noqa: E402
-from chaeksas.core.run_log import RunLog, log_path, summarize  # noqa: E402
-from chaeksas.studio.packaging import default_name, export  # noqa: E402
-from chaeksas.studio.workspace import Workspace  # noqa: E402
+from bpm.bot_ui.agent import Agent  # noqa: E402
+from bpm.bot_ui.center_client import CenterClient  # noqa: E402
+from bpm.bot_ui.runner import runner_args  # noqa: E402
+from bpm.bot_ui.settings import Settings  # noqa: E402
+from bpm.bot_ui.store import Store  # noqa: E402
+from bpm.center.app import create_app  # noqa: E402
+from bpm.center.settings import Settings as CenterSettings  # noqa: E402
+from bpm.contracts.approvals import ApprovalCreateRequest  # noqa: E402
+from bpm.contracts.bot_ui import ApprovalDispatch  # noqa: E402
+from bpm.contracts.bpmn_ext import read_process, validate  # noqa: E402
+from bpm.core import control, requests  # noqa: E402
+from bpm.core.engine import Engine, EngineError, Run, RunEnv, State  # noqa: E402
+from bpm.core.packages import install  # noqa: E402
+from bpm.core.run_log import RunLog, log_path, summarize  # noqa: E402
+from bpm.studio.packaging import default_name, export  # noqa: E402
+from bpm.studio.workspace import Workspace  # noqa: E402
 
 NOW = datetime(2026, 10, 7, 9, 0, tzinfo=UTC)
 RUN_ID = "run_20261007_090000_abc123"
@@ -414,7 +414,7 @@ def make_agent(
     center: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, remote_approval: bool
 ) -> Iterator[Agent]:
     data_dir = tmp_path / "botui"
-    monkeypatch.setattr("chaeksas.bot_ui.settings.data_dir", lambda: data_dir)
+    monkeypatch.setattr("bpm.bot_ui.settings.data_dir", lambda: data_dir)
     key = center.post(
         "/api/v1/center-keys", json={"name": "시험 PC", "type": "bot_ui"}, headers=ADMIN_AUTH
     ).json()["key"]
@@ -467,7 +467,7 @@ def finished(agent: Agent) -> str:
 
 
 def events(agent: Agent, run_id: str) -> list[Any]:
-    from chaeksas.bot_ui.settings import data_dir  # noqa: PLC0415
+    from bpm.bot_ui.settings import data_dir  # noqa: PLC0415
 
     return list(RunLog.read(log_path(data_dir(), run_id)))
 
@@ -530,7 +530,7 @@ def test_an_answer_for_something_not_waiting_is_handed_back(agent: Agent) -> Non
 
 def test_the_run_log_shipper_reads_only_run_logs(tmp_path: Path) -> None:
     """제어 파일·요청 파일은 같은 `runs/`에 있지만 C3가 아니다 — 실어 보내면 하트비트가 깨진다."""
-    from chaeksas.core.run_shipping import Queue  # noqa: PLC0415
+    from bpm.core.run_shipping import Queue  # noqa: PLC0415
 
     RunLog(run_id=RUN_ID, path=log_path(tmp_path, RUN_ID)).emit("run_started", executor="bot_ui", mode="deterministic")
     control.stop(control.control_path(tmp_path, RUN_ID))
@@ -554,8 +554,8 @@ def test_a_field_approval_shows_what_to_judge(
     """현장 결재 창(CMN-01)에 **제목·검토 자료**가 실린다 (ADR-0078) — 그리고 Center로는 가지 않는다."""
     from PySide6.QtWidgets import QApplication  # noqa: PLC0415
 
-    from chaeksas.bot_ui import main_window  # noqa: PLC0415
-    from chaeksas.qt.approval import ApprovalDialog  # noqa: PLC0415
+    from bpm.bot_ui import main_window  # noqa: PLC0415
+    from bpm.qt.approval import ApprovalDialog  # noqa: PLC0415
 
     assert QApplication.instance() or QApplication([])
     agent = field_agent
@@ -595,7 +595,7 @@ def test_a_field_approval_shows_what_to_judge(
 
 def test_assignees_travel_with_the_server_snapshot() -> None:
     """서버 실행기는 기다리는 실행을 담았다 되살린다 — 담당자도 함께 가야 다시 올릴 때 같은 본문이다."""
-    from chaeksas.core.run_snapshot import dump_pending, load_pending  # noqa: PLC0415
+    from bpm.core.run_snapshot import dump_pending, load_pending  # noqa: PLC0415
 
     _, run = waiting(approval_process(location="center", assignees=["김감독"]))
     assert run.pending is not None

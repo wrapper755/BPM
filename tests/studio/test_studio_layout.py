@@ -21,7 +21,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.studio import layout  # noqa: E402
+from bpm.studio import layout  # noqa: E402
 
 
 @pytest.fixture(scope="module")

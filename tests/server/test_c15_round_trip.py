@@ -23,18 +23,18 @@ import httpx
 import pytest
 from consumers import ADMIN, enroll, serve, start
 
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store
-from chaeksas.core.services import (
+from bpm.center.app import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store
+from bpm.core.services import (
     CenterServiceCaller,
     OpCall,
     ServiceCallError,
     ServicePending,
     ServiceResultLost,
 )
-from chaeksas.mock_apps import catalog
-from chaeksas.mock_apps.c11 import build
+from bpm.mock_apps import catalog
+from bpm.mock_apps.c11 import build
 
 
 @pytest.fixture

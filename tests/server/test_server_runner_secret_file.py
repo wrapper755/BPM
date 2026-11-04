@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from chaeksas.server_runner import secret_file
-from chaeksas.server_runner.credentials import Credentials
+from bpm.server_runner import secret_file
+from bpm.server_runner.credentials import Credentials
 
 
 def test_set_get_delete_round_trip(tmp_path: Path) -> None:

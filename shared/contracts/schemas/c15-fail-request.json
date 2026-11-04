@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c15-fail-request",
+  "$id": "urn:bpm:contracts:c15-fail-request",
   "additionalProperties": true,
   "properties": {
     "code": {

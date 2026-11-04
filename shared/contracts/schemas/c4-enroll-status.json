@@ -31,7 +31,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c4-enroll-status",
+  "$id": "urn:bpm:contracts:c4-enroll-status",
   "additionalProperties": true,
   "description": "`POST …/enroll`의 응답이자 `GET …/enroll/{id}`의 응답 (C4 `EnrollResponse`·`EnrollStatus`).",
   "properties": {

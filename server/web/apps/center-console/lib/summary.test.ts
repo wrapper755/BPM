@@ -12,12 +12,12 @@
  * 4. **세는 쪽은 제가 세지 않은 칸을 들고 다니지 않는다** (`RunFields` — 한 번 덮어썼다).
  */
 import { describe, expect, it } from "vitest";
-import type { DeploymentInfo } from "@chaeksas/api-types/c5-deployment-info";
-import type { RunInfo } from "@chaeksas/api-types/c3-run-info";
-import type { JobInfo } from "@chaeksas/api-types/c5-job-info";
-import type { ServerRunnerInfo } from "@chaeksas/api-types/c12-server-runner-info";
-import type { ScheduleInfo } from "@chaeksas/api-types/c5-schedule-info";
-// 생성된 표만 읽는다 — `@chaeksas/ui` 전체를 들이면 React 구성요소까지 따라온다.
+import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
+import type { RunInfo } from "@bpm/api-types/c3-run-info";
+import type { JobInfo } from "@bpm/api-types/c5-job-info";
+import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
+import type { ScheduleInfo } from "@bpm/api-types/c5-schedule-info";
+// 생성된 표만 읽는다 — `@bpm/ui` 전체를 들이면 React 구성요소까지 따라온다.
 import { STATUS_MAP } from "../../../packages/ui/src/status-map";
 import {
   NO_RUNS,

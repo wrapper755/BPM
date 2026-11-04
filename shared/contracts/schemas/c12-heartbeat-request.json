@@ -480,7 +480,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c12-heartbeat-request",
+  "$id": "urn:bpm:contracts:c12-heartbeat-request",
   "additionalProperties": true,
   "description": "`POST /api/v1/server-runner/heartbeat` — 기본 10초.\n\n**`restored[]`는 재시작 직후 첫 하트비트에만** 싣는다 — 저장소에서 되살려 **정말 이어 가는**\n실행만이다. 되살리지 못한 것은 여기 넣지 않고 C5 `run_status`에 사유와 함께 적는다\n(ADR-0054 §4 — `runner_restarted`·`runner_version_changed`).",
   "properties": {

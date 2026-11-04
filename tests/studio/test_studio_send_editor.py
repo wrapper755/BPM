@@ -16,8 +16,8 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.bpmn_ext import Email, Webhook  # noqa: E402
-from chaeksas.studio.send_editor import (  # noqa: E402
+from bpm.contracts.bpmn_ext import Email, Webhook  # noqa: E402
+from bpm.studio.send_editor import (  # noqa: E402
     ALL_WARNING,
     BODY_FIELDS,
     BODY_TEMPLATE,
@@ -94,7 +94,7 @@ def test_unknown_keys_survive() -> None:
 
 def test_every_example_send_task_round_trips() -> None:
     """업무 예제의 보내기가 **손대지 않으면 같은 뜻으로** 돌아온다 — 편집기가 조용히 바꾸지 않는다."""
-    from chaeksas.contracts.bpmn_ext import read_process  # noqa: PLC0415
+    from bpm.contracts.bpmn_ext import read_process  # noqa: PLC0415
 
     seen = 0
     for path in sorted(Path("docs/08-business-examples/bpmn").glob("*.bpmn")):
@@ -198,7 +198,7 @@ def test_both_channels_in_the_drawing_shows_the_email_and_warns() -> None:
 
 
 def panel_with(chk: dict[str, Any]) -> Any:
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
     panel.show_element({

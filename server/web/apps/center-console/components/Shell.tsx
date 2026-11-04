@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { BpmMark, Button } from "@chaeksas/ui";
+import { BpmMark, Button } from "@bpm/ui";
 import { logout } from "@/app/actions";
 import { session } from "@/lib/center";
 import type { Mode } from "@/lib/session";

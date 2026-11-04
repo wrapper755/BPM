@@ -1,6 +1,6 @@
 /** CON-05 「새 작업」의 서버 대상·「취소」/「중지」 단추 (`lib/jobs.ts`, ADR-0063). */
 import { describe, expect, it } from "vitest";
-import type { DeploymentInfo } from "@chaeksas/api-types/c5-deployment-info";
+import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import { cancelControl, runsOnServer, serverLimit, serverVersions } from "./jobs";
 
 function deployment(

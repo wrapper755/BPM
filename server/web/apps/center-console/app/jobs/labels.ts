@@ -1,5 +1,5 @@
-import type { JobInfo } from "@chaeksas/api-types/c5-job-info";
-import type { BotUiInfo } from "@chaeksas/api-types/c5-bot-ui-info";
+import type { JobInfo } from "@bpm/api-types/c5-job-info";
+import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
 
 /**
  * CON-05 작업 지시의 표기 — 목록과 상세가 같이 쓴다.

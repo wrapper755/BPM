@@ -84,7 +84,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c7-service-app-resource",
+  "$id": "urn:bpm:contracts:c7-service-app-resource",
   "additionalProperties": true,
   "description": "서비스 앱 하나 (확장의 서버 부분).",
   "properties": {

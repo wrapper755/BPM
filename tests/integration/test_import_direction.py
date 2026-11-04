@@ -41,7 +41,7 @@ def members() -> dict[str, Member]:
             data = tomllib.loads(p.read_text(encoding="utf-8"))
             out[data["project"]["name"]] = {
                 "path": p.parent,
-                "deps": [d for d in data["project"]["dependencies"] if d.startswith("chaeksas-")],
+                "deps": [d for d in data["project"]["dependencies"] if d.startswith("bpm-")],
             }
     return out
 
@@ -61,22 +61,22 @@ def reachable(name: str, graph: dict[str, Member]) -> set[str]:
 
 # (멤버, 의존하면 안 되는 멤버, 근거)
 FORBIDDEN_DEPS = [
-    ("chaeksas-center", "chaeksas-core", "§5 — center는 core를 import하지 않는다"),
-    ("chaeksas-contracts", "chaeksas-extension-api", "§2 — contracts는 로직·I/O를 모른다"),
-    ("chaeksas-extension-api", "chaeksas-core", "§5 — 방향은 extension_api ◀── core"),
-    ("chaeksas-service-kit", "chaeksas-core", "§5 — service_kit은 contracts만 본다 (업무 로직·실행을 모른다)"),
-    ("chaeksas-service-kit", "chaeksas-qt", "§2 — 서비스 앱은 화면이 없다"),
-    ("chaeksas-server-runner", "chaeksas-qt", "§2 — 서버 실행기는 화면이 없다"),
-    ("chaeksas-core", "chaeksas-qt", "§5 — core는 Qt를 import하지 않는다"),
-    ("chaeksas-mock-apps", "chaeksas-core", "§5 — 모의 앱도 서비스 앱이다 (core를 모른다)"),
-    ("chaeksas-mock-apps", "chaeksas-qt", "§2 — 서비스 앱은 화면이 없다"),
+    ("bpm-center", "bpm-core", "§5 — center는 core를 import하지 않는다"),
+    ("bpm-contracts", "bpm-extension-api", "§2 — contracts는 로직·I/O를 모른다"),
+    ("bpm-extension-api", "bpm-core", "§5 — 방향은 extension_api ◀── core"),
+    ("bpm-service-kit", "bpm-core", "§5 — service_kit은 contracts만 본다 (업무 로직·실행을 모른다)"),
+    ("bpm-service-kit", "bpm-qt", "§2 — 서비스 앱은 화면이 없다"),
+    ("bpm-server-runner", "bpm-qt", "§2 — 서버 실행기는 화면이 없다"),
+    ("bpm-core", "bpm-qt", "§5 — core는 Qt를 import하지 않는다"),
+    ("bpm-mock-apps", "bpm-core", "§5 — 모의 앱도 서비스 앱이다 (core를 모른다)"),
+    ("bpm-mock-apps", "bpm-qt", "§2 — 서비스 앱은 화면이 없다"),
 ]
 
 
 def test_llm_is_the_bottom() -> None:
     """ADR-0034 — 모델 클라이언트는 맨 아래다. 어느 멤버도 의존하지 않는다 (`contracts`도)."""
     graph = members()
-    assert graph["chaeksas-llm"]["deps"] == [], graph["chaeksas-llm"]["deps"]
+    assert graph["bpm-llm"]["deps"] == [], graph["bpm-llm"]["deps"]
 
 
 @pytest.mark.parametrize(("member", "forbidden", "why"), FORBIDDEN_DEPS)
@@ -90,14 +90,14 @@ def test_platform_does_not_depend_on_extensions() -> None:
     """ADR-0018 — 플랫폼(core·apps)은 특정 확장을 의존하지 않는다. 엔트리 포인트로만 찾는다."""
     graph = members()
     platform = [
-        "chaeksas-core",
-        "chaeksas-studio",
-        "chaeksas-bot-ui",
-        "chaeksas-server-runner",
-        "chaeksas-center",
+        "bpm-core",
+        "bpm-studio",
+        "bpm-bot-ui",
+        "bpm-server-runner",
+        "bpm-center",
     ]
     for m in platform:
-        bad = {d for d in reachable(m, graph) if d.startswith("chaeksas-ext-")}
+        bad = {d for d in reachable(m, graph) if d.startswith("bpm-ext-")}
         assert not bad, f"{m}이 확장 {sorted(bad)}를 의존한다 (ADR-0018)"
 
 
@@ -107,28 +107,28 @@ def test_nothing_depends_on_the_samples() -> None:
     쓰는 쪽은 `tests/`와 사람이 띄우는 `bpm-mock-apps`뿐이다.
     """
     graph = members()
-    bad = {name for name in graph if name != "chaeksas-mock-apps" and "chaeksas-mock-apps" in reachable(name, graph)}
+    bad = {name for name in graph if name != "bpm-mock-apps" and "bpm-mock-apps" in reachable(name, graph)}
     assert not bad, f"{sorted(bad)}가 모의 앱을 의존한다"
 
 
 def test_extensions_do_not_depend_on_each_other() -> None:
     """ADR-0018 — 확장끼리 import하지 않는다."""
     graph = members()
-    for name in [m for m in graph if m.startswith("chaeksas-ext-")]:
-        bad = {d for d in reachable(name, graph) if d.startswith("chaeksas-ext-") and d != name}
+    for name in [m for m in graph if m.startswith("bpm-ext-")]:
+        bad = {d for d in reachable(name, graph) if d.startswith("bpm-ext-") and d != name}
         assert not bad, f"{name}이 다른 확장 {sorted(bad)}를 의존한다"
 
 
 # (경로 글롭, 금지 import 접두사, 근거)
 FORBIDDEN_IMPORTS = [
-    ("shared/core", "chaeksas.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
-    ("server/*", "chaeksas.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
-    ("studio/app", "chaeksas.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
-    ("bot/app", "chaeksas.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
-    ("server/center", "chaeksas.core", "§5"),
-    ("extensions/*", "chaeksas.core", "§5 — 확장의 service·worker는 core를 모른다"),
+    ("shared/core", "bpm.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
+    ("server/*", "bpm.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
+    ("studio/app", "bpm.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
+    ("bot/app", "bpm.ext.", "ADR-0018 — 플랫폼은 특정 확장을 import하지 않는다"),
+    ("server/center", "bpm.core", "§5"),
+    ("extensions/*", "bpm.core", "§5 — 확장의 service·worker는 core를 모른다"),
     ("shared/core", "PySide6", "§5 — core는 Qt를 import하지 않는다"),
-    ("shared/llm", "chaeksas.", "ADR-0034 — llm은 맨 아래다 (chaeksas의 아무것도 모른다)"),
+    ("shared/llm", "bpm.", "ADR-0034 — llm은 맨 아래다 (bpm의 아무것도 모른다)"),
     ("server/server_runner", "PySide6", "§2 — 화면 없음"),
     ("server/center", "PySide6", "§2 — 서버"),
     ("shared/*", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
@@ -137,18 +137,18 @@ FORBIDDEN_IMPORTS = [
     ("bot/app", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
     ("extensions/*", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
     # ADR-0129 — 제품끼리 import하지 않는다. 함께 쓰는 것은 shared/로 내린다.
-    ("server/*", "chaeksas.studio", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("server/*", "chaeksas.bot_ui", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("studio/app", "chaeksas.bot_ui", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("studio/app", "chaeksas.center", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("studio/app", "chaeksas.server_runner", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("studio/app", "chaeksas.adapter_consumer", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("studio/app", "chaeksas.service_kit", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("bot/app", "chaeksas.studio", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("bot/app", "chaeksas.center", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("bot/app", "chaeksas.server_runner", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("bot/app", "chaeksas.adapter_consumer", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("bot/app", "chaeksas.service_kit", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("server/*", "bpm.studio", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("server/*", "bpm.bot_ui", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("studio/app", "bpm.bot_ui", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("studio/app", "bpm.center", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("studio/app", "bpm.server_runner", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("studio/app", "bpm.adapter_consumer", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("studio/app", "bpm.service_kit", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("bot/app", "bpm.studio", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("bot/app", "bpm.center", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("bot/app", "bpm.server_runner", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("bot/app", "bpm.adapter_consumer", "ADR-0129 — 제품끼리 import하지 않는다"),
+    ("bot/app", "bpm.service_kit", "ADR-0129 — 제품끼리 import하지 않는다"),
 ]
 
 

@@ -16,9 +16,9 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.bpmn_ext import BpmnProcess, Call, read_process  # noqa: E402
-from chaeksas.contracts.center_api import PackageInfo  # noqa: E402
-from chaeksas.studio.call_editor import (  # noqa: E402
+from bpm.contracts.bpmn_ext import BpmnProcess, Call, read_process  # noqa: E402
+from bpm.contracts.center_api import PackageInfo  # noqa: E402
+from bpm.studio.call_editor import (  # noqa: E402
     BOUNDARY_NOTE,
     MODE_DELEGATE,
     MODE_LOCAL,
@@ -27,7 +27,7 @@ from chaeksas.studio.call_editor import (  # noqa: E402
     CallEditor,
     local_targets,
 )
-from chaeksas.studio.service_catalog import (  # noqa: E402
+from bpm.studio.service_catalog import (  # noqa: E402
     CallInput,
     CallTarget,
     delegation_targets,
@@ -338,7 +338,7 @@ def test_delegation_targets_forget_a_run_location_that_differs() -> None:
 
 def test_local_targets_include_installed_libs(tmp_path: Path) -> None:
     """**엔진·B14가 찾는 `processes()`**와 같은 것을 고른다 — 설치한 공유 정의에는 판이 붙는다."""
-    from chaeksas.studio.workspace import Workspace  # noqa: PLC0415
+    from bpm.studio.workspace import Workspace  # noqa: PLC0415
 
     space = Workspace(tmp_path).ensure()
     made = space.create("caller", name="부르는 쪽")
@@ -356,8 +356,8 @@ def test_local_targets_include_installed_libs(tmp_path: Path) -> None:
 
 
 def panel_with(body: dict[str, Any], *, chk: dict[str, Any] | None = None) -> Any:
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
-    from chaeksas.studio.service_catalog import Catalog  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.service_catalog import Catalog  # noqa: PLC0415
 
     panel = Properties()
     panel.run_location = "server"

@@ -12,7 +12,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 
-from chaeksas.contracts import (
+from bpm.contracts import (
     DEPLOYMENT_REFUSAL_STATUS,
     ENVELOPE_REFUSAL_STATUS,
     AdminKey,
@@ -439,7 +439,7 @@ def test_list_params_bounds() -> None:
 
 
 def test_package_info_embeds_the_c1_manifest() -> None:
-    from chaeksas.contracts import Manifest
+    from bpm.contracts import Manifest
 
     m = Manifest.model_validate(
         {"schema": 1, "kind": "bpm_process", "id": "erp.order-entry", "version": "2.1.0",

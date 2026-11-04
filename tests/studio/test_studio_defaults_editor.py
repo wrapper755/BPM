@@ -17,8 +17,8 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.contracts.bpmn_ext import Defaults, read_process  # noqa: E402
-from chaeksas.studio.defaults_editor import UNREAD_WEB, DefaultsEditor  # noqa: E402
+from bpm.contracts.bpmn_ext import Defaults, read_process  # noqa: E402
+from bpm.studio.defaults_editor import UNREAD_WEB, DefaultsEditor  # noqa: E402
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
 DEFAULTS: dict[str, Any] = {
@@ -106,7 +106,7 @@ def test_an_empty_definition_opens_empty() -> None:
 
 
 def process_panel(chk: dict[str, Any]) -> Any:
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
     panel.show_element({
@@ -158,7 +158,7 @@ def test_an_untouched_definition_without_defaults_sends_nothing() -> None:
 
 
 def test_the_empty_state_has_the_button_and_hides_it_for_an_element() -> None:
-    from chaeksas.studio.properties import Properties  # noqa: PLC0415
+    from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
     asked: list[bool] = []
@@ -202,8 +202,8 @@ def window(app: Any, tmp_path: Path) -> Any:
             _PROBE.append(QWebEngineView())
     except Exception as e:  # noqa: BLE001
         pytest.skip(f"QtWebEngine을 띄울 수 없다: {type(e).__name__}: {e}")
-    from chaeksas.studio.main_window import MainWindow  # noqa: PLC0415
-    from chaeksas.studio.settings import Settings  # noqa: PLC0415
+    from bpm.studio.main_window import MainWindow  # noqa: PLC0415
+    from bpm.studio.settings import Settings  # noqa: PLC0415
 
     found = MainWindow(Settings(data_dir=tmp_path))
     if not wait_for(lambda: found.canvas.live):
@@ -213,7 +213,7 @@ def window(app: Any, tmp_path: Path) -> Any:
 
 def test_the_button_shows_the_definition_and_applying_keeps_chk_process(window: Any) -> None:
     """빈 상태의 단추 → 열린 정의가 패널에 → 「적용」은 `bpm:defaults`만 바꾸고 `bpm:process`는 그대로다."""
-    from chaeksas.studio import file_actions  # noqa: PLC0415
+    from bpm.studio import file_actions  # noqa: PLC0415
 
     made = window.workspace.import_example(EXAMPLES, "bx01_invoice_reconciliation")
     file_actions.open_definition(window, made.entry_definition.path.as_posix())

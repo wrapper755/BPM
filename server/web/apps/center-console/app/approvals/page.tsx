@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@chaeksas/ui";
-import type { ApprovalInfo } from "@chaeksas/api-types/c6-approval-info";
-import type { BotUiInfo } from "@chaeksas/api-types/c5-bot-ui-info";
+import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { ApprovalInfo } from "@bpm/api-types/c6-approval-info";
+import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 

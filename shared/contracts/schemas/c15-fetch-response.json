@@ -221,7 +221,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c15-fetch-response",
+  "$id": "urn:bpm:contracts:c15-fetch-response",
   "additionalProperties": true,
   "properties": {
     "consumer_id": {

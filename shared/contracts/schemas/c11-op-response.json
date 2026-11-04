@@ -26,7 +26,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c11-op-response",
+  "$id": "urn:bpm:contracts:c11-op-response",
   "additionalProperties": true,
   "description": "작업 함수의 결과 — 뼈대가 C15 `complete`로 옮긴다.",
   "properties": {

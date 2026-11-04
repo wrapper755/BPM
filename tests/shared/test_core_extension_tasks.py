@@ -22,12 +22,12 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.approvals import request_id_for
-from chaeksas.contracts.bpmn_ext import read_process
-from chaeksas.core.engine import Engine, RunEnv, State
-from chaeksas.core.requests import create_request
-from chaeksas.core.run_log import RunLog
-from chaeksas.extension_api import ExtensionEvent, TaskContext, TaskFailed, TaskOutcome, review_table
+from bpm.contracts.approvals import request_id_for
+from bpm.contracts.bpmn_ext import read_process
+from bpm.core.engine import Engine, RunEnv, State
+from bpm.core.requests import create_request
+from bpm.core.run_log import RunLog
+from bpm.extension_api import ExtensionEvent, TaskContext, TaskFailed, TaskOutcome, review_table
 
 RUN = "run_20261005_120000_abcdef"
 
@@ -305,7 +305,7 @@ def test_stop_is_an_escalated_failure(tmp_path: Path, xml: str, state: State) ->
 
 
 def test_an_escalation_answer_is_a_decision(tmp_path: Path) -> None:
-    from chaeksas.core.engine import EngineError
+    from bpm.core.engine import EngineError
 
     engine = Engine()
     run = engine.start(

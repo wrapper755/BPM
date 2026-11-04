@@ -16,10 +16,10 @@ from typing import Any
 
 import pytest
 
-from chaeksas.bot_ui.autostart import TASK_NAME
+from bpm.bot_ui.autostart import TASK_NAME
 
 ROOT = Path(__file__).resolve().parents[2]
-ISS = ROOT / "packaging" / "installer" / "chaeksas.iss"
+ISS = ROOT / "packaging" / "installer" / "bpm.iss"
 BUILD = ROOT / "packaging" / "build.py"
 
 #: **바꾸면 덮어쓰기가 아니라 두 번째 설치가 된다** (ADR-0068 §1) — 현장 PC에 같은 앱이 둘 깔린다.

@@ -14,7 +14,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from chaeksas.extension_api import ExtensionContext, Finding, PreflightTarget, TaskContext, TaskOutcome
+from bpm.extension_api import ExtensionContext, Finding, PreflightTarget, TaskContext, TaskOutcome
 
 #: 확장 id와 그 「패키지」 — 호스트에 넣을 때 쓴다.
 EXTENSION_ID = "fake-builtin"
@@ -26,7 +26,7 @@ DEFINITION: dict[str, Any] = {
     "id": EXTENSION_ID,
     "version": "0.1.0",
     "name": "시험용 확장",
-    "publisher": "Chaeksas",
+    "publisher": "BPM",
     "tier": "builtin",
     "api": ">=2,<3",
     "contributes": {

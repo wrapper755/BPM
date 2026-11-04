@@ -21,8 +21,8 @@ SERVER_FOLDER = "server"
 
 #: 서버 시험이 import하면 안 되는 것 — PC에서 도는 코드다.
 CLIENT_MODULES = (
-    "chaeksas.bot_ui",
-    "chaeksas.qt",
+    "bpm.bot_ui",
+    "bpm.qt",
     "PySide6",
 )
 

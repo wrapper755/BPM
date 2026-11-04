@@ -59,28 +59,28 @@
 
 | 계약 | 모듈 | 검사 함수 | 문서 예시 시험 |
 | --- | --- | --- | --- |
-| C1 | `chaeksas.contracts.manifest` | `validate()` — R1·R2·R3·R6·R7 (R5는 Studio, R8은 Center 배포 때) | `tests/shared/test_contract_examples.py` |
-| C2 | `chaeksas.contracts.hashing` | `canonical_json()`, `content_hash_dir()`·`content_hash_zip()` | 같음 |
-| C2 | `chaeksas.contracts.signing` | `sign()`, `verify()`(V1~V4), `verify_time()`(V5), `verify_target()`(V6), `verify_package()`(V7), `verify_admin_key_addition()`(V8) | 같음 |
-| C3 | `chaeksas.contracts.events` | `missing_data_keys()` — 줄 단위 거부용 | 같음 |
-| C4 | `chaeksas.contracts.bot_ui` | (모델 검증만) | 같음 |
-| C5 | `chaeksas.contracts.center_api` | `validate_deployment()` — **Center `POST /deployments`가 이것을 부른다** (ADR-0047), 상태는 `deployment_refusal()`이 고른다. `validate_job_create()`, `cancel_outcome()` | (문서에 JSON 예시 없음) |
-| C6 | `chaeksas.contracts.approvals` | `validate_answer()` — Center와 실행하는 쪽이 **같이 쓴다**. `validate_create()`, `request_id_for()`, `apply_defaults()` | `tests/shared/test_contract_examples.py` |
-| C7 | `chaeksas.contracts.resources` | `missing()` — C1 `requires` ↔ 리소스 목록 대조. `blocking_at_deploy()`가 배포를 막을 것만 고른다 | (문서에 JSON 예시 없음) |
-| C7 | `chaeksas.contracts.center_keys` | `key_state()`, `expires_soon()`, `prefix_of()`, `validate_create()` | 같음 |
-| C11 | `chaeksas.contracts.service_app` | `resolve_mode()`(폴백 규칙), `idempotency_key()` | (문서 예시는 HTTP라 모델 시험은 `tests/server/test_service_kit.py`) |
-| C12 | `chaeksas.contracts.server_runner` | `validate_heartbeat()`(자리 셈·`waiting[]` 짝 칸 — 보내는 쪽과 받는 쪽이 **같이 쓴다**), `free_slots()`·`pick_jobs()`(작업 나누기), `restorable()`(되살리기 판정, ADR-0054), `message_matches()`·`pick_message_target()`(받는 곳 고르기 — **엔진의 규칙 그대로**이고 `tests/shared/test_core_events.py`가 둘을 대조한다) | `tests/shared/test_contracts_server_runner.py`·`tests/shared/test_contract_examples.py` |
-| C12 | **`chaeksas.core.run_snapshot`** | 기다리는 실행을 담고 되살린다 (ADR-0054 §1~§2) — `Run`의 칸을 **셋으로 가르고**(담는다/다시 꽂는다/버린다) `audit_fields()`가 **칸이 늘면 묻는다** | `tests/shared/test_core_run_snapshot.py` |
-| C12 | **`chaeksas.center.api.server_runner`** + **`chaeksas.server_runner`** | 받는 쪽(등록·하트비트·운영 API 셋·작업 나누기·**메시지** `api.messages`)과 보내는 쪽(`agent.tick()` — 배포 설치·준비 상태·작업 실행·저장·재개·결재·**메시지**까지. 실행 하나는 `worker.Worker` 스레드 하나이고, 기다리는 실행은 `store.Store`(SQLite)에 담긴다). 키 묶기는 C4와 **한 코드**(`center.host_keys`), `machine_id`·설치·배포 적용·`RunEnv` 짓기·**담고 되살리기**도 하나(`core.machine`·`core.packages`·`core.deploy`·`core.run_env`·`core.run_snapshot`). 현황 목록은 **콘솔 토큰만**(`auth.require_console` — CON-03도 같이 좁혔다) | `tests/server/test_center_server_runner.py`·`tests/server/test_server_runner_agent.py`·`tests/server/test_server_runner_deploy.py`·`tests/server/test_center_messages.py`·`tests/server/test_server_runner_messages.py` |
-| C11 | **`chaeksas.service_kit`** | 계약을 지키는 일꾼 — 작업 함수를 받아 `create_app`(`/healthz`·관리 API)과 `service_kit.consumer`(`Consumer` 가져가기 루프·`Enrollment` 들이기·`TokenFile`)를 준다. 멱등, 수행 모드·폴백, 오류 형식, 사용 기록 | `tests/server/test_service_kit.py`·`tests/server/test_service_kit_consumer.py` |
-| C13 | `chaeksas.contracts.extension` | `validate()` — E1·E2·E3 + 모양. `task_type_conflicts()`(E4), `check_api()`(E5), `verify_external()`(E6), `check_size()`, `definition_hash()` | `tests/shared/test_contract_examples.py` |
-| C13 | **`chaeksas.core.extensions`** | 확장 호스트 — 엔트리 포인트로 찾기, 검사 규칙 적용, 기여 지점별 목록, `entry` 해석(그 확장 패키지 안으로 제한). 인터페이스는 `chaeksas.extension_api` | `tests/shared/test_extension_host.py` |
-| C14 | `chaeksas.contracts.bpmn_ext` | `read_process()`(BPMN 읽기, 표준 라이브러리만), `validate()` — B1~B16(오류·경고), `matches()` — 기대 결과 비교, `available_vars()` — 변수 흐름 | `tests/shared/test_contracts_bpmn_ext.py` (업무 예제 48개를 읽고 검사한다) |
-| C15 | `chaeksas.contracts.external_task` + Center `api/external_tasks.py` | `task_id_for()`(멱등 칸 → 같은 일감 id), `body_hash()`(같은 칸·다른 본문 → 409), `missing_outputs()`(출력 검사). 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`server/adapter_consumer` | `tests/server/test_center_external_tasks.py`·`tests/server/test_c15_round_trip.py`·`tests/server/test_adapter_consumer.py` |
+| C1 | `bpm.contracts.manifest` | `validate()` — R1·R2·R3·R6·R7 (R5는 Studio, R8은 Center 배포 때) | `tests/shared/test_contract_examples.py` |
+| C2 | `bpm.contracts.hashing` | `canonical_json()`, `content_hash_dir()`·`content_hash_zip()` | 같음 |
+| C2 | `bpm.contracts.signing` | `sign()`, `verify()`(V1~V4), `verify_time()`(V5), `verify_target()`(V6), `verify_package()`(V7), `verify_admin_key_addition()`(V8) | 같음 |
+| C3 | `bpm.contracts.events` | `missing_data_keys()` — 줄 단위 거부용 | 같음 |
+| C4 | `bpm.contracts.bot_ui` | (모델 검증만) | 같음 |
+| C5 | `bpm.contracts.center_api` | `validate_deployment()` — **Center `POST /deployments`가 이것을 부른다** (ADR-0047), 상태는 `deployment_refusal()`이 고른다. `validate_job_create()`, `cancel_outcome()` | (문서에 JSON 예시 없음) |
+| C6 | `bpm.contracts.approvals` | `validate_answer()` — Center와 실행하는 쪽이 **같이 쓴다**. `validate_create()`, `request_id_for()`, `apply_defaults()` | `tests/shared/test_contract_examples.py` |
+| C7 | `bpm.contracts.resources` | `missing()` — C1 `requires` ↔ 리소스 목록 대조. `blocking_at_deploy()`가 배포를 막을 것만 고른다 | (문서에 JSON 예시 없음) |
+| C7 | `bpm.contracts.center_keys` | `key_state()`, `expires_soon()`, `prefix_of()`, `validate_create()` | 같음 |
+| C11 | `bpm.contracts.service_app` | `resolve_mode()`(폴백 규칙), `idempotency_key()` | (문서 예시는 HTTP라 모델 시험은 `tests/server/test_service_kit.py`) |
+| C12 | `bpm.contracts.server_runner` | `validate_heartbeat()`(자리 셈·`waiting[]` 짝 칸 — 보내는 쪽과 받는 쪽이 **같이 쓴다**), `free_slots()`·`pick_jobs()`(작업 나누기), `restorable()`(되살리기 판정, ADR-0054), `message_matches()`·`pick_message_target()`(받는 곳 고르기 — **엔진의 규칙 그대로**이고 `tests/shared/test_core_events.py`가 둘을 대조한다) | `tests/shared/test_contracts_server_runner.py`·`tests/shared/test_contract_examples.py` |
+| C12 | **`bpm.core.run_snapshot`** | 기다리는 실행을 담고 되살린다 (ADR-0054 §1~§2) — `Run`의 칸을 **셋으로 가르고**(담는다/다시 꽂는다/버린다) `audit_fields()`가 **칸이 늘면 묻는다** | `tests/shared/test_core_run_snapshot.py` |
+| C12 | **`bpm.center.api.server_runner`** + **`bpm.server_runner`** | 받는 쪽(등록·하트비트·운영 API 셋·작업 나누기·**메시지** `api.messages`)과 보내는 쪽(`agent.tick()` — 배포 설치·준비 상태·작업 실행·저장·재개·결재·**메시지**까지. 실행 하나는 `worker.Worker` 스레드 하나이고, 기다리는 실행은 `store.Store`(SQLite)에 담긴다). 키 묶기는 C4와 **한 코드**(`center.host_keys`), `machine_id`·설치·배포 적용·`RunEnv` 짓기·**담고 되살리기**도 하나(`core.machine`·`core.packages`·`core.deploy`·`core.run_env`·`core.run_snapshot`). 현황 목록은 **콘솔 토큰만**(`auth.require_console` — CON-03도 같이 좁혔다) | `tests/server/test_center_server_runner.py`·`tests/server/test_server_runner_agent.py`·`tests/server/test_server_runner_deploy.py`·`tests/server/test_center_messages.py`·`tests/server/test_server_runner_messages.py` |
+| C11 | **`bpm.service_kit`** | 계약을 지키는 일꾼 — 작업 함수를 받아 `create_app`(`/healthz`·관리 API)과 `service_kit.consumer`(`Consumer` 가져가기 루프·`Enrollment` 들이기·`TokenFile`)를 준다. 멱등, 수행 모드·폴백, 오류 형식, 사용 기록 | `tests/server/test_service_kit.py`·`tests/server/test_service_kit_consumer.py` |
+| C13 | `bpm.contracts.extension` | `validate()` — E1·E2·E3 + 모양. `task_type_conflicts()`(E4), `check_api()`(E5), `verify_external()`(E6), `check_size()`, `definition_hash()` | `tests/shared/test_contract_examples.py` |
+| C13 | **`bpm.core.extensions`** | 확장 호스트 — 엔트리 포인트로 찾기, 검사 규칙 적용, 기여 지점별 목록, `entry` 해석(그 확장 패키지 안으로 제한). 인터페이스는 `bpm.extension_api` | `tests/shared/test_extension_host.py` |
+| C14 | `bpm.contracts.bpmn_ext` | `read_process()`(BPMN 읽기, 표준 라이브러리만), `validate()` — B1~B16(오류·경고), `matches()` — 기대 결과 비교, `available_vars()` — 변수 흐름 | `tests/shared/test_contracts_bpmn_ext.py` (업무 예제 48개를 읽고 검사한다) |
+| C15 | `bpm.contracts.external_task` + Center `api/external_tasks.py` | `task_id_for()`(멱등 칸 → 같은 일감 id), `body_hash()`(같은 칸·다른 본문 → 409), `missing_outputs()`(출력 검사). 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`server/adapter_consumer` | `tests/server/test_center_external_tasks.py`·`tests/server/test_c15_round_trip.py`·`tests/server/test_adapter_consumer.py` |
 
 V5~V8은 **역할에 따라 누가 검사하는지가 다르므로** 함수를 나눠 뒀다. Center는 `verify_time(..., check_not_before=False)`로 예약 배포를 받아 두고, 실행하는 쪽만 `not_before`를 본다.
 
-검사 함수 이름이 계약마다 겹칠 수 있다 (`validate_create`가 C6·C7 둘에 있다). 모듈 안의 이름은 계약 문서 그대로 두고, `chaeksas.contracts`에서 다시 내보낼 때만 계약을 붙인다 (`validate_approval_create`·`validate_center_key_create`).
+검사 함수 이름이 계약마다 겹칠 수 있다 (`validate_create`가 C6·C7 둘에 있다). 모듈 안의 이름은 계약 문서 그대로 두고, `bpm.contracts`에서 다시 내보낼 때만 계약을 붙인다 (`validate_approval_create`·`validate_center_key_create`).
 
 검사 함수는 **저장소를 보지 않는다.** 상태가 필요한 검사(대상이 존재하는지, 같은 봉투가 이미 있는지, 활성 배포가 몇 개인지)는 Center가 자기 저장소에서 읽어 인자로 넘긴다 — 없으면 그 검사를 건너뛰고, 무엇을 건너뛰는지 docstring에 적혀 있다.
 

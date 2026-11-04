@@ -16,7 +16,7 @@ import pytest
 # PySide6를 불러오기 **전에** 정해야 한다. 화면·디스플레이 없이 돌린다.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from chaeksas.qt.theme import (  # noqa: E402
+from bpm.qt.theme import (  # noqa: E402
     THEME_CHOICES,
     THEME_DARK,
     THEME_LIGHT,
@@ -189,7 +189,7 @@ def test_widgets_hearing_the_palette_change_already_see_the_new_theme(app: Any) 
     from PySide6.QtCore import QEvent, QObject
     from PySide6.QtWidgets import QWidget
 
-    from chaeksas.qt.theme import current
+    from bpm.qt.theme import current
 
     heard: list[str] = []
 
@@ -246,7 +246,7 @@ def test_a_fixed_choice_stops_following_the_system(app: Any, monkeypatch: Any) -
 
     신호는 한 번 붙으면 떼지 않으므로 **받는 쪽이** 지금 고른 값을 본다.
     """
-    from chaeksas.qt import theme as theme_module  # noqa: PLC0415
+    from bpm.qt import theme as theme_module  # noqa: PLC0415
 
     apply_theme(app, choice=THEME_SYSTEM)
     apply_theme(app, choice=THEME_DARK)
@@ -285,7 +285,7 @@ def test_fonts_ship_with_the_license() -> None:
     """OFL은 재배포할 때 라이선스를 함께 두라고 한다."""
     from importlib.resources import files
 
-    names = {entry.name for entry in files("chaeksas.qt.fonts").iterdir()}
+    names = {entry.name for entry in files("bpm.qt.fonts").iterdir()}
     assert {"OFL-Pretendard.txt", "OFL-JetBrainsMono.txt"} <= names, sorted(names)
 
 
@@ -315,7 +315,7 @@ def test_every_status_label_has_a_color() -> None:
 _NATIVE_MENU_CHECK = """
 import sys
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox
-from chaeksas.qt.theme import apply_theme
+from bpm.qt.theme import apply_theme
 app = QApplication(sys.argv[:1])
 apply_theme(app, choice="light")
 for widget in (QMenu(), QMessageBox()):
@@ -395,7 +395,7 @@ def test_standard_buttons_speak_korean(app: Any, monkeypatch: pytest.MonkeyPatch
     """Qt 표준 단추(OK·Cancel·Save)가 영어로 남지 않는다 — 테마를 입히면 번역도 단다."""
     from PySide6.QtWidgets import QDialogButtonBox, QMessageBox  # noqa: PLC0415
 
-    from chaeksas.qt.messages import DISCARD_LABEL, ask_unsaved  # noqa: PLC0415
+    from bpm.qt.messages import DISCARD_LABEL, ask_unsaved  # noqa: PLC0415
 
     apply_theme(app)
     apply_theme(app)  # 두 번 입혀도 번역은 하나다
@@ -465,7 +465,7 @@ def test_a_role_given_after_the_label_is_shown_still_colors_it(app: Any) -> None
     from PySide6.QtGui import QColor, QPalette  # noqa: PLC0415
     from PySide6.QtWidgets import QLabel, QWidget  # noqa: PLC0415
 
-    from chaeksas.qt.theme import set_role  # noqa: PLC0415
+    from bpm.qt.theme import set_role  # noqa: PLC0415
 
     apply_theme(app, choice=THEME_LIGHT)
     holder = QWidget()
@@ -482,12 +482,12 @@ def test_a_role_given_after_the_label_is_shown_still_colors_it(app: Any) -> None
 def test_roles_are_given_through_set_role() -> None:
     """`setProperty("role", …)`만 부르면 보인 뒤 준 뜻이 칠해지지 않는다 — `set_role`을 쓴다.
 
-    `chaeksas-qt`를 쓰지 않는 확장은 스스로 다시 칠하므로 여기서 보지 않는다 (스타일 가이드 §4-2).
+    `bpm-qt`를 쓰지 않는 확장은 스스로 다시 칠하므로 여기서 보지 않는다 (스타일 가이드 §4-2).
     """
     from pathlib import Path  # noqa: PLC0415
 
     root = Path(__file__).resolve().parents[2]
-    theme = root / "shared" / "qt" / "src" / "chaeksas" / "qt" / "theme" / "__init__.py"
+    theme = root / "shared" / "qt" / "src" / "bpm" / "qt" / "theme" / "__init__.py"
     raw = [
         f"{path.relative_to(root).as_posix()}"
         for top in ROLE_SOURCES
@@ -501,7 +501,7 @@ def test_an_icon_is_drawn_in_the_color_given(app: Any) -> None:
     """스타일 가이드 §6 — Lucide SVG의 `currentColor`를 토큰 색으로 칠한다 (20과 고해상도용 40)."""
     from PySide6.QtGui import QColor  # noqa: PLC0415
 
-    from chaeksas.qt.theme import ICON_SIZE, icon  # noqa: PLC0415
+    from bpm.qt.theme import ICON_SIZE, icon  # noqa: PLC0415
 
     found = icon("square", "#ff0000")
     assert sorted(s.width() for s in found.availableSizes()) == [ICON_SIZE, ICON_SIZE * 2]
@@ -514,9 +514,9 @@ def test_an_icon_is_drawn_in_the_color_given(app: Any) -> None:
 def test_every_shipped_icon_loads_and_an_unknown_one_is_an_error(app: Any) -> None:
     from importlib.resources import files  # noqa: PLC0415
 
-    from chaeksas.qt.theme import icon  # noqa: PLC0415
+    from bpm.qt.theme import icon  # noqa: PLC0415
 
-    names = [p.name[len("icon-"):-len(".svg")] for p in files("chaeksas.qt.theme").iterdir()
+    names = [p.name[len("icon-"):-len(".svg")] for p in files("bpm.qt.theme").iterdir()
              if p.name.startswith("icon-") and p.name.endswith(".svg")]
     assert "play" in names
     for name in names:

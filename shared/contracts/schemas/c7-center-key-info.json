@@ -57,7 +57,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c7-center-key-info",
+  "$id": "urn:bpm:contracts:c7-center-key-info",
   "additionalProperties": true,
   "description": "`GET /center-keys`의 한 줄. **원문은 들어가지 않는다.**",
   "properties": {

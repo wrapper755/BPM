@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c15-external-task-info",
+  "$id": "urn:bpm:contracts:c15-external-task-info",
   "additionalProperties": true,
   "description": "`GET /api/v1/external-tasks?run_id=`의 한 줄 — 콘솔이 보는 일감 (CON-01 「외부 작업」).\n\n**업무 값은 없다** (원칙 6) — 입력·출력·오류 글은 싣지 않고 코드만 싣는다. 자리(`node_id`·\n`node_instance`·`attempt`·`call_seq`)는 멱등 칸에서 온다.",
   "properties": {

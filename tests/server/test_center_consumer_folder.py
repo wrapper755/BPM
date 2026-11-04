@@ -23,12 +23,12 @@ import pytest
 from fastapi.testclient import TestClient
 from test_m5_extensions import definition
 
-from chaeksas.center import consumer_folder
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.extension import verify_external
-from chaeksas.contracts.signing import AdminKey, Envelope
+from bpm.center import consumer_folder
+from bpm.center.app import create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
+from bpm.contracts.extension import verify_external
+from bpm.contracts.signing import AdminKey, Envelope
 
 TOKEN = "t-admin"
 ADMIN = {"Authorization": f"Bearer {TOKEN}"}

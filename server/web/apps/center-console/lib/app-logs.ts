@@ -1,6 +1,6 @@
-import type { EnrollmentInfo } from "@chaeksas/api-types/c5-enrollment-info";
-import type { CenterKeyInfo } from "@chaeksas/api-types/c7-center-key-info";
-import type { DeploymentResult } from "@chaeksas/api-types/c5-bot-ui-info";
+import type { EnrollmentInfo } from "@bpm/api-types/c5-enrollment-info";
+import type { CenterKeyInfo } from "@bpm/api-types/c7-center-key-info";
+import type { DeploymentResult } from "@bpm/api-types/c5-bot-ui-info";
 
 /**
  * CON-16 앱 로그 — Center가 이미 들고 있는 것(등록 요청·키·배치 결정)을 **읽어 합친다** (ADR-0121).

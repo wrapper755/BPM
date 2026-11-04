@@ -22,12 +22,12 @@ from typing import Any
 import fake_extension
 from conftest import FakeCredentials
 
-from chaeksas.bot_ui.agent import Agent
-from chaeksas.bot_ui.main_window import EXTENSION_OFF, READY, readiness_label
-from chaeksas.bot_ui.settings import Settings, data_dir
-from chaeksas.bot_ui.store import Store
-from chaeksas.core.extensions import load_host
-from chaeksas.core.packages import InstalledBot, install
+from bpm.bot_ui.agent import Agent
+from bpm.bot_ui.main_window import EXTENSION_OFF, READY, readiness_label
+from bpm.bot_ui.settings import Settings, data_dir
+from bpm.bot_ui.store import Store
+from bpm.core.extensions import load_host
+from bpm.core.packages import InstalledBot, install
 
 EXAMPLE = fake_extension.DRAWING
 OFF = fake_extension.EXTENSION_ID
@@ -35,8 +35,8 @@ OFF = fake_extension.EXTENSION_ID
 
 def install_example(tmp_path: Path) -> InstalledBot:
     """Studio처럼 내보내고 PC 실행기에 설치한다 (배포 길은 `test_m5_pc_rerun.py`가 본다)."""
-    from chaeksas.studio.packaging import export  # noqa: PLC0415
-    from chaeksas.studio.workspace import Workspace  # noqa: PLC0415
+    from bpm.studio.packaging import export  # noqa: PLC0415
+    from bpm.studio.workspace import Workspace  # noqa: PLC0415
 
     source = fake_extension.drawing(tmp_path / "src")
     made = Workspace(tmp_path / "studio").ensure().import_example(source, EXAMPLE)
@@ -124,7 +124,7 @@ class _FakeChild:
 
 def test_the_readiness_label_only_uses_words_from_the_status_map() -> None:
     """CLAUDE.md §5 — 상태 표기는 `status_map`에 있는 것만 쓴다 (색이 붙지 않는다)."""
-    from chaeksas.core.preflight import (  # noqa: PLC0415
+    from bpm.core.preflight import (  # noqa: PLC0415
         EXTENSION_TURNED_OFF,
         EXTENSIONS_UNUSABLE,
         MISSING_ENVIRONMENT,
@@ -132,8 +132,8 @@ def test_the_readiness_label_only_uses_words_from_the_status_map() -> None:
         TASK_TYPES_UNSUPPORTED,
         Preflight,
     )
-    from chaeksas.extension_api import SEVERITY_BLOCK, Finding  # noqa: PLC0415
-    from chaeksas.qt import theme  # noqa: PLC0415
+    from bpm.extension_api import SEVERITY_BLOCK, Finding  # noqa: PLC0415
+    from bpm.qt import theme  # noqa: PLC0415
 
     cases = [Preflight()] + [
         Preflight((Finding(id=code, severity=SEVERITY_BLOCK, message=""),))

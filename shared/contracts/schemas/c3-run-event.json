@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c3-run-event",
+  "$id": "urn:bpm:contracts:c3-run-event",
   "additionalProperties": true,
   "description": "실행 이벤트 한 줄. 로컬 `runs/<run_id>.jsonl`의 한 줄이자 전송 단위.\n\n`data`에는 **업무 값·결재 답·비밀·스크린샷을 넣지 않는다** (README 원칙 6).",
   "properties": {

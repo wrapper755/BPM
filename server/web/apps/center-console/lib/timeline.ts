@@ -2,9 +2,9 @@
  * CON-01 상세 「노드 타임라인」의 셈 — 노드 줄 모으기, 가로 막대 자리, LLM 단계 수.
  *
  * **화면을 모른다** — 막대의 자리는 0~1 비율로만 주고 색은 페이지가 `status_map`에서 고른다
- * (여기서 `@chaeksas/ui`를 들이면 React 구성요소까지 따라와 vitest가 못 부른다).
+ * (여기서 `@bpm/ui`를 들이면 React 구성요소까지 따라와 vitest가 못 부른다).
  */
-import type { RunEvent } from "@chaeksas/api-types/c3-run-event";
+import type { RunEvent } from "@bpm/api-types/c3-run-event";
 import type { ResumeRow } from "./summary";
 
 export interface NodeRow {

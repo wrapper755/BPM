@@ -13,11 +13,11 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.bpmn_ext import read_process
-from chaeksas.contracts.dmn import read_decisions
-from chaeksas.contracts.events import REQUIRED_DATA_KEYS
-from chaeksas.contracts.organization import OrgRef, PlaceIdentity
-from chaeksas.core.engine import (
+from bpm.contracts.bpmn_ext import read_process
+from bpm.contracts.dmn import read_decisions
+from bpm.contracts.events import REQUIRED_DATA_KEYS
+from bpm.contracts.organization import OrgRef, PlaceIdentity
+from bpm.core.engine import (
     DECISION_KEY,
     Engine,
     EngineError,
@@ -27,11 +27,11 @@ from chaeksas.core.engine import (
     new_run_id,
     sourced_inputs,
 )
-from chaeksas.core.files import Workspace
-from chaeksas.core.llm import Reply
-from chaeksas.core.run_log import RunLog, sanitize
-from chaeksas.core.senders import RecordingSender
-from chaeksas.core.services import RecordingServiceCaller
+from bpm.core.files import Workspace
+from bpm.core.llm import Reply
+from bpm.core.run_log import RunLog, sanitize
+from bpm.core.senders import RecordingSender
+from bpm.core.services import RecordingServiceCaller
 
 NOW = datetime(2026, 10, 4, 9, 30, tzinfo=UTC)
 
@@ -514,7 +514,7 @@ def test_a_timeout_fails_the_run() -> None:
 
 def test_the_request_id_matches_the_contract_shape() -> None:
     """C6 `request_id_for` — 답이 엉뚱한 노드로 돌아가지 않게 모양이 정해져 있다."""
-    from chaeksas.contracts.approvals import ApprovalCreateRequest  # noqa: PLC0415
+    from bpm.contracts.approvals import ApprovalCreateRequest  # noqa: PLC0415
 
     engine, run = start(approval_process())
     engine.run_until_blocked(run)
@@ -957,7 +957,7 @@ def test_a_loop_over_something_that_is_not_a_list_fails() -> None:
 
 def test_an_error_boundary_catches_a_task_failure() -> None:
     """C14 §이벤트 — 오류 경로에 `error_code`·`error_message`·`failed_task`가 생긴다."""
-    from chaeksas.core.engine import Context, Go, TaskFailed  # noqa: PLC0415
+    from bpm.core.engine import Context, Go, TaskFailed  # noqa: PLC0415
 
     def failing(context: Context) -> Go:
         raise TaskFailed("바깥 시스템이 500을 돌려줬다", node_id=context.node.id)

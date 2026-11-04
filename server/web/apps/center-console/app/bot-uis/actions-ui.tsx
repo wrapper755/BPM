@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, ConfirmDialog, ErrorBanner } from "@chaeksas/ui";
+import { Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
 import { setBotUiDisabled } from "@/app/actions";
 
 /**

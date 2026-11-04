@@ -13,8 +13,8 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.bpmn_ext import read_process
-from chaeksas.core.expr import (
+from bpm.contracts.bpmn_ext import read_process
+from bpm.core.expr import (
     ExprError,
     Scope,
     check_calls,
@@ -26,8 +26,8 @@ from chaeksas.core.expr import (
     template_names,
     truthy,
 )
-from chaeksas.core.expr_check import check_expressions, expression_sites
-from chaeksas.core.helpers import HELPER_NAMES, HELPERS, bind
+from bpm.core.expr_check import check_expressions, expression_sites
+from bpm.core.helpers import HELPER_NAMES, HELPERS, bind
 
 NOW = datetime(2026, 10, 4, 9, 30)
 ROOT = Path(__file__).resolve().parents[2]

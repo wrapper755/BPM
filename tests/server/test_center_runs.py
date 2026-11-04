@@ -18,10 +18,10 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center.api.runs import CODE_MISSING, CODE_SCHEMA
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings
-from chaeksas.center.storage import Store
+from bpm.center.api.runs import CODE_MISSING, CODE_SCHEMA
+from bpm.center.app import create_app
+from bpm.center.settings import Settings
+from bpm.center.storage import Store
 
 ADMIN = "admin-token"
 READ = "read-token"

@@ -15,20 +15,20 @@ import pytest
 from conftest import FakeCredentials
 from fastapi.testclient import TestClient
 
-from chaeksas.bot_ui.agent import (
+from bpm.bot_ui.agent import (
     TRAY_DISABLED,
     TRAY_DISCONNECTED,
     TRAY_KEY_REVOKED,
     TRAY_UNREGISTERED,
     Agent,
 )
-from chaeksas.bot_ui.center_client import CenterClient, KeyRejected, MachineMismatch, Unreachable
-from chaeksas.bot_ui.settings import Settings
-from chaeksas.bot_ui.store import Store
-from chaeksas.center.app import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.contracts.bot_ui import JobDispatch
-from chaeksas.core.seen import Seen
+from bpm.bot_ui.center_client import CenterClient, KeyRejected, MachineMismatch, Unreachable
+from bpm.bot_ui.settings import Settings
+from bpm.bot_ui.store import Store
+from bpm.center.app import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.contracts.bot_ui import JobDispatch
+from bpm.core.seen import Seen
 
 ADMIN = "t-center-admin"
 
@@ -282,11 +282,11 @@ def test_the_heartbeat_ships_the_run_log_and_counts_what_is_left(
     **실행 중에 보내지 않는다** — 느린 Center가 업무를 붙잡으면 안 된다. 하트비트가 끝난 뒤
     큐를 비우고, 남은 줄 수는 `unsent_events`로 알린다 (C4).
     """
-    from chaeksas.core.run_log import RunLog, log_path
-    from chaeksas.core.run_shipping import HttpUploader
+    from bpm.core.run_log import RunLog, log_path
+    from bpm.core.run_shipping import HttpUploader
 
     data_dir = tmp_path / "botui"
-    monkeypatch.setattr("chaeksas.bot_ui.settings.data_dir", lambda: data_dir)
+    monkeypatch.setattr("bpm.bot_ui.settings.data_dir", lambda: data_dir)
 
     run_id = "run_20261005_120000_abcdef"
     log = RunLog(run_id=run_id, path=log_path(data_dir, run_id))
@@ -314,10 +314,10 @@ def test_the_heartbeat_ships_the_run_log_and_counts_what_is_left(
 
 def test_without_a_key_nothing_is_shipped(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """키가 없으면 보내지 않는다 — 기록은 쌓아 두고 화면이 키 문제를 말한다 (C3 §오류)."""
-    from chaeksas.core.run_log import RunLog, log_path
+    from bpm.core.run_log import RunLog, log_path
 
     data_dir = tmp_path / "botui"
-    monkeypatch.setattr("chaeksas.bot_ui.settings.data_dir", lambda: data_dir)
+    monkeypatch.setattr("bpm.bot_ui.settings.data_dir", lambda: data_dir)
     RunLog(run_id="run_20261005_120000_abcdef", path=log_path(data_dir, "run_20261005_120000_abcdef")).emit(
         "log", level="info", message="한 줄"
     )
@@ -351,7 +351,7 @@ def test_a_failed_call_token_does_not_break_anything(
     center: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Center에 닿지 못해 토큰을 못 받아도 하트비트는 끝나고 `None`을 준다 — 서비스 태스크가 그 자리에서 말한다."""
-    from chaeksas.bot_ui.center_client import CenterClient  # noqa: PLC0415
+    from bpm.bot_ui.center_client import CenterClient  # noqa: PLC0415
 
     agent = make_agent(center, tmp_path, key=issue_key(center))
 

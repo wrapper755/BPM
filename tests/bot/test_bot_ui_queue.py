@@ -9,11 +9,11 @@ from pathlib import Path
 
 import pytest
 
-from chaeksas.bot_ui.agent import Agent
-from chaeksas.bot_ui.settings import Settings
-from chaeksas.bot_ui.store import Store
-from chaeksas.contracts.bot_ui import HeartbeatResponse, JobDispatch, QueueItem
-from chaeksas.core.seen import CAP, GRACE_CYCLES
+from bpm.bot_ui.agent import Agent
+from bpm.bot_ui.settings import Settings
+from bpm.bot_ui.store import Store
+from bpm.contracts.bot_ui import HeartbeatResponse, JobDispatch, QueueItem
+from bpm.core.seen import CAP, GRACE_CYCLES
 
 AT = "2026-10-03T09:00:00+09:00"
 
@@ -260,8 +260,8 @@ def test_the_wait_is_measured_from_the_request() -> None:
     """C3 `run_started.queued_s` — 요청 시각부터 띄우는 시각까지 (`waited()`)."""
     from datetime import UTC, datetime, timedelta
 
-    from chaeksas.bot_ui.agent import waited
-    from chaeksas.contracts.bot_ui import QueueItem
+    from bpm.bot_ui.agent import waited
+    from bpm.contracts.bot_ui import QueueItem
 
     asked = datetime(2026, 10, 9, 10, 15, tzinfo=UTC)
     item = QueueItem(

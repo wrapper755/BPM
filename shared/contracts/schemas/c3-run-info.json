@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c3-run-info",
+  "$id": "urn:bpm:contracts:c3-run-info",
   "additionalProperties": true,
   "description": "실행 하나의 요약 (CON-01 목록·상세). **받을 때 만들어 둔다** — 목록을 그릴 때마다\n이벤트를 다시 읽지 않는다.",
   "properties": {

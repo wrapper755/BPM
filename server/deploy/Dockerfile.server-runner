@@ -28,12 +28,12 @@ COPY bot/app/pyproject.toml bot/app/
 COPY server/server_runner/pyproject.toml server/server_runner/
 
 # 실행기가 쓰는 것만 (Qt·PySide6는 들어가지 않는다).
-RUN uv sync --frozen --no-install-workspace --package chaeksas-server-runner
+RUN uv sync --frozen --no-install-workspace --package bpm-server-runner
 
 COPY shared/ shared/
 COPY server/service_kit/ server/service_kit/
 COPY server/server_runner/ server/server_runner/
-RUN uv sync --frozen --package chaeksas-server-runner
+RUN uv sync --frozen --package bpm-server-runner
 
 # 데이터(배포·실행 기록·기다리는 실행 `state.sqlite3`)와 비밀(받은 Center API 키·서비스 앱 키)은
 # **볼륨 둘로 가른다** — 데이터를 백업·복사해도 키가 따라 나가지 않게 (ADR-0100).
@@ -44,8 +44,8 @@ VOLUME ["/data", "/secrets"]
 # 기계 id는 **데이터 볼륨에** 둔다 — 이미지에 `/etc/machine-id`가 있으면 그 이미지로 뜬 실행기가 모두 같은
 # id를 갖고(C12 키 묶기가 둘째를 409로 막는다), 볼륨에 두면 컨테이너를 다시 만들어도 같은 실행기다.
 RUN rm -f /etc/machine-id /var/lib/dbus/machine-id \
- && useradd --create-home --uid 10001 chaeksas \
- && mkdir -p /data /secrets && chown -R chaeksas /data /app && chown chaeksas /secrets && chmod 0700 /secrets
-USER chaeksas
+ && useradd --create-home --uid 10001 bpm \
+ && mkdir -p /data /secrets && chown -R bpm /data /app && chown bpm /secrets && chmod 0700 /secrets
+USER bpm
 
-CMD ["uv", "run", "--frozen", "--package", "chaeksas-server-runner", "bpm-server-runner"]
+CMD ["uv", "run", "--frozen", "--package", "bpm-server-runner", "bpm-server-runner"]

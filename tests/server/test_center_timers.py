@@ -21,16 +21,16 @@ import center_admin
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center.api import jobs as jobs_api
-from chaeksas.center.api import timers
-from chaeksas.center.app import create_app
-from chaeksas.center.errors import ApiError
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store
-from chaeksas.contracts.center_api import job_source, timer_requester
-from chaeksas.contracts.hashing import MANIFEST_NAME, content_hash_zip
-from chaeksas.contracts.manifest import Manifest, validate
-from chaeksas.contracts.schedule import CycleError, cycle_problem, parse_cycle
+from bpm.center.api import jobs as jobs_api
+from bpm.center.api import timers
+from bpm.center.app import create_app
+from bpm.center.errors import ApiError
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store
+from bpm.contracts.center_api import job_source, timer_requester
+from bpm.contracts.hashing import MANIFEST_NAME, content_hash_zip
+from bpm.contracts.manifest import Manifest, validate
+from bpm.contracts.schedule import CycleError, cycle_problem, parse_cycle
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 ZIP = "application/zip"

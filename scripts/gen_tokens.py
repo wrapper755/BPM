@@ -35,7 +35,7 @@ WEB_SRC = ROOT / "server" / "web" / "packages" / "ui" / "src"
 WEB_CSS = WEB_SRC / "tokens.css"
 WEB_THEME = WEB_SRC / "theme.css"
 WEB_STATUS_MAP = WEB_SRC / "status-map.ts"
-QT_DIR = ROOT / "shared" / "qt" / "src" / "chaeksas" / "qt" / "theme"
+QT_DIR = ROOT / "shared" / "qt" / "src" / "bpm" / "qt" / "theme"
 PREVIEW = ROOT / "design" / "preview.html"
 #: BPM 흐름 마크 (ADR-0118) — 원본 하나, 웹 구성요소 하나, 콘솔마다 탭 아이콘 하나.
 MARK_SOURCE = ROOT / "design" / "bpm-mark.svg"
@@ -551,7 +551,7 @@ QSpinBox::down-button {{
 }}
 QSpinBox::up-button:hover, QSpinBox::down-button:hover {{ background-color: {c["bg.subtle"]}; }}
 /* 단추를 꾸미면 Qt가 기본 화살표를 그리지 않는다 — 생성한 SVG를 쓴다. `@THEME_DIR@`는 테마를 읽을 때
-   그 패키지 폴더의 실제 경로로 바뀐다 (chaeksas.qt.theme.qss). */
+   그 패키지 폴더의 실제 경로로 바뀐다 (bpm.qt.theme.qss). */
 QSpinBox::up-arrow {{
   image: url(@THEME_DIR@/arrow-up-{theme}.svg);
   width: {s["2"]}px;
@@ -697,7 +697,7 @@ def preview_html(tokens: dict[str, Any], rows_light: list[tuple[str, str, float,
     # 글꼴은 **외부 CDN에서 받지 않는다** (스타일 가이드 §4 — 사내망). 설치된 글꼴로 떨어진다.
     return f"""<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Chaeksas 스타일 미리보기</title>
+<title>BPM 스타일 미리보기</title>
 <!-- {BANNER} -->
 <link rel="stylesheet" href="../web/packages/ui/src/tokens.css">
 <style>
@@ -741,7 +741,7 @@ th {{ color:var(--text-secondary); background:var(--bg-subtle); }}
   const r=document.documentElement;
   r.dataset.theme = r.dataset.theme==='dark' ? 'light' : 'dark';">밝게 / 어둡게</button>
 
-<h1>Chaeksas 스타일 미리보기</h1>
+<h1>BPM 스타일 미리보기</h1>
 <p style="color:var(--text-muted)">원본은 <code>design/tokens.json</code>. 이 파일은 생성물이다.</p>
 
 <h2>색 (밝게)</h2>

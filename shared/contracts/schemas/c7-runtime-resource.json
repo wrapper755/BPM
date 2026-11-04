@@ -32,7 +32,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c7-runtime-resource",
+  "$id": "urn:bpm:contracts:c7-runtime-resource",
   "additionalProperties": true,
   "description": "실행하는 쪽이 보고한 런타임 (C4 등록·하트비트, C12).",
   "properties": {

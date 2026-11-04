@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { EnrollmentInfo } from "@chaeksas/api-types/c5-enrollment-info";
-import { Button, DataTable, Dialog, ErrorBanner, Field, StatusBadge, type Column } from "@chaeksas/ui";
+import type { EnrollmentInfo } from "@bpm/api-types/c5-enrollment-info";
+import { Button, DataTable, Dialog, ErrorBanner, Field, StatusBadge, type Column } from "@bpm/ui";
 import { decideEnrollment } from "@/app/actions";
 
 /**

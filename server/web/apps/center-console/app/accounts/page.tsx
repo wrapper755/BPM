@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { DataTable, ErrorBanner, StatusBadge, type Column } from "@chaeksas/ui";
-import type { AccountInfo } from "@chaeksas/api-types/c5-account-info";
+import { DataTable, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { AccountInfo } from "@bpm/api-types/c5-account-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { fullTime } from "@/app/bot-uis/page";

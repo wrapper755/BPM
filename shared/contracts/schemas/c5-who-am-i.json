@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c5-who-am-i",
+  "$id": "urn:bpm:contracts:c5-who-am-i",
   "additionalProperties": true,
   "description": "`GET /auth/me` — 지금 부르는 쪽. 세션이면 계정, 토큰이면 `account`가 없다.",
   "properties": {

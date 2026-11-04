@@ -1,4 +1,4 @@
-"""서버 실행기(`chaeksas.server_runner`)가 진짜 Center에 등록·하트비트한다 (C12, M7 조각 2).
+"""서버 실행기(`bpm.server_runner`)가 진짜 Center에 등록·하트비트한다 (C12, M7 조각 2).
 
 **양쪽을 한 줄로 본다** — 실행기의 `agent.tick()`이 ASGI로 붙은 진짜 Center를 부른다. 그래서
 C12가 「구현됨」으로 가는 조건(보내는 쪽과 받는 쪽이 다 있고 시험이 지킨다)을 이 파일이 센다.
@@ -18,21 +18,21 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from chaeksas.center import create_app
-from chaeksas.center.settings import Settings as CenterSettings
-from chaeksas.center.storage import Store, now_iso
-from chaeksas.contracts.manifest import Manifest
-from chaeksas.contracts.resources import ServiceAppResource
-from chaeksas.server_runner import agent as agent_mod
-from chaeksas.server_runner import main as main_mod
-from chaeksas.server_runner.center_client import (
+from bpm.center import create_app
+from bpm.center.settings import Settings as CenterSettings
+from bpm.center.storage import Store, now_iso
+from bpm.contracts.manifest import Manifest
+from bpm.contracts.resources import ServiceAppResource
+from bpm.server_runner import agent as agent_mod
+from bpm.server_runner import main as main_mod
+from bpm.server_runner.center_client import (
     CenterClient,
     CenterProblem,
     Unreachable,
     _problem,
 )
-from chaeksas.server_runner.credentials import ENV_CENTER_API_KEY, Credentials
-from chaeksas.server_runner.settings import Settings
+from bpm.server_runner.credentials import ENV_CENTER_API_KEY, Credentials
+from bpm.server_runner.settings import Settings
 
 ADMIN = {"Authorization": "Bearer t-admin"}
 READ = {"Authorization": "Bearer t-read"}
@@ -107,7 +107,7 @@ def test_it_reports_no_running_work(settings: Settings, key: str, center: TestCl
 
 def test_the_machine_id_is_the_shared_rule(settings: Settings, key: str, center: TestClient) -> None:
     """`machine_id`는 **PC 실행기와 같은 함수**다 (`core.machine`) — 원값은 보내지 않는다."""
-    from chaeksas.core import machine
+    from bpm.core import machine
 
     found = build(settings, key, center)
     assert found.machine_id() == machine.machine_id(settings.data_path)
@@ -335,7 +335,7 @@ def test_without_a_key_it_asks_center_and_is_let_in_by_approval(
     settings: Settings, center: TestClient, caplog: Any
 ) -> None:
     """C12 §등록 요청과 승인 — 요청 코드는 로그 한 줄, 승인은 CON-12. 사람은 키를 보지 않는다."""
-    from chaeksas.server_runner import enroll  # noqa: PLC0415
+    from bpm.server_runner import enroll  # noqa: PLC0415
 
     found = build(settings, "", center)
     found.credentials = MemoryCredentials()
@@ -362,7 +362,7 @@ def test_a_bundled_runner_is_let_in_by_the_join_token(
     settings: Settings, store: Store, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any
 ) -> None:
     """같이 배포된 실행기 (ADR-0117) — 들이기 비밀이 맞으면 **첫 걸음에** 키를 받는다."""
-    from chaeksas.server_runner import enroll  # noqa: PLC0415
+    from bpm.server_runner import enroll  # noqa: PLC0415
 
     center_settings = CenterSettings(
         admin_token="t-admin", package_dir=tmp_path / "pkg", server_runner_join_token="j" * 43
@@ -596,7 +596,7 @@ def test_service_calls_go_to_center_as_external_tasks(tmp_path: Path) -> None:
     토큰은 이 실행기의 Center API 키이고 **부를 때마다 읽는다**(회전으로 바뀐다). **누가 부르는가**가
     PC와 다르다 (C11 `caller.type`) — 앱의 기록에 그대로 남는다.
     """
-    from chaeksas.core.services import CenterServiceCaller  # noqa: PLC0415
+    from bpm.core.services import CenterServiceCaller  # noqa: PLC0415
 
     found = _Resources()
     client = cast(Any, found)
@@ -623,7 +623,7 @@ def test_the_register_answer_already_carries_the_admin_keys(
     되살린 실행도 바깥 앱 명부를 짓고, 봉투는 공개키로만 검증된다 (C13 E6). 등록에서 받지
     않으면 되살린 실행은 외부 앱을 **한 번도** 부를 수 없다.
     """
-    from chaeksas.center import signer  # noqa: PLC0415
+    from bpm.center import signer  # noqa: PLC0415
 
     found = build(settings, key, center)
     assert found.tick() is True  # 등록만 했다
@@ -713,7 +713,7 @@ def test_the_runner_plugs_the_sender_in(tmp_path: Path) -> None:
 
 def test_without_smtp_the_mail_task_fails_clearly(tmp_path: Path) -> None:
     """**주지 않으면 보내지 않고 실패한다** — 조용히 넘어가지 않는다 (C14 §보내기)."""
-    from chaeksas.core.senders import EmailMessage, SendError
+    from bpm.core.senders import EmailMessage, SendError
 
     made = agent_mod.Agent(
         settings=Settings(data_path=tmp_path / "runner"), client=cast(Any, _NoClient())

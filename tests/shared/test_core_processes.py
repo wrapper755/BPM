@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from chaeksas.core.processes import (
+from bpm.core.processes import (
     MAX_RESTARTS,
     ChildProcess,
     ProcessError,

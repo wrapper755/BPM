@@ -21,7 +21,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c3-event-batch-response",
+  "$id": "urn:bpm:contracts:c3-event-batch-response",
   "additionalProperties": true,
   "description": "`POST /api/v1/runs/{run_id}/events`의 응답.",
   "properties": {

@@ -28,10 +28,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS", "--no-sandbox --disable-gpu")
 os.environ.setdefault("QTWEBENGINE_DISABLE_SANDBOX", "1")
 
-from chaeksas.contracts.bpmn_ext import read_process, validate  # noqa: E402
-from chaeksas.studio import split_actions  # noqa: E402
-from chaeksas.studio.split_actions import Plan  # noqa: E402
-from chaeksas.studio.workspace import BpmProcess, Definition, Workspace  # noqa: E402
+from bpm.contracts.bpmn_ext import read_process, validate  # noqa: E402
+from bpm.studio import split_actions  # noqa: E402
+from bpm.studio.split_actions import Plan  # noqa: E402
+from bpm.studio.workspace import BpmProcess, Definition, Workspace  # noqa: E402
 
 LOCATIONS = {"ui_task": ["pc"]}
 
@@ -142,7 +142,7 @@ def app() -> Any:
 def canvas(app: Any) -> Any:
     from PySide6.QtCore import QEventLoop, QTimer
 
-    from chaeksas.studio.canvas import Canvas
+    from bpm.studio.canvas import Canvas
 
     found = Canvas()
     loop = QEventLoop()
@@ -286,7 +286,7 @@ def test_a_taken_id_changes_nothing(tmp_path: Path, canvas: Any) -> None:
 
 
 def test_the_window_fills_counted_names_and_keeps_open_on_a_problem(app: Any) -> None:
-    from chaeksas.studio.split_dialog import SplitDialog  # noqa: PLC0415
+    from bpm.studio.split_dialog import SplitDialog  # noqa: PLC0415
 
     process = server()
     window = SplitDialog(

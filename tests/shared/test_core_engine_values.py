@@ -16,12 +16,12 @@ from typing import Any
 
 import pytest
 
-from chaeksas.contracts.bpmn_ext import read_process
-from chaeksas.contracts.dmn import read_decisions
-from chaeksas.core.engine import Engine, Run, RunEnv, State
-from chaeksas.core.files import Workspace
-from chaeksas.core.run_log import RunLog
-from chaeksas.core.senders import RecordingSender
+from bpm.contracts.bpmn_ext import read_process
+from bpm.contracts.dmn import read_decisions
+from bpm.core.engine import Engine, Run, RunEnv, State
+from bpm.core.files import Workspace
+from bpm.core.run_log import RunLog
+from bpm.core.senders import RecordingSender
 
 NOW = datetime(2026, 10, 4, 9, 30, tzinfo=UTC)
 RUN_ID = "run_20261004_093000_abc123"
@@ -526,7 +526,7 @@ def test_a_signal_throw_is_not_a_milestone(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("raw", ["../밖.md", "/etc/passwd", "안/../../밖.md"])
 def test_the_workspace_refuses_paths_outside_the_output_folder(tmp_path: Path, raw: str) -> None:
-    from chaeksas.core.files import PathDenied  # noqa: PLC0415
+    from bpm.core.files import PathDenied  # noqa: PLC0415
 
     workspace = Workspace(output_dir=tmp_path / "outputs")
     with pytest.raises(PathDenied):

@@ -1,5 +1,5 @@
 {
-  "$id": "urn:chaeksas:contracts:c15-extend-request",
+  "$id": "urn:bpm:contracts:c15-extend-request",
   "additionalProperties": true,
   "properties": {
     "lock_s": {

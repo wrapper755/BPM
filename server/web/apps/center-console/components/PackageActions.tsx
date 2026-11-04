@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ConfirmDialog, ErrorBanner } from "@chaeksas/ui";
+import { Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
 import { approvePackage, deprecatePackage, revokePackage, type ActionResult } from "@/app/actions";
 
 /**

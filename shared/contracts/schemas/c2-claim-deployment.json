@@ -21,7 +21,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:chaeksas:contracts:c2-claim-deployment",
+  "$id": "urn:bpm:contracts:c2-claim-deployment",
   "additionalProperties": true,
   "description": "`kind: \"deployment\"` — 배포.",
   "properties": {

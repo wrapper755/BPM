@@ -5,7 +5,7 @@
 | 상태 | **구현됨** (2026-10-12). 모델·BPMN 읽기·검사 B1~B16, DMN 읽기·판정이 `contracts.bpmn_ext`·`contracts.dmn`에 있고 **쓰는 쪽이 셋**이다 — 엔진이 `bpm:*`를 수행하고(`core.nodes`), Studio가 그 모델로 편집·검사하고(STU-04·실행 전 검사), 업무 예제 48개가 이 형식으로 쓰여 시험이 읽고 검사한다. schema 1에서 **쓰지 않기로 적은 것**(조건 시작 이벤트, 경계 타이머 반복)은 범위 결정이고 빠진 구현이 아니다 |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | Studio(쓰기) → 패키지(C1 `process/*.bpmn`) → 실행기·서버 실행기(읽기·실행), Center(검사) |
-| 코드 위치 | `chaeksas.contracts.bpmn_ext` — 모델·`read_process()`·`validate()`. DMN 읽기·판정은 `chaeksas.contracts.dmn`. 확장 태스크의 속 내용은 각 확장의 `contracts/` |
+| 코드 위치 | `bpm.contracts.bpmn_ext` — 모델·`read_process()`·`validate()`. DMN 읽기·판정은 `bpm.contracts.dmn`. 확장 태스크의 속 내용은 각 확장의 `contracts/` |
 | 관련 ADR | [0008](../decisions/0008-map-driver-hands-boundary.md), [0013](../decisions/0013-api-keys.md), [0015](../decisions/0015-run-location.md), [0016](../decisions/0016-server-first.md), [0018](../decisions/0018-extensions.md), [0026](../decisions/0026-file-paths-and-file-list-task.md), [0110](../decisions/0110-center-keeps-the-schedule.md), [0114](../decisions/0114-remove-ui-automation.md) |
 | 관련 화면 | STU-04 속성 패널(「JSON」 탭이 이 모델로 검증한다), STU-06, STU-07, STU-14 |
 
@@ -21,7 +21,7 @@ BPMN 2.0 파일 안에 우리 태스크의 속성을 적는 방법을 정한다.
 3. **표준 BPMN으로 표현되는 것은 표준으로 쓴다:** 흐름, 게이트웨이 조건, 타이머, 메시지, 신호, 오류, 다중 인스턴스 표시, 호출 대상(`calledElement`). 우리 속성은 표준에 없는 것만 더한다.
 4. **노드 id는 읽을 수 있게 짓는다.** 예: `Task_ReadLedger`, `Gw_HasHold`, `Approve_Hold`. 시험 케이스의 결재 자동 응답이 노드 id를 키로 쓰기 때문이다. 프로토타입에서는 `Activity_0ngrasb` 같은 생성 id 때문에 케이스를 읽을 수 없었다. Studio는 새 노드에 `<종류>_<이름 영문 요약>` 형식을 제안한다.
 5. **변수 이름:** 한글을 써도 된다. 공백·하이픈은 쓸 수 없고 숫자로 시작할 수 없다 (식에서 이름으로 쓰이므로). 정규식은 `^[A-Za-z가-힣_][A-Za-z0-9가-힣_]*$`.
-6. **식:** 게이트웨이 조건, 호출 입력, 스크립트는 **안전한 식 언어 `bpm-expr`**(Python 식 문법의 부분집합)로 쓴다. 문법·도우미 함수 목록은 [ADR-0025](../decisions/0025-expression-language.md)가 정하고, 구현은 `chaeksas.core.expr`다 (`eval`을 쓰지 않는다 — `ast`로 파싱해 허용한 노드만 걷는다). 문자열 상수는 따옴표로 감싼다 (프로토타입에서 따옴표를 빠뜨려 변수로 해석되는 실수가 많았다).
+6. **식:** 게이트웨이 조건, 호출 입력, 스크립트는 **안전한 식 언어 `bpm-expr`**(Python 식 문법의 부분집합)로 쓴다. 문법·도우미 함수 목록은 [ADR-0025](../decisions/0025-expression-language.md)가 정하고, 구현은 `bpm.core.expr`다 (`eval`을 쓰지 않는다 — `ast`로 파싱해 허용한 노드만 걷는다). 문자열 상수는 따옴표로 감싼다 (프로토타입에서 따옴표를 빠뜨려 변수로 해석되는 실수가 많았다).
    - **점은 사전의 키를 읽는다** — `결과.지급`은 `결과['지급']`이다. 파이썬 객체의 속성은 읽을 수 없고, 밑줄로 시작하는 이름은 점·첨자 모두 막힌다.
    - 선언한 입력(`bpm:process.inputs`)을 주지 않았고 기본값도 없으면 `None`이다. 그래서 `대상월 = 대상월 or 지난달()`처럼 쓸 수 있다. **선언하지 않은 변수나 아직 만들어지지 않은 변수를 읽으면 실행 오류**다 (검사 B11이 미리 잡는다).
    - **한 가지에서만 생기는 값을 뒤에서 읽으려면 공통 경로에서 초기값을 둔다** ([ADR-0039](../decisions/0039-optional-variables-and-b11.md)). BX-22가 분기 전 스크립트에서 `메일실패 = None` 셋을 두는 것이 본보기다. 작업 지시(C5)로 바꿔 줄 수 있는 값이면 `bpm:process.inputs`에 기본값으로 선언하는 쪽이 낫다. **엔진은 모르는 이름에 `None`을 주지 않는다** — 오타가 조용히 지나가면 안 된다 ([ADR-0025](../decisions/0025-expression-language.md) §5).
@@ -171,7 +171,7 @@ BPM 프로세스가 받는 정보는 **입력 한 목록**이다. 대부분은 �
 
 ### 규칙 태스크와 DMN
 
-DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decision`)는 **결정표**(`dmn:decisionTable`) 하나다. 읽기·판정은 `chaeksas.contracts.dmn`이 한다 (형식 해석이므로 계약 쪽이다).
+DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decision`)는 **결정표**(`dmn:decisionTable`) 하나다. 읽기·판정은 `bpm.contracts.dmn`이 한다 (형식 해석이므로 계약 쪽이다).
 
 - **입력 이름은 `dmn:inputExpression`의 본문**이다 (`dmn:input@label`이 아니다 — 라벨은 사람이 읽는 이름이라 「시각」과 「시」처럼 다를 수 있다). `bpm:rule.input`의 열쇠가 이 이름이고, 값은 `bpm-expr` 식이다.
 - **값은 `typeRef`로 맞춘다.** `number`면 숫자로, `boolean`이면 참거짓으로, `string`이면 문자열로 바꾼 뒤 견준다. 이것이 없으면 `"25" > 20`이 문자열 비교가 된다.
