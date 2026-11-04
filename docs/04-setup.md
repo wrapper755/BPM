@@ -36,7 +36,7 @@ winget install --id Git.Git -e
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
 # 2) 저장소 받기 (경로에 한글·공백이 없는 곳 권장)
-git clone https://github.com/wrapper755/Chaeksas.git C:\dev\BPM
+git clone https://github.com/wrapper755/BPM.git C:\dev\BPM
 cd C:\dev\BPM
 
 # 3) Python과 의존성 (uv가 3.12를 내려받는다)
@@ -101,7 +101,7 @@ pnpm --filter @bpm/center-console dev   # 하나만 — http://localhost:8501
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # 2) 저장소와 의존성 (uv가 3.12를 내려받는다)
-git clone https://github.com/wrapper755/Chaeksas.git ~/dev/Chaeksas && cd ~/dev/Chaeksas
+git clone https://github.com/wrapper755/BPM.git ~/dev/BPM && cd ~/dev/BPM
 uv sync --all-packages
 uv run pytest
 
