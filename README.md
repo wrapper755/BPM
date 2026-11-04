@@ -1,6 +1,6 @@
 # BPM
 
-[![CI](https://github.com/wrapper755/Chaeksas/actions/workflows/ci.yml/badge.svg)](https://github.com/wrapper755/Chaeksas/actions/workflows/ci.yml)
+[![CI](https://github.com/wrapper755/BPM/actions/workflows/ci.yml/badge.svg)](https://github.com/wrapper755/BPM/actions/workflows/ci.yml)
 
 BPMN으로 업무 프로세스를 그리고, 각 단계의 실제 일(문서 처리, 판단, 서버 API 호출)은 AI 에이전트·서비스 앱이 수행하는 업무 자동화 플랫폼. 화면 조작(UI 자동화 확장)은 걷었고 다시 들인다 ([ADR-0114](docs/decisions/0114-remove-ui-automation.md)).
 
