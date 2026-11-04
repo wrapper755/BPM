@@ -72,7 +72,7 @@ uv run bpm-mock-apps definition ext-credit --base-url http://127.0.0.1:8150 -o e
 모의 앱은 127.0.0.1에 뜨므로 정의가 `allow_private_network: true`를 켠다. 주소를 진짜 외부 호스트로
 주면 그 칸은 저절로 꺼진다.
 
-외부 앱을 부르는 것은 **어댑터 일꾼**이다 — 주소·키는 그 일꾼의 설정에만 있다 (`docs/04-setup.md` §5):
+외부 앱을 부르는 것은 **어댑터 일꾼**이다 — 주소·키는 그 일꾼의 설정에만 있다 (`server/docs/setup.md`):
 
 ```bash
 uv run bpm-center consumer-file adapter --topics ext-credit,ext-helpdesk   # 찍힌 토큰을 아래에

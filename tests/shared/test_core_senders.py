@@ -1,4 +1,4 @@
-"""제품용 보내기 어댑터 — SMTP와 웹훅 ([ADR-0059](../docs/decisions/0059-sending-mail-and-webhooks.md)).
+"""제품용 보내기 어댑터 — SMTP와 웹훅 ([ADR-0059](../../docs/decisions/0059-sending-mail-and-webhooks.md)).
 
 **진짜 소켓으로 본다.** 메일은 이 파일이 띄우는 **작은 SMTP 서버**가 받고(`smtplib`가 정말
 말을 주고받는다), 웹훅은 127.0.0.1의 진짜 HTTP 서버로 간다 — 어댑터 시험(`test_core_http_adapter`)과

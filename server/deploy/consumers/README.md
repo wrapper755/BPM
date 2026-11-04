@@ -1,7 +1,7 @@
 # 일꾼 폴더
 
 `server/deploy/compose.yaml`의 Center가 이 폴더를 `/consumers`(읽기 전용)로 붙여, **뜰 때** 여기의 `<이름>.consumer.json`으로
-일꾼을 들인다 ([ADR-0122](../../docs/decisions/0122-consumer-folder.md), C15 §일꾼 들이기). **일꾼이 들어오는 길은
+일꾼을 들인다 ([ADR-0122](../../../docs/decisions/0122-consumer-folder.md), C15 §일꾼 들이기). **일꾼이 들어오는 길은
 이것 하나다** — 요청 코드·승인이 없다.
 
 ```bash
@@ -12,7 +12,7 @@ uv run bpm-center consumer-file worker --topics external --dir server/deploy/con
 `…CENTER__TOKEN`에 넣는다. 원문은 이 폴더에 두지 않는다. 외부 확장 정의는 일꾼이 뜰 때 Center에 올린다.
 
 **폴더가 원본이다** — 파일을 빼고 Center를 다시 띄우면 일꾼 키가 폐기되고, 그 일꾼만 맡던 외부 확장은 철회된다.
-**연동용·대리 답용 키도 여기서 들인다** ([ADR-0123](../../docs/decisions/0123-folder-keys.md)) — `<이름>.key.json`:
+**연동용·대리 답용 키도 여기서 들인다** ([ADR-0123](../../../docs/decisions/0123-folder-keys.md)) — `<이름>.key.json`:
 
 ```bash
 uv run bpm-center key-file nowview --type integration --dir server/deploy/consumers

@@ -1,6 +1,6 @@
 """AI 태스크가 빌려 쓰는 **내장 도구 넷** — PDF·엑셀·CSV·HTTP 읽기.
 
-결정은 [ADR-0030](../../../../docs/decisions/0030-ai-task-tools.md)이다.
+결정은 [ADR-0030](../../../../../docs/decisions/0030-ai-task-tools.md)이다.
 
 - **도구는 자기 설명과 인자 모양을 들고 다닌다** (`ToolDef.spec`). 이름만 알려 주면 모델이
   인자를 지어낸다.

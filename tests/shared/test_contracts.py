@@ -353,7 +353,7 @@ def test_built_by_stays_an_open_string() -> None:
 
 
 def test_r10_only_a_server_bot_can_delegate_to_a_pc() -> None:
-    """**PC 위임은 서버 BPM 프로세스만** 한다 (R10, [ADR-0062](../docs/decisions/0062-pc-delegation.md)).
+    """**PC 위임은 서버 BPM 프로세스만** 한다 (R10, [ADR-0062](../../docs/decisions/0062-pc-delegation.md)).
 
     PC 실행은 그 PC의 자리를 끝까지 쥐므로(ADR-0014) PC가 다른 PC를 기다리면 서로를 기다린다.
     C14 B14가 그림에서 같은 것을 보지만 **매니페스트를 보는 쪽은 그림을 읽지 않는다**.

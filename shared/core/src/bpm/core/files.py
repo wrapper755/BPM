@@ -1,6 +1,6 @@
 """파일을 읽고 쓰는 자리 — C14 §파일 경로·파일 목록·파일 출력.
 
-결정은 [ADR-0026](../../../../docs/decisions/0026-file-paths-and-file-list-task.md)이다.
+결정은 [ADR-0026](../../../../../docs/decisions/0026-file-paths-and-file-list-task.md)이다.
 
 실행 하나가 닿을 수 있는 곳은 **출력 폴더**(쓰기·상대 경로의 기준)와 **읽기 허용 폴더**(읽기)
 뿐이다. 그 밖을 가리키면 `PathDenied`이고, 엔진은 그것을 오류 경계로 **받지 않는다** — 그림이나

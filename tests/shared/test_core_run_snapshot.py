@@ -118,7 +118,7 @@ def test_a_waiting_run_survives_a_roundtrip(tmp_path: Path) -> None:
 
 
 def test_a_delegation_wait_carries_its_job_id(tmp_path: Path) -> None:
-    """**위임 작업 id는 스냅샷과 함께 간다** ([ADR-0062](../docs/decisions/0062-pc-delegation.md)).
+    """**위임 작업 id는 스냅샷과 함께 간다** ([ADR-0062](../../docs/decisions/0062-pc-delegation.md)).
 
     없으면 되살린 실행이 **어느 작업을 기다리는지 모른다** — 결과가 내려와도 받을 자리가 없다.
     """

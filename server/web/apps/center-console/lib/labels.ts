@@ -1,6 +1,6 @@
 /**
  * 여러 화면이 같이 쓰는 표기 — **한 자리에 둔다** (CON-01 목록과 CON-03 상세가 따로 들고 있다가
- * 목록만 `schedule`을 그대로 보였다, 09-gaps §8-3).
+ * 목록만 `schedule`을 그대로 보였다, server/docs/gaps.md §8-3).
  *
  * 화면을 모르는 순수 함수라 vitest가 잰다 (`labels.test.ts`).
  */

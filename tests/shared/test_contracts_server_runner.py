@@ -1,7 +1,7 @@
 """C12 (서버 실행기 ↔ Center) 모델과 검사.
 
 규칙이 **보내는 쪽과 받는 쪽에서 같아야** 하므로 함수를 계약에 두었다 — 여기가 그 함수를
-지킨다. 결정의 까닭은 [ADR-0054](../docs/decisions/0054-server-run-state-and-concurrency.md)와
+지킨다. 결정의 까닭은 [ADR-0054](../../docs/decisions/0054-server-run-state-and-concurrency.md)와
 스파이크 `spikes/s10-server-runner-state/`에 있다.
 """
 

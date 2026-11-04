@@ -6,7 +6,7 @@
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | PC 실행기(실행 중 BPM 프로세스)·서버 실행기 → Center ↔ Center 콘솔(결재함) |
 | 코드 위치 | `shared/contracts/src/bpm/contracts/approvals.py` (import `bpm.contracts.approvals`, [ADR-0019](../decisions/0019-package-names.md)) |
-| JSON Schema | [`c6-approval-create-request.json`](../../packages/contracts/schemas/c6-approval-create-request.json) · [`c6-approval-info.json`](../../packages/contracts/schemas/c6-approval-info.json) · [`c6-answer-request.json`](../../packages/contracts/schemas/c6-answer-request.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
+| JSON Schema | [`c6-approval-create-request.json`](../../shared/contracts/schemas/c6-approval-create-request.json) · [`c6-approval-info.json`](../../shared/contracts/schemas/c6-approval-info.json) · [`c6-answer-request.json`](../../shared/contracts/schemas/c6-answer-request.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
 | 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0014](../decisions/0014-one-bot-per-pc.md), [0015](../decisions/0015-run-location.md), [0017](../decisions/0017-web-nextjs-design-system.md), [0080](../decisions/0080-approval-assignees.md)·[0081](../decisions/0081-answering-on-behalf.md), [0112](../decisions/0112-escalation-review-from-extensions.md) |
 | 관련 화면 | CON-04 결재함, CMN-01, BUI-05, STU-04(결재 위치) |
 

@@ -371,7 +371,7 @@ class NewProcessDialog(QDialog):
 class ShareDefinitionsDialog(QDialog):
     """STU-12 「공유 BPM 프로세스로 내보내기...」 — 담을 정의를 고른다.
 
-    **「올리기」는 아직 없다** (Center 올리기 자체가 없다, `docs/09-gaps.md` §4-5) — 창은 파일로
+    **「올리기」는 아직 없다** (Center 올리기 자체가 없다, `studio/docs/gaps.md` §4-5) — 창은 파일로
     내보내는 쪽만 가진다. 읽지 못한 정의는 **고를 수 없게** 두고 사유를 옆에 적는다 (U3).
     """
 

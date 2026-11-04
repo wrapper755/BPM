@@ -116,21 +116,7 @@ sudo apt-get install -y --no-install-recommends \
 - **Qt 테스트는 화면이 없어도 돈다** — `QT_QPA_PLATFORM=offscreen`을 테스트가 스스로 켠다. 위 라이브러리가 없으면 그 테스트만 건너뛴다 (CI는 깔고 돌린다).
 - PySide6는 `uv sync`가 받는다. `shared/qt`는 **Essentials만** 쓰고, QtWebEngine이 든 Addons는 Studio가 따로 받는다 ([ADR-0022](decisions/0022-studio-canvas.md)·[ADR-0024](decisions/0024-desktop-packaging-extensions.md) — PC 실행기 설치 파일을 작게 두려는 것이다).
 
-서버 쪽 구성(Center·Center 콘솔·**서버 실행기**)은 `server/deploy/compose.yaml` **한 번으로** 뜬다 — Windows에서도 Docker Desktop으로 같은 서버를 띄운다. 서비스 앱은 compose에 없다 — 따로 띄워 일꾼으로 Center에 붙인다(아래 §5).
-
-**Center를 새 판으로 올리면 저장소가 뜰 때 저절로 옮겨진다** ([ADR-0065](decisions/0065-center-schema-migrations.md)) — 모자란 단계만 차례로 돌고, 단계 하나가 실패하면 그 단계는 없던 일이 되고 **Center가 뜨지 않는다**(사유가 로그에 남는다). **되돌리는 단계는 없다** — 옮겨진 DB를 옛 판 Center가 열면 「새 판의 Center로 띄우세요」라며 **뜨지 않는다**. 그래서 **올리기 전에 DB 파일을 떠 둔다**(WAL이라 `center.sqlite3`·`-wal`·`-shm` 셋을 함께, Center를 멈춘 뒤). 지금 판은 `SELECT * FROM schema_migrations`가 말해 준다.
-
-**3판에서 멈췄다면** — 같은 키·같은 기계가 여러 행에 있다는 뜻이다(2026-10-08 전에 만든 DB에서 같은 PC를 두 키로 등록하면 생긴다). Center는 **어느 행을 남길지 짐작하지 않는다**([ADR-0066](decisions/0066-migration-guards.md)) — Center를 멈춘 채로 사람이 고른다:
-
-```bash
-uv run bpm-center hosts duplicates
-```
-
-```bash
-uv run bpm-center hosts retire bui_xxxxxxxx
-```
-
-목록은 무리마다 이름·마지막으로 본 때를 보인다. 은퇴는 **지우지 않고**(배포·실행 기록이 그 id를 가리킨다) 그 행의 키·기계 자리를 놓게 하고 다시 쓰이지 않게 한다(PC는 비활성, 서버 실행기는 일시 중지). **겹친 무리에 든 행만** 은퇴시킬 수 있다. 다 고른 뒤 Center를 다시 띄우면 3판으로 간다.
+서버 쪽 구성(Center·Center 콘솔·서버 실행기) 띄우기, Center 판 올리기·저장소 옮기기는 [server/docs/setup.md](../server/docs/setup.md)에 있다 ([ADR-0129](decisions/0129-product-folders.md)).
 
 ## 5. 설정과 비밀
 
@@ -139,23 +125,8 @@ uv run bpm-center hosts retire bui_xxxxxxxx
 - 환경변수 접두사: **`BPM_`** 하나. 중첩은 `__` (예: `BPM_CENTER__PORT`, `BPM_CENTER__API_KEY`). [ADR-0011](decisions/0011-config-ports-env.md)
 - 우선순위: 환경변수 > `.env` > 설정 파일 > 기본값.
 - 서비스 앱 API 키: **없다** ([ADR-0102](decisions/0102-calling-outside-is-pull.md)) — BPM 프로세스는 바깥 기능을 Center의 외부 작업으로 부른다(C15). 서버 실행기·Studio는 제 Center API 키로, 실행 프로세스는 PC 실행기가 청한 **호출 토큰**으로 올린다. 외부 앱의 주소·키는 **어댑터 일꾼**의 설정에만 있다(아래).
-- 서버 실행기: 들어오는 포트가 없다 (Center로 접속만). **화면이 없으니 설정 파일도 없다** — 환경변수로만 설정한다: `BPM_SERVER_RUNNER__CENTER_URL`(기본 `http://localhost:8800`), `BPM_SERVER_RUNNER__MAX_CONCURRENCY`(동시 실행 상한, 기본 10), `BPM_SERVER_RUNNER__NAME`(비우면 호스트 이름), `BPM_SERVER_RUNNER__HEARTBEAT_S`(첫 주기, 기본 10 — 그다음은 Center가 주는 `next_heartbeat_s`를 따른다), `BPM_SERVER_RUNNER__RETRY_S`(닿지 못했을 때, 기본 30), **`BPM_SERVER_RUNNER__PARK_AFTER_S`**(외부 작업을 이만큼 기다려 끝나지 않으면 기다림으로 넘기고 자리를 놓는다, 기본 20초 — 결과는 하트비트 주기마다 묻는다, [ADR-0103](decisions/0103-long-external-tasks.md)), `BPM_SERVER_RUNNER__DATA_DIR`, **`BPM_SERVER_RUNNER__LLM__BASE_URL`·`BPM_SERVER_RUNNER__LLM__MODEL`**(AI 태스크가 쓰는 모델, 기본 모델 이름은 `qwen2.5:7b`. **주소를 비우면 AI 태스크가 실패한다** — 조용히 넘어가지 않는다, [ADR-0027](decisions/0027-llm-connection.md)), **`BPM_SERVER_RUNNER__READABLE_DIRS`·`BPM_SERVER_RUNNER__WRITABLE_DIRS`**(읽기·쓰기 허용 폴더, `os.pathsep`으로 여럿 — Linux `:`, Windows `;`. **기본은 비어 있다**: 출력 폴더 밖은 적어 주지 않으면 `PathDenied`다, [ADR-0032](decisions/0032-writable-dirs.md)), **`BPM_SERVER_RUNNER__SMTP__HOST`·`__PORT`·`__SECURITY`·`__USERNAME`·`__FROM`·`__ATTACHMENT_MB`**(메일 보내기 — 보안은 `starttls`(기본)·`ssl`·`none`, 포트를 비우면 보안에 맞는 기본(587·465·25), 첨부 합계 상한 기본 10 MB. **주소·보내는 주소를 비우면 `bpm:email`이 실패한다** — 조용히 넘어가지 않는다, [ADR-0059](decisions/0059-sending-mail-and-webhooks.md)), **`BPM_SERVER_RUNNER__WEBHOOK__ALLOWED_HOSTS`**(웹훅을 보낼 수 있는 호스트, **쉼표로 여럿**. **기본은 비어 있고 비면 아무 데도 보내지 않는다** — 사설·루프백은 적어도 열리지 않는다). **Center API 키(서버 실행기용)는 둘 중 하나로 온다** — 환경변수 `BPM_SERVER_RUNNER__CENTER_API_KEY`(systemd·CI, 이것이 이긴다) 또는 **등록 승인**(**`BPM_SERVER_RUNNER__JOIN_TOKEN`이 Center의 들이기 비밀과 맞으면 그 자리에서 승인된다** — ADR-0117. OS 비밀 저장소 `bpm-server-runner`나 **비밀 폴더 `BPM_SERVER_RUNNER__SECRETS_DIR`**가 있을 때만 — 키가 없으면 등록 요청을 보내고 요청 코드를 로그에 찍는다, C12 §등록 요청과 승인. 둘 다 없으면 요청하지 않고 끝 코드 2로 끝난다). **컨테이너는 비밀 폴더가 그 자리다** ([ADR-0100](decisions/0100-server-runner-secrets-dir.md) — `server/deploy/compose.yaml`의 실행기는 볼륨 `server-runner-secrets`를 쓰고 키 회전도 그대로 돈다). **모델 키는 `BPM_SERVER_RUNNER__LLM__API_KEY`**, **메일 비밀번호는 `BPM_SERVER_RUNNER__SMTP__PASSWORD`**(PC 실행기·Studio와 같은 규칙, [ADR-0013](decisions/0013-api-keys.md) — 값은 설정·실행 기록에 넣지 않는다). **확장 설정 칸은 `BPM_SERVER_RUNNER__EXT__<확장 id>__<칸 이름>`이다** (C13 `configuration`의 `scope: server_runner`인 것만. 이름은 영대문자·숫자·`_`로 바꿔 쓴다 — `doc-ocr`·`ocr_key` → `..._EXT__DOC_OCR__OCR_KEY`. **PC 실행기의 `BPM_BOT_UI__EXT__…`와 같은 규칙**이고 비밀 칸도 같은 이름으로 온다, [ADR-0064](decisions/0064-extension-tasks-on-the-server.md) §2). 띄우는 것은 `uv run bpm-server-runner`이고 `--once`는 **등록하고 하트비트까지 한 번** 해 보고 상태 한 줄을 찍는다(설치 확인용 — 끝 코드 0/1/3이 「됐다」·「사람이 고쳐야 한다」·「닿지 못했다」를 가른다). 배포는 하트비트로 받아 `<데이터>/bots/<id>/<버전>/`에 푼다 (PC 실행기와 같은 자리 규칙). 실행 기록은 `<데이터>/runs/<run_id>.jsonl`이고(파일이 원본이다 — C3) 하트비트 뒤에 Center로 보낸다. **기다리는 실행은 `<데이터>/state.sqlite3`에 담긴다** — 실행기를 다시 띄우면 그것을 훑어 되살린다 (ADR-0054). 그 파일을 지우면 기다리던 실행은 `runner_restarted`로 닫힌다. **메시지를 받는 포트는 없다** — 서버 실행기는 들어오는 포트가 없고, 외부 시스템은 Center의 `POST /api/v1/messages`에 넣는다 (C12 §메시지. PC는 PC 실행기의 8790이다). **`--once`는 작업을 받지 않는다** — 곧 끝나는 프로세스가 실행 스레드를 버리면 안 된다 (받지 않은 작업은 다음 하트비트에 다시 실린다, C4). **SIGTERM에 곱게 끝낸다** ([ADR-0015](decisions/0015-run-location.md), C12).
-- PC 실행기 대기열 크기: 기본 20, `BPM_BOT_UI__QUEUE__MAX`. 실행 자리(동시 실행 BPM 프로세스 수)는 1로 고정이라 설정이 없다 ([ADR-0014](decisions/0014-one-bot-per-pc.md)).
-- Studio 시험 실행의 서비스 앱 태스크: **키가 없다** — Studio가 제 Center API 키로 C15 외부 작업을 올린다(`origin: test` — 시험 쪽으로 보낼지는 일꾼이 정한다, ADR-0102 §6). 모델 키는 「LLM」에서 넣거나 `BPM_STUDIO__LLM__API_KEY`(이것이 이긴다). 확장의 **비밀 설정 칸**(C13 `configuration[].secret`, scope `studio`)은 STU-10 「확장별 설정」에서 넣으면 `ext:<확장>:<칸>`으로 가고 `BPM_STUDIO__EXT__<확장>__<칸>`이 이긴다 ([ADR-0073](decisions/0073-studio-settings-only-what-is-used.md)).
-- PC 실행기(실행기)의 호출 토큰 (C15): PC 실행기가 제 Center API 키로 `POST /api/v1/call-tokens`에 청해(24시간) 실행 프로세스에게 넘긴다(환경변수 `BPM_BOT_UI__CALL_TOKEN`·제어 파일, 만료 2시간 전부터 새것). **메모리에만 들고** 비밀 저장소에 두지 않는다. 사람이 넣는 것은 없다.
-- PC 실행기의 메일 보내기(BUI-03 「보내기」): 설정 파일에 **주소·보안·사용자·보내는 주소·첨부 상한·웹훅 허용 호스트**가 가고, **비밀번호는 OS 비밀 저장소**(`bpm-bot-ui`, 이름 `smtp-password`)다. 개발·CI에서는 `BPM_BOT_UI__SMTP__PASSWORD`로 주고, 나머지도 `BPM_BOT_UI__SMTP__HOST`·`__PORT`·`__SECURITY`·`__USERNAME`·`__FROM`·`BPM_BOT_UI__WEBHOOK__ALLOWED_HOSTS`(쉼표)로 덮어쓸 수 있다 ([ADR-0059](decisions/0059-sending-mail-and-webhooks.md) — **비우면 보내지 않고 실패한다**). 실행 프로세스에는 **비밀번호를 명령줄로 넘기지 않는다** — 자식이 같은 저장소에서 제 손으로 읽는다.
 - Center API 키: **PC 실행기·서버 실행기는 사람이 넣지 않는다** ([ADR-0092](decisions/0092-keys-are-issued-and-delivered-by-center.md)) — Center 주소만 주고 띄우면 등록 요청을 보내고, 관리자가 콘솔 CON-03(서버는 CON-12) 「승인 대기」에서 요청 코드(현장 화면·서버 로그)와 같은 줄을 승인하면 키를 받아 OS 비밀 저장소에 둔다. 만료 14일 전부터 Center가 갈아 준다. **Studio도 같다** — STU-10 「Center」에 주소를 넣고 「연결 테스트」를 누르면 요청 코드가 뜨고, 관리자가 CON-03 「Studio」 탭 「승인 대기」에서 승인하면 Studio 키(1년, 회전하지 않는다 — 만료되면 「다시 요청」)를 받는다. 개발·CI에서만 `BPM_CENTER__API_KEY`. Studio가 승인으로 받은 키는 OS 비밀 저장소(`bpm-studio`, 이름 `center`)로 가고, 비밀 저장소가 없는 환경(헤드리스 CI)에서는 관리자 토큰으로 발급한 Studio용 키를 `BPM_STUDIO__CENTER_API_KEY`로 준다(이것이 이기고, 그때 STU-10은 요청을 보내지 않는다).
-- Studio: `uv run bpm-studio` (캔버스는 QtWebEngine이라 `pyside6-addons`가 함께 깔린다). 작업 폴더·설정은 사용자 데이터 폴더의 `studio/`이고 환경변수로 덮어쓴다 — `BPM_STUDIO__DATA_DIR`, `BPM_STUDIO__CENTER__URL`, `BPM_STUDIO__LLM__BASE_URL`, `BPM_STUDIO__LLM__MODEL`, `BPM_STUDIO__READABLE_DIRS`.
-- PC 실행기: `uv run bpm-bot-ui` (트레이에 뜬다. 트레이가 없는 환경이면 메인 창으로 뜬다). 설정은 BUI-03 창에서 하고 파일은 사용자 데이터 폴더의 `settings.json`이다. 환경변수로 덮어쓸 수 있다 — `BPM_BOT_UI__CENTER__URL`, `BPM_BOT_UI__QUEUE__MAX`, `BPM_BOT_UI__AUTOSTART`, `BPM_BOT_UI__DATA_DIR`. **Center API 키는 등록 승인으로 받아 OS 비밀 저장소**에 둔다(사람이 넣는 칸은 없다 — BUI-03). 비밀 저장소가 없는 환경(헤드리스 CI)에서는 `BPM_BOT_UI__CENTER_API_KEY`로 주고, 그러면 등록 요청을 보내지 않는다.
-- Center 관리자 계정 ([ADR-0090](decisions/0090-center-admin-accounts.md)): 콘솔은 **아이디·비밀번호**로 들어온다. 첫 관리자는 `BPM_CENTER__FIRST_ADMIN__USERNAME`(비우면 `admin`)·`BPM_CENTER__FIRST_ADMIN__PASSWORD`로 정하고 **계정이 하나도 없을 때만** 쓰인다(그다음에는 콘솔 CON-14에서 바꾼다). 비밀번호는 12자 이상·영문과 숫자를 모두 넣는다 — 맞지 않으면 Center가 **뜨지 않는다**. 비우면 Center가 만들어 로그에 한 번 찍고 데이터 폴더의 `first-admin-password.txt`에 둔다(그 계정이 비밀번호를 바꾸면 지운다). `BPM_CENTER__ADMIN_TOKEN`·`BPM_CENTER__READ_TOKEN`은 **자동화용**이고 선택이다 — 비우면 그 길이 닫힌다. **`BPM_CENTER__SERVER_RUNNER_JOIN_TOKEN`**은 같이 배포된 서버 실행기를 승인 없이 들이는 비밀이다 — 실행기의 `BPM_SERVER_RUNNER__JOIN_TOKEN`과 같은 값이고, 비우면 그 길이 닫혀 실행기는 콘솔 「승인 대기」를 거친다 ([ADR-0117](decisions/0117-bundled-server-runner-joins-by-shared-secret.md), compose는 둘을 `.env`의 한 값에서 준다).
-- Center 서명 키: Center가 **처음 뜰 때 만들어 DB에 둔다**(승인·배포·외부 확장 봉투에 Center가 서명한다, ADR-0090). 서버 셸에서 `bpm-center signing-key list`(믿는 키) · `rotate`(새 키로 바꾼다 — 옛 키는 믿는 목록에 남는다) · `retire <key_id>`(그 키가 서명한 승인·배포가 **모두 무효**가 된다, 묻는다)다. compose면 `docker compose exec center uv run --frozen --package bpm-center bpm-center signing-key …`.
-- 서비스 앱 관리자 토큰: `BPM_SVC_<앱 id>__ADMIN_TOKEN`. **이 토큰이 없으면 그 앱의 관리 API(`/admin/v1/*`)가 503으로 닫혀 있다** — 빈 토큰으로 열리지 않는다 ([C11](03-contracts/C11-service-app-common.md) §관리 API). **서비스 앱은 일꾼으로 Center에 붙는다** ([C15](03-contracts/C15-external-tasks.md), `service_kit.consumer`) — 업무 호출을 받는 포트는 없다. 서비스 앱은 `BPM_SVC_<앱 id>__CENTER__URL`(Center 주소 — 비우면 일감을 가져가지 않고 관리 API만 돈다)과 **일꾼 토큰** `BPM_SVC_<앱 id>__CENTER__TOKEN`(또는 데이터 폴더 `BPM_SVC_<앱 id>__DATA_DIR`의 `consumer-token.json`의 `token`)을 받는다. **들이기 요청·승인은 없다** — Center 일꾼 폴더에 `bpm-center consumer-file <이름> --topics <앱 id>`로 파일을 짓고 찍힌 토큰을 넣는다(아래 「일꾼 폴더」).
-- 모의 앱 (`bpm-mock-apps serve`, [samples/README](../samples/README.md)): `BPM_MOCK_APPS__CENTER__URL`과 일꾼 토큰 `BPM_MOCK_APPS__CENTER__TOKEN`(또는 `BPM_MOCK_APPS__DATA_DIR`(기본 `.mock-apps`)의 `consumer-token.json`)을 주면 C11 모의 앱 열셋이 **일꾼 하나**로 붙는다. 토큰이 없으면 붙지 않고 짓는 명령을 찍는다.
-- 어댑터 일꾼 (`uv run bpm-adapter-consumer`, `server/adapter_consumer` — 외부 앱을 부른다, C13 §4): `BPM_ADAPTER__CENTER__URL`(Center 주소)·`BPM_ADAPTER__CENTER__TOKEN`(일꾼 토큰 — 또는 `BPM_ADAPTER__DATA_DIR`(기본 `.adapter-consumer`)의 `consumer-token.json`)·`BPM_ADAPTER__DEFINITIONS`(맡을 외부 확장 **정의 파일**, `os.pathsep`으로 여럿)가 있어야 뜬다. 정의는 이 일꾼이 들고 있다가 뜰 때 Center에 올린다(Center가 검사·서명한다, ADR-0122). **외부 앱의 주소·키는 여기에만 있다** — 확장마다 `BPM_ADAPTER__EXT__<확장>__BASE_URL`(없으면 정의의 `base_url`)·`__KEY`(키를 받는 앱만), 시험 일감(`origin: test`)용 `__TEST_BASE_URL`·`__TEST_KEY`(없으면 운영 쪽). 이름은 영대문자·숫자·`_`로 바꿔 쓴다(`ext-credit` → `EXT_CREDIT`). 정의가 허용한 사설망으로 나가려면 `BPM_ADAPTER__ALLOW_PRIVATE_NETWORK=1`(기본 닫힘).
-- 타이머 시작의 시간대 ([ADR-0110](decisions/0110-center-keeps-the-schedule.md), C5 §일정): `BPM_CENTER__TIMEZONE`(IANA 이름, 기본 `Asia/Seoul`). cron이 이 벽시계로 읽힌다. 풀 수 없는 이름이면 Center가 **뜨지 않는다** (이미지에 시간대 자료가 있어야 한다 — `python:*-slim`에는 있다). **Center 콘솔도 이 시간대로 시각을 보인다** — 콘솔은 시각을 서버에서 글로 만들므로 `server/deploy/compose.yaml`이 같은 값을 콘솔 컨테이너의 `TZ`로 넘긴다(없으면 UTC라 한국에서 9시간 이르게 보인다). 콘솔을 따로 띄우면 그 프로세스의 `TZ`를 같은 값으로 둔다.
-- 일꾼 폴더 ([ADR-0122](decisions/0122-consumer-folder.md), [C15](03-contracts/C15-external-tasks.md) §일꾼 들이기): `BPM_CENTER__CONSUMERS_DIR`(적지 않으면 `<데이터>/consumers` — 없으면 조용히 지나간다). **일꾼이 들어오는 길은 이것 하나다** — 요청 코드·승인이 없다. `bpm-center consumer-file <이름> --topics a,b [--dir 폴더]`가 `<이름>.consumer.json`(이름·토픽·**토큰 해시**)을 짓고 토큰 원문을 **한 번만** 찍는다 — 그 값을 일꾼의 `…CENTER__TOKEN`에 넣고 Center를 다시 띄운다. 토픽은 파일에 적은 것으로 고정이고 만료·회전이 없다. **폴더가 원본이다** — 파일을 빼고 다시 띄우면 일꾼 키가 폐기되고, 그 일꾼만 맡던 외부 확장은 철회된다(폴더가 붙지 않았거나 읽지 못한 파일이 있으면 거두지 않는다). 외부 확장 정의는 일꾼이 올린다(C15 `PUT …/self/extension`) — 콘솔에서 등록·해제하는 칸은 없다. **잘못된 파일은 Center를 막지 않는다** — 로그와 CON-07 「일꾼 폴더」에 사유가 보인다. 일감 흐름(가져감·끝냄·실패)도 Center 로그에 남는다. **같은 폴더의 `<이름>.key.json`은 연동용·대리 답용 키다** ([ADR-0123](decisions/0123-folder-keys.md), C7 §폴더 키) — `bpm-center key-file <이름> --type integration|relay`가 짓고 원문을 한 번 찍는다. 함께 설치되는 연동 시스템이 콘솔에서 발급받아 붙여 넣지 않는다(콘솔은 키를 발급하지 않는다 — ADR-0124). 뜻(뜰 때 한 번·바꾸면 옛 키 폐기·빼면 폐기)은 일꾼 파일과 같다. compose에서는 `server/deploy/consumers/`(`BPM_CENTER__CONSUMERS_HOST_DIR`로 바꾼다)가 컨테이너의 `/consumers`에 읽기 전용으로 붙는다.
-- 외부 작업 롱폴링 상한 ([C15](03-contracts/C15-external-tasks.md)): `BPM_CENTER__EXTERNAL_TASKS__MAX_WAITERS`(기본 200 — 올리는 쪽·일꾼의 기다림을 함께 센다). 넘으면 503 `too_many_waiters`.
-- 서비스 앱의 모델: `BPM_SVC_<앱 id>__LLM__BASE_URL`·`__LLM__MODEL`·`__LLM__API_KEY`(선택, 비밀). 없으면 모델이 필요한 작업만 503 `llm_unavailable`이고 나머지는 돈다 ([C11](03-contracts/C11-service-app-common.md) §모델 연결).
+- **앱마다의 설정·비밀**은 그 제품 문서에 있다 — 서버(Center·서버 실행기·일꾼·서비스 앱·모의 앱)는 [server/docs/setup.md](../server/docs/setup.md), [Studio](../studio/docs/setup.md), [PC 실행기](../bot/docs/setup.md) ([ADR-0129](decisions/0129-product-folders.md)).
 
 ## 6. 포트
 
@@ -229,34 +200,11 @@ PyInstaller는 `--group build`에만 있어 평소 `uv sync`로는 들어오지 
 
 ## 6-3. 판 올리기 (Studio·PC 실행기)
 
-**사람이 설치 파일을 다시 돌린다** ([ADR-0069](decisions/0069-upgrading-by-reinstall.md)) — Center는 프로그램을
-내려 주지 않는다. BPM 프로세스의 판은 이것이 아니라 배포로 오간다(C2·C5).
-
-1. 설치 파일은 **산출물 워크플로가 올린 것**(`installers-windows`)에서 받는다. 처음 설치와 같은 파일이다.
-2. **PC 실행기는 빈 때 깐다** — 설치 파일이 PC 실행기를 닫으면 도는 BPM 프로세스와 대기열을 잃는다. CON-03에서 그 PC를
-   「비활성화...」하면 새 작업이 그 PC로 가지 않고(Center에서 기다린다) 도는 BPM 프로세스는 끝까지 돈다. 「실행 중」·
-   「대기열」이 비면 깐다. 결재를 기다리는 BPM 프로세스를 기다릴지 멈출지는 사람이 정한다.
-3. 설치 파일을 돌린다 — 덮어쓰기이고 설정·설치한 BPM 프로세스·실행 기록은 남는다. 끝 화면의 「실행」으로 다시 띄운다.
-4. CON-03에서 그 PC의 「버전」이 새 판으로 바뀌었는지 보고 「다시 활성화」한다.
-5. 문제가 있으면 **옛 판의 설치 파일로 다시 깐다**(낮은 판으로 덮어써도 된다). **옛 설치 파일은 받은 사람이
-   보관한다** — 산출물 워크플로는 30일만 남긴다(`desktop.yml` `retention-days`).
+옮겼다 — [bot/docs/setup.md](../bot/docs/setup.md) 「판 올리기」 ([ADR-0129](decisions/0129-product-folders.md)). Studio도 같은 순서다(대기열을 비우는 걸음만 없다).
 
 ## 6-4. Center 백업
 
-Center의 저장소는 **SQLite 파일 하나와 패키지 폴더**다([ADR-0070](decisions/0070-center-stays-on-sqlite.md) —
-PostgreSQL은 쓰지 않는다). 컨테이너에서는 `/data/center.sqlite3`·`/data/packages`이고 자리는
-`BPM_CENTER__DATA_DIR`(또는 `DB_PATH`·`PACKAGE_DIR`)가 정한다.
-
-- **DB 파일을 그냥 복사하지 않는다** — WAL이라 커밋 일부가 `-wal` 파일에 있다. SQLite의 백업 API로 뜬다
-  (Center가 도는 중에도 된다):
-
-  ```bash
-  docker compose exec center python -c "import sqlite3; sqlite3.connect('/data/center.sqlite3').backup(sqlite3.connect('/data/center-backup.sqlite3'))"
-  ```
-
-- **패키지 폴더도 함께** 남긴다 — DB에는 메타데이터만 있고 zip은 폴더에 있다.
-- 되살릴 때는 **판 번호가 같거나 높은 Center**로 연다 — DB 판이 코드보다 높으면 Center가 뜨지 않는다
-  ([ADR-0065](decisions/0065-center-schema-migrations.md) §2).
+옮겼다 — [server/docs/setup.md](../server/docs/setup.md) 「Center 백업」 ([ADR-0129](decisions/0129-product-folders.md)).
 
 ## 7. 시험 돌리기와 **건너뛰는 것**
 

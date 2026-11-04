@@ -1,6 +1,6 @@
 /** CON-02가 세는 일 (`lib/summary.ts`) — **셈을 글이 아니라 숫자로** 본다.
  *
- * 09-gaps §4-9: 이 셈은 TypeScript라 `pnpm typecheck`·`pnpm build`로는 **틀려도 잡히지 않았다**.
+ * server/docs/gaps.md §4-9: 이 셈은 TypeScript라 `pnpm typecheck`·`pnpm build`로는 **틀려도 잡히지 않았다**.
  * 파이썬 쪽 시험(`tests/server/test_console_bot_status.py`)은 **재료가 오는가**와 **같은 흠이 다시
  * 들어오는가**(글)만 본다 — 여기서 재는 것은 **값**이다.
  *

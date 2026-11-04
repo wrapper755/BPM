@@ -2,7 +2,7 @@
 
 > 상태: **확인 (2026-10-01, 미리보기 검토 완료).** 모든 화면(Studio, PC 실행기, Center 콘솔, 서비스 앱 관리 콘솔)이 이 문서와 `design/tokens.json` 하나를 따른다 ([ADR-0017](decisions/0017-web-nextjs-design-system.md)).
 > 미리보기: `design/preview.html`을 브라우저로 연다 (밝게/어둡게 전환 단추, 명암비 표 포함). 생성물이다.
-> 화면 배치·문구의 개별 결정은 `06-screens/`, 공통 UX 원칙 U1~U17은 [06-screens/README.md](06-screens/README.md) §2.
+> 화면 배치·문구의 개별 결정은 `06-screens/`, 공통 UX 원칙 U1~U17은 [docs/06-screens.md](06-screens.md) §2.
 
 ## 1. 원칙
 
@@ -50,7 +50,7 @@
 | `warning` | 주의 (곧 문제가 될 수 있음) | 만료, 연결 끊김, 다시 띄우는 중, 저하 |
 | `replayed` | 학습한 대로 다시 함 | 재생됨 |
 
-화면 표기 → 상태 토큰 대응은 `tokens.json`의 `status_map`이 원본이다 ([06-screens/README.md](06-screens/README.md) §3의 표와 같아야 한다). 새 상태를 만들면 `status_map`에 먼저 넣는다.
+화면 표기 → 상태 토큰 대응은 `tokens.json`의 `status_map`이 원본이다 ([docs/06-screens.md](06-screens.md) §3의 표와 같아야 한다). 새 상태를 만들면 `status_map`에 먼저 넣는다.
 
 ### 2-3. 글자
 

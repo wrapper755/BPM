@@ -693,7 +693,7 @@ def test_the_field_outputs_reach_the_server_variables(
 
 # ─────────────────────────── 서버 실행이 취소되면 맡긴 것도 거둔다 (ADR-0062 §5) ───────────────────────────
 
-#: **취소는 Center에서 온다** ([ADR-0063](../docs/decisions/0063-stopping-a-running-server-run.md)) —
+#: **취소는 Center에서 온다** ([ADR-0063](../../docs/decisions/0063-stopping-a-running-server-run.md)) —
 #: 서버 대상 작업은 `accepted`에도 취소를 받아 `cancel_jobs`로 내려온다 (PC는 그대로 거절이다).
 #: 그래서 아래 셋은 **운영자가 하는 그대로** `DELETE /jobs/{id}`로 민다.
 

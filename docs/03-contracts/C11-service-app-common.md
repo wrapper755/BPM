@@ -6,7 +6,7 @@
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 서비스 앱(일꾼) → Center (C15 가져가기·끝내기). 업무 호출의 모양은 부르는 쪽이 C15로 Center에 올린 것이다 |
 | 코드 위치 | 모델 `shared/contracts/src/bpm/contracts/service_app.py`, 받는 쪽 뼈대 `server/service_kit/` (`service_kit.consumer` — 가져가기 루프), **부르는 쪽 `bpm.core.services`** (`CenterServiceCaller` — 멱등 칸·재시도·C3 `service_call` 기록). 보기: 업무 예제가 부르는 **모의 앱 열셋**은 [`samples/`](../../samples/README.md) |
-| JSON Schema | [`c11-service-app-manifest.json`](../../packages/contracts/schemas/c11-service-app-manifest.json) · [`c11-op-request.json`](../../packages/contracts/schemas/c11-op-request.json) · [`c11-op-response.json`](../../packages/contracts/schemas/c11-op-response.json) · [`c11-health-response.json`](../../packages/contracts/schemas/c11-health-response.json) |
+| JSON Schema | [`c11-service-app-manifest.json`](../../shared/contracts/schemas/c11-service-app-manifest.json) · [`c11-op-request.json`](../../shared/contracts/schemas/c11-op-request.json) · [`c11-op-response.json`](../../shared/contracts/schemas/c11-op-response.json) · [`c11-health-response.json`](../../shared/contracts/schemas/c11-health-response.json) |
 | 관련 ADR | [0010](../decisions/0010-service-apps.md), [0015](../decisions/0015-run-location.md), [0102](../decisions/0102-calling-outside-is-pull.md) |
 | 관련 화면 | STU-14, SVC-00·01·03 |
 
