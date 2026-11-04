@@ -66,7 +66,7 @@ BPM 프로세스가 호출하는 서버 기능은 **서비스 앱**으로 늘려
 - 서버 BPM 프로세스인 시나리오 1·2·4는 서버 실행기(M7)에서 끝까지 돈다. 시나리오 3(현장 PC, [ADR-0055](decisions/0055-m6-field-scenario-is-scenario-3.md))은 UI 자동화 확장을 다시 들인 뒤의 기준이다 ([ADR-0114](decisions/0114-remove-ui-automation.md)).
 - 새 개발자가 Windows PC에서 `docs/04-setup.md`만 보고 1시간 안에 Studio·PC 실행기를 띄운다.
 - 모든 구성요소 간 통신이 `docs/03-contracts/`의 명세와 일치한다 (계약 테스트로 확인).
-- 모든 화면이 `docs/06-screens/`의 설계와 일치한다.
+- 모든 화면이 `docs/06-screens.md`(공통)·`<제품>/docs/screens`의 설계와 일치한다.
 
 ## 열린 질문
 

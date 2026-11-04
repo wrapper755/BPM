@@ -1,4 +1,4 @@
-"""결정 수행 재생 — C14 §재생, [ADR-0028](../docs/decisions/0028-replay-memory.md).
+"""결정 수행 재생 — C14 §재생, [ADR-0028](../../docs/decisions/0028-replay-memory.md).
 
 여기서 거듭 보는 것은 넷이다.
 

@@ -490,7 +490,7 @@ def test_a_refused_handover_is_a_task_failure() -> None:
 
 
 def test_a_delegated_call_stops_instead_of_running_it_here() -> None:
-    """**PC 위임은 서버에서 대신 돌리지 않는다** ([ADR-0062](../docs/decisions/0062-pc-delegation.md)).
+    """**PC 위임은 서버에서 대신 돌리지 않는다** ([ADR-0062](../../docs/decisions/0062-pc-delegation.md)).
 
     대상은 다른 패키지라 이 패키지 안에 정의가 없고, 맡길 포트도 아직 없다 — 그래서 **그림·설치
     오류로 멈춘다**. 폴백을 두면 화면을 만지는 정의를 서버에서 돌리다 「확장 없음」으로 터져

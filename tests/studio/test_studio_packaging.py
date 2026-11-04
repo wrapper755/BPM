@@ -189,7 +189,7 @@ def delegating(tmp_path: Path) -> BpmProcess:
 
 
 def test_a_delegated_call_is_not_a_lib(tmp_path: Path) -> None:
-    """**PC 위임은 `libs`가 아니다** ([ADR-0062](../docs/decisions/0062-pc-delegation.md)).
+    """**PC 위임은 `libs`가 아니다** ([ADR-0062](../../docs/decisions/0062-pc-delegation.md)).
 
     복사해 넣는 것이 아니라 **따로 배포된 BPM 프로세스**이다. `libs`에 넣으면 없는 공유 BPM 프로세스를
     요구하는 패키지가 되어 설치가 막히고, R3이 「PC 정의를 부른다」고 읽는다.

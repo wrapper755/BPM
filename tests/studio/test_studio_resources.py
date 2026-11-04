@@ -267,7 +267,7 @@ def test_the_shared_process_root_lists_center_libs_and_their_definitions() -> No
 
 def test_an_installed_definition_becomes_a_call_activity() -> None:
     """설치된 판의 정의로 **Call Activity를 만든다**
-    ([ADR-0051](../docs/decisions/0051-shared-process-conveniences.md)).
+    ([ADR-0051](../../docs/decisions/0051-shared-process-conveniences.md)).
 
     만드는 것은 **`calledElement`뿐**이다 — `bpm:call`의 입력·출력 짝은 내 변수 이름을 알아야
     하는 일이라 지어내지 않는다 (속성 패널에서 적는다).

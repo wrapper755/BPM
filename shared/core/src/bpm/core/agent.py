@@ -1,8 +1,8 @@
 """AI 태스크의 운전사 — 목표를 주고, 도구를 빌려 주고, 결과 필드를 받아 낸다.
 
-[ADR-0008](../../../../docs/decisions/0008-map-driver-hands-boundary.md)의 「운전사」가 여기다.
+[ADR-0008](../../../../../docs/decisions/0008-map-driver-hands-boundary.md)의 「운전사」가 여기다.
 지도(BPMN)는 순서를, 운전사는 **방법**을 안다. 모델에 닿는 길은
-[ADR-0027](../../../../docs/decisions/0027-llm-connection.md)이 정했고, 루프는 **우리가** 돈다 —
+[ADR-0027](../../../../../docs/decisions/0027-llm-connection.md)이 정했고, 루프는 **우리가** 돈다 —
 그래야 도구를 고르고, 허용 밖을 막고, 궤적을 적어 재생할 수 있다.
 
 갈림은 둘이다 (C14·`core.nodes`와 같은 규칙).
@@ -12,7 +12,7 @@
 - **허용하지 않은 도구를 부르거나 단계 한도를 넘은 것은 실행 오류**다 — 그림·설정이 잘못된
   것이라 경계로 받지 않는다.
 
-한도와 지시문은 [ADR-0105](../../../../docs/decisions/0105-ai-task-limits-and-instructions.md)다 —
+한도와 지시문은 [ADR-0105](../../../../../docs/decisions/0105-ai-task-limits-and-instructions.md)다 —
 시간 한도(`limits.timeout_s`)를 넘으면 업무 실패, 금지 행동은 **지시문일 뿐**이고, 확인 트리거에
 걸리면 모델이 `{"_confirm": 번호}`로 멈춰 **전환**(`escalated`)이 된다.
 

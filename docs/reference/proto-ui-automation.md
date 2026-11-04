@@ -15,7 +15,7 @@
   - 새 로케이터는 `unverified`, 우선순위 0으로 등록한다.
   - 3회 연속 성공하면 `active`로 올리고, 대체된 로케이터는 `deprecated`로 내린다.
 - **전환:** 치유 3회 실패 → 사람 작업을 만든다. 웹훅 또는 폴링 방식.
-- **웹 화면 (Streamlit — 새 구조에서는 Next.js, ADR-0017):** 개요, 셀렉터 인벤토리, 모니터링 → 서비스 앱 관리 콘솔([../06-screens/service-app-console.md](../06-screens/service-app-console.md))의 앱 고유 화면 자리 (지금은 비어 있다).
+- **웹 화면 (Streamlit — 새 구조에서는 Next.js, ADR-0017):** 개요, 셀렉터 인벤토리, 모니터링 → 서비스 앱 관리 콘솔([../06-screens/service-app-console.md](../../server/docs/screens/service-app-console.md))의 앱 고유 화면 자리 (지금은 비어 있다).
 
 ## API (`src/main.py`)
 

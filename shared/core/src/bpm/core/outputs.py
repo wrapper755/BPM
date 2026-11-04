@@ -2,7 +2,7 @@
 
 실행 기록(C3)은 값을 나르지 않는다 (원칙 6). 그런데 위임의 요점은 **결과를 받아 이어 가는
 것**이고, 실행 변수를 아는 것은 **자식 프로세스(실행기)**다. 그래서 결재 요청이 그랬듯
-([ADR-0038](../../../../docs/decisions/0038-approval-request-channel.md)) 값은 **따로 이 파일로**
+([ADR-0038](../../../../../docs/decisions/0038-approval-request-channel.md)) 값은 **따로 이 파일로**
 올라간다.
 
 - 실행기가 끝날 때 `runs/<run_id>.outputs.json`에 **한 번** 쓴다 (덧붙이지 않는다 — 실행

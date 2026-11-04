@@ -530,7 +530,7 @@ class Workspace:
 
         **그림은 손대지 않는다** — 정의 파일을 그대로 옮기므로 BPMN process id도 그대로다.
         폴더가 다르면 패키지가 다르니 겹치지 않고, 바꾸려면 XML을 파이썬이 만져야 한다
-        ([ADR-0022](../../../../docs/decisions/0022-studio-canvas.md)가 막는 일이다).
+        ([ADR-0022](../../../../../docs/decisions/0022-studio-canvas.md)가 막는 일이다).
 
         케이스·학습(`memory/`)·받아 둔 공유 BPM 프로세스는 함께 간다 (`COPIED_DIRS`) —
         **실행 기록은 두고 간다.** 담당자·태그·설명도 옮긴다 (복사한 사람이 다시 적지 않는다).

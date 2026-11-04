@@ -26,7 +26,7 @@ DB: SQLite(WAL). 타입은 PostgreSQL 호환으로 골랐다.
 - `UTCDateTime`: naive datetime을 거부한다.
 - 하트비트로 지시를 전달하는 방식 ([ADR-0007](../decisions/0007-client-initiated-communication.md)).
 - `docs/center_api_phase2.md`: 106KB의 계약 협상 기록. 계약 C4~C6 초안의 출발점으로 쓴다.
-- 웹 화면 구성(실행 로그 타임라인, 준비도, 봇 현황, 결재함, 작업 지시, 공통 패키지) → [../06-screens/center-console.md](../06-screens/center-console.md).
+- 웹 화면 구성(실행 로그 타임라인, 준비도, 봇 현황, 결재함, 작업 지시, 공통 패키지) → [../06-screens/center-console.md](../../server/docs/screens/center-console.md).
 
 ## 모자랐던 것 (새로 설계)
 

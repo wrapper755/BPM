@@ -6,7 +6,7 @@
 - **적어 둔 것을 조용히 바꾸지 않는다.** 편집기가 다루지 않는 칸(`web` — 계약에 있지만 웹 환경을 주는
   확장이 없다)은 읽은 그대로 돌려준다.
 - 「지시문」(`forbidden_actions`·`confirm_triggers`)과 「제한 시간」(`limits.timeout_s`)은 엔진이 읽는다
-  ([ADR-0105](../../../../docs/decisions/0105-ai-task-limits-and-instructions.md)) — 금지 행동은 **모델에게
+  ([ADR-0105](../../../../../docs/decisions/0105-ai-task-limits-and-instructions.md)) — 금지 행동은 **모델에게
   주는 말일 뿐**이라 화면도 그렇게 말한다. 비우면 BPM 프로세스 기본값(`bpm:defaults`)을 따른다.
   업무 파라미터도 그 줄을 고치지 않았으면 **읽은 값 그대로** 간다(글로 보였다 되읽으면 모양이 바뀔 수 있다).
 - 「적용」을 막는 것은 **엔진·검사가 거부할 것**뿐이다 — 결과 이름(빈 칸·겹침·변수 규칙, B8 타입),

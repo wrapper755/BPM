@@ -242,7 +242,7 @@ interface ReadinessLike {
  *
  * 보고가 없으면 **`null`**이다 (「확인 전」이라고 단정하지 않는다 — 모르는 것을 안다고 하지
  * 않는다). 가르는 순서는 BUI-04와 **같고**, **「꺼 뒀다」와 「없다」는 다른 점검이다**
- * ([ADR-0043](../../../../docs/decisions/0043-turned-off-extensions.md)) — 뭉치면 켜면 될 일에
+ * ([ADR-0043](../../../../../docs/decisions/0043-turned-off-extensions.md)) — 뭉치면 켜면 될 일에
  * 「판을 올리세요」라고 한다. CON-03과 CON-12가 **이 함수 하나**를 쓴다 (베끼면 갈라진다).
  */
 export function readinessLabel(

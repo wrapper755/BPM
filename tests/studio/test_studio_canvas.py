@@ -339,7 +339,7 @@ def test_a_resource_becomes_a_node_in_one_undo_step(canvas: Any) -> None:
 
 
 def test_a_real_drop_makes_a_node_where_it_landed(canvas: Any) -> None:
-    """STU-03 끌어다 놓기 ([ADR-0044](../docs/decisions/0044-canvas-drag-and-drop.md)).
+    """STU-03 끌어다 놓기 ([ADR-0044](../../docs/decisions/0044-canvas-drag-and-drop.md)).
 
     **진짜 드롭 이벤트를 보낸다.** 「필터를 달았다」까지만 보면 PySide6가 내부 위젯을 다르게
     만들었을 때 드롭이 **조용히** 안 되는 것을 놓친다 — 그래서 뷰가 아니라 그 자식에게 보내고,
@@ -467,7 +467,7 @@ def test_two_added_nodes_do_not_land_on_the_same_spot(canvas: Any) -> None:
 
 def test_a_shared_process_becomes_a_call_activity_with_its_called_element(canvas: Any) -> None:
     """STU-03 공유 BPM 프로세스 → Call Activity
-    ([ADR-0051](../docs/decisions/0051-shared-process-conveniences.md)).
+    ([ADR-0051](../../docs/decisions/0051-shared-process-conveniences.md)).
 
     `calledElement`는 `bpm:*`가 아니라 **그냥 BPMN 속성**이라 `attrs`로 간다 — 만드는 길은
     하나여야(ADR-0044) 실행 취소가 한 걸음이다. **`bpm:call`은 넣지 않는다** (입력·출력 짝은

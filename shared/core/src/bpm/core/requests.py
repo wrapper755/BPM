@@ -1,4 +1,4 @@
-"""올라가는 결재 요청 — 요청 파일 한 벌 ([ADR-0038](../../../../docs/decisions/0038-approval-request-channel.md)).
+"""올라가는 결재 요청 — 요청 파일 한 벌 ([ADR-0038](../../../../../docs/decisions/0038-approval-request-channel.md)).
 
 실행 기록(C3)은 값을 나르지 않는다 (원칙 6). 그런데 Center 결재함에 올릴 결재에는 결재자가
 판단할 값(C6 `review`)이 있어야 한다. 그래서 **값이 필요한 결재 요청만** 이 파일로 올라간다.
@@ -6,7 +6,7 @@
 - 실행기가 `runs/<run_id>.requests.jsonl`에 **C6 `ApprovalCreateRequest` 본문 그대로** 한 줄씩
   덧붙인다. `where=center`인 것만 쓴다 (현장 결재는 올릴 이유가 없다).
 - **현장 결재·확인은 `runs/<run_id>.field-requests.jsonl`에** 같은 본문으로 쓴다
-  ([ADR-0078](../../../../docs/decisions/0078-field-approval-shows-what-to-judge.md)) — 올리지 않고
+  ([ADR-0078](../../../../../docs/decisions/0078-field-approval-shows-what-to-judge.md)) — 올리지 않고
   PC 실행기의 결재 창(CMN-01)이 **읽기만** 한다. 제목·설명·검토 자료를 아는 것은 엔진뿐이라,
   이것이 없으면 현장 결재자는 무엇을 승인하는지 모르고 누른다. 파일을 가른 것은 **올리는 길이
   현장 결재를 나를 수 없게** 하려고다 (한 파일에 섞으면 고르는 자리가 하나 더 생긴다).

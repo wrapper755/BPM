@@ -250,7 +250,7 @@ def web_status_map_ts(tokens: dict[str, Any]) -> str:
         "",
         "export type StatusToken = (typeof STATUS_TOKENS)[number];",
         "",
-        "/** 상태 표기 → 상태 색. 열쇠는 화면 설계서(`docs/06-screens`)의 묶음 이름이다. */",
+        "/** 상태 표기 → 상태 색. 열쇠는 화면 설계서(`docs/06-screens.md`)의 묶음 이름이다. */",
         "export const STATUS_MAP = {",
     ]
     for group, mapping in tokens["status_map"].items():

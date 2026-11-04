@@ -132,7 +132,7 @@ BPM/
 │  ├─ core/                # 런타임 코어 + 확장 호스트
 │  ├─ llm/                 # 모델 클라이언트 (맨 아래, ADR-0034)
 │  └─ qt/                  # 공용 PySide6 위젯·테마·결재 창 (Studio·PC 실행기)
-├─ server/                 # 서버 (Linux 주)
+├─ server/                 # 서버 (Linux 주) — 제품마다 CLAUDE.md·docs/(screens·setup·gaps)가 있다 (ADR-0129)
 │  ├─ center/              # Center API (콘솔은 server/web/apps/center-console)
 │  ├─ server_runner/       # 서버 실행기 (화면 없음, core 사용)
 │  ├─ adapter_consumer/    # 어댑터 일꾼 (외부 확장의 HTTP 어댑터, C15)
@@ -153,7 +153,7 @@ BPM/
 │  └─ mock_apps/           # C11 앱 13 + 외부 앱 2 + 그 C13 어댑터 정의. bpm-mock-apps
 ├─ spikes/                 # 실험 (제품 코드에서 import 금지, 워크스페이스 멤버 아님)
 ├─ tests/                  # 앱 간 통합·계약 테스트 + 의존 방향 검사(§5)
-└─ docs/
+└─ docs/                  # 셋이 함께 보는 문서 — 계약·용어·ADR·업무 예제·공통 화면 원칙·공통 설치
 ```
 
 > 상태: 위 Python 멤버 12개(`shared/*` 다섯·`server/*` 넷·`studio/app`·`bot/app`·`samples/mock_apps`)가 돈다 (`uv sync --all-packages` → `uv run pytest`). **제품(`server/`·`studio/`·`bot/`)끼리는 import하지 않는다** — 함께 쓰는 것은 `shared/`로 내린다 ([ADR-0129](decisions/0129-product-folders.md), `test_import_direction.py`). 내장 확장을 두는 `extensions/<id>/`는 지금 없다 — 확장을 다시 들일 때 워크스페이스 멤버 목록에 `extensions/*`를 함께 더한다 ([ADR-0114](decisions/0114-remove-ui-automation.md)). pnpm 명령은 저장소 맨 위에서 부른다.

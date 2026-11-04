@@ -1,4 +1,4 @@
-"""재생 명세를 적고 되밟는다 — C14 §재생, [ADR-0028](../../../../docs/decisions/0028-replay-memory.md).
+"""재생 명세를 적고 되밟는다 — C14 §재생, [ADR-0028](../../../../../docs/decisions/0028-replay-memory.md).
 
 자율 수행(Studio)이 적고, 결정 수행(PC 실행기 운영 실행)이 되밟는다. 명세는 패키지 안
 `memory/specs.json`이고 **배포된 BPM 프로세스는 읽기만** 한다.

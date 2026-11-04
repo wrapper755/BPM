@@ -5,7 +5,7 @@ export const STATUS_TOKENS = ["neutral", "active", "done", "failed", "waiting", 
 
 export type StatusToken = (typeof STATUS_TOKENS)[number];
 
-/** 상태 표기 → 상태 색. 열쇠는 화면 설계서(`docs/06-screens`)의 묶음 이름이다. */
+/** 상태 표기 → 상태 색. 열쇠는 화면 설계서(`docs/06-screens.md`)의 묶음 이름이다. */
 export const STATUS_MAP = {
   "실행·노드": {
     "대기": "neutral",

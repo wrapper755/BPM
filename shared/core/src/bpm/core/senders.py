@@ -2,7 +2,7 @@
 
 엔진은 받는 사람·제목·본문을 만들어 넘기기만 하고, 보내는 일은 **실행하는 쪽이 끼우는 어댑터**가
 한다. 그래야 Studio 시험 실행이 진짜 메일을 보내지 않고, PC 실행기·서버 실행기가 SMTP·허용 호스트
-설정을 자기 쪽에 둘 수 있다 ([ADR-0059](../../../../docs/decisions/0059-sending-mail-and-webhooks.md)).
+설정을 자기 쪽에 둘 수 있다 ([ADR-0059](../../../../../docs/decisions/0059-sending-mail-and-webhooks.md)).
 
 **어댑터를 주지 않으면 보내지 않고 실패한다** (`SendError` → `TaskFailed(SEND_FAILED)`).
 조용히 삼키면 「보냈겠거니」 하고 업무가 흘러가 버린다.
