@@ -41,7 +41,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import Approval, is_var_name
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
 from bpm.studio.name_pick import attach
 
@@ -104,7 +104,9 @@ class ApprovalEditor(QWidget):
         self.show_input = QLineEdit(self)
         self.show_input.setPlaceholderText("변수 이름 — Enter로 추가 (목록이 비면 전부 보입니다)")
         self.add_show = QPushButton("추가", self)
+        button_icon(self.add_show, "plus")
         self.drop_show = QPushButton("삭제", self)
+        button_icon(self.drop_show, "trash")
         self.drop_show.setObjectName("Secondary")
         self.show_note = QLabel("", self)
         self.show_note.setWordWrap(True)
@@ -120,7 +122,9 @@ class ApprovalEditor(QWidget):
         header.setSectionResizeMode(COL_REQUIRED, QHeaderView.ResizeMode.ResizeToContents)
         _show_rows(self.fields, VISIBLE_ROWS)
         self.add_field = QPushButton("줄 더하기", self)
+        button_icon(self.add_field, "plus")
         self.drop_field = QPushButton("줄 삭제", self)
+        button_icon(self.drop_field, "trash")
         # 채운 단추는 영역마다 하나 (스타일 가이드 §3 Button).
         self.drop_field.setObjectName("Secondary")
 

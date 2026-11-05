@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts import SCOPE_STUDIO, ConfigurationItem
-from bpm.qt.theme import THEME_DARK, THEME_LIGHT, THEME_SYSTEM, set_role
+from bpm.qt.theme import THEME_DARK, THEME_LIGHT, THEME_SYSTEM, button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_1
 from bpm.studio.center_enroll import StudioEnrollment, connected_text, expires_soon, waiting_text
 from bpm.studio.checks import center_status, llm_status
@@ -199,6 +199,7 @@ class StudioSettingsDialog(QDialog):
         key_row.addWidget(self.llm_key, 1)
         key_row.addWidget(self.llm_show)
         self.llm_test = QPushButton("연결 테스트")
+        button_icon(self.llm_test, "plug")
         self.llm_test.clicked.connect(self.test_llm)
         self.llm_result = QLabel("")
         self.llm_result.setWordWrap(True)
@@ -230,8 +231,10 @@ class StudioSettingsDialog(QDialog):
         self.center_result.setWordWrap(True)
         self.center_result.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.center_test = QPushButton("연결 테스트")
+        button_icon(self.center_test, "plug")
         self.center_test.clicked.connect(self.test_center)
         self.center_again = QPushButton("다시 요청")
+        button_icon(self.center_again, "refresh")
         self.center_again.clicked.connect(self.request_again)
 
         form.addRow("Center 주소", self.center_url)

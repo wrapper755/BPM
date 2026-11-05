@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
 
 from bpm.contracts.bpmn_ext import CASE_ANSWERER, Case, CaseMessage
 from bpm.qt.messages import ask_unsaved
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3, SPACE_4
 from bpm.studio.cases import (
     COMPARISONS,
@@ -98,8 +98,10 @@ class Block(QWidget):
         self.counted: Callable[[], None] = lambda: None
 
         add = QPushButton("추가", self)
+        button_icon(add, "plus")
         add.clicked.connect(self.add_row)
         drop = QPushButton("선택 줄 삭제", self)
+        button_icon(drop, "trash")
         drop.clicked.connect(self.drop_row)
 
         head = QHBoxLayout()
@@ -153,8 +155,10 @@ class CaseDialog(QDialog):
         self.list = QListWidget(self)
         self.list.currentRowChanged.connect(self._pick)
         add = QPushButton("추가", self)
+        button_icon(add, "plus")
         add.clicked.connect(self._add)
         drop = QPushButton("삭제", self)
+        button_icon(drop, "trash")
         drop.clicked.connect(self._drop)
 
         self.names = declared_inputs(definition)

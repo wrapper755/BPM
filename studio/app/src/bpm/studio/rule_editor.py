@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (
 
 from bpm.contracts.bpmn_ext import is_var_name
 from bpm.core.expr import ExprError, parse
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
 from bpm.studio.dmn_table import DecisionFile, Decisions, blank, io_names, summary
 from bpm.studio.name_pick import NameDelegate
@@ -73,11 +73,13 @@ class RuleEditor(QWidget):
 
         self.decision_box = QComboBox(self)
         self.new_button = QPushButton("새 결정표...", self)
+        button_icon(self.new_button, "file-plus")
         self.new_button.setObjectName("Secondary")
         self.summary_label = QLabel("", self)
         self.summary_label.setWordWrap(True)
         set_role(self.summary_label, "muted")
         self.edit_button = QPushButton("결정표 편집...", self)
+        button_icon(self.edit_button, "pencil")
         self.edit_button.setObjectName("Secondary")
         self.collect_note = QLabel(COLLECT_NOTE, self)
         self.collect_note.setWordWrap(True)
@@ -97,9 +99,12 @@ class RuleEditor(QWidget):
         self.outputs.setItemDelegateForColumn(0, NameDelegate(names, self.outputs))
         _show_rows(self.outputs, VISIBLE_ROWS)
         self.add_output_button = QPushButton("줄 더하기", self)
+        button_icon(self.add_output_button, "plus")
         self.drop_output_button = QPushButton("줄 삭제", self)
+        button_icon(self.drop_output_button, "trash")
         self.drop_output_button.setObjectName("Secondary")
         self.fill_button = QPushButton("출력 채우기", self)
+        button_icon(self.fill_button, "wand")
         self.fill_button.setObjectName("Secondary")
         self.fill_button.setToolTip("받지 않은 출력마다 같은 이름의 변수 줄을 더합니다 — 있는 줄은 덮지 않습니다.")
 

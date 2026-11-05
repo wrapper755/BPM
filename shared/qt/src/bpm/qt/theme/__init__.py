@@ -8,8 +8,8 @@
 
 이 폴더에서 **생성물**은 `tokens.py`·`theme-light.qss`·`theme-dark.qss`다
 (`design/tokens.json` → `scripts/gen_tokens.py`). 색·크기를 여기 적지 않는다.
-`icon-*.svg`는 **Lucide를 그대로 옮긴 것**이다 (스타일 가이드 §6, ISC — `icons-LICENSE.txt`).
-웹의 `lucide-react`와 같은 판에서 꺼냈고 `currentColor`를 `icon()`이 칠한다.
+`icon-*.png`는 **우리가 그린 한 색 마스크**다 (스타일 가이드 §6, ADR-0132 — 검정 + 알파, 128px).
+만드는 길은 `spikes/s12-studio-icons/`에 있고, 색은 `icon()`이 토큰 색으로 칠한다.
 
 세 가지를 함께 적용한다. QSS만으로는 모자라기 때문이다.
 
@@ -30,7 +30,7 @@ from bpm.qt.theme import tokens
 
 if TYPE_CHECKING:  # QApplication을 타입으로만 쓴다 (import 비용을 줄인다)
     from PySide6.QtGui import QFont, QIcon, QPalette
-    from PySide6.QtWidgets import QApplication, QWidget
+    from PySide6.QtWidgets import QAbstractButton, QApplication, QWidget
 
 LOG = logging.getLogger(__name__)
 
@@ -223,25 +223,50 @@ ICON_SIZE = 20
 
 
 def icon(name: str, color: str) -> QIcon:
-    """Lucide 아이콘 하나 (`icon-<name>.svg`) — `currentColor`를 `color`(토큰에서 온 색)로 칠한다.
+    """아이콘 하나 (`icon-<name>.png`, 한 색 마스크) — 알파 모양대로 `color`(토큰에서 온 색)를 칠한다.
 
     없는 이름은 `FileNotFoundError`다 — 빈 아이콘으로 조용히 넘어가지 않는다.
     """
-    from PySide6.QtCore import QByteArray, Qt  # noqa: PLC0415
-    from PySide6.QtGui import QIcon, QPainter, QPixmap  # noqa: PLC0415
-    from PySide6.QtSvg import QSvgRenderer  # noqa: PLC0415
+    from PySide6.QtCore import Qt  # noqa: PLC0415
+    from PySide6.QtGui import QColor, QIcon, QImage, QPainter, QPixmap  # noqa: PLC0415
 
-    svg = (files(__package__ or "bpm.qt.theme") / f"icon-{name}.svg").read_text(encoding="utf-8")
-    renderer = QSvgRenderer(QByteArray(svg.replace("currentColor", color).encode("utf-8")))
+    data = (files(__package__ or "bpm.qt.theme") / f"icon-{name}.png").read_bytes()
+    mask = QImage.fromData(data)
+    if mask.isNull():
+        raise ValueError(f"아이콘 그림을 읽지 못했습니다: icon-{name}.png")
     found = QIcon()
     for size in (ICON_SIZE, ICON_SIZE * 2):
-        pixmap = QPixmap(size, size)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        renderer.render(painter)
+        shape = mask.scaled(
+            size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+        ).convertToFormat(QImage.Format.Format_ARGB32_Premultiplied)
+        painter = QPainter(shape)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+        painter.fillRect(shape.rect(), QColor(color))
         painter.end()
-        found.addPixmap(pixmap)
+        found.addPixmap(QPixmap.fromImage(shape))
     return found
+
+
+def button_icon(button: QAbstractButton, name: str) -> None:
+    """보조 단추에 아이콘을 붙인다 — 단추의 글자색(`ButtonText`)으로 칠하고 **테마가 바뀌면 다시 칠한다**.
+
+    칠한 색이 그림에 박히므로 팔레트가 바뀔 때 다시 그려야 한다. 단추마다 `changeEvent`를 쓰지
+    않도록 작은 이벤트 필터를 단추에 붙인다 (단추와 함께 사라진다).
+    """
+    from PySide6.QtCore import QEvent, QObject  # noqa: PLC0415
+    from PySide6.QtGui import QPalette  # noqa: PLC0415
+
+    def paint() -> None:
+        button.setIcon(icon(name, button.palette().color(QPalette.ColorRole.ButtonText).name()))
+
+    class _Repaint(QObject):
+        def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802 — Qt 이름 그대로
+            if event.type() in (QEvent.Type.PaletteChange, QEvent.Type.ApplicationPaletteChange):
+                paint()
+            return False
+
+    paint()
+    button.installEventFilter(_Repaint(button))
 
 
 def set_role(widget: QWidget, role: str) -> None:
@@ -277,6 +302,7 @@ __all__ = [
     "THEME_LIGHT",
     "THEME_SYSTEM",
     "apply_theme",
+    "button_icon",
     "current",
     "icon",
     "load_fonts",

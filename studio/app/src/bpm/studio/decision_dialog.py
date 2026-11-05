@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.qt.messages import ask_unsaved
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_3
 from bpm.studio.dmn_table import (
     CELL_HELP,
@@ -180,13 +180,21 @@ class DecisionDialog(QDialog):
         self.grid.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
         self.add_input_button = QPushButton("입력 열 더하기", self)
+        button_icon(self.add_input_button, "plus")
         self.add_output_button = QPushButton("출력 열 더하기", self)
+        button_icon(self.add_output_button, "plus")
         self.edit_column_button = QPushButton("열 고치기...", self)
+        button_icon(self.edit_column_button, "pencil")
         self.drop_column_button = QPushButton("열 삭제", self)
+        button_icon(self.drop_column_button, "trash")
         self.add_rule_button = QPushButton("규칙 더하기", self)
+        button_icon(self.add_rule_button, "plus")
         self.drop_rule_button = QPushButton("규칙 삭제", self)
+        button_icon(self.drop_rule_button, "trash")
         self.up_button = QPushButton("위로", self)
+        button_icon(self.up_button, "arrow-up")
         self.down_button = QPushButton("아래로", self)
+        button_icon(self.down_button, "arrow-down")
         for one in (
             self.add_input_button,
             self.add_output_button,

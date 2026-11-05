@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import VALUE_TYPES, BpmnProcess
+from bpm.qt.theme import button_icon
 from bpm.studio.split_actions import (
     DEFAULT_TYPE,
     UNKNOWN_HINT,
@@ -73,8 +74,10 @@ class SplitDialog(QDialog):
         self.inputs = self._table(("쓸 것", "이름", "타입"))
         self.outputs = self._table(("쓸 것", "이름"))
         add_input = QPushButton("입력 추가", self)
+        button_icon(add_input, "plus")
         add_input.clicked.connect(lambda: self._add_input("", DEFAULT_TYPE))
         add_output = QPushButton("출력 추가", self)
+        button_icon(add_output, "plus")
         add_output.clicked.connect(lambda: self._add_output(""))
 
         self.hint = QLabel("", self)

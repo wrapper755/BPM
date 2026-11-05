@@ -41,7 +41,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import Call, is_var_name
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
 from bpm.studio.service_catalog import CallTarget, target_of
 from bpm.studio.workspace import BpmProcess
@@ -144,11 +144,17 @@ class CallEditor(QWidget):
         self.inputs = _table(self, INPUT_COLUMNS)
         self.outputs = _table(self, OUTPUT_COLUMNS)
         self.fill_inputs = QPushButton("기대 입력 채우기", self)
+        button_icon(self.fill_inputs, "wand")
         self.fill_outputs = QPushButton("만드는 출력 채우기", self)
+        button_icon(self.fill_outputs, "wand")
         self.add_input = QPushButton("줄 더하기", self)
+        button_icon(self.add_input, "plus")
         self.drop_input = QPushButton("줄 삭제", self)
+        button_icon(self.drop_input, "trash")
         self.add_output = QPushButton("줄 더하기", self)
+        button_icon(self.add_output, "plus")
         self.drop_output = QPushButton("줄 삭제", self)
+        button_icon(self.drop_output, "trash")
         # 채운 단추는 영역마다 하나 (스타일 가이드 §3 Button).
         for button in (self.add_input, self.drop_input, self.add_output, self.drop_output):
             button.setObjectName("Secondary")

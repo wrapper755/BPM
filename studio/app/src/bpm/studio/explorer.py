@@ -10,11 +10,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
+from typing import Any
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QStandardItem, QStandardItemModel
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, Qt, Signal
+from PySide6.QtGui import QFont, QGuiApplication, QIcon, QPalette, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QTreeView, QWidget
 
+from bpm.qt.theme import icon
 from bpm.studio.workspace import DEFAULT_GROUP, BpmProcess, Definition, Group, Workspace
 
 HEADERS = ("BPM 프로세스 / 정의", "버전", "학습·검증")
@@ -26,6 +28,9 @@ ROW_DEFINITION = "definition"
 
 _KIND = Qt.ItemDataRole.UserRole + 1
 _PAYLOAD = Qt.ItemDataRole.UserRole + 2
+
+#: 줄 앞의 아이콘 (스타일 가이드 §6) — 첫 열에만.
+ROW_ICONS = {ROW_GROUP: "folder", ROW_PROCESS: "process", ROW_DEFINITION: "definition"}
 
 EMPTY_TEXT = "열린 BPM 프로세스가 없습니다. 파일 → BPM 프로세스 열기...로 열거나 새 BPM 프로세스...로 만드세요."
 
@@ -69,6 +74,20 @@ class ExplorerModel(QStandardItemModel):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setHorizontalHeaderLabels(list(HEADERS))
+        self._icons: dict[tuple[str, str], QIcon] = {}
+
+    def data(self, index: QModelIndex | QPersistentModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        """첫 열의 아이콘은 **그릴 때마다** 지금 팔레트의 글자색으로 — 테마가 바뀌어도 다시 칠할 일이 없다."""
+        if role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
+            name = ROW_ICONS.get(super().data(index, _KIND))
+            if name is not None:
+                return self._icon(name, QGuiApplication.palette().color(QPalette.ColorRole.Text).name())
+        return super().data(index, role)
+
+    def _icon(self, name: str, color: str) -> QIcon:
+        if (name, color) not in self._icons:
+            self._icons[(name, color)] = icon(name, color)
+        return self._icons[(name, color)]
 
     def fill(self, groups: list[Group], *, opened: str = "", listed: Iterable[str] | None = None) -> None:
         """`listed`가 있으면 그 id의 BPM 프로세스만 그린다 — 그룹은 「기본」과 고른 것이 든 것만."""

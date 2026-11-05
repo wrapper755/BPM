@@ -498,7 +498,7 @@ def test_roles_are_given_through_set_role() -> None:
 
 
 def test_an_icon_is_drawn_in_the_color_given(app: Any) -> None:
-    """스타일 가이드 §6 — Lucide SVG의 `currentColor`를 토큰 색으로 칠한다 (20과 고해상도용 40)."""
+    """스타일 가이드 §6 — 한 색 마스크(PNG)의 모양대로 토큰 색을 칠한다 (20과 고해상도용 40)."""
     from PySide6.QtGui import QColor  # noqa: PLC0415
 
     from bpm.qt.theme import ICON_SIZE, icon  # noqa: PLC0415
@@ -516,8 +516,8 @@ def test_every_shipped_icon_loads_and_an_unknown_one_is_an_error(app: Any) -> No
 
     from bpm.qt.theme import icon  # noqa: PLC0415
 
-    names = [p.name[len("icon-"):-len(".svg")] for p in files("bpm.qt.theme").iterdir()
-             if p.name.startswith("icon-") and p.name.endswith(".svg")]
+    names = [p.name[len("icon-"):-len(".png")] for p in files("bpm.qt.theme").iterdir()
+             if p.name.startswith("icon-") and p.name.endswith(".png")]
     assert "play" in names
     for name in names:
         assert not icon(name, "#000000").isNull(), name

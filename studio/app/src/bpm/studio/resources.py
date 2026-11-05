@@ -52,6 +52,7 @@ from bpm.contracts.center_api import PackageInfo
 from bpm.contracts.extension import ResourceView
 from bpm.contracts.manifest import ProvidedProcess
 from bpm.contracts.resources import ContributedResource
+from bpm.qt.theme import button_icon
 from bpm.studio import service_catalog
 from bpm.studio.services import CenterReader, CenterUnreachable
 from bpm.studio.workspace import InstalledLib
@@ -620,6 +621,7 @@ class ResourceExplorer(QWidget):
         self.tree = Tree()
 
         self.reload_button = QPushButton("새로 고침", self)
+        button_icon(self.reload_button, "refresh")
         self.reload_button.clicked.connect(self.reloading)
         top = QHBoxLayout()
         top.addWidget(self.reload_button)

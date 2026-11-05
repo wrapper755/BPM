@@ -42,7 +42,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3, SPACE_4
 from bpm.studio.name_pick import NameDelegate
 from bpm.studio.service_catalog import Catalog, Operation, Usage, missing_required, stale_fields
@@ -118,9 +118,12 @@ class ServiceTaskEditor(QWidget):
         self.outputs.setItemDelegateForColumn(OUTPUT_COLUMNS.index("저장할 변수"), NameDelegate(names, self))
 
         self.fill_inputs = QPushButton("기대 입력 채우기", self)
+        button_icon(self.fill_inputs, "wand")
         self.same_names = QPushButton("모두 같은 이름으로", self)
         self.add_input = QPushButton("줄 더하기", self)
+        button_icon(self.add_input, "plus")
         self.add_output = QPushButton("줄 더하기", self)
+        button_icon(self.add_output, "plus")
         # 채운 단추는 영역마다 하나 (스타일 가이드 §3 Button) — 「채우기」가 주된 일이다.
         for one in (self.add_input, self.add_output):
             one.setObjectName("Secondary")

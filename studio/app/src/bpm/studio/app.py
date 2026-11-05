@@ -32,13 +32,17 @@ def main(argv: list[str] | None = None) -> int:
     # QtWebEngine을 쓰려면 QApplication을 만들기 전에 켜 둔다 (Qt가 그렇게 요구한다).
     QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
 
-    from bpm.qt.theme import apply_theme  # noqa: PLC0415
+    from bpm.qt.theme import apply_theme, icon  # noqa: PLC0415
     from bpm.studio.main_window import MainWindow  # noqa: PLC0415
 
     app = QApplication(argv if argv is not None else sys.argv)
     app.setApplicationName("BPM Studio")
     settings = Settings.load()
     apply_theme(app, choice=settings.theme)
+    # 창 아이콘 — BPM 흐름 마크를 새긴 판, `primary`(팔레트 `Highlight`) 색 (스타일 가이드 §6).
+    from PySide6.QtGui import QPalette  # noqa: PLC0415
+
+    app.setWindowIcon(icon("app", app.palette().color(QPalette.ColorRole.Highlight).name()))
 
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     window = MainWindow(settings)

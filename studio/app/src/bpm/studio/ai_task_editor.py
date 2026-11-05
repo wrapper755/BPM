@@ -58,7 +58,7 @@ from bpm.contracts.replay import REPLAY_DEFAULT, ReplaySpec
 from bpm.core.engine import BUILTIN_NOW, BUILTIN_RUN_ID, BUILTIN_TODAY, goal_names
 from bpm.core.files import Workspace
 from bpm.core.tools import builtin_tools
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
 from bpm.studio.name_pick import NameDelegate
 from bpm.studio.replay_specs import ReplaySpecs, SpecsUnreadable
@@ -167,6 +167,7 @@ class AiTaskEditor(QWidget):
         self.goal_box.setPlaceholderText("Markdown — 값은 적지 않고 변수 이름으로 가리킵니다")
         self.goal_box.setFixedHeight(lines * 9)
         self.outline_button = QPushButton("틀 넣기", self)
+        button_icon(self.outline_button, "wand")
         self.outline_button.setObjectName("Secondary")
         self.outline_button.setToolTip("권장 머리말(상황·할 일·판단하지 않는 것·반환)을 넣습니다. 목표가 비었을 때만.")
         self.goal_hint = QLabel("목표에 이름이 나오는 변수와 업무 파라미터만 모델에게 갑니다.", self)
@@ -196,6 +197,7 @@ class AiTaskEditor(QWidget):
         self.tool_input = QLineEdit(self)
         self.tool_input.setPlaceholderText("내장이 아닌 도구 이름 — 「추가」")
         self.add_tool = QPushButton("추가", self)
+        button_icon(self.add_tool, "plus")
         self.add_tool.setObjectName("Secondary")
         self.tools_note = QLabel("고른 도구만 모델에게 알려 줍니다. 밖의 도구를 부르면 실행 오류입니다.", self)
         self.tools_note.setWordWrap(True)
@@ -203,16 +205,20 @@ class AiTaskEditor(QWidget):
 
         self.params = _table(PARAM_COLUMNS, self)
         self.add_param = QPushButton("줄 더하기", self)
+        button_icon(self.add_param, "plus")
         self.add_param.setObjectName("Secondary")
         self.drop_param = QPushButton("줄 삭제", self)
+        button_icon(self.drop_param, "trash")
         self.drop_param.setObjectName("Secondary")
 
         # 출력
         self.results = _table(RESULT_COLUMNS, self)
         self.results.setItemDelegateForColumn(0, NameDelegate(names, self.results))
         self.add_result = QPushButton("줄 더하기", self)
+        button_icon(self.add_result, "plus")
         self.add_result.setObjectName("Secondary")
         self.drop_result = QPushButton("줄 삭제", self)
+        button_icon(self.drop_result, "trash")
         self.drop_result.setObjectName("Secondary")
 
         # 지시문 (ADR-0105)
