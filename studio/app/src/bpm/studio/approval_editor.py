@@ -105,6 +105,7 @@ class ApprovalEditor(QWidget):
         self.show_input.setPlaceholderText("변수 이름 — Enter로 추가 (목록이 비면 전부 보입니다)")
         self.add_show = QPushButton("추가", self)
         button_icon(self.add_show, "plus")
+        self.add_show.setObjectName("Secondary")
         self.drop_show = QPushButton("삭제", self)
         button_icon(self.drop_show, "trash")
         self.drop_show.setObjectName("Secondary")
@@ -123,6 +124,7 @@ class ApprovalEditor(QWidget):
         _show_rows(self.fields, VISIBLE_ROWS)
         self.add_field = QPushButton("줄 더하기", self)
         button_icon(self.add_field, "plus")
+        self.add_field.setObjectName("Secondary")
         self.drop_field = QPushButton("줄 삭제", self)
         button_icon(self.drop_field, "trash")
         # 채운 단추는 영역마다 하나 (스타일 가이드 §3 Button).

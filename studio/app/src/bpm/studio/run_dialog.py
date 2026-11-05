@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import Case
-from bpm.qt.theme import set_role
+from bpm.qt.theme import dress_button_box, set_role
 from bpm.studio.runner import Plan, read_cases
 from bpm.studio.settings import Settings
 from bpm.studio.workspace import BpmProcess, Definition
@@ -154,6 +154,7 @@ class RunDialog(QDialog):
         self.run_button = buttons.button(QDialogButtonBox.StandardButton.Ok)
         self.run_button.setText("실행")
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("취소")
+        dress_button_box(buttons)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
 

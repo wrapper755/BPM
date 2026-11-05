@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.approvals import Form, FormField, as_table, validate_answer
-from bpm.qt.theme import set_role
+from bpm.qt.theme import dress_button_box, set_role
 
 #: 확인(`confirmation`)은 업무 결재가 아니라 **실행 중 막힘**이다 (CMN-01 오른쪽 칸).
 CONFIRMATION = "confirmation"
@@ -218,6 +218,7 @@ class ApprovalDialog(QDialog):
             self.comment.setPlaceholderText("메모 (선택)")
         self.ok.clicked.connect(self.send)
         self.no.clicked.connect(self.refuse)
+        dress_button_box(box)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         return box
 
     # ── 답 ──

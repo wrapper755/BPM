@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
 
 from bpm.contracts.bpmn_ext import CASE_ANSWERER, Case, CaseMessage
 from bpm.qt.messages import ask_unsaved
-from bpm.qt.theme import button_icon, set_role
+from bpm.qt.theme import button_icon, dress_button_box, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3, SPACE_4
 from bpm.studio.cases import (
     COMPARISONS,
@@ -156,9 +156,11 @@ class CaseDialog(QDialog):
         self.list.currentRowChanged.connect(self._pick)
         add = QPushButton("추가", self)
         button_icon(add, "plus")
+        add.setObjectName("Secondary")
         add.clicked.connect(self._add)
         drop = QPushButton("삭제", self)
         button_icon(drop, "trash")
+        drop.setObjectName("Secondary")
         drop.clicked.connect(self._drop)
 
         self.names = declared_inputs(definition)
@@ -260,6 +262,7 @@ class CaseDialog(QDialog):
         )
         box.button(QDialogButtonBox.StandardButton.Save).setText("저장")
         box.button(QDialogButtonBox.StandardButton.Close).setText("닫기")
+        dress_button_box(box)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         box.accepted.connect(self.save)
         box.button(QDialogButtonBox.StandardButton.Save).clicked.connect(self.save)
         box.rejected.connect(self.reject)

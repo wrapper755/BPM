@@ -244,6 +244,7 @@ class AiTaskEditor(QWidget):
         self.spec_tools.setWordWrap(True)
         set_role(self.spec_tools, "muted")
         self.forget_button = QPushButton(FORGET_TITLE, self)
+        button_icon(self.forget_button, "trash")
         self.forget_button.setObjectName("Secondary")
         self.forget_button.setToolTip(FORGET_TIP)
         self.max_steps_box = QSpinBox(self)

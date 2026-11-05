@@ -85,6 +85,8 @@ def contrast_rows(colors: dict[str, str]) -> list[tuple[str, str, float, float, 
         rows.append((fg, f"status.{status}.bg", contrast(colors[fg], colors[f"status.{status}.bg"]), AA_TEXT, True))
         rows.append((fg, "bg.surface", contrast(colors[fg], colors["bg.surface"]), AA_TEXT, True))
     rows.append(("primary.fg", "primary", contrast(colors["primary.fg"], colors["primary"]), AA_TEXT, True))
+    # 데스크톱 주 단추(연한 채움)의 글자
+    rows.append(("primary", "primary.subtle", contrast(colors["primary"], colors["primary.subtle"]), AA_TEXT, True))
     rows.append(
         (
             "danger.fg",
@@ -487,20 +489,34 @@ QLabel[role="warning"] {{ color: {c["status.warning.fg"]}; }}
 QLabel[role="muted"] {{ color: {c["text.muted"]}; }}
 QLabel[role="h2"] {{ font-size: {f["size.h2"]}px; font-weight: {f["weight.semibold"]}; }}
 
+/* 주 단추는 **연한 채움**이다 (데스크톱만 — 스타일 가이드 §3 Button). 회색 화면에서 진한 채움 하나가 너무 튄다. */
 QPushButton {{
-  background-color: {c["primary"]};
-  color: {c["primary.fg"]};
-  border: none;
+  background-color: {c["primary.subtle"]};
+  color: {c["primary"]};
+  border: 1px solid {c["primary"]};
   border-radius: {r["md"]}px;
   min-height: {z["control.md"]}px;
   padding: 0 {s["3"]}px;
   font-weight: {f["weight.medium"]};
 }}
-QPushButton:hover {{ background-color: {c["primary.hover"]}; }}
+QPushButton:hover {{ color: {c["primary.hover"]}; border-color: {c["primary.hover"]}; }}
 QPushButton:focus {{ border: 2px solid {c["focus"]}; }}
-QPushButton:disabled {{ background-color: {c["bg.subtle"]}; color: {c["text.muted"]}; }}
+QPushButton:disabled {{
+  background-color: {c["bg.subtle"]};
+  color: {c["text.muted"]};
+  border-color: {c["border.default"]};
+}}
 
 QPushButton#Secondary {{
+  background-color: {c["bg.surface"]};
+  color: {c["text.primary"]};
+  border: 1px solid {c["border.strong"]};
+}}
+
+/* 대화상자 아래 단추 — Qt 표준 아이콘(초록 체크·빨간 X)을 쓰지 않는다 (스타일 가이드 §6).
+   우리 아이콘은 `dress_button_box`가 단다. 메시지 상자는 단추를 우리가 짓지 않으니 기본 단추 하나만 채운다. */
+QDialogButtonBox {{ dialogbuttonbox-buttons-have-icons: 0; }}
+QMessageBox QPushButton:!default {{
   background-color: {c["bg.surface"]};
   color: {c["text.primary"]};
   border: 1px solid {c["border.strong"]};

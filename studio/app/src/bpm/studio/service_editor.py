@@ -119,12 +119,15 @@ class ServiceTaskEditor(QWidget):
 
         self.fill_inputs = QPushButton("기대 입력 채우기", self)
         button_icon(self.fill_inputs, "wand")
+        self.fill_inputs.setObjectName("Secondary")
         self.same_names = QPushButton("모두 같은 이름으로", self)
+        self.same_names.setObjectName("Secondary")
+        button_icon(self.same_names, "copy")
         self.add_input = QPushButton("줄 더하기", self)
         button_icon(self.add_input, "plus")
         self.add_output = QPushButton("줄 더하기", self)
         button_icon(self.add_output, "plus")
-        # 채운 단추는 영역마다 하나 (스타일 가이드 §3 Button) — 「채우기」가 주된 일이다.
+        # 채운 단추는 영역마다 하나 (스타일 가이드 §6) — 속성 패널에서는 「적용」이다.
         for one in (self.add_input, self.add_output):
             one.setObjectName("Secondary")
 

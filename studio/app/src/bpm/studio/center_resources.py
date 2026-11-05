@@ -301,14 +301,18 @@ class CenterResourcesDialog(QDialog):
 
         self.refresh_button = QPushButton("새로 고침", self)
         button_icon(self.refresh_button, "refresh")
+        self.refresh_button.setObjectName("Secondary")
         self.refresh_button.clicked.connect(self.refresh)
         self.install_button = QPushButton("설치", self)
         button_icon(self.install_button, "download")
         self.install_button.clicked.connect(self.install_selected)
         self.remove_button = QPushButton("제거...", self)
         button_icon(self.remove_button, "trash")
+        self.remove_button.setObjectName("Secondary")
         self.remove_button.clicked.connect(self.remove_selected)
         self.close_button = QPushButton("닫기", self)
+        self.close_button.setObjectName("Secondary")
+        button_icon(self.close_button, "x")
         self.close_button.clicked.connect(self.reject)
 
         buttons = QHBoxLayout()

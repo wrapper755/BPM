@@ -33,8 +33,10 @@ def main(argv: list[str] | None = None) -> int:
     QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
 
     from bpm.qt.theme import apply_theme, icon  # noqa: PLC0415
+    from bpm.studio import taskbar  # noqa: PLC0415
     from bpm.studio.main_window import MainWindow  # noqa: PLC0415
 
+    taskbar.before_app()
     app = QApplication(argv if argv is not None else sys.argv)
     app.setApplicationName("BPM Studio")
     settings = Settings.load()
@@ -42,7 +44,11 @@ def main(argv: list[str] | None = None) -> int:
     # 창 아이콘 — BPM 흐름 마크를 새긴 판, `primary`(팔레트 `Highlight`) 색 (스타일 가이드 §6).
     from PySide6.QtGui import QPalette  # noqa: PLC0415
 
-    app.setWindowIcon(icon("app", app.palette().color(QPalette.ColorRole.Highlight).name()))
+    window_icon = icon(
+        "app", app.palette().color(QPalette.ColorRole.Highlight).name(), sizes=(16, 24, 32, 48, 64, 128)
+    )
+    app.setWindowIcon(window_icon)
+    taskbar.after_app(app, window_icon)  # 작업 표시줄이 Python 아이콘을 보이지 않게
 
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     window = MainWindow(settings)

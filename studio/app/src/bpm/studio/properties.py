@@ -40,7 +40,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import ELEMENT_MODELS
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.studio.dmn_table import Decisions
 from bpm.studio.replay_specs import ReplaySpecs
 from bpm.studio.service_catalog import CallTarget, Catalog
@@ -253,6 +253,7 @@ class Properties(QWidget):
         self.head.setWordWrap(True)
         self.head.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.process_button = QPushButton(PROCESS_BUTTON, self)
+        button_icon(self.process_button, "process")
         self.process_button.setObjectName("Secondary")
         self.process_button.setToolTip("열린 정의 자체 — 모든 AI 태스크의 기본값(bpm:defaults)을 고칩니다.")
         self.process_button.clicked.connect(self.process_wanted)
@@ -291,6 +292,7 @@ class Properties(QWidget):
         self.error.setWordWrap(True)
         set_role(self.error, "error")
         self.apply_button = QPushButton("적용", self)
+        button_icon(self.apply_button, "check")
         self.apply_button.clicked.connect(self.apply)
 
         bottom = QHBoxLayout()

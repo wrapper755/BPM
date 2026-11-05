@@ -44,20 +44,34 @@ QLabel[role="warning"] { color: #F5B65C; }
 QLabel[role="muted"] { color: #A1A1A1; }
 QLabel[role="h2"] { font-size: 20px; font-weight: 600; }
 
+/* 주 단추는 **연한 채움**이다 (데스크톱만 — 스타일 가이드 §3 Button). 회색 화면에서 진한 채움 하나가 너무 튄다. */
 QPushButton {
-  background-color: #8B94F4;
-  color: #0C0E1C;
-  border: none;
+  background-color: #222546;
+  color: #8B94F4;
+  border: 1px solid #8B94F4;
   border-radius: 6px;
   min-height: 32px;
   padding: 0 12px;
   font-weight: 500;
 }
-QPushButton:hover { background-color: #9FA9FC; }
+QPushButton:hover { color: #9FA9FC; border-color: #9FA9FC; }
 QPushButton:focus { border: 2px solid #7078C7; }
-QPushButton:disabled { background-color: #262626; color: #A1A1A1; }
+QPushButton:disabled {
+  background-color: #262626;
+  color: #A1A1A1;
+  border-color: #3C3C3C;
+}
 
 QPushButton#Secondary {
+  background-color: #171717;
+  color: #FAFAFA;
+  border: 1px solid #585858;
+}
+
+/* 대화상자 아래 단추 — Qt 표준 아이콘(초록 체크·빨간 X)을 쓰지 않는다 (스타일 가이드 §6).
+   우리 아이콘은 `dress_button_box`가 단다. 메시지 상자는 단추를 우리가 짓지 않으니 기본 단추 하나만 채운다. */
+QDialogButtonBox { dialogbuttonbox-buttons-have-icons: 0; }
+QMessageBox QPushButton:!default {
   background-color: #171717;
   color: #FAFAFA;
   border: 1px solid #585858;

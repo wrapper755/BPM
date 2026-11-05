@@ -783,6 +783,8 @@ def test_the_toolbar_holds_the_everyday_actions(window: Any) -> None:
     bar = window.toolbar
     texts = [one.text() for one in bar.actions() if not one.isSeparator()]
     assert texts == ["저장", "실행 취소", "다시 실행", "실행 전 검사", "실행...", "속성 패널 접기"]
+    shown = [one.iconText() for one in bar.actions() if not one.isSeparator()]
+    assert shown[1:3] == ["취소", "다시"], "도구 모음에서만 짧게 — 메뉴 이름은 그대로"
     assert bar.actions()[0] is window.save_action and window.collapse_action in bar.actions()
     assert not bar.isMovable() and not bar.isFloatable() and not bar.toggleViewAction().isVisible()
     assert all(not one.icon().isNull() for one in bar.actions() if not one.isSeparator())

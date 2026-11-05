@@ -530,3 +530,20 @@ def test_an_open_menu_has_a_border() -> None:
     for theme in (THEME_LIGHT, THEME_DARK):
         color = tokens.colors(dark=theme == THEME_DARK)["border.strong"]
         assert f"border: 1px solid {color};" in qss(theme).split("QMenu {", 1)[1].split("}", 1)[0]
+
+
+def test_a_dialog_button_box_fills_one_button_and_uses_our_icons(app: Any) -> None:
+    """스타일 가이드 §6 — 받는 쪽 하나만 채우고 나머지는 테두리, 따로 이름 준 단추(`Danger`)는 그대로."""
+    from PySide6.QtWidgets import QDialogButtonBox  # noqa: PLC0415
+
+    from bpm.qt.theme import dress_button_box  # noqa: PLC0415
+
+    box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+    box.button(QDialogButtonBox.StandardButton.Ok).setText("올리기")
+    danger = box.addButton("지우기", QDialogButtonBox.ButtonRole.DestructiveRole)
+    danger.setObjectName("Danger")
+    dress_button_box(box)
+    dress_button_box(box)  # 두 번 불러도 같다
+    ok, cancel = box.button(QDialogButtonBox.StandardButton.Ok), box.button(QDialogButtonBox.StandardButton.Cancel)
+    assert (ok.objectName(), cancel.objectName(), danger.objectName()) == ("", "Secondary", "Danger")
+    assert not ok.icon().isNull() and not cancel.icon().isNull() and not danger.icon().isNull()

@@ -49,7 +49,7 @@ from bpm.bot_ui.credentials import SecretsUnavailable
 from bpm.bot_ui.settings import Settings, data_dir
 from bpm.contracts import SCOPE_BOT_UI, ConfigurationItem
 from bpm.core.senders import KNOWN_SECURITY, SECURITY_NONE, SECURITY_STARTTLS
-from bpm.qt.theme import set_role
+from bpm.qt.theme import dress_button_box, set_role
 
 log = logging.getLogger(__name__)
 
@@ -88,6 +88,7 @@ class SettingsDialog(QDialog):
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         buttons.button(QDialogButtonBox.StandardButton.Save).setText("저장")
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("취소")
+        dress_button_box(buttons)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         buttons.accepted.connect(self.save)
         buttons.rejected.connect(self.reject)
 

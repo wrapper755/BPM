@@ -560,6 +560,8 @@ class DetailDialog(QDialog):
         self.body.setPlainText(text)
         layout.addWidget(self.body)
         close = QPushButton("닫기", self)
+        close.setObjectName("Secondary")
+        button_icon(close, "x")
         close.clicked.connect(self.accept)
         row = QHBoxLayout()
         row.addStretch(1)
@@ -622,6 +624,7 @@ class ResourceExplorer(QWidget):
 
         self.reload_button = QPushButton("새로 고침", self)
         button_icon(self.reload_button, "refresh")
+        self.reload_button.setObjectName("Secondary")  # 탭의 잔일 — 강조색으로 채우지 않는다
         self.reload_button.clicked.connect(self.reloading)
         top = QHBoxLayout()
         top.addWidget(self.reload_button)

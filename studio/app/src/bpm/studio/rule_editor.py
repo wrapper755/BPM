@@ -100,6 +100,7 @@ class RuleEditor(QWidget):
         _show_rows(self.outputs, VISIBLE_ROWS)
         self.add_output_button = QPushButton("줄 더하기", self)
         button_icon(self.add_output_button, "plus")
+        self.add_output_button.setObjectName("Secondary")
         self.drop_output_button = QPushButton("줄 삭제", self)
         button_icon(self.drop_output_button, "trash")
         self.drop_output_button.setObjectName("Secondary")

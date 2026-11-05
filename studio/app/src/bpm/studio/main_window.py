@@ -481,6 +481,10 @@ class MainWindow(QMainWindow):
         self.run_tool_action.triggered.connect(self._run_or_stop)
         bar.addAction(self.save_action)
         bar.addSeparator()
+        # 도구 모음에서만 짧게 — 메뉴는 「실행 취소」「다시 실행」 그대로, 툴팁도 그 이름이다.
+        for action, short in ((self.undo_action, "취소"), (self.redo_action, "다시")):
+            action.setIconText(short)
+            action.setToolTip(action.text())
         bar.addActions([self.undo_action, self.redo_action])
         bar.addSeparator()
         bar.addActions([self.preflight_action, self.run_tool_action])

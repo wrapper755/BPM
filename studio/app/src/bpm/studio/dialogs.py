@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import BpmnReadError, read_process
+from bpm.qt.theme import dress_button_box
 from bpm.studio.workspace import (
     DEFAULT_GROUP,
     ID_PATTERN,
@@ -171,6 +172,7 @@ class NewProcessDialog(QDialog):
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=self
         )
+        dress_button_box(buttons)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
 
@@ -405,6 +407,7 @@ class ShareDefinitionsDialog(QDialog):
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=self
         )
         self.buttons.button(QDialogButtonBox.StandardButton.Ok).setText("올리기" if upload else "내보내기")
+        dress_button_box(self.buttons)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
 

@@ -24,7 +24,7 @@ ICONS: dict[str, str] = {
     "play": "a play triangle pointing right with rounded corners, no circle",
     "square": "a plain rounded square (stop)",
     "panel-right-close": "a rounded rectangle window with a vertical divider near the right side and a small chevron pointing right inside the right panel (collapse side panel)",
-    "plus": "a plus sign",
+    "plus": "a plus sign made of two very thin hairline strokes",
     "trash": "a trash can with lid and two vertical lines on the body",
     "folder": "a closed folder",
     "process": "a compact square-shaped process flow: a small circle at the top-left, a line down to a rounded rectangle at the bottom-left, a line right to a small diamond at the bottom-right — the whole drawing fits a square",
@@ -43,6 +43,10 @@ ICONS: dict[str, str] = {
     "pin": "a push pin drawn diagonally",
     "pin-off": "a push pin drawn diagonally with a single diagonal slash line crossing it",
     "file-plus": "a document page with a folded top-right corner and a plus sign in the middle",
+    "check": "a single check mark drawn with ONE very thin hairline stroke (OK / confirm)",
+    "x": "a single X made of two crossing diagonal very thin hairline strokes (cancel / close)",
+    "upload": "an arrow pointing up out of an open tray (upload)",
+    "clock": "a clock face circle with two hands (later)",
     "app": "a solid rounded square tile filled completely black; inside it, cut out in white, a horizontal flow: a small hollow circle, a short line, a small rounded rectangle, a short line, a small hollow diamond. White cut-out lines, black tile",
 }
 

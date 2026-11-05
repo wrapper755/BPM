@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.qt.messages import ask_unsaved
-from bpm.qt.theme import button_icon, set_role
+from bpm.qt.theme import button_icon, dress_button_box, set_role
 from bpm.qt.theme.tokens import SPACE_3
 from bpm.studio.dmn_table import (
     CELL_HELP,
@@ -103,6 +103,7 @@ class ColumnDialog(QDialog):
             form.addRow("이름", self.name_box)
         form.addRow("typeRef", self.type_box)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, self)
+        dress_button_box(buttons)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout = QVBoxLayout(self)
@@ -221,7 +222,9 @@ class DecisionDialog(QDialog):
         set_role(self.warning_label, "muted")
 
         self.save_button = QPushButton("저장", self)
+        button_icon(self.save_button, "save")
         self.close_button = QPushButton("닫기", self)
+        button_icon(self.close_button, "x")
         self.close_button.setObjectName("Secondary")
         self.save_button.setVisible(not read_only)
         bottom = QHBoxLayout()
