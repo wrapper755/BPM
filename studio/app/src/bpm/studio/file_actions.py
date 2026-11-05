@@ -24,8 +24,9 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from bpm.qt.messages import ask_unsaved
 from bpm.studio.canvas import CanvasError
-from bpm.studio.dialogs import NewProcessDialog, pick_bpmn_file
+from bpm.studio.dialogs import NewProcessDialog, pick_process_folder
 from bpm.studio.workspace import (
+    RECORD_NAME,
     WorkspaceError,
     check_definition_name,
     definition_process_id,
@@ -42,6 +43,8 @@ DISCARD_TEXT = "저장하지 않은 변경사항이 있습니다. 저장할까�
 LAID_OUT = "그림 좌표가 없어 자동 배치했습니다 — 저장하면 파일에 남습니다."
 #: 시험 실행 중에는 닫지 않는다 — 실행이 그 그림에 노드 상태를 칠한다.
 CLOSE_WHILE_RUNNING = "시험 실행 중에는 닫을 수 없습니다 — 먼저 「실행 중지」를 누르세요."
+#: 「BPM 프로세스 열기...」로 고른 폴더에 기록이 없을 때 — 여는 단위는 BPM 프로세스 폴더다 (U1).
+NOT_A_PROCESS_FOLDER = "BPM 프로세스 폴더가 아닙니다 — process.json이 있는 폴더를 고르세요."
 
 
 def may_discard(window: MainWindow) -> bool:
@@ -230,23 +233,35 @@ def save_process_as(window: MainWindow) -> None:
 
 
 def open_process(window: MainWindow) -> None:
-    """STU-01 「BPM 프로세스 열기...」 (Ctrl+O) — `.bpmn` 하나를 고른다 (작업 폴더에서 시작).
+    """STU-01 「BPM 프로세스 열기...」 (Ctrl+O) — BPM 프로세스 폴더(`process.json`이 있는 폴더)를
+    고른다 (작업 폴더에서 시작).
 
-    **이미 어느 BPM 프로세스의 정의면** 그것을 연다(탐색기 목록에 올라간다). 아니면 **가져온다**
-    — STU-05로 id·이름을 받아 그 파일 **하나만** 진입 정의로 복사한다 (`Workspace.create`의
+    **작업 폴더의 BPM 프로세스면** 그것의 진입 정의를 연다(탐색기 목록에 올라간다). 바깥 폴더면
+    **가져온다** — STU-05로 id·이름을 받아 그 진입 정의 **하나만** 복사한다 (`Workspace.create`의
     `first` — 원본은 읽기만 한다). 그림 좌표가 없으면 **열 때** 캔버스가 배치한다 (ADR-0088).
-    BPM 프로세스 없이 파일만 열지 않는다 (U1).
+    맨 `.bpmn` 파일은 고르지 않는다 (U1 — 예제는 「새 BPM 프로세스...」가 들인다).
     """
-    picked = pick_bpmn_file(window, window.workspace.root)
-    if picked is None:
+    folder = pick_process_folder(window, window.workspace.root)
+    if folder is None:
         return
-    target = picked.resolve()
+    if not (folder / RECORD_NAME).is_file():
+        window.say(NOT_A_PROCESS_FOLDER)
+        return
+    target = folder.resolve()
     for group in window.workspace.groups():
         for one in group.processes:
-            for definition in one.definitions:
-                if definition.path.resolve() == target:
-                    open_definition(window, definition.path.as_posix())
+            if one.folder.resolve() == target:
+                entry = one.entry_definition
+                if entry is None:
+                    window.say(f"{one.display}에 정의가 없습니다 — 새 정의를 그려 저장하세요.")
                     return
+                open_definition(window, entry.path.as_posix())
+                return
+    found = window.workspace.read(folder, folder.parent.name).entry_definition
+    if found is None:
+        window.say(f"가져올 정의가 없습니다 — {folder.name}/process 폴더에 .bpmn이 없습니다.")
+        return
+    picked = found.path
     if not may_discard(window):
         return
     # 같은 id가 있으면 창이 「기존 것을 바꾸기」를 묻는다 — 상태 줄이 무엇을 했는지 가른다.

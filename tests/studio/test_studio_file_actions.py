@@ -234,24 +234,36 @@ def test_closing_takes_the_process_off_the_explorer_list(tmp_path: Path) -> None
     assert window.workspace.find("a.b") is not None
 
 
-def test_opening_a_file_of_the_work_folder_lists_its_process_again(tmp_path: Path, monkeypatch: Any) -> None:
-    """「BPM 프로세스 열기...」 — 이미 어느 BPM 프로세스의 정의면 가져오지 않고 그것을 연다."""
+def test_opening_a_folder_of_the_work_folder_lists_its_process_again(tmp_path: Path, monkeypatch: Any) -> None:
+    """「BPM 프로세스 열기...」 — 작업 폴더의 BPM 프로세스 폴더면 가져오지 않고 그 진입 정의를 연다."""
     window = opened(tmp_path, "main.bpmn", "sub.bpmn")
     assert window.process is not None
-    sub = window.process.definitions[1].path
+    folder, main = window.process.folder, window.process.definitions[0].path
     file_actions.close_process(window)  # type: ignore[arg-type]
     starts: list[Path | None] = []
 
     def pick(_window: Any, start: Path | None = None) -> Path:
         starts.append(start)
-        return sub
+        return folder
 
-    monkeypatch.setattr(file_actions, "pick_bpmn_file", pick)
+    monkeypatch.setattr(file_actions, "pick_process_folder", pick)
     monkeypatch.setattr(NewProcessDialog, "ask", staticmethod(lambda *_a, **_k: pytest.fail("가져오면 안 된다")))
     file_actions.open_process(window)  # type: ignore[arg-type]
     assert starts == [window.workspace.root]
     assert window.process is not None and window.process.id == "a.b"
-    assert window.definition == sub and window.explorer.refreshed[-1].endswith("sub.bpmn")
+    assert window.definition == main and window.explorer.refreshed[-1].endswith("main.bpmn")
+
+
+def test_opening_a_folder_without_a_record_says_so(tmp_path: Path, monkeypatch: Any) -> None:
+    """process.json이 없는 폴더는 BPM 프로세스가 아니다 — 맨 `.bpmn`이 있어도 가져오지 않는다 (U1)."""
+    window = opened(tmp_path, "main.bpmn")
+    loose = tmp_path / "그냥 폴더"
+    loose.mkdir()
+    (loose / "바깥.bpmn").write_text(MINIMAL.format(process_id="Proc_out"), encoding="utf-8")
+    monkeypatch.setattr(file_actions, "pick_process_folder", lambda _window, _start=None: loose)
+    monkeypatch.setattr(NewProcessDialog, "ask", staticmethod(lambda *_a, **_k: pytest.fail("가져오면 안 된다")))
+    file_actions.open_process(window)  # type: ignore[arg-type]
+    assert window.said[-1] == file_actions.NOT_A_PROCESS_FOLDER
 
 
 def test_closing_during_a_test_run_is_refused(tmp_path: Path) -> None:
@@ -325,10 +337,14 @@ def test_a_definition_with_di_opens_as_saved(tmp_path: Path) -> None:
     assert window.dirty is False and file_actions.LAID_OUT not in window.said
 
 
-def test_importing_a_file_makes_a_process_and_opens_it(tmp_path: Path, monkeypatch: Any) -> None:
-    """「BPM 프로세스 열기...」로 바깥 파일을 고르면 가져온다 — 파일 → STU-05 → 연다."""
+def test_importing_an_outside_folder_makes_a_process_and_opens_it(tmp_path: Path, monkeypatch: Any) -> None:
+    """「BPM 프로세스 열기...」로 바깥 BPM 프로세스 폴더를 고르면 그 진입 정의를 가져온다 — 폴더 → STU-05 → 연다."""
     window = opened(tmp_path, "main.bpmn")
-    source = tmp_path / "바깥.bpmn"
+    outside = tmp_path / "바깥" / "x.y"
+    (outside / "process").mkdir(parents=True)
+    (outside / "process.json").write_text('{"id": "x.y", "entry": "바깥.bpmn"}', encoding="utf-8")
+    (outside / "process" / "다른.bpmn").write_text(MINIMAL.format(process_id="Proc_other"), encoding="utf-8")
+    source = outside / "process" / "바깥.bpmn"
     source.write_text(MINIMAL.format(process_id="Proc_out"), encoding="utf-8")
     seen: dict[str, Any] = {}
 
@@ -336,7 +352,7 @@ def test_importing_a_file_makes_a_process_and_opens_it(tmp_path: Path, monkeypat
         seen.update(kwargs)
         return workspace.create("c.d", first=kwargs["imported"])
 
-    monkeypatch.setattr(file_actions, "pick_bpmn_file", lambda _window, _start=None: source)
+    monkeypatch.setattr(file_actions, "pick_process_folder", lambda _window, _start=None: outside)
     monkeypatch.setattr(NewProcessDialog, "ask", staticmethod(ask))
     opened_paths: list[str] = []
     monkeypatch.setattr(file_actions, "open_definition", lambda _w, path: opened_paths.append(path))
@@ -350,6 +366,6 @@ def test_importing_a_file_makes_a_process_and_opens_it(tmp_path: Path, monkeypat
 
 def test_importing_stops_when_no_file_is_picked(tmp_path: Path, monkeypatch: Any) -> None:
     window = opened(tmp_path, "main.bpmn")
-    monkeypatch.setattr(file_actions, "pick_bpmn_file", lambda _window, _start=None: None)
+    monkeypatch.setattr(file_actions, "pick_process_folder", lambda _window, _start=None: None)
     file_actions.open_process(window)  # type: ignore[arg-type]
     assert window.said == [] and window.workspace.find("c.d") is None

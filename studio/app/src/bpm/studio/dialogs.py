@@ -66,14 +66,19 @@ NO_OPEN_DEFINITION = "열린 정의가 없습니다"
 #: 「예제에서 가져오기」를 끌 때 옆에 적는 까닭 — 예제는 체크아웃에만 있다 (설치본에는 없다).
 NO_EXAMPLES = "예제를 찾지 못했습니다"
 
-#: 파일에서 가져올 때(「BPM 프로세스 열기...」) 안내 — 따라가지 않는 것을 미리 말한다 (STU-05).
+#: 바깥 폴더에서 가져올 때(「BPM 프로세스 열기...」) 안내 — 따라가지 않는 것을 미리 말한다 (STU-05).
 FILE_HINT = "그 파일 하나만 가져옵니다. 쓰는 결정(DMN)·호출 대상은 실행 전 검사가 알려 줍니다."
 
 
-def pick_bpmn_file(parent: QWidget | None, start: Path | None = None) -> Path | None:
-    """STU-01 「BPM 프로세스 열기...」의 첫 걸음 — `.bpmn` 하나 (`start` 폴더에서 시작한다)."""
+def pick_process_folder(parent: QWidget | None, start: Path | None = None) -> Path | None:
+    """STU-01 「BPM 프로세스 열기...」의 첫 걸음 — BPM 프로세스 폴더 하나 (`start` 폴더에서 시작한다).
+
+    파일도 보이게 둔다 — 폴더 안의 `process.json`을 보고 맞는 폴더인지 알 수 있다.
+    """
     where = start.as_posix() if start is not None else ""
-    path, _ = QFileDialog.getOpenFileName(parent, "BPM 프로세스 열기", where, "BPMN (*.bpmn)")
+    path = QFileDialog.getExistingDirectory(
+        parent, "BPM 프로세스 열기", where, QFileDialog.Option(0)
+    )
     return Path(path) if path else None
 
 
