@@ -164,7 +164,7 @@ def upload_shared(window: MainWindow) -> None:
         return
     if not window.saved_to_disk():
         return
-    picked = ShareDefinitionsDialog.ask(window, process)
+    picked = ShareDefinitionsDialog.ask(window, process, upload=True)
     if not picked:
         return
     locations = window.task_type_locations()

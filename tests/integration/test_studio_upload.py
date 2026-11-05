@@ -514,3 +514,28 @@ def test_the_place_goes_into_the_manifest(tmp_path: Path) -> None:
     assert reread.place == {"scope": "staff", "staff": "kim"}
     manifest = build_manifest(reread)
     assert manifest.place is not None and manifest.place.staff == "kim"
+
+
+def test_the_share_dialog_says_upload_when_it_uploads(window: Any) -> None:
+    """STU-12 — 창 하나가 두 일을 맡고 **제목·단추·안내가 일을 따라간다** (올리기로 열고 「내보내기」라 하지 않는다)."""
+    from types import SimpleNamespace
+
+    from PySide6.QtWidgets import QDialogButtonBox, QLabel
+
+    from bpm.studio.dialogs import ShareDefinitionsDialog
+
+    process: Any = SimpleNamespace(display="사건 접수", version="0.1.0", definitions=[])
+    ok = QDialogButtonBox.StandardButton.Ok
+
+    def texts(dialog: ShareDefinitionsDialog) -> list[str]:
+        return [one.text() for one in dialog.findChildren(QLabel)]
+
+    sharing = ShareDefinitionsDialog(window, process)
+    assert sharing.windowTitle() == "공유 BPM 프로세스로 내보내기"
+    assert sharing.buttons.button(ok).text() == "내보내기"
+    assert ShareDefinitionsDialog.UPLOAD_HINT not in texts(sharing)
+
+    uploading = ShareDefinitionsDialog(window, process, upload=True)
+    assert uploading.windowTitle() == "공유 BPM 프로세스 Center로 올리기"
+    assert uploading.buttons.button(ok).text() == "올리기"
+    assert ShareDefinitionsDialog.UPLOAD_HINT in texts(uploading)

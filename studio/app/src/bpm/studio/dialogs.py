@@ -371,17 +371,18 @@ class NewProcessDialog(QDialog):
 class ShareDefinitionsDialog(QDialog):
     """STU-12 「공유 BPM 프로세스로 내보내기...」 — 담을 정의를 고른다.
 
-    **「올리기」는 아직 없다** (Center 올리기 자체가 없다, `studio/docs/gaps.md` §4-5) — 창은 파일로
-    내보내는 쪽만 가진다. 읽지 못한 정의는 **고를 수 없게** 두고 사유를 옆에 적는다 (U3).
+    「공유 BPM 프로세스 Center로 올리기」도 이 창을 쓴다 — `upload=True`면 제목·단추·안내가 올리기다.
+    읽지 못한 정의는 **고를 수 없게** 두고 사유를 옆에 적는다 (U3).
     """
 
     #: 하나도 고르지 않으면 「내보내기」가 꺼진다 (STU-12 「하나 이상 필수」).
     HINT = "고른 정의가 공유 BPM 프로세스 패키지(`process_lib`)에 담깁니다. 결정(DMN)은 모두 함께 담깁니다."
+    UPLOAD_HINT = "후보 상태로 올라갑니다. 같은 버전은 다시 올릴 수 없으니 버전을 올리세요."
 
-    def __init__(self, parent: QWidget | None, process: BpmProcess) -> None:
+    def __init__(self, parent: QWidget | None, process: BpmProcess, *, upload: bool = False) -> None:
         super().__init__(parent)
         self.process = process
-        self.setWindowTitle("공유 BPM 프로세스로 내보내기")
+        self.setWindowTitle("공유 BPM 프로세스 Center로 올리기" if upload else "공유 BPM 프로세스로 내보내기")
 
         self.boxes: list[tuple[QCheckBox, Definition]] = []
         picks = QVBoxLayout()
@@ -398,7 +399,7 @@ class ShareDefinitionsDialog(QDialog):
         self.buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=self
         )
-        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setText("내보내기")
+        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setText("올리기" if upload else "내보내기")
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
 
@@ -407,6 +408,8 @@ class ShareDefinitionsDialog(QDialog):
         layout.addWidget(QLabel("공유할 정의", self))
         layout.addLayout(picks)
         layout.addWidget(QLabel(self.HINT, self))
+        if upload:
+            layout.addWidget(QLabel(self.UPLOAD_HINT, self))
         layout.addWidget(self.buttons)
         self._refresh()
 
@@ -417,8 +420,10 @@ class ShareDefinitionsDialog(QDialog):
         return [d for box, d in self.boxes if box.isChecked() and d.process is not None]
 
     @classmethod
-    def ask(cls, parent: QWidget | None, process: BpmProcess) -> list[Definition] | None:
-        dialog = cls(parent, process)
+    def ask(
+        cls, parent: QWidget | None, process: BpmProcess, *, upload: bool = False
+    ) -> list[Definition] | None:
+        dialog = cls(parent, process, upload=upload)
         return dialog.picked() if dialog.exec() == QDialog.DialogCode.Accepted else None
 
 
