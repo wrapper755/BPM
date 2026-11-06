@@ -1,7 +1,7 @@
 """STU-02 BPM 프로세스 탐색기 — 그룹 → BPM 프로세스 → 정의.
 
 **파일을 직접 여는 메뉴는 없다** (STU-01 U1). 목록은 **연 BPM 프로세스**다 — 작업 폴더 전부가
-아니다. 열면 올라가고 「BPM 프로세스 닫기」가 빼며, 다시 올리는 길은 「BPM 프로세스 열기...」다.
+아니다. 열면 올라가고 「프로세스 닫기」가 빼며, 다시 올리는 길은 「프로세스 열기...」다.
 
 열은 셋이다: 「BPM 프로세스 / 정의」, 「버전」, 「학습·검증」. 학습·검증 칸은 지금 AI 태스크 수만
 센다 — 학습·재생 검증·케이스 통과 수는 시험 실행이 생긴 뒤에 채운다 (조각 3e-3).
@@ -32,7 +32,7 @@ _PAYLOAD = Qt.ItemDataRole.UserRole + 2
 #: 줄 앞의 아이콘 (스타일 가이드 §6) — 첫 열에만.
 ROW_ICONS = {ROW_GROUP: "folder", ROW_PROCESS: "process", ROW_DEFINITION: "definition"}
 
-EMPTY_TEXT = "열린 BPM 프로세스가 없습니다. 파일 → BPM 프로세스 열기...로 열거나 새 BPM 프로세스...로 만드세요."
+EMPTY_TEXT = "열린 BPM 프로세스가 없습니다. 파일 → 프로세스 열기...로 열거나 새 프로세스...로 만드세요."
 
 
 def ai_task_count(definition: Definition) -> int:

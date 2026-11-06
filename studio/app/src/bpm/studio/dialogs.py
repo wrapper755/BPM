@@ -27,9 +27,9 @@ from PySide6.QtWidgets import (
 
 from bpm.contracts.bpmn_ext import BpmnReadError, read_process
 from bpm.qt.theme import dress_button_box
+from bpm.qt.theme.tokens import SPACE_3
 from bpm.studio.workspace import (
     DEFAULT_GROUP,
-    ID_PATTERN,
     BpmProcess,
     Definition,
     Workspace,
@@ -131,10 +131,10 @@ class NewProcessDialog(QDialog):
             self.name_box.setText(source.display)
             self.version_box.setText(source.version)
             self.group_box.setText(source.group)
-        if imported is not None:
-            self._fill_from(imported)
 
         form = QFormLayout()
+
+        form.setVerticalSpacing(SPACE_3)
         id_label = QLabel("id", self)
         id_label.setToolTip(HINT)
         form.addRow(id_label, self.id_box)
@@ -288,7 +288,7 @@ class NewProcessDialog(QDialog):
 class ShareDefinitionsDialog(QDialog):
     """STU-12 「공유 BPM 프로세스로 내보내기...」 — 담을 정의를 고른다.
 
-    「공유 BPM 프로세스 Center로 올리기」도 이 창을 쓴다 — `upload=True`면 제목·단추·안내가 올리기다.
+    「공유 BPM 프로세스 서버로 올리기」도 이 창을 쓴다 — `upload=True`면 제목·단추·안내가 올리기다.
     읽지 못한 정의는 **고를 수 없게** 두고 사유를 옆에 적는다 (U3).
     """
 
@@ -299,7 +299,7 @@ class ShareDefinitionsDialog(QDialog):
     def __init__(self, parent: QWidget | None, process: BpmProcess, *, upload: bool = False) -> None:
         super().__init__(parent)
         self.process = process
-        self.setWindowTitle("공유 BPM 프로세스 Center로 올리기" if upload else "공유 BPM 프로세스로 내보내기")
+        self.setWindowTitle("공유 BPM 프로세스 서버로 올리기" if upload else "공유 BPM 프로세스로 내보내기")
 
         self.boxes: list[tuple[QCheckBox, Definition]] = []
         picks = QVBoxLayout()

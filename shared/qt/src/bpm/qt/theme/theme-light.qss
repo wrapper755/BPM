@@ -13,8 +13,9 @@ QFrame#Surface, QGroupBox, QDialog {
   border-radius: 8px;
 }
 
-/* 묶음(Section, 스타일 가이드 §3) — 제목은 **카드 안쪽 맨 위**에, 굵게 + 왼쪽 강조 막대.
-   테두리에 걸친 회색 제목은 내용과 붙어 보여 묶음이 갈리지 않았다. Qt는 제목 자리를 비워 주지
+/* 묶음(Section, 스타일 가이드 §3) — 제목은 **카드 안쪽 맨 위**에 굵게, 그 아래 옅은 선.
+   테두리에 걸친 회색 제목은 내용과 붙어 보여
+   묶음이 갈리지 않았다. Qt는 제목 자리를 비워 주지
    않으므로 위 패딩 = 제목 위 여백 + 제목 줄 높이 + 제목 아래 간격으로 직접 연다 (없으면 겹친다, 이슈 #3). */
 QGroupBox {
   margin-top: 0;
@@ -25,10 +26,13 @@ QGroupBox {
 QGroupBox::title {
   subcontrol-origin: padding;
   subcontrol-position: top left;
-  left: 12px;
+  left: 0;
   top: 12px;
-  padding: 0 0 0 8px;
-  border-left: 3px solid #5152C1;
+  /* 아래 선 — 제목 칸을 오른쪽으로 길게 늘여 그 밑줄이 묶음 폭을 가로지르게 한다(묶음이 넘친 것을 자른다).
+     폭 전체 선은 QSS로 따로 그을 수 없다. 선은 제목 아래 간격의 절반에 오고
+     카드 양끝까지 닿는다(제목 글은 왼쪽 패딩으로 들여 쓴다). */
+  padding: 0 4000px 6px 12px;
+  border-bottom: 1px solid #D5D5D5;
   color: #0A0A0A;
 }
 
@@ -210,9 +214,90 @@ QTabWidget#PaneTabs > QStackedWidget > QWidget > QAbstractScrollArea {
   border: none;
   border-radius: 0;
 }
+/* 틈 — 카드보다 한 단계 가라앉는다. 메인 창과 그 안의 감싸개만 (`Workspace`) — 대화상자는 그대로다. */
+QMainWindow[workspace="true"], QMainWindow[workspace="true"] > QDockWidget,
+QMainWindow[workspace="true"] > QStatusBar, QWidget#Workspace,
+QSplitter#middleSplit, QSplitter#bottomSplit { background-color: #E8E8E8; }
+/* 카드 머리띠 — 캔버스·속성처럼 탭이 없는 카드. 위 모서리는 카드의 둥글기 안쪽에 맞춘다. */
+QLabel#PaneHeader {
+  background-color: #F3F4F7;
+  color: #45484D;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-bottom: 1px solid #D5D5D5;
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
+}
+/* 탭 (스타일 가이드 §3 Tabs) — 앱의 **모든 탭이 한 모양**이다. 탭이 있는 카드는 탭 줄이 곧 머리띠다.
+   고른 탭은 흰 바탕 + 굵게 + **연한 보라 밑줄**(`focus`) — `primary` 밑줄은 너무 셌다.
+   밑줄 자리는 다른 탭도 같은 두께로 비워(머리 바탕색) 고를 때 높이가 바뀌지 않는다. */
+QTabWidget#PaneTabs > QTabBar { background-color: transparent; }
+QTabBar::tab {
+  background-color: #F3F4F7;
+  color: #45484D;
+  border: 1px solid #D5D5D5;
+  border-bottom: 2px solid #F3F4F7;
+  padding: 4px 12px;
+  margin-right: 2px;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+QTabBar::tab:selected {
+  background-color: #FFFFFF;
+  color: #0A0A0A;
+  font-weight: 600;
+  border-bottom: 2px solid #757CD3;
+}
+QTabBar::tab:!selected:hover { color: #0A0A0A; }
+
+/* 위 띠 (STU-01 [M]·[B]) — 메뉴 막대와 도구 모음이 하나로 이어진 연한 보라 띠. `band` 속성을 단 창만이다.
+   남색 틀(`chrome.*`)은 데스크톱 창 위에서 너무 셌다 — 브랜드 색의 옅은 단계에 보통 글자를 얹는다. */
+QMenuBar[band="true"] {
+  background-color: #E6EAFF;
+  color: #0A0A0A;
+  padding: 4px 8px 0 8px;
+}
+QMenuBar[band="true"]::item {
+  background-color: transparent;
+  color: #0A0A0A;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+QMenuBar[band="true"]::item:selected, QMenuBar[band="true"]::item:pressed {
+  background-color: #FFFFFF;
+}
+QToolBar[band="true"] {
+  background-color: #E6EAFF;
+  border: none;
+  border-bottom: 1px solid #D5D5D5;
+  padding: 4px 8px;
+  spacing: 4px;
+}
+QToolBar[band="true"] QToolButton {
+  background-color: transparent;
+  color: #0A0A0A;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+QToolBar[band="true"] QToolButton:hover, QToolBar[band="true"] QToolButton:checked {
+  background-color: #FFFFFF;
+}
+QToolBar[band="true"] QToolButton:disabled { color: #656565; }
+QToolBar[band="true"] QToolButton[running="true"] { background-color: #5152C1; color: #FFFFFF; }
+QToolBar[band="true"]::separator {
+  background-color: #AEAEAE;
+  width: 1px;
+  margin: 4px 8px;
+}
 
 /* 무리 아래 선 (STU-01 「변수」 탭) — 작은 탭과 그 아래 표를 가른다. */
-QFrame#Rule { background-color: #D5D5D5; border: none; max-height: 1px; min-height: 1px; }
+QFrame#Rule {
+  background-color: #D5D5D5;
+  border: none;
+  max-height: 1px;
+  min-height: 1px;
+}
 
 /* 펼친 메뉴(메뉴 막대·문맥 메뉴) — 테두리가 없으면 흰 바탕 위에서 메뉴가 어디까지인지 안 보인다. */
 QMenu {

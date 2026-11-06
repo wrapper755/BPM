@@ -1,6 +1,6 @@
 """STU-10 설정 — 왼쪽 분류 목록, 오른쪽 그 분류의 칸.
 
-- **「저장」을 누를 때까지 아무것도 바뀌지 않는다** — 키도 그때 OS 비밀 저장소에 간다. **예외는 「Center」가
+- **「저장」을 누를 때까지 아무것도 바뀌지 않는다** — 키도 그때 OS 비밀 저장소에 간다. **예외는 「서버」가
   여는 STU-16 「Center에 연결」**이다 — 그 창은 누르는 그 자리에서 등록 요청을 보내거나 키를 받고 주소를
   적는다 (ADR-0093). 그래서 창을 「취소」로 닫아도 `center_changed`에 바뀐 설정이 남는다.
 - 키는 칸에 **보이지 않는다** — 저장된 것이 있으면 자리 글로 알린다. 새로 넣을 때만 친다.
@@ -26,19 +26,23 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
     QPushButton,
     QStackedWidget,
+    QTableWidget,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
 from bpm.contracts import SCOPE_STUDIO, ConfigurationItem
 from bpm.qt.theme import THEME_DARK, THEME_LIGHT, THEME_SYSTEM, button_icon, dress_button_box, set_role
-from bpm.qt.theme.tokens import SPACE_1
+from bpm.qt.theme.tokens import SPACE_1, SPACE_3
+from bpm.studio import runtime_info
 from bpm.studio.center_enroll import StudioEnrollment, connected_text, expires_soon, waiting_text
 from bpm.studio.checks import center_status, llm_status
 from bpm.studio.connect_dialog import CenterConnectDialog
@@ -59,9 +63,9 @@ TITLE = "설정"
 MIN_WIDTH = 720
 
 #: 분류 이름 (STU-10 표 순서).
-APPEARANCE, LLM, CENTER, EXTENSIONS = ("외형", "LLM", "Center", "확장별 설정")
+GENERAL, APPEARANCE, LLM, CENTER, EXTENSIONS, ABOUT = ("일반", "외형", "LLM", "서버", "확장별 설정", "정보")
 #: 「서비스 앱」 분류는 없다 — 서비스 앱 키가 없어졌다 (ADR-0102). 시험 실행은 Studio 키로 Center에 올린다.
-CATEGORIES = (APPEARANCE, LLM, CENTER, EXTENSIONS)
+CATEGORIES = (GENERAL, APPEARANCE, LLM, CENTER, EXTENSIONS, ABOUT)
 
 #: 「외형」 테마 — 저장하는 값과 보이는 글 (스타일 가이드 §4-2).
 THEMES = ((THEME_SYSTEM, "시스템 따름"), (THEME_LIGHT, "밝게"), (THEME_DARK, "어둡게"))
@@ -88,7 +92,7 @@ class StudioSettingsDialog(QDialog):
         #: 시험이 끼우는 HTTP 클라이언트 (연결 테스트).
         self.client = client
         self.saved: Settings | None = None
-        #: 「Center」가 그 자리에서 적은 설정 — 「취소」로 닫아도 부르는 쪽이 받는다 (ADR-0093).
+        #: 「서버」가 그 자리에서 적은 설정 — 「취소」로 닫아도 부르는 쪽이 받는다 (ADR-0093).
         self.center_changed: Settings | None = None
         self.setWindowTitle(TITLE)
         self.setMinimumWidth(MIN_WIDTH)
@@ -136,6 +140,7 @@ class StudioSettingsDialog(QDialog):
             LLM: self._llm_page,
             CENTER: self._center_page,
             EXTENSIONS: self._extensions_page,
+            ABOUT: self._about_page,
         }
         return pages[name]()
 
@@ -164,12 +169,50 @@ class StudioSettingsDialog(QDialog):
     def _appearance_page(self) -> QWidget:
         page = QWidget()
         form = QFormLayout(page)
+        form.setVerticalSpacing(SPACE_3)
         self.theme = QComboBox()
         for value, label in THEMES:
             self.theme.addItem(label, value)
         at = self.theme.findData(self.settings.theme)
         self.theme.setCurrentIndex(at if at >= 0 else 0)
         form.addRow("테마", self.theme)
+        return page
+
+    def _about_page(self) -> QWidget:
+        """「정보」 — 실행 환경과 오픈소스 고지. **읽기만 한다** (「저장」과 상관없다)."""
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        where = QGroupBox("실행 환경")
+        form = QFormLayout(where)
+        form.setVerticalSpacing(SPACE_3)
+        for label, value in runtime_info.environment(self.settings.data_dir):
+            shown = QLabel(value)
+            shown.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            shown.setWordWrap(True)
+            form.addRow(label, shown)
+        layout.addWidget(where)
+
+        credits = QGroupBox("오픈소스 고지")
+        box = QVBoxLayout(credits)
+        found = runtime_info.notices()
+        self.notices = QTableWidget(len(found), 3)
+        self.notices.setObjectName("notices")
+        self.notices.setHorizontalHeaderLabels(["이름", "판", "라이선스"])
+        self.notices.verticalHeader().setVisible(False)
+        self.notices.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.notices.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
+        for row, one in enumerate(found):
+            for column, value in enumerate((one.name, one.version, one.license)):
+                self.notices.setItem(row, column, QTableWidgetItem(value))
+        header = self.notices.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setStretchLastSection(True)
+        box.addWidget(self.notices)
+        full = QLabel(runtime_info.FULL_TEXT)
+        set_role(full, "muted")
+        box.addWidget(full)
+        layout.addWidget(credits, 1)
         return page
 
     def _extensions_page(self) -> QWidget:
@@ -182,6 +225,7 @@ class StudioSettingsDialog(QDialog):
                 continue
             box = QGroupBox(found.manifest.name)
             form = QFormLayout(box)
+            form.setVerticalSpacing(SPACE_3)
             stored = self.settings.extension(found.id)
             for item in items:
                 field = QLineEdit()
@@ -208,6 +252,7 @@ class StudioSettingsDialog(QDialog):
     def _llm_page(self) -> QWidget:
         page = QWidget()
         form = QFormLayout(page)
+        form.setVerticalSpacing(SPACE_3)
         self.llm_url = QLineEdit(self.settings.llm_base_url)
         self.llm_model = QLineEdit(self.settings.llm_model)
         self.llm_key = QLineEdit()
@@ -244,13 +289,14 @@ class StudioSettingsDialog(QDialog):
         return page
 
     def _center_page(self) -> QWidget:
-        """STU-10 「Center」 — 주소·상태 줄·「연결 테스트」, 필요할 때만 「다시 요청」 (ADR-0093).
+        """STU-10 「서버」(ADR-0133) — 주소·상태 줄·「연결 테스트」, 필요할 때만 「다시 요청」 (ADR-0093).
 
         **들어오는 일 자체는 STU-16 「Center에 연결」**이 한다 — 키가 없으면 「연결 테스트」가 그 창을
         연다. 이 탭은 「지금 어떤가」를 보고 고치는 자리다. 아이디·비밀번호도, 키 칸도 없다.
         """
         page = QWidget()
         form = QFormLayout(page)
+        form.setVerticalSpacing(SPACE_3)
         self.center_url = QLineEdit(self.settings.center_url)
         self.center_url.setPlaceholderText("http://center.example.com:8800")
         self.center_result = QLabel("")
@@ -265,7 +311,7 @@ class StudioSettingsDialog(QDialog):
         self.center_again.setObjectName("Secondary")
         self.center_again.clicked.connect(self.request_again)
 
-        form.addRow("Center 주소", self.center_url)
+        form.addRow("서버 주소", self.center_url)
         form.addRow("", self.center_result)
         buttons = QHBoxLayout()
         buttons.addWidget(self.center_test)
@@ -370,7 +416,7 @@ class StudioSettingsDialog(QDialog):
         if not self.llm_model.text().strip():
             out.append("모델 이름이 비었습니다.")
         if not self.center_url.text().strip():
-            out.append("Center 주소가 비었습니다.")
+            out.append("서버 주소가 비었습니다.")
         return out
 
     def save(self) -> None:

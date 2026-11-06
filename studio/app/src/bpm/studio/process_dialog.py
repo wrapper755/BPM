@@ -50,7 +50,7 @@ from PySide6.QtWidgets import (
 
 from bpm.contracts.bpmn_ext import BpmnProcess, ProcessInfo, server_blockers
 from bpm.qt.theme import dress_button_box, set_role
-from bpm.qt.theme.tokens import SIZE_CONTROL_MD, SPACE_2, SPACE_3, SPACE_4
+from bpm.qt.theme.tokens import SIZE_CONTROL_MD, SPACE_3, SPACE_4
 from bpm.studio.workspace import BpmProcess, Definition, Workspace, WorkspaceError, write_record
 
 log = logging.getLogger(__name__)
@@ -199,7 +199,7 @@ class ProcessInfoDialog(QDialog):
         # [I] 읽기 전용 셋 — 흐린 글자로 위에 모은다 (STU-06 배치).
         captions: list[QLabel] = []
         facts = QFormLayout()
-        facts.setVerticalSpacing(SPACE_2)
+        facts.setVerticalSpacing(SPACE_3)
         facts.setHorizontalSpacing(SPACE_4)
         for text, shown in (
             ("id", self._fixed(process.id)),
@@ -214,7 +214,7 @@ class ProcessInfoDialog(QDialog):
 
         # [F] 편집 칸 — 이름표는 한 줄 칸의 세로 가운데에 맞춘다 (설명은 첫 줄).
         form = QFormLayout()
-        form.setVerticalSpacing(SPACE_2)
+        form.setVerticalSpacing(SPACE_3)
         form.setHorizontalSpacing(SPACE_4)
         form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         fields: tuple[tuple[str, QWidget], ...] = (

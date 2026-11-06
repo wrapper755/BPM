@@ -95,6 +95,8 @@ class ColumnDialog(QDialog):
         self.type_box.setCurrentIndex(index)
 
         form = QFormLayout()
+
+        form.setVerticalSpacing(SPACE_3)
         if not output:
             form.addRow("라벨", self.label_box)
             form.addRow("식 이름", self.name_box)

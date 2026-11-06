@@ -225,6 +225,7 @@ class CaseDialog(QDialog):
 
         mark = " — 진입" if definition is process.entry_definition else ""
         form = QFormLayout()
+        form.setVerticalSpacing(SPACE_3)
         form.addRow("대상 정의", QLabel(f"{definition.path.name}{mark}", self))
         form.addRow("이름", self.name_box)
         form.addRow("설명", self.description_box)

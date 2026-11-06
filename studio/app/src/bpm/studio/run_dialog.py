@@ -74,7 +74,7 @@ def required_inputs(definition: Definition) -> list[str]:
 def needs_case_text(names: list[str]) -> str:
     return (
         f"필수 입력이 있어 케이스 없이 돌 수 없습니다: {', '.join(names)} "
-        "— 「파일 → 시험 케이스...」에서 값을 적은 케이스를 고르세요"
+        "— 「실행 → 시험 케이스...」에서 값을 적은 케이스를 고르세요"
     )
 
 

@@ -22,6 +22,7 @@ from PySide6.QtGui import QAction, QCloseEvent, QKeySequence, QPalette
 from PySide6.QtWidgets import (
     QDockWidget,
     QFrame,
+    QLabel,
     QMainWindow,
     QMenu,
     QMessageBox,
@@ -47,6 +48,7 @@ from bpm.studio import (
     run_dialog,
     services,
 )
+from bpm.studio.about_dialog import AboutDialog
 from bpm.studio.call_editor import local_targets
 from bpm.studio.canvas import Canvas, CanvasError
 from bpm.studio.case_dialog import CaseDialog
@@ -180,6 +182,8 @@ class MainWindow(QMainWindow):
         self.running: CaseRun | None = None
         self.receiver = Receiver(port=settings.receiver_port)
 
+        # 영역을 색으로 가른다 (STU-01, 스타일 가이드 §4-2) — 틈 바탕·위 띠는 속성으로 고른다.
+        self.setProperty("workspace", True)
         self._build_layout()
         self._build_menus()
         self._build_toolbar()
@@ -202,7 +206,7 @@ class MainWindow(QMainWindow):
         tabs.addTab(self.explorer, "BPM 프로세스")
         tabs.addTab(self.resource_tree, "리소스")
         # 바깥 틈 — 창 가장자리와 캔버스 쪽 틈은 분할자·가운데 영역이 낸다.
-        dock.setWidget(_margined(tabs, SPACE_2, SPACE_2, 0, SPACE_2))
+        dock.setWidget(_margined(tabs, SPACE_2, SPACE_2, 0, SPACE_2, name="Workspace"))
         # STU-01 [E] — 왼쪽 고정, 제목 줄 없음 (띄우기·닫기·옮기기가 없다 — 닫아 잃어버릴 일이 없다).
         dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         dock.setTitleBarWidget(QWidget(dock))
@@ -211,8 +215,8 @@ class MainWindow(QMainWindow):
         self.explorer_dock = dock
         middle = QSplitter(Qt.Orientation.Horizontal, self)
         self.middle = middle
-        middle.addWidget(_pane(self.canvas))
-        self.properties_pane = _pane(self.properties)
+        middle.addWidget(_pane(self.canvas, "캔버스"))
+        self.properties_pane = _pane(self.properties, "속성")
         middle.addWidget(self.properties_pane)
         middle.setObjectName("middleSplit")
         middle.setStretchFactor(0, 3)  # 캔버스와 속성 패널은 3:1 (STU-01)
@@ -238,6 +242,7 @@ class MainWindow(QMainWindow):
         split.setSizes([4000, 1000])
 
         holder = QWidget(self)
+        holder.setObjectName("Workspace")
         box = QVBoxLayout(holder)
         box.setContentsMargins(0, SPACE_2, SPACE_2, SPACE_2)
         box.addWidget(split)
@@ -283,28 +288,30 @@ class MainWindow(QMainWindow):
 
     def _build_menus(self) -> None:
         bar = self.menuBar()
+        bar.setProperty("band", True)  # 위 띠 — 도구 모음과 이어진 연한 보라 띠
+        # 메뉴 항목은 「BPM」을 떼고 「프로세스」라 쓴다 — 프로그램 이름이 BPM Studio다 (ADR-0133).
         files = bar.addMenu("파일")
-        self._add(files, "새 BPM 프로세스...", self.new_process, QKeySequence.StandardKey.New)
-        self._add(
+        self.new_action = self._add(
+            files, "새 프로세스...", self.new_process, QKeySequence.StandardKey.New
+        )
+        self.open_action = self._add(
             files,
-            "BPM 프로세스 열기...",
+            "프로세스 열기...",
             lambda: file_actions.open_process(self),
             QKeySequence.StandardKey.Open,
         )
-        self.close_action = self._add(
-            files,
-            "BPM 프로세스 닫기",
-            lambda: file_actions.close_process(self),
-            QKeySequence.StandardKey.Close,
-        )
-        self._add(files, "BPM 프로세스 정보...", self.edit_info)
+        # STU-01 「최근 프로세스」 — 펼칠 때마다 설정에서 다시 짓는다.
+        self.recent_menu = files.addMenu("최근 프로세스")
+        self.recent_menu.aboutToShow.connect(self._fill_recent)
+        # 열기 / 프로세스 다루기 / 저장 / 닫기 — 하는 일 차례로 구분선을 긋는다 (ADR-0133).
+        files.addSeparator()
+        self._add(files, "프로세스 정보...", self.edit_info)
         self.add_definition_action = self._add(
             files, "정의 추가...", lambda: file_actions.add_definition(self)
         )
         self.entry_action = self._add(
             files, "이 정의를 진입으로 지정", lambda: file_actions.make_entry(self)
         )
-        self._add(files, "시험 케이스...", self.edit_cases)
         files.addSeparator()
         self.save_action = self._add(files, "저장", self.save, QKeySequence.StandardKey.Save)
         self.save_as_action = self._add(
@@ -313,14 +320,16 @@ class MainWindow(QMainWindow):
             lambda: file_actions.save_process_as(self),
             QKeySequence("Ctrl+Shift+S"),
         )
-        self._add(files, "패키지로 내보내기...", lambda: export_actions.export_package(self))
-        self._add(files, "공유 BPM 프로세스로 내보내기...", lambda: export_actions.export_shared(self))
-        self._add(files, "Center로 올리기", lambda: export_actions.upload_package(self))
-        self._add(
-            files, "공유 BPM 프로세스 Center로 올리기", lambda: export_actions.upload_shared(self)
-        )
-        self._add(files, "Center 공유 자원...", lambda: center_actions.open_center_resources(self))
+        exports = files.addMenu("내보내기")
+        self._add(exports, "패키지...", lambda: export_actions.export_package(self))
+        self._add(exports, "공유 프로세스...", lambda: export_actions.export_shared(self))
         files.addSeparator()
+        self.close_action = self._add(
+            files,
+            "프로세스 닫기",
+            lambda: file_actions.close_process(self),
+            QKeySequence.StandardKey.Close,
+        )
         self._add(files, "종료", self.close)
 
         edit = bar.addMenu("편집")
@@ -344,6 +353,15 @@ class MainWindow(QMainWindow):
         self.stop_action = self._add(run, "실행 중지", lambda: run_actions.stop_test(self))
         self.stop_action.setEnabled(False)
         self.preflight_action = self._add(run, "실행 전 검사", self.run_preflight, QKeySequence("F6"))
+        run.addSeparator()
+        self._add(run, "시험 케이스...", self.edit_cases)
+
+        # Center와 주고받는 일만 — 파일로 쓰는 내보내기는 「파일 › 내보내기」에 있다 (ADR-0133).
+        center = bar.addMenu("서버")
+        self._add(center, "프로세스 올리기...", lambda: export_actions.upload_package(self))
+        self._add(center, "공유 프로세스 올리기...", lambda: export_actions.upload_shared(self))
+        center.addSeparator()
+        self._add(center, "공유 자원...", lambda: center_actions.open_center_resources(self))
 
         settings = bar.addMenu("설정")
         self._add(settings, "설정...", self.open_settings, QKeySequence("Ctrl+,"))
@@ -358,6 +376,9 @@ class MainWindow(QMainWindow):
 
         tools = bar.addMenu("도구")
         self._add(tools, "확장...", self.open_extensions)
+
+        helping = bar.addMenu("도움말")
+        self._add(helping, "정보...", lambda: AboutDialog(self).exec())
 
     def refresh_catalog(self) -> None:
         """Center 리소스 목록을 받아 꽂는다 — 하는 일은 `center_actions`에 있다."""
@@ -434,7 +455,7 @@ class MainWindow(QMainWindow):
             self.say("설정을 저장했습니다.")
             self.refresh_catalog()  # Center 주소·키가 바뀌었을 수 있다
         elif dialog.center_changed is not None:
-            # 「Center」의 등록 요청·키 받기는 「저장」을 기다리지 않는다 (ADR-0093) — 「취소」로 닫아도 받는다.
+            # 「서버」의 등록 요청·키 받기는 「저장」을 기다리지 않는다 (ADR-0093) — 「취소」로 닫아도 받는다.
             self.settings = dialog.center_changed
             self.refresh_catalog()
 
@@ -514,13 +535,20 @@ class MainWindow(QMainWindow):
         bar.setMovable(False)
         bar.setFloatable(False)
         bar.toggleViewAction().setVisible(False)
+        bar.setProperty("band", True)  # 메뉴 막대와 이어진 연한 보라 띠 (STU-01 [B])
         bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.run_tool_action = QAction(RUN_TEXT, self)
         self.run_tool_action.triggered.connect(self._run_or_stop)
-        bar.addAction(self.save_action)
+        # 파일 | 편집 | 실행 | 기타 — 메뉴 막대처럼 묶음마다 구분선 (ADR-0133).
+        bar.addActions([self.new_action, self.open_action, self.save_action])
         bar.addSeparator()
-        # 도구 모음에서만 짧게 — 메뉴는 「실행 취소」「다시 실행」 그대로, 툴팁도 그 이름이다.
-        for action, short in ((self.undo_action, "취소"), (self.redo_action, "다시")):
+        # 도구 모음에서만 짧게 — 메뉴 이름은 그대로, 툴팁도 그 이름이다.
+        for action, short in (
+            (self.new_action, "새 프로세스"),
+            (self.open_action, "프로세스 열기"),
+            (self.undo_action, "취소"),
+            (self.redo_action, "다시"),
+        ):
             action.setIconText(short)
             action.setToolTip(action.text())
         bar.addActions([self.undo_action, self.redo_action])
@@ -533,17 +561,21 @@ class MainWindow(QMainWindow):
         self._paint_icons()
 
     def _paint_icons(self) -> None:
-        """도구 모음 아이콘을 **지금 팔레트의 글자색**으로 칠한다 (팔레트는 토큰에서 온다).
+        """도구 모음 아이콘을 **위 띠의 글자색**(`text.primary`)으로 칠한다.
 
         테마가 바뀌면 다시 부른다 (`changeEvent`) — 칠한 색이 아이콘에 박혀 있어서다. 실행 중 단추는
         강조색 바탕이라 그 위의 글자색(`primary.fg` = 팔레트 `HighlightedText`)으로 칠한다.
         """
         from bpm.qt.theme import icon  # noqa: PLC0415
+        from bpm.qt.theme.tokens import colors as token_colors  # noqa: PLC0415
 
         colors = self.palette()
-        plain = colors.color(QPalette.ColorRole.ButtonText).name()
+        dark = colors.color(QPalette.ColorRole.Window).lightness() < 128
+        plain = token_colors(dark=dark)["text.primary"]
         on_accent = colors.color(QPalette.ColorRole.HighlightedText).name()
         for action, name in (
+            (self.new_action, "file-plus"),
+            (self.open_action, "folder-open"),
             (self.save_action, "save"),
             (self.undo_action, "undo-2"),
             (self.redo_action, "redo-2"),
@@ -648,7 +680,7 @@ class MainWindow(QMainWindow):
             if path.is_file():
                 self.open_definition(self.settings.last_opened)
                 return
-        self.say("열린 BPM 프로세스가 없습니다 — 파일 → BPM 프로세스 열기...로 열거나 새로 만드세요.")
+        self.say("열린 BPM 프로세스가 없습니다 — 파일 → 프로세스 열기...로 열거나 새로 만드세요.")
         self.explorer.setFocus()
 
     # ── 속성 패널 (STU-04) ──
@@ -1020,18 +1052,28 @@ class MainWindow(QMainWindow):
 __all__ = ["DEFAULT_SIZE", "NO_PROCESS", "RUN_TEXT", "STOP_TEXTS", "TITLE", "MainWindow"]
 
 
-def _pane(widget: QWidget) -> QFrame:
-    """STU-01 — 작업 영역 하나를 카드(흰 바탕 + 테두리)로 감싼다. 영역 사이는 바탕색 틈이 가른다."""
+def _pane(widget: QWidget, title: str) -> QFrame:
+    """STU-01 — 작업 영역 하나를 카드(흰 바탕 + 테두리)로 감싸고 머리띠에 이름을 단다.
+
+    영역 사이는 바탕색 틈이 가른다. 탭이 있는 카드는 탭 줄이 머리띠라 이것을 쓰지 않는다.
+    """
     frame = QFrame(widget.parentWidget())
     frame.setObjectName("Pane")
     box = QVBoxLayout(frame)
     box.setContentsMargins(1, 1, 1, 1)  # 테두리 1px 안쪽 — 캔버스(WebEngine)가 테두리를 덮지 않게
-    box.addWidget(widget)
+    box.setSpacing(0)
+    header = QLabel(title, frame)
+    header.setObjectName("PaneHeader")
+    box.addWidget(header)
+    box.addWidget(widget, 1)  # 늘어나는 것은 내용이다 — 머리띠는 글 한 줄 높이 그대로
     return frame
 
 
-def _margined(widget: QWidget, left: int, top: int, right: int, bottom: int) -> QWidget:
+def _margined(
+    widget: QWidget, left: int, top: int, right: int, bottom: int, *, name: str = ""
+) -> QWidget:
     holder = QWidget(widget.parentWidget())
+    holder.setObjectName(name)
     box = QVBoxLayout(holder)
     box.setContentsMargins(left, top, right, bottom)
     box.addWidget(widget)

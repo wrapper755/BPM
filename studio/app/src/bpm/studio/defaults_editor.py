@@ -40,7 +40,7 @@ from bpm.studio.ai_task_editor import CONFIRM_NOTE, FORBIDDEN_NOTE
 TAB_LABEL = "기본값"
 
 ELSEWHERE = (
-    "입력·출력은 아래 「변수」 탭, 실행 위치는 파일 → BPM 프로세스 정보(STU-06), "
+    "입력·출력은 아래 「변수」 탭, 실행 위치는 파일 → 프로세스 정보...(STU-06), "
     "외부 정의 고정은 확장 창(STU-15)에서 고칩니다."
 )
 TASK_WINS = (

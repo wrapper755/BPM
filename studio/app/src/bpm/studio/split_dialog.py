@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 
 from bpm.contracts.bpmn_ext import VALUE_TYPES, BpmnProcess
 from bpm.qt.theme import button_icon, dress_button_box
+from bpm.qt.theme.tokens import SPACE_3
 from bpm.studio.split_actions import (
     DEFAULT_TYPE,
     UNKNOWN_HINT,
@@ -89,6 +90,8 @@ class SplitDialog(QDialog):
         self.error.setObjectName("splitError")
 
         form = QFormLayout()
+
+        form.setVerticalSpacing(SPACE_3)
         form.addRow("옮길 노드", self.node_box)
         form.addRow("새 PC BPM 프로세스 id", self.id_box)
         form.addRow("이름", self.name_box)

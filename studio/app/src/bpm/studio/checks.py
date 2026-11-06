@@ -59,7 +59,7 @@ def llm_status(base_url: str, api_key: str | None, *, client: Any = None) -> str
 
 
 def center_status(base_url: str, api_key: str | None, *, client: Any = None) -> str:
-    """Center에 닿는가, Studio용 키가 맞는가 (STU-10 「Center」).
+    """Center에 닿는가, Studio용 키가 맞는가 (STU-10 「서버」).
 
     리소스 목록을 읽어 본다 — 읽기 권한만 쓰고(C5 권한표) 서비스 앱을 깨우지 않는다.
     **키 없이 묻지 않는다** — Center는 토큰 없는 요청을 401로 돌려보내므로 「키가 거부되었다」로

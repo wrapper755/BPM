@@ -29,8 +29,8 @@
 | `bg.inverse` / `text.inverse` | 툴팁 |
 | `border.default` / `border.strong` | 구분선 / 입력칸·보조 단추 테두리 |
 | `text.primary` / `text.secondary` / `text.muted` | 본문 / 표 머리·보조 설명 / 설명 줄·빈 상태 (모두 바탕 셋 위에서 4.5:1 이상 확인됨) |
-| `primary` / `primary.hover` / `primary.subtle` / `primary.fg` | 주 단추·링크·선택된 메뉴 / 위에 올림 / 선택 바탕 / 주 단추 글자 |
-| `focus` | 포커스 테두리 (2px, 2px 띄움) |
+| `primary` / `primary.hover` / `primary.subtle` / `primary.fg` | 주 단추·링크·선택된 메뉴 / 위에 올림 / 선택 바탕·Studio 위 띠(§4-2) / 주 단추 글자 |
+| `focus` | 포커스 테두리 (2px, 2px 띄움), 데스크톱 고른 탭의 밑줄 (§3 Tabs — `primary`보다 연한 보라) |
 | `chrome.bg` / `chrome.fg` / `chrome.muted` / `chrome.hover` / `chrome.border` / `chrome.side` / `chrome.side.hover` / `chrome.edge` | 웹 콘솔의 **남색 틀**(위 막대·왼쪽 탐색, §4-1) — 위 막대 바탕(가장 짙다) / 글자 / 보조 글자 / 위 막대에서 올림 / 구분선 / 왼쪽 탐색 바탕(위 막대보다 분명히 밝다 — 비슷하면 둘의 경계가 보이지 않는다) / 탐색에서 올림 / 위 막대 아래 띠(라벤더 2px — 위 막대와 탐색을 가른다). 남색 단계는 로그인 배경 그림(ADR-0120)에서 골랐다(`.chrome-side`가 탐색에 바꿔 끼운다). 틀 안에서는 `.chrome`이 `bg.surface`·`text.*`·`border.*`를 이것으로 바꿔 끼워 구성요소를 그대로 쓴다 (글자는 바탕·`chrome.hover` 위 둘 다 4.5:1 이상 확인됨) |
 | `danger.fg` | 위험 단추 글자 (`status.failed.solid` 바탕 위) |
 
@@ -79,6 +79,7 @@
 | 그림자 | `sm` 카드(표·빈 상태 — 선 + 옅은 그림자로 연회색 바탕에서 떠 보이게, NowView와 같은 결) / `md` 펼침 메뉴·팝오버 / `lg` 대화상자 |
 | 컨트롤 높이 | `control.sm` 28 / `md` **32**(기본) / `lg` 40 |
 | 표 줄 높이 | `row.default` 36 / `row.compact` 32 (Studio·PC 실행기 표) |
+| 칸 줄 간격 | 데스크톱 **이름–입력 칸의 줄 사이는 `space.3`(12) 하나**다 — 설정·속성 패널·대화상자·결재 창 모두(`QFormLayout`·이름 열이 있는 `QGridLayout`의 `setVerticalSpacing`). 창마다 달리 두면 같은 칸이 창에 따라 빽빽하거나 헐겁다. `tests/shared/test_qt_form_spacing.py`가 지킨다 |
 | 콘솔 틀 | 왼쪽 탐색 `nav.width` 224 (접으면 64), 위 막대 `topbar.height` 48, 본문 여백 24 |
 | 움직임 | `motion.fast` 120ms (올림·포커스), `base` 200ms (펼침·대화상자). 운영체제의 "동작 줄이기"를 따른다 |
 
@@ -101,8 +102,8 @@
 | **KeyReveal** | 키 원문은 **발급 직후 한 번만**, 복사 단추 + 「다시 볼 수 없습니다」. 그 뒤에는 앞자리 16자만 | `KeyReveal` | `ChkKeyReveal` |
 | **Timeline** | CON-01 노드 막대: 상태 `solid` 색, 재생됨은 점선, 이어 돈 지점은 세로 점선 | `RunTimeline` | Studio 캔버스 표시 |
 | **LogView** | mono 13px, 최대 5000줄, 실패 줄은 `failed.fg` | `LogView` | `ChkLogView` |
-| **Section (묶음)** | 한 화면 안의 기능 묶음. 제목은 **카드 안쪽 맨 위**에 `text.primary`·굵게(`weight.bold`)·`size.body-lg`로, 왼쪽에 `primary` 세로 막대(3px)를 둔다. 제목과 내용 사이는 `space.3`, 묶음과 묶음 사이도 `space.3`. 테두리 위에 걸친 회색 제목은 쓰지 않는다 — 내용과 붙어 보이고 묶음이 갈리지 않는다 | — | `QGroupBox` 스타일 |
-| **Tabs / Nav** | 탭은 둥근 알약(`radius.md`) — 선택된 것은 `primary.subtle` 바탕 + `primary` 글자 + 굵게, 나머지는 흰 바탕 + 선. 웹 콘솔의 왼쪽 탐색(남색 틀)은 고른 줄이 `primary` 바탕 + `primary.fg` 글자다 | `Tabs`, `SideNav` | `QTabWidget` 스타일 |
+| **Section (묶음)** | 한 화면 안의 기능 묶음. 제목은 **카드 안쪽 맨 위**에 `text.primary`·굵게(`weight.bold`)·`size.body-lg`로 쓰고, **그 아래 묶음 폭 전체에 옅은 선**(`border.default` 1px, 카드 양끝까지)을 긋는다. 꾸밈(세로 막대·이름표·아이콘)은 달지 않는다 — 진한 막대는 화면마다 줄지어 너무 셌고, 아이콘은 묶음이 하는 일이 아니라 갈래라 뜻을 싣지 못한다(§6은 하는 일로 고른다). 선은 제목 칸의 밑줄을 오른쪽으로 길게 늘여 긋는다(묶음이 넘친 것을 자른다) — 앱 전체에 거는 Python 걸러 내기는 캔버스(QtWebEngine)와 함께 앱을 죽여 쓰지 않는다. 제목과 내용 사이는 `space.3`, 묶음과 묶음 사이도 `space.3`. 테두리 위에 걸친 회색 제목은 쓰지 않는다 — 내용과 붙어 보이고 묶음이 갈리지 않는다 | — | `QGroupBox` 스타일 |
+| **Tabs / Nav** | 웹: 탭은 둥근 알약(`radius.md`) — 선택된 것은 `primary.subtle` 바탕 + `primary` 글자 + 굵게, 나머지는 흰 바탕 + 선. **데스크톱: 앱의 모든 탭이 한 모양** — 위가 둥근 탭(`radius.md`)이고 고른 것은 `bg.surface` 바탕 + `text.primary` 굵게(`weight.semibold`) + **연한 보라 밑줄 2px(`focus`)**, 나머지는 머리 바탕(§4-2) + `text.secondary`. `primary` 밑줄은 너무 셌다. 밑줄 자리는 다른 탭도 같은 두께로 비워 고를 때 높이가 바뀌지 않는다. 웹 콘솔의 왼쪽 탐색(남색 틀)은 고른 줄이 `primary` 바탕 + `primary.fg` 글자다 | `Tabs`, `SideNav` | `QTabWidget` 스타일 |
 
 - **웹 화면에서 손으로 쓴 칸·묶음도 같은 모양이다** — `<select>`·`<input>`·`<textarea>`는 입력칸(Field)처럼 `radius.md` + `border.strong`, `details`·`fieldset` 묶음은 카드처럼 `radius.lg` + `bg.surface`. 상태 배지는 `radius.full`. 섹션 제목(h2)은 굵기 `semibold` 하나다.
 
@@ -136,6 +137,7 @@
 - **표 칸 안의 콤보**(타입 고르기 같은 칸 위젯)는 칸 선에 붙지 않게 위아래 `space.0.5`·양옆 `space.1`을 띄우고, 안쪽 여백은 `space.1`, 높이는 줄을 따른다(`control.md` 최소 높이를 걸지 않는다). 그 열은 내용 폭에 맞춰 글자가 잘리지 않게 한다.
 - 칸 여럿을 한 자리에 모을 때는 **레이아웃**으로 모은다 — 맨 `QWidget` 그릇은 앱 바탕(`bg.canvas`)을 칠해 칸 사이로 회색이 보인다.
 - **카드 안의 묶음은 흰 바탕 위에 선으로만 갈린다** — 속성 패널의 편집기 탭(스크롤 영역 `EditorHolder`)도 바탕이 `bg.surface`다 — 맨 `QWidget`은 앱 바탕(`bg.canvas`)을 칠하므로 그 그릇에 이름을 붙여 칠한다. 묶음 사이로 회색 틈이 보이는 것은 메인 창의 카드 사이뿐이다.
+- **Studio 메인 창은 영역을 색으로 가른다** (STU-01) — 메뉴 막대·도구 모음은 하나로 이어진 **연한 보라 띠**(`primary.subtle` 바탕 — 남색 틀(`chrome.*`)은 데스크톱 창 위에서 너무 세다. 글자·아이콘 `text.primary`, 꺼진 것 `text.muted`, 올림·켜진 체크 `bg.surface`, 구분선 `border.strong`, 띠 아래 `border.default` 선). 그 아래 작업 영역은 **틈 바탕**(밝게 `bg.subtle` / 어둡게 `bg.canvas` — 어느 테마에서나 카드보다 한 단계 가라앉는 쪽) 위의 흰 카드(`bg.surface`·`border.default`·`radius.lg`)다. 카드 머리띠는 **머리 바탕**(밝게 `bg.canvas` / 어둡게 `bg.subtle` — 틈과 카드 사이 단계)에 `text.secondary`·`weight.semibold`, 아래 `border.default` 선. 탭이 있는 카드는 탭 줄이 머리띠이고 탭 모양은 앱의 다른 탭과 같다(§3 Tabs — 고른 것은 흰 바탕 + 굵게 + 연한 보라 밑줄). 띠를 쓰는 창은 객체 이름이 아니라 **`band` 속성**(`QMenuBar[band="true"]`·`QToolBar[band="true"]`)으로 고른다 — PC 실행기 같은 다른 창은 그대로다.
 - 펼친 메뉴(메뉴 막대·문맥 메뉴)는 `bg.surface` 바탕에 `border.strong` 테두리, 고른 줄은 `primary`·`primary.fg`. 메뉴에는 아이콘을 보이지 않는다(체크 표시를 가린다) — 아이콘은 도구 모음·탐색기 줄·보조 단추에만(§6).
 - 글자 하나의 뜻은 `QLabel`의 **`role` 속성**으로 준다 — 색·크기를 코드에 쓰지 않는다. 생성 QSS(`gen_tokens.py`)가 칠한다. **`bpm.qt.theme.set_role(위젯, 뜻)`으로 준다** — Qt는 스타일시트를 처음 보일 때 한 번 입히므로 `setProperty`만 부르면 보인 뒤에 준 뜻이 칠해지지 않는다.
 

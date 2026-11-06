@@ -50,6 +50,7 @@ from bpm.bot_ui.settings import Settings, data_dir
 from bpm.contracts import SCOPE_BOT_UI, ConfigurationItem
 from bpm.core.senders import KNOWN_SECURITY, SECURITY_NONE, SECURITY_STARTTLS
 from bpm.qt.theme import dress_button_box, set_role
+from bpm.qt.theme.tokens import SPACE_3
 
 log = logging.getLogger(__name__)
 
@@ -132,6 +133,7 @@ class SettingsDialog(QDialog):
     def _center_box(self) -> QWidget:
         box = QWidget()
         form = QFormLayout(box)
+        form.setVerticalSpacing(SPACE_3)
 
         self.center_url = QLineEdit(self._agent.settings.center_url)
         self.center_url.setPlaceholderText("http://center.example.com:8800")
@@ -190,6 +192,7 @@ class SettingsDialog(QDialog):
     def _run_box(self) -> QWidget:
         box = QWidget()
         form = QFormLayout(box)
+        form.setVerticalSpacing(SPACE_3)
 
         self.autostart = QCheckBox("로그인할 때 자동 시작")
         self.autostart.setChecked(self._agent.settings.autostart)
@@ -222,6 +225,7 @@ class SettingsDialog(QDialog):
         """BUI-03 「모델」 (ADR-0027). **주소·키는 여기만 안다** — BPM 프로세스에 들어가지 않는다."""
         box = QWidget()
         form = QFormLayout(box)
+        form.setVerticalSpacing(SPACE_3)
 
         self.llm_url = QLineEdit(self._agent.settings.llm_base_url)
         self.llm_url.setPlaceholderText("http://localhost:11434 (OpenAI 호환 주소. 비우면 AI 태스크가 돌지 않습니다)")
@@ -335,6 +339,7 @@ class SettingsDialog(QDialog):
         """
         box = QWidget()
         form = QFormLayout(box)
+        form.setVerticalSpacing(SPACE_3)
         settings = self._agent.settings
 
         self.smtp_host = QLineEdit(settings.smtp_host)
@@ -453,6 +458,7 @@ class SettingsDialog(QDialog):
                 continue
             box = QWidget()
             form = QFormLayout(box)
+            form.setVerticalSpacing(SPACE_3)
             stored = self._agent.settings.extension(found.id)
             for item in items:
                 field = QLineEdit()

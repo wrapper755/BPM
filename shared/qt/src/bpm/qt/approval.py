@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
 
 from bpm.contracts.approvals import Form, FormField, as_table, validate_answer
 from bpm.qt.theme import dress_button_box, set_role
+from bpm.qt.theme.tokens import SPACE_3
 
 #: 확인(`confirmation`)은 업무 결재가 아니라 **실행 중 막힘**이다 (CMN-01 오른쪽 칸).
 CONFIRMATION = "confirmation"
@@ -172,6 +173,7 @@ class ApprovalDialog(QDialog):
 
     def _fields(self) -> QFormLayout:
         made = QFormLayout()
+        made.setVerticalSpacing(SPACE_3)
         for field in self.form.fields if self.form else []:
             widget = self._widget(field)
             self._widgets[field.key] = widget

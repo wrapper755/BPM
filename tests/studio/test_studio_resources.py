@@ -23,6 +23,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtWidgets import QLabel  # noqa: E402
 
 from bpm.contracts.center_api import PackageInfo  # noqa: E402
 from bpm.contracts.extension import ResourceView  # noqa: E402
@@ -782,10 +783,11 @@ def test_the_toolbar_holds_the_everyday_actions(window: Any) -> None:
     """STU-01 [B] — 메뉴와 같은 동작(같은 켜짐·체크), 고정이라 옮기거나 감출 수 없다."""
     bar = window.toolbar
     texts = [one.text() for one in bar.actions() if not one.isSeparator()]
-    assert texts == ["저장", "실행 취소", "다시 실행", "실행 전 검사", "실행...", "속성 패널 접기"]
-    shown = [one.iconText() for one in bar.actions() if not one.isSeparator()]
-    assert shown[1:3] == ["취소", "다시"], "도구 모음에서만 짧게 — 메뉴 이름은 그대로"
-    assert bar.actions()[0] is window.save_action and window.collapse_action in bar.actions()
+    assert texts == [
+        "새 프로세스...", "프로세스 열기...", "저장", "실행 취소", "다시 실행",
+        "실행 전 검사", "실행...", "속성 패널 접기",
+    ]  # fmt: skip
+    assert bar.actions()[0] is window.new_action and window.collapse_action in bar.actions()
     assert not bar.isMovable() and not bar.isFloatable() and not bar.toggleViewAction().isVisible()
     assert all(not one.icon().isNull() for one in bar.actions() if not one.isSeparator())
     assert not window.collapse_action.isIconVisibleInMenu(), "메뉴에서 체크 표시를 가리지 않는다"
@@ -814,6 +816,28 @@ def test_the_view_menu_holds_the_layout_and_tools_only_extensions(window: Any) -
     }
     assert menus["보기"] == ["속성 패널 접기", "레이아웃 초기화", "로그 지우기"]
     assert menus["도구"] == ["확장..."]
+    assert menus["도움말"] == ["정보..."]
+
+
+def test_the_menu_and_tool_bars_are_one_band(window: Any) -> None:
+    """STU-01 [M]·[B] — 위 띠는 `band` 속성으로 고른다 (스타일 가이드 §4-2). 다른 창은 그대로다."""
+    assert window.menuBar().property("band") is True
+    assert window.toolbar.property("band") is True
+    assert window.property("workspace") is True
+    headers = {one.text() for one in window.findChildren(QLabel, "PaneHeader")}
+    assert headers == {"캔버스", "속성"}  # 탭이 있는 카드(탐색기·아래 탭)는 탭 줄이 머리띠다
+
+
+def test_the_tool_bar_is_grouped_like_the_menus(window: Any) -> None:
+    """STU-01 [B] — 파일 | 편집 | 실행 | 기타. 단추 글은 짧고(「...」도 뗀다) 툴팁은 메뉴 이름이다 (ADR-0133)."""
+    shown = ["" if one.isSeparator() else one.iconText() for one in window.toolbar.actions()]
+    assert shown == [
+        "새 프로세스", "프로세스 열기", "저장", "",
+        "취소", "다시", "",
+        "실행 전 검사", "실행", "",
+        "속성 패널 접기",
+    ]  # fmt: skip
+    assert window.new_action.toolTip() == "새 프로세스..." and window.undo_action.toolTip() == "실행 취소"
 
 
 def test_the_roots_are_drawn_without_knocking_on_center(window: Any) -> None:

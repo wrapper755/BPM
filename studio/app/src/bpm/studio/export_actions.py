@@ -120,7 +120,7 @@ def uploader(window: MainWindow) -> upload.CenterUploader | None:
 
 
 def upload_package(window: MainWindow) -> None:
-    """STU-12 「Center로 올리기」 — **내보내는 것과 같은 zip**을 올린다 (C5).
+    """STU-12 「서버로 올리기」 — **내보내는 것과 같은 zip**을 올린다 (C5).
 
     파일을 남기지 않는다 — 올리기는 내보내기가 아니다. 사람이 파일을 보고 싶으면 「패키지로
     내보내기...」가 그 일을 한다 (같은 `export`를 쓰므로 내용이 같다).
@@ -157,7 +157,7 @@ def upload_package(window: MainWindow) -> None:
 
 
 def upload_shared(window: MainWindow) -> None:
-    """STU-12 「공유 BPM 프로세스 Center로 올리기」 — 고른 정의만 담아 올린다."""
+    """STU-12 「공유 BPM 프로세스 서버로 올리기」 — 고른 정의만 담아 올린다."""
     process = window.process
     if process is None:
         window.say(NO_PROCESS)

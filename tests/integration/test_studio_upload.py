@@ -359,13 +359,22 @@ def window(tmp_path: Path, webengine: Any) -> Any:
     return MainWindow(Settings(data_dir=tmp_path))
 
 
-def test_the_file_menu_no_longer_says_later(window: Any) -> None:
-    """「올리기」 둘과 STU-11이 **말풍선이 아니라 동작**이다 (STU-01 메뉴 표)."""
-    files = next(one for one in window.menuBar().actions() if one.text() == "파일")
-    labels = [one.text() for one in files.menu().actions()]
-    assert "Center로 올리기" in labels
-    assert "공유 BPM 프로세스 Center로 올리기" in labels
-    assert "Center 공유 자원..." in labels
+def test_the_server_menu_holds_the_uploads(window: Any) -> None:
+    """「올리기」 둘과 STU-11은 「서버」 메뉴에, 파일로 쓰는 내보내기는 「파일 › 내보내기」에 (ADR-0133)."""
+    menus = {one.text(): one.menu() for one in window.menuBar().actions()}
+    assert [name for name in menus if name in ("실행", "서버", "설정")] == ["실행", "서버", "설정"]
+    labels = {name: [a.text() for a in menu.actions()] for name, menu in menus.items()}
+    assert [one for one in labels["서버"] if one] == ["프로세스 올리기...", "공유 프로세스 올리기...", "공유 자원..."]
+    assert "시험 케이스..." in labels["실행"]
+    # 「파일」은 구분선으로 넷 — 열기 / 프로세스 다루기 / 저장 / 닫기 (빈 글이 구분선이다).
+    assert labels["파일"] == [
+        "새 프로세스...", "프로세스 열기...", "최근 프로세스", "",
+        "프로세스 정보...", "정의 추가...", "이 정의를 진입으로 지정", "",
+        "저장", "다른 이름으로 저장...", "내보내기", "",
+        "프로세스 닫기", "종료",
+    ]  # fmt: skip
+    exports = next(a.menu() for a in menus["파일"].actions() if a.text() == "내보내기")
+    assert [a.text() for a in exports.actions()] == ["패키지...", "공유 프로세스..."]
 
 
 def test_uploading_without_an_open_process_says_so(window: Any) -> None:
@@ -486,6 +495,7 @@ def test_the_upload_window_says_where_the_work_sits(qt_app: Any, center: TestCli
     org = upload.read_organization(uploader(center, studio_key))
 
     dialog = UploadDialog(None, process, org)
+    assert dialog.windowTitle() == f"서버로 올리기 — 구매 요청 {process.version}"
     assert dialog.place() is None, "처음에는 회사 공통이다"
     dialog.staff.setChecked(True)
     assert dialog.place() == {"scope": "staff", "staff": "kim"}
@@ -536,6 +546,6 @@ def test_the_share_dialog_says_upload_when_it_uploads(window: Any) -> None:
     assert ShareDefinitionsDialog.UPLOAD_HINT not in texts(sharing)
 
     uploading = ShareDefinitionsDialog(window, process, upload=True)
-    assert uploading.windowTitle() == "공유 BPM 프로세스 Center로 올리기"
+    assert uploading.windowTitle() == "공유 BPM 프로세스 서버로 올리기"
     assert uploading.buttons.button(ok).text() == "올리기"
     assert ShareDefinitionsDialog.UPLOAD_HINT in texts(uploading)
