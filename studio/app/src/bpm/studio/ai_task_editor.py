@@ -318,6 +318,7 @@ class AiTaskEditor(QWidget):
         column.addLayout(row)
         column.addWidget(self.domain_note)
         form = QFormLayout()
+        form.setVerticalSpacing(SPACE_3)
         form.setContentsMargins(0, 0, 0, 0)
         form.addRow("띄울 앱", self.app_box)
         self._domain_form = form
@@ -359,6 +360,7 @@ class AiTaskEditor(QWidget):
         column = QVBoxLayout(box)
         _tight(column)
         form = QFormLayout()
+        form.setVerticalSpacing(SPACE_3)
         form.setContentsMargins(0, 0, 0, 0)
         form.addRow("하지 않을 것", self.forbidden_box)
         form.addRow("", _muted(FORBIDDEN_NOTE, box))
@@ -385,6 +387,7 @@ class AiTaskEditor(QWidget):
         spec_row.addWidget(self.forget_button, 0, Qt.AlignmentFlag.AlignTop)
         column.addLayout(spec_row)
         form = QFormLayout()
+        form.setVerticalSpacing(SPACE_3)
         form.setContentsMargins(0, 0, 0, 0)
         form.addRow("최대 단계", self.max_steps_box)
         form.addRow("제한 시간(초)", self.timeout_box)

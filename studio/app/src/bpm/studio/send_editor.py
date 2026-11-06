@@ -164,6 +164,7 @@ class SendEditor(QWidget):
     def _email_box(self) -> QGroupBox:
         box = QGroupBox("메일", self)
         form = QFormLayout(box)
+        form.setVerticalSpacing(SPACE_3)
         _tight(form)
         form.addRow("받는 사람", self.to_box)
         form.addRow("참조", self.cc_box)
@@ -176,6 +177,7 @@ class SendEditor(QWidget):
     def _webhook_box(self) -> QGroupBox:
         box = QGroupBox("웹훅", self)
         form = QFormLayout(box)
+        form.setVerticalSpacing(SPACE_3)
         _tight(form)
         form.addRow("URL", self.url_box)
         form.addRow("메서드", self.method_box)

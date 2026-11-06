@@ -41,6 +41,7 @@ from PySide6.QtWidgets import (
 
 from bpm.contracts.bpmn_ext import ELEMENT_MODELS
 from bpm.qt.theme import button_icon, set_role
+from bpm.qt.theme.tokens import SPACE_3
 from bpm.studio.dmn_table import Decisions
 from bpm.studio.replay_specs import ReplaySpecs
 from bpm.studio.service_catalog import CallTarget, Catalog
@@ -270,6 +271,7 @@ class Properties(QWidget):
         self.form = QWidget(self)
         outer = QVBoxLayout(self.form)
         form_layout = QFormLayout()
+        form_layout.setVerticalSpacing(SPACE_3)
         outer.addLayout(form_layout)
         # 칸들은 늘어나지 않는다 — 남는 높이를 아래로 모은다 (없으면 칸 사이가 벌어진다).
         outer.addStretch(1)
@@ -555,6 +557,8 @@ class Properties(QWidget):
     def _holder_for(self, found: QWidget) -> QScrollArea:
         """**세로로 스크롤되게 담는다** — 창이 낮아도 편집기의 표가 한 줄로 찌그러지지 않는다."""
         holder = QScrollArea(self)
+        # 바탕은 카드와 같은 흰색 — 묶음 사이로 앱 바탕(회색)이 비치지 않게 (테마 QSS가 이 이름으로 칠한다).
+        holder.setObjectName("EditorHolder")
         holder.setWidgetResizable(True)
         holder.setFrameShape(QFrame.Shape.NoFrame)
         holder.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)

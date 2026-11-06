@@ -100,6 +100,20 @@ QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QTextEdit:focus, QSpinBo
   border: 2px solid #7078C7;
 }
 
+/* 속성 패널의 편집기 탭 (Studio `EditorHolder`) — 스크롤 영역과 편집기 바탕을 카드와 같은 흰색으로.
+   맨 QWidget은 위의 앱 바탕을 칠해 묶음 사이에 회색 띠가 생긴다 (스타일 가이드 §4-2). */
+QScrollArea#EditorHolder, QScrollArea#EditorHolder > QWidget#qt_scrollarea_viewport,
+QScrollArea#EditorHolder > QWidget#qt_scrollarea_viewport > QWidget {
+  background-color: #171717;
+}
+
+/* 표 칸 안의 콤보(칸 위젯) — 칸 선에 붙지 않게 띄우고 높이는 줄을 따른다 (스타일 가이드 §4-2). */
+QAbstractItemView QComboBox {
+  margin: 2px 4px;
+  padding: 0 4px;
+  min-height: 0;
+}
+
 /* QSpinBox에 테두리·둥근 모서리를 입히면 기본 ▲▼ 단추가 그 테두리 위에 그대로 겹쳐 잘린다 (이슈 #3, 150%).
    단추를 테두리 안쪽에 세로로 놓고, 칸 오른쪽에 그 자리를 비운다. */
 QSpinBox { padding-right: 24px; }

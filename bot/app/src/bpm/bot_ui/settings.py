@@ -71,7 +71,7 @@ class Settings:
     #: 표시 이름 (기본: PC 이름). C4 `name`.
     name: str | None = None
     autostart: bool = True
-    #: 결재를 Center로 올린다 (BUI-03 「실행」 — BPM 프로세스가 「PC 실행기 설정을 따름」일 때만).
+    #: 결재를 Center로 올린다 (BUI-03 「실행」 — BPM 프로세스의 결재 위치가 「설정」일 때만).
     remote_approval: bool = False
     signed_only: bool = True
     queue_max: int = DEFAULT_QUEUE_MAX

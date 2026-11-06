@@ -114,6 +114,7 @@ class DataOutputEditor(QWidget):
 
         self.file_group = QGroupBox("파일", self)
         file_form = QFormLayout(self.file_group)
+        file_form.setVerticalSpacing(SPACE_3)
         _tight(file_form)
         file_form.addRow("파일 경로", self.path_box)
         file_form.addRow("형식", self.format_box)
@@ -134,6 +135,7 @@ class DataOutputEditor(QWidget):
 
         self.store_group = QGroupBox("경로 저장", self)
         store = QFormLayout(self.store_group)
+        store.setVerticalSpacing(SPACE_3)
         _tight(store)
         store.addRow("변수", self.store_box)
 

@@ -186,6 +186,7 @@ class CallEditor(QWidget):
         _tight(column)
         column.addWidget(self.mode_picks[MODE_LOCAL])
         local = QFormLayout()
+        local.setVerticalSpacing(SPACE_3)
         local.addRow("정의", self.target_box)
         column.addLayout(local)
         column.addWidget(self.mode_picks[MODE_DELEGATE])
@@ -194,6 +195,7 @@ class CallEditor(QWidget):
 
         self.delegate_box = QGroupBox("위임", self)
         form = QFormLayout(self.delegate_box)
+        form.setVerticalSpacing(SPACE_3)
         _tight(form)
         form.addRow("BPM 프로세스", self.bot_box)
         form.addRow("판", self.version_box)

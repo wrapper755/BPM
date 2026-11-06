@@ -203,7 +203,7 @@ class SettingsDialog(QDialog):
         self.remote_approval = QCheckBox("결재를 Center로 올리기")
         self.remote_approval.setChecked(self._agent.settings.remote_approval)
         self.remote_approval.setToolTip(
-            "BPM 프로세스의 결재 위치가 「PC 실행기 설정을 따름」인 결재에만 적용됩니다 (Studio가 정한 것이 우선)."
+            "BPM 프로세스의 결재 위치가 「설정」인 결재에만 적용됩니다 (Studio가 정한 것이 우선)."
         )
         form.addRow(self.remote_approval)
 

@@ -93,6 +93,7 @@ class DefaultsEditor(QWidget):
 
         limits = QGroupBox("실행 제한", self)
         limits_form = QFormLayout(limits)
+        limits_form.setVerticalSpacing(SPACE_3)
         _tight(limits_form)
         limits_form.addRow("최대 단계", self.max_steps_box)
         limits_form.addRow("제한 시간(초)", self.timeout_box)
@@ -101,6 +102,7 @@ class DefaultsEditor(QWidget):
         column = QVBoxLayout(instructions)
         _tight(column)
         form = QFormLayout()
+        form.setVerticalSpacing(SPACE_3)
         form.setContentsMargins(0, 0, 0, 0)
         form.addRow("하지 않을 것", self.forbidden_box)
         form.addRow("", _muted(FORBIDDEN_NOTE, instructions))
@@ -111,6 +113,7 @@ class DefaultsEditor(QWidget):
 
         desktop = QGroupBox("데스크톱", self)
         desktop_form = QFormLayout(desktop)
+        desktop_form.setVerticalSpacing(SPACE_3)
         _tight(desktop_form)
         desktop_form.addRow("띄울 앱", self.app_box)
 
