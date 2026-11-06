@@ -548,9 +548,11 @@ QLineEdit, QComboBox, QPlainTextEdit, QTextEdit, QSpinBox {{
   color: {c["text.primary"]};
   border: 1px solid {c["border.strong"]};
   border-radius: {r["md"]}px;
-  min-height: {z["control.md"]}px;
   padding: 0 {s["2"]}px;
 }}
+/* 한 줄 칸만 컨트롤 높이를 받는다 — 여러 줄 글상자(QPlainTextEdit·QTextEdit)에 주면 편집기가 정한
+   높이를 이 값으로 눌러 한 줄 반만 보인다. 여러 줄 높이는 그 칸을 만든 쪽이 정한다 (스타일 가이드 §4-2). */
+QLineEdit, QComboBox, QSpinBox {{ min-height: {z["control.md"]}px; }}
 QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QTextEdit:focus, QSpinBox:focus {{
   border: 2px solid {c["focus"]};
 }}

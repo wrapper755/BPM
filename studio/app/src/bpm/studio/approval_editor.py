@@ -31,7 +31,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
-    QPlainTextEdit,
     QPushButton,
     QRadioButton,
     QTableWidget,
@@ -43,6 +42,7 @@ from PySide6.QtWidgets import (
 from bpm.contracts.bpmn_ext import Approval, is_var_name
 from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
+from bpm.studio.long_text import LongText
 from bpm.studio.name_pick import attach
 
 #: 탭 이름 — 결재와 확인은 같은 `bpm:approval`이고 이름만 다르다 (C14).
@@ -80,6 +80,10 @@ _TRUE = {"true", "예", "참", "1", "yes"}
 _FALSE = {"false", "아니오", "거짓", "0", "no"}
 
 
+#: 「설명」 칸에 보일 줄 수.
+DESCRIPTION_LINES = 5
+
+
 class ApprovalEditor(QWidget):
     """결재·확인 하나. `run_location`이 `server`면 「현장 PC에서만」을 끈다."""
 
@@ -99,10 +103,10 @@ class ApprovalEditor(QWidget):
 
         self.title_box = QLineEdit(self)
         self.title_box.setPlaceholderText("결재 창 제목 (필수)")
-        self.description_box = QPlainTextEdit(self)
-        self.description_box.setPlaceholderText("결재하는 사람에게 보일 설명")
+        # 결재 설명은 Markdown이다 (C14 「결재 설명」) — 읽기 전용 상자, 누르면 편집 창 (ADR-0134).
+        self.description_box = LongText("설명", is_markdown=True, lines=DESCRIPTION_LINES, parent=self)
+        self.description_box.setPlaceholderText("결재하는 사람에게 보일 설명 — Markdown (# 제목, - 목록, **굵게**)")
         lines = self.fontMetrics().lineSpacing()
-        self.description_box.setFixedHeight(lines * 4)
         self.show_list = QListWidget(self)
         self.show_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         # 테마가 줄마다 안쪽 여백을 주므로 글 높이만으로 세면 셋째 줄이 잘린다 — 넉 줄이 보이게.

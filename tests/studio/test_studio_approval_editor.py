@@ -278,3 +278,22 @@ def test_shown_names_row_has_no_grey_holder() -> None:
     form = next(one for one in made.findChildren(QFormLayout) if one.rowCount() == 3)
     field = form.itemAt(2, QFormLayout.ItemRole.FieldRole)
     assert field is not None and field.widget() is None and field.layout() is not None
+
+
+def test_the_description_box_shows_five_lines_under_the_theme() -> None:
+    """「설명」은 긴 글이라 다섯 줄이 보인다 — 테마의 한 줄 칸 높이(`control.md`)가 눌러 한 줄 반이 되면 안 된다."""
+    from PySide6.QtWidgets import QApplication  # noqa: PLC0415
+
+    from bpm.qt.theme import apply_theme  # noqa: PLC0415
+    from bpm.studio.approval_editor import DESCRIPTION_LINES  # noqa: PLC0415
+
+    app = QApplication.instance()
+    assert isinstance(app, QApplication)
+    apply_theme(app, choice="light")
+    made = loaded()
+    made.show()
+    app.processEvents()
+    box = made.description_box
+    assert box.minimumHeight() == box.maximumHeight() == box.height()
+    text_room = box.viewport().height() - int(box.document().documentMargin()) * 2
+    assert text_room >= box.fontMetrics().lineSpacing() * DESCRIPTION_LINES

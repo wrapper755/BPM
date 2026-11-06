@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.approvals import Form, FormField, as_table, validate_answer
+from bpm.qt import markdown
 from bpm.qt.theme import dress_button_box, set_role
 from bpm.qt.theme.tokens import SPACE_3
 
@@ -127,8 +128,13 @@ class ApprovalDialog(QDialog):
         layout.addWidget(heading)
 
         if description:
-            said = QLabel(description, self)
+            # 결재 설명은 Markdown이다 (C14 「결재 설명」) — Studio 미리보기와 같은 함수로 그린다.
+            said = QLabel(markdown.to_html(description), self)
+            said.setTextFormat(Qt.TextFormat.RichText)
             said.setWordWrap(True)
+            said.setOpenExternalLinks(False)
+            said.linkActivated.connect(markdown.open_link)
+            self.description_label = said
             layout.addWidget(said)
 
         #: [R]의 표들 (시험이 본다).

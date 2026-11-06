@@ -173,3 +173,32 @@ def test_a_table_value_is_drawn_as_a_table_and_the_rest_as_text(app: Any) -> Non
 def test_a_review_without_tables_draws_no_table(app: Any) -> None:
     dialog = ApprovalDialog(None, review={"합계": 1000})
     assert dialog.review_tables == []
+
+
+def test_the_description_is_drawn_as_markdown_without_html(app: Any) -> None:
+    """[D] 설명은 Markdown이다 (C14 「결재 설명」, ADR-0134) — 기호는 그려지고 HTML 태그는 글자로 남는다."""
+    from PySide6.QtGui import QTextDocument
+
+    dialog = ApprovalDialog(description="# 보완 요청\n\n- **수치** 확인\n- <b>태그</b>")
+    shown = QTextDocument()
+    shown.setHtml(dialog.description_label.text())
+    plain = shown.toPlainText()
+    assert "보완 요청" in plain and "수치" in plain
+    assert "#" not in plain and "**" not in plain
+    assert "<b>태그</b>" in plain
+
+
+def test_only_web_links_open() -> None:
+    """설명의 링크는 `http`·`https`만 연다 — 파일·스크립트 주소는 열지 않는다."""
+    from bpm.qt.markdown import open_link
+
+    assert open_link("file:///etc/passwd") is False
+    assert open_link("javascript:alert(1)") is False
+
+
+def test_drawn_markdown_keeps_the_box_font(app: Any) -> None:
+    """그린 글은 칸의 글꼴을 따른다 — 문서 기본 글꼴(9pt)을 적으면 옆 입력 칸보다 작아진다."""
+    from bpm.qt.markdown import to_html
+
+    html = to_html("보통 글 **굵게**")
+    assert "<body>" in html and "9pt" not in html

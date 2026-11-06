@@ -28,7 +28,6 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QLabel,
     QLineEdit,
-    QPlainTextEdit,
     QRadioButton,
     QSpinBox,
     QVBoxLayout,
@@ -38,6 +37,7 @@ from PySide6.QtWidgets import (
 from bpm.contracts.bpmn_ext import WEBHOOK_BODY_ALL, Email, Webhook, is_var_name
 from bpm.qt.theme import set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
+from bpm.studio.long_text import LongText
 from bpm.studio.name_pick import attach
 
 #: 탭 이름.
@@ -88,7 +88,6 @@ class SendEditor(QWidget):
             self.channel_group.addButton(one)
         self.channel_picks[CHANNEL_EMAIL].setChecked(True)
 
-        lines = self.fontMetrics().lineSpacing()
 
         # 메일
         self.to_box = QLineEdit(self)
@@ -96,9 +95,8 @@ class SendEditor(QWidget):
         self.cc_box = QLineEdit(self)
         self.cc_box.setPlaceholderText("비우면 참조 없음")
         self.subject_box = QLineEdit(self)
-        self.body_box = QPlainTextEdit(self)
+        self.body_box = LongText("본문", lines=6, parent=self)
         self.body_box.setPlaceholderText("{변수}로 값을 채웁니다")
-        self.body_box.setFixedHeight(lines * 6)
         self.attachments_box = QLineEdit(self)
         self.attachments_box.setPlaceholderText("변수 이름, 쉼표로 여럿 — 값은 파일 경로")
         self.attachments_box.setToolTip("대개 데이터 객체(파일 출력)의 「경로 저장」 변수입니다.")
@@ -121,9 +119,8 @@ class SendEditor(QWidget):
             self.body_kind.addItem(text, value)
         self.fields_box = QLineEdit(self)
         self.fields_box.setPlaceholderText("보낼 변수 이름, 쉼표로 여럿")
-        self.template_box = QPlainTextEdit(self)
+        self.template_box = LongText("템플릿", lines=6, parent=self)
         self.template_box.setPlaceholderText("{변수}로 채운 글을 그대로 보냅니다")
-        self.template_box.setFixedHeight(lines * 6)
         self.webhook_store_box = QLineEdit(self)
         self.webhook_store_box.setPlaceholderText("변수 이름 — 비우면 남기지 않습니다")
         self.webhook_store_box.setToolTip('응답 요약 {"ok", "status", "body"}가 이 변수에 들어갑니다.')

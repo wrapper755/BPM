@@ -43,6 +43,7 @@ from bpm.contracts.bpmn_ext import ELEMENT_MODELS
 from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_3
 from bpm.studio.dmn_table import Decisions
+from bpm.studio.long_text import LongText
 from bpm.studio.replay_specs import ReplaySpecs
 from bpm.studio.service_catalog import CallTarget, Catalog
 
@@ -261,11 +262,11 @@ class Properties(QWidget):
         self.process_button.setEnabled(False)
 
         self.name_box = QLineEdit(self)
-        self.doc_box = QPlainTextEdit(self)
-        self.doc_box.setMaximumHeight(80)
+        # 여러 줄 글은 읽기 전용 상자, 누르면 편집 창 (ADR-0134). 설명(documentation)은 Markdown이다.
+        self.doc_box = LongText("설명", is_markdown=True, parent=self)
         self.condition_box = QLineEdit(self)
         self.condition_box.setPlaceholderText("비우면 항상 진행합니다 (bpm-expr)")
-        self.script_box = QPlainTextEdit(self)
+        self.script_box = LongText("스크립트", lines=6, parent=self)
         self.script_box.setPlaceholderText("변수 = 식  (한 줄에 하나, ADR-0025)")
 
         self.form = QWidget(self)

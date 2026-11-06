@@ -42,7 +42,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMessageBox,
-    QPlainTextEdit,
     QPushButton,
     QRadioButton,
     QSpinBox,
@@ -60,6 +59,7 @@ from bpm.core.files import Workspace
 from bpm.core.tools import builtin_tools
 from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
+from bpm.studio.long_text import LongText
 from bpm.studio.name_pick import NameDelegate
 from bpm.studio.replay_specs import ReplaySpecs, SpecsUnreadable
 
@@ -160,12 +160,10 @@ class AiTaskEditor(QWidget):
         self._loaded: dict[str, Any] = {}
         self._quiet = False
         self._builtin = builtin_tool_descriptions()
-        lines = self.fontMetrics().lineSpacing()
 
         # 입력
-        self.goal_box = QPlainTextEdit(self)
+        self.goal_box = LongText("목표", is_markdown=True, lines=9, parent=self)
         self.goal_box.setPlaceholderText("Markdown — 값은 적지 않고 변수 이름으로 가리킵니다")
-        self.goal_box.setFixedHeight(lines * 9)
         self.outline_button = QPushButton("틀 넣기", self)
         button_icon(self.outline_button, "wand")
         self.outline_button.setObjectName("Secondary")
@@ -222,12 +220,10 @@ class AiTaskEditor(QWidget):
         self.drop_result.setObjectName("Secondary")
 
         # 지시문 (ADR-0105)
-        self.forbidden_box = QPlainTextEdit(self)
+        self.forbidden_box = LongText("하지 않을 것", parent=self)
         self.forbidden_box.setPlaceholderText("예: 삭제 버튼을 누르지 않는다")
-        self.forbidden_box.setFixedHeight(lines * 4)
-        self.confirm_box = QPlainTextEdit(self)
+        self.confirm_box = LongText("멈추고 넘길 상황", parent=self)
         self.confirm_box.setPlaceholderText("예: 로그인 화면이 나타남")
-        self.confirm_box.setFixedHeight(lines * 4)
 
         # 재생·실행 제한
         self.replay_picks: dict[str, QRadioButton] = {}
@@ -870,7 +866,7 @@ def _parse(text: str, kind: str) -> tuple[Any, str]:
     return None, f"타입을 모릅니다: {kind}"
 
 
-def _lines(box: QPlainTextEdit) -> list[str]:
+def _lines(box: LongText) -> list[str]:
     """줄마다 하나 — 빈 줄은 버린다."""
     return [line.strip() for line in box.toPlainText().splitlines() if line.strip()]
 

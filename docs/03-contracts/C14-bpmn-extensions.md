@@ -57,7 +57,7 @@ BPMN 2.0 파일 안에 우리 태스크의 속성을 적는 방법을 정한다.
 | AI 태스크 | `serviceTask` | `bpm:aiTask` | `goal`(Markdown — `## 상황`·`## 할 일`·`## 판단하지 않는 것`·`## 반환` 권장), `domain`(`llm`\|`api`\|`doc`\|`web`\|`desktop`), `tools[]`, `params`(업무 파라미터, 재생 때 그대로 쓰인다), `results`(`{이름: 타입}`), `replay`(`plan`\|`full`\|`none`, 기본 `plan` — 아래 「재생」), `limits`(`timeout_s`·`max_steps` — 아래 「한도와 지시문」), `forbidden_actions[]`, `confirm_triggers[]`, `web`/`desktop`(환경 설정). **`domain`의 `web`·`desktop`은 낱말로만 남고 돌지 않는다** — 아래 「`web`·`desktop` AI 태스크」 |
 | 서비스 앱 태스크 | `serviceTask` | `bpm:serviceCall` | `app_id`, `operation`, `input`(`{필드: 식}`), `output`(`{변수: 필드}`), `timeout_s`, `retry`(`{max, on: [503, 429]}` — C15 실패 코드 `dependency_down`=503·`rate_limited`=429·`timeout`=504로 읽는다) |
 | 확장 태스크 | `serviceTask` | `bpm:task` `type="<확장 태스크 종류>"` `extension="<id>"` | 그 확장의 계약이 정한 JSON |
-| 결재 | `userTask` | `bpm:approval` | `title`, `description`, `show`(**변수 이름 배열** — 문자열 하나로 쓰면 검사 오류), `fields[]`(C6 Form과 같다: `{key, label, type: bool\|number\|text\|choice, choices?, required, default?}`), `location`(`follow`\|`center`\|`field`), `expires`(ISO 기간 또는 변수 이름), `assignees`(**결재 담당자** — 이름 배열 또는 변수 이름 하나, 아래 「결재 담당자」), `answered_by_as?`·`answered_via_as?`(**답한 사람**이 들어갈 변수, 아래 「답한 사람」) |
+| 결재 | `userTask` | `bpm:approval` | `title`, `description`(**Markdown** — 아래 「결재 설명」), `show`(**변수 이름 배열** — 문자열 하나로 쓰면 검사 오류), `fields[]`(C6 Form과 같다: `{key, label, type: bool\|number\|text\|choice, choices?, required, default?}`), `location`(`follow`\|`center`\|`field`), `expires`(ISO 기간 또는 변수 이름), `assignees`(**결재 담당자** — 이름 배열 또는 변수 이름 하나, 아래 「결재 담당자」), `answered_by_as?`·`answered_via_as?`(**답한 사람**이 들어갈 변수, 아래 「답한 사람」) |
 | 수동 작업 (사람 확인) | `manualTask` | `bpm:approval` | 결재와 같은 형식. 화면에는 「확인」으로 보인다. **늘 현장에서 답한다** (화면 앞 사람만 답할 수 있다, C6) — `location`에 `center`를 적으면 **B12 경고**다. **서버 BPM 프로세스에는 넣을 수 없다** (C1 R2 `human.confirmation=false`) |
 | 스크립트 | `scriptTask` | 표준 `bpmn:script` (`scriptFormat="bpm-expr"`) | 식 언어로 쓴 대입문. 입력은 프로세스 변수, 결과는 대입한 변수 |
 | 규칙 | `businessRuleTask` | `bpm:rule` | `decision`(같은 패키지의 DMN 결정 id), `input`(`{DMN 입력 식 이름: 식}`), `output`(`{변수: DMN 출력}`). DMN은 한 건을 판정한다 — 목록은 반복(아래)으로. 적중 정책 `COLLECT`면 출력이 목록이다 (맞는 줄이 없으면 빈 목록). 아래 「규칙 태스크와 DMN」 |
@@ -66,6 +66,10 @@ BPMN 2.0 파일 안에 우리 태스크의 속성을 적는 방법을 정한다.
 | 웹훅 보내기 | `sendTask` | `bpm:webhook` | `url`, `method`, `body`(`all`\|`fields:[..]`\|`template:"…"`), `timeout_s`, `store_as?`. URL은 허용 호스트 규칙(C13 §4-3과 같은 해석기)을 따른다. 아래 「보내기」 |
 | 메시지 받기 | `receiveTask` | 표준 `messageRef` + `bpm:receive` | `correlation`(변수 이름 — 이 값이 같은 메시지만 받는다), `payload[]`(메시지 본문에서 변수로 들어오는 이름 — 검사 B11이 출처로 본다. 메시지 시작은 `bpm:process.inputs`로 선언) |
 | 다른 BPM 프로세스 호출 | `callActivity` | 표준 `calledElement` + `bpm:call` | `input`(`{호출 대상 변수: 식}`), `output`(`{내 변수: 호출 대상 변수}`). **적은 것만 오간다.** 둘 다 비면 오가는 변수 없음 (프로토타입의 "비면 전부"는 없앴다). `delegate?`를 적으면 **PC 위임**이다 (아래) |
+
+### 결재 설명 (`bpm:approval.description`)
+
+결재하는 사람에게 보이는 글이고 **Markdown**이다 ([ADR-0134](../decisions/0134-long-text-is-edited-in-a-window-and-approval-description-is-markdown.md)). 값은 글 그대로 C6 `description`으로 간다. 그리는 쪽(CMN-01·CON-04·Studio 미리보기)이 모두 그리는 것은 문단·줄바꿈, 제목(`#`~`###`), 굵게·기울임, 인라인 코드·코드 블록, 글머리·번호 목록, 링크(`http`·`https`만)다. **HTML은 그리지 않는다** — 글자로 보인다. 이 밖(표 등)은 그리는 쪽에 따라 글로 남을 수 있다.
 
 ### 결재 담당자 (`bpm:approval.assignees`)
 
