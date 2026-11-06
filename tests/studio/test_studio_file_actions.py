@@ -36,12 +36,20 @@ class FakeExplorer:
     refreshed: list[str] = field(default_factory=list)
     listed: list[str] = field(default_factory=list)
     picked: str | None = None
+    #: 있으면 진짜처럼 **연 정의의 BPM 프로세스를 목록에 올린다**.
+    workspace: Workspace | None = None
 
     def selected_process_id(self) -> str | None:
         return self.picked
 
     def refresh(self, *, opened: str = "", adding: Any = ()) -> None:
         self.refreshed.append(opened)
+        self.listed.extend(one for one in adding if one not in self.listed)
+        if opened and self.workspace is not None:
+            for group in self.workspace.groups():
+                for one in group.processes:
+                    if one.id not in self.listed and any(d.path.as_posix() == opened for d in one.definitions):
+                        self.listed.append(one.id)
 
     def unlist(self, process_id: str) -> None:
         self.listed.remove(process_id)
@@ -85,6 +93,8 @@ class FakeTable:
 class FakeSettings:
     last_opened: str = ""
     open_processes: tuple[str, ...] = ()
+    open_folders: tuple[str, ...] = ()
+    recent_processes: tuple[str, ...] = ()
     saved: int = 0
 
     def save(self) -> None:
@@ -139,6 +149,7 @@ def opened(tmp_path: Path, *names: str, entry: str | None = None) -> FakeWindow:
     assert again is not None
     window = FakeWindow(workspace=workspace, process=again, definition=again.definitions[0].path)
     window.explorer.listed.append(again.id)
+    window.explorer.workspace = workspace
     return window
 
 
@@ -337,31 +348,75 @@ def test_a_definition_with_di_opens_as_saved(tmp_path: Path) -> None:
     assert window.dirty is False and file_actions.LAID_OUT not in window.said
 
 
-def test_importing_an_outside_folder_makes_a_process_and_opens_it(tmp_path: Path, monkeypatch: Any) -> None:
-    """「BPM 프로세스 열기...」로 바깥 BPM 프로세스 폴더를 고르면 그 진입 정의를 가져온다 — 폴더 → STU-05 → 연다."""
+def _outside(tmp_path: Path, process_id: str = "x.y") -> Path:
+    """기본 폴더 밖의 BPM 프로세스 폴더 (`<저장소>/<그룹>/<폴더>/process.json`)."""
+    folder = tmp_path / "저장소" / "업무" / "고객 접수"
+    (folder / "process").mkdir(parents=True)
+    (folder / "process.json").write_text(
+        f'{{"id": "{process_id}", "name": "바깥 것", "entry": "바깥.bpmn"}}', encoding="utf-8"
+    )
+    (folder / "process" / "다른.bpmn").write_text(MINIMAL.format(process_id="Proc_other"), encoding="utf-8")
+    (folder / "process" / "바깥.bpmn").write_text(MINIMAL.format(process_id="Proc_out"), encoding="utf-8")
+    return folder
+
+
+def test_an_outside_folder_opens_in_place(tmp_path: Path, monkeypatch: Any) -> None:
+    """ADR-0131 — 바깥 BPM 프로세스 폴더는 **복사하지 않고** 그 자리의 진입 정의를 연다."""
     window = opened(tmp_path, "main.bpmn")
-    outside = tmp_path / "바깥" / "x.y"
-    (outside / "process").mkdir(parents=True)
-    (outside / "process.json").write_text('{"id": "x.y", "entry": "바깥.bpmn"}', encoding="utf-8")
-    (outside / "process" / "다른.bpmn").write_text(MINIMAL.format(process_id="Proc_other"), encoding="utf-8")
-    source = outside / "process" / "바깥.bpmn"
-    source.write_text(MINIMAL.format(process_id="Proc_out"), encoding="utf-8")
-    seen: dict[str, Any] = {}
-
-    def ask(_parent: Any, workspace: Workspace, **kwargs: Any) -> BpmProcess:
-        seen.update(kwargs)
-        return workspace.create("c.d", first=kwargs["imported"])
-
+    outside = _outside(tmp_path)
     monkeypatch.setattr(file_actions, "pick_process_folder", lambda _window, _start=None: outside)
-    monkeypatch.setattr(NewProcessDialog, "ask", staticmethod(ask))
-    opened_paths: list[str] = []
-    monkeypatch.setattr(file_actions, "open_definition", lambda _w, path: opened_paths.append(path))
+    monkeypatch.setattr(NewProcessDialog, "ask", staticmethod(lambda *_a, **_k: pytest.fail("복사하면 안 된다")))
 
     file_actions.open_process(window)  # type: ignore[arg-type]
 
-    assert seen == {"imported": source}
-    assert opened_paths and opened_paths[0].endswith("c.d/process/바깥.bpmn")
-    assert window.said[-1] == "가져왔습니다: Proc_out — 바깥.bpmn"
+    assert window.definition == outside / "process" / "바깥.bpmn"
+    assert window.process is not None and window.process.folder == outside
+    assert window.process.group == "업무", "그룹은 상위 폴더 이름이다"
+    assert not (window.workspace.root / "업무").exists(), "기본 폴더에 아무것도 생기지 않는다"
+    assert window.settings.open_folders == (outside.as_posix(),)
+    assert window.settings.recent_processes[0] == outside.as_posix()
+
+
+def test_the_same_id_in_another_listed_folder_is_refused(tmp_path: Path, monkeypatch: Any) -> None:
+    window = opened(tmp_path, "main.bpmn")
+    outside = _outside(tmp_path, process_id="a.b")  # 기본 폴더의 a.b가 목록에 있다
+    monkeypatch.setattr(file_actions, "pick_process_folder", lambda _window, _start=None: outside)
+    file_actions.open_process(window)  # type: ignore[arg-type]
+    assert window.said[-1].startswith("같은 id(a.b)의 BPM 프로세스가 이미 목록에 있습니다:")
+    assert window.workspace.extra == [] and window.definition is not None
+    assert window.definition.parent.parent != outside
+
+
+def test_closing_an_outside_process_forgets_its_folder_but_not_the_recent_line(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    window = opened(tmp_path, "main.bpmn")
+    outside = _outside(tmp_path)
+    file_actions.open_folder(window, outside)  # type: ignore[arg-type]
+    window.explorer.picked = "x.y"
+    file_actions.close_process(window)  # type: ignore[arg-type]
+    assert window.settings.open_folders == () and window.workspace.extra == []
+    assert outside.as_posix() in window.settings.recent_processes
+
+
+def test_a_recent_line_whose_folder_is_gone_is_dropped(tmp_path: Path) -> None:
+    window = opened(tmp_path, "main.bpmn")
+    gone = (tmp_path / "없음").as_posix()
+    window.settings.recent_processes = (gone, "남는 것")
+    file_actions.open_recent(window, gone)  # type: ignore[arg-type]
+    assert list(window.settings.recent_processes) == ["남는 것"]
+    assert window.said[-1] == f"찾지 못했습니다: {gone} — 최근 목록에서 뺐습니다."
+
+
+def test_recent_lines_carry_the_name_from_the_record(tmp_path: Path) -> None:
+    window = opened(tmp_path, "main.bpmn")
+    outside = _outside(tmp_path)
+    window.settings.recent_processes = (outside.as_posix(),)
+    assert file_actions.recent_entries(window) == [  # type: ignore[arg-type]
+        (f"바깥 것 — {outside.as_posix()}", outside.as_posix())
+    ]
+    file_actions.clear_recent(window)  # type: ignore[arg-type]
+    assert not window.settings.recent_processes
 
 
 def test_importing_stops_when_no_file_is_picked(tmp_path: Path, monkeypatch: Any) -> None:

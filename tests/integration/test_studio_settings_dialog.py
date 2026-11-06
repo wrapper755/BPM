@@ -134,6 +134,20 @@ def test_the_theme_goes_to_the_file(qt: Any, settings: Settings, extensions: Ext
     assert dialog(Settings.load(settings.path), extensions, Vault()).theme.currentData() == "dark"
 
 
+def test_the_default_folder_goes_to_the_file(
+    qt: Any, settings: Settings, extensions: Extensions, tmp_path: Path
+) -> None:
+    """ADR-0131 — 「일반」의 「기본 폴더」. 비우면 기본값(자리 글)이고, 적으면 새로 만드는 자리가 된다."""
+    found = dialog(settings, extensions, Vault())
+    assert found.workspace_root.text() == ""
+    assert found.workspace_root.placeholderText() == settings.default_workspace_dir.as_posix()
+    found.workspace_root.setText((tmp_path / "업무").as_posix())
+    found.save()
+    again = Settings.load(settings.path)
+    assert again.workspace_root == (tmp_path / "업무").as_posix()
+    assert again.workspace_dir == tmp_path / "업무"
+
+
 # ─────────────────────────── 확장별 설정 (C13 scope studio) ───────────────────────────
 
 DEMO: dict[str, Any] = {

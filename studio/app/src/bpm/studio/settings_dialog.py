@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -130,12 +131,35 @@ class StudioSettingsDialog(QDialog):
 
     def _page(self, name: str) -> QWidget:
         pages = {
+            GENERAL: self._general_page,
             APPEARANCE: self._appearance_page,
             LLM: self._llm_page,
             CENTER: self._center_page,
             EXTENSIONS: self._extensions_page,
         }
         return pages[name]()
+
+    def _general_page(self) -> QWidget:
+        """「기본 폴더」 — 새 BPM 프로세스가 만들어지는 자리 (ADR-0131). 비우면 기본값이다."""
+        page = QWidget()
+        form = QFormLayout(page)
+        form.setVerticalSpacing(SPACE_3)
+        self.workspace_root = QLineEdit(self.settings.workspace_root)
+        self.workspace_root.setPlaceholderText(self.settings.default_workspace_dir.as_posix())
+        browse = QPushButton("찾아보기...")
+        button_icon(browse, "folder-open")
+        browse.clicked.connect(self._browse_workspace_root)
+        row = QHBoxLayout()
+        row.addWidget(self.workspace_root, 1)
+        row.addWidget(browse)
+        form.addRow("기본 폴더", row)
+        return page
+
+    def _browse_workspace_root(self) -> None:
+        start = self.workspace_root.text().strip() or self.settings.workspace_dir.as_posix()
+        found = QFileDialog.getExistingDirectory(self, "기본 폴더", start)
+        if found:
+            self.workspace_root.setText(found)
 
     def _appearance_page(self) -> QWidget:
         page = QWidget()
@@ -371,6 +395,7 @@ class StudioSettingsDialog(QDialog):
             llm_base_url=self.llm_url.text().strip(),
             llm_model=self.llm_model.text().strip(),
             theme=str(self.theme.currentData()),
+            workspace_root=self.workspace_root.text().strip(),
             extensions={**self.settings.extensions, **self.extension_values()},
         )
         made.save()

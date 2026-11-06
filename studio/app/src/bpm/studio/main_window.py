@@ -106,7 +106,10 @@ class MainWindow(QMainWindow):
     def __init__(self, settings: Settings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.settings = settings
-        self.workspace = Workspace(settings.workspace_dir).ensure()
+        # 기본 폴더 + 제자리로 연 바깥 폴더 (ADR-0131).
+        self.workspace = Workspace(
+            settings.workspace_dir, extra=[Path(one) for one in settings.open_folders]
+        ).ensure()
         self.process: BpmProcess | None = None
         self.definition: Path | None = None
         self.dirty = False
@@ -422,7 +425,10 @@ class MainWindow(QMainWindow):
         if dialog.exec() and dialog.saved is not None:
             if dialog.saved.theme != self.settings.theme:
                 self._apply_theme(dialog.saved.theme)
+            moved = dialog.saved.workspace_dir != self.settings.workspace_dir
             self.settings = dialog.saved
+            if moved:
+                self._move_default_folder(dialog.saved.workspace_dir)
             # 확장별 설정 — 다음 시험 실행·사전 점검부터 쓴다.
             self.extensions.configured = dict(dialog.saved.extensions)
             self.say("설정을 저장했습니다.")
@@ -431,6 +437,38 @@ class MainWindow(QMainWindow):
             # 「Center」의 등록 요청·키 받기는 「저장」을 기다리지 않는다 (ADR-0093) — 「취소」로 닫아도 받는다.
             self.settings = dialog.center_changed
             self.refresh_catalog()
+
+    def _fill_recent(self) -> None:
+        menu = self.recent_menu
+        menu.clear()
+        entries = file_actions.recent_entries(self)
+        for text, path_text in entries:
+            menu.addAction(text).triggered.connect(
+                lambda _checked=False, where=path_text: file_actions.open_recent(self, where)
+            )
+        if not entries:
+            menu.addAction("(비어 있음)").setEnabled(False)
+            return
+        menu.addSeparator()
+        menu.addAction("목록 지우기").triggered.connect(lambda: file_actions.clear_recent(self))
+
+    def _move_default_folder(self, root: Path) -> None:
+        """STU-10 「기본 폴더」가 바뀌었다 — **그 자리에서** 옮긴다 (ADR-0131).
+
+        목록에 올라 있던 옛 기본 폴더의 BPM 프로세스는 바깥 폴더로 남아 그대로 보인다.
+        """
+        listed = set(self.explorer.listed)
+        kept = [
+            one.folder
+            for group in self.workspace.groups()
+            for one in group.processes
+            if one.id in listed and not self.workspace.is_outside(one.folder)
+        ]
+        self.workspace.root = root
+        self.workspace.extra = [*self.workspace.extra, *kept]
+        self.workspace.ensure()
+        self.explorer.refresh(opened=self.definition.as_posix() if self.definition else "")
+        file_actions.remember_last_opened(self)
 
     def open_extensions(self) -> None:
         """STU-15. 끄고 켠 것이 있으면 **속성 패널을 다시 그린다** (ADR-0043).

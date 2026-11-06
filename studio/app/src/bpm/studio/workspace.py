@@ -313,18 +313,6 @@ def read_record(folder: Path) -> dict[str, object]:
     return raw if isinstance(raw, dict) else {}
 
 
-def record_beside(definition: Path) -> dict[str, object]:
-    """바깥 `.bpmn`이 BPM 프로세스 폴더 모양(`<폴더>/process/<파일>` 옆에 `process.json`)이면
-    그 기록, 아니면 빈 사전 (STU-05 「파일에서 가져오기」).
-
-    작업 폴더 밖(예: 업무 저장소의 체크아웃)에서 BPM 프로세스를 관리하면 **버전·이름은 그 기록이
-    원본**이다 — 그림만 가져오고 기록을 버리면 가져올 때마다 버전이 작업 폴더의 옛 값으로 돌아간다.
-    """
-    if definition.parent.name != "process":
-        return {}
-    return read_record(definition.parent.parent)
-
-
 def write_record(process: BpmProcess) -> Path:
     found = _record_path(process.folder)
     found.parent.mkdir(parents=True, exist_ok=True)
@@ -357,9 +345,15 @@ def write_record(process: BpmProcess) -> Path:
 
 @dataclass
 class Workspace:
-    """작업 폴더 한 벌. **디스크가 원본이다** — 화면은 `scan()`한 결과를 그린다."""
+    """작업 폴더 한 벌. **디스크가 원본이다** — 화면은 `scan()`한 결과를 그린다.
+
+    `root`는 **새 BPM 프로세스가 만들어지는 기본 폴더**이고(`<root>/<그룹>/<id>/`), `extra`는
+    그 밖에서 **제자리로 연** BPM 프로세스 폴더다 (ADR-0131). 그룹은 어느 쪽이든 **상위 폴더
+    이름**이다. 바깥 것과 id가 같은 기본 폴더의 것은 보이지 않는다 — 바깥 것을 연 사람의 뜻이다.
+    """
 
     root: Path
+    extra: list[Path] = field(default_factory=list)
 
     def ensure(self) -> Workspace:
         (self.root / DEFAULT_GROUP).mkdir(parents=True, exist_ok=True)
@@ -370,13 +364,35 @@ class Workspace:
     def groups(self) -> list[Group]:
         """그룹 → BPM 프로세스 → 정의. 「기본」이 맨 위, 나머지는 이름순 (STU-02)."""
         self.ensure()
-        found = [
-            Group(name=folder.name, processes=self._processes(folder))
-            for folder in sorted(self.root.iterdir())
-            if folder.is_dir()
-        ]
+        outside = self._outside()
+        taken = {one.id for one in outside}
+        by_name: dict[str, list[BpmProcess]] = {}
+        for folder in sorted(self.root.iterdir()):
+            if folder.is_dir():
+                by_name.setdefault(folder.name, []).extend(
+                    one for one in self._processes(folder) if one.id not in taken
+                )
+        for one in outside:
+            by_name.setdefault(one.group, []).append(one)
+        found = [Group(name=name, processes=processes) for name, processes in by_name.items()]
         found.sort(key=lambda g: (g.name != DEFAULT_GROUP, g.name))
         return found
+
+    def is_outside(self, folder: Path) -> bool:
+        """기본 폴더의 `<그룹>/<id>/` 자리가 아닌가 (ADR-0131)."""
+        return folder.resolve().parent.parent != self.root.resolve()
+
+    def _outside(self) -> list[BpmProcess]:
+        """제자리로 연 바깥 폴더 — 기록이 없어진 것과 기본 폴더 안의 것은 건너뛴다."""
+        out: list[BpmProcess] = []
+        seen: set[Path] = set()
+        for folder in self.extra:
+            where = folder.resolve()
+            if where in seen or not self.is_outside(folder) or not _record_path(folder).is_file():
+                continue
+            seen.add(where)
+            out.append(self.read(folder, folder.parent.name))
+        return out
 
     def _processes(self, group: Path) -> list[BpmProcess]:
         out = []
@@ -438,8 +454,8 @@ class Workspace:
     ) -> BpmProcess:
         """새 BPM 프로세스 (STU-05). 정의 파일은 캔버스가 저장할 때 생긴다.
 
-        `first`를 주면 **그 파일 하나**를 진입 정의로 복사한다 (「첫 정의」 — 「파일에서
-        가져오기」·「지금 열린 정의 복사」). 파일 이름은 그대로, 그림은 손대지 않는다(ADR-0022).
+        `first`를 주면 **그 파일 하나**를 진입 정의로 복사한다 (「첫 정의」 — 「지금 열린 정의
+        복사」). 파일 이름은 그대로, 그림은 손대지 않는다(ADR-0022).
         **아무것도 쓰기 전에 읽어 본다** — 읽지 못하면 반쯤 만든 폴더가 남지 않는다. 쓰는 DMN·호출
         대상은 따라가지 않는다 (바깥 파일에는 예제 생성기의 이름 규칙이 없다 — B14가 말한다).
         """
@@ -469,25 +485,6 @@ class Workspace:
             self.save_definition(found, entry, first_text)
             return self.read(folder, group)
         return found
-
-    def replace_entry(self, process: BpmProcess, source: Path) -> BpmProcess:
-        """진입 정의의 **내용만** 바깥 파일로 바꾼다 (STU-05 「기존 것을 바꾸기」).
-
-        파일 이름은 기존 진입 이름 그대로다 — 기록·케이스가 그 이름을 가리킨다. 케이스는 건드리지
-        않는다. 이름·버전·설명은 **바깥 파일 옆에 같은 id의 기록이 있을 때만** 그것을 따른다
-        (`record_beside` — 그쪽이 원본이다). **쓰기 전에 읽어 본다** — 읽지 못하면 아무것도
-        바뀌지 않는다.
-        """
-        text, _ = _readable_definition(source)
-        self.save_definition(process, process.entry, text)
-        beside = record_beside(source)
-        if beside.get("id") == process.id:
-            fresh = self.read(process.folder, process.group)
-            fresh.name = str(beside.get("name") or fresh.name)
-            fresh.version = str(beside.get("version") or fresh.version)
-            fresh.description = str(beside.get("description") or fresh.description)
-            write_record(fresh)
-        return self.read(process.folder, process.group)
 
     def save_definition(self, process: BpmProcess, file_name: str, xml: str) -> Path:
         """정의 하나를 쓴다. 파일은 늘 UTF-8이다 (Windows 기본 인코딩은 cp949)."""
