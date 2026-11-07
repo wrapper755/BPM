@@ -20,7 +20,7 @@
 | M7 | 서버 실행 | **끝** | 서버 실행기, 서버 BPM 프로세스 동시 실행, 상태 저장·재개, PC 위임, CON-12 | M6 |
 | M8 | 건넬 수 있게, 고칠 수 있게 | **진행 중** (남은 둘은 현장 PC 사람 몫) | Windows 설치 파일(빌드·CI 산출물·자동 시작·판 올리기), Center 저장소 옮기기 수단 | M7 |
 | M9 | 바깥 기능은 Pull로 | **끝** (조각 1~6과 C14·C1의 옛 키 칸 — ADR-0102·0103) | C15 외부 작업, 일꾼이 된 서비스 앱, 어댑터 일꾼, 주소·키 칸 없는 CON-07 | M7 |
-| M10 | 세 기둥 — AI 작업·외부 작업·통합 일꾼 | **진행 중** (조각 1~3 끝 — ADR-0135) | 일꾼 종류 칸, 통합 일꾼과 AI 작업 뼈대, 보상, 일꾼 콘솔. 업무 처리기는 Company1로 | M9 |
+| M10 | 세 기둥 — AI 작업·외부 작업·통합 일꾼 | **진행 중** (조각 1~4 끝 — ADR-0135) | 일꾼 종류 칸, 통합 일꾼과 AI 작업 뼈대, 보상, 일꾼 콘솔. 업무 처리기는 Company1로 | M9 |
 
 ## M0. 문서 기준선
 
@@ -191,7 +191,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 
 ## M10. 세 기둥 — AI 작업·외부 작업·통합 일꾼
 
-> 상태: **진행 중** — 조각 1~3이 끝났고 다음은 조각 4(AI 작업 뼈대). [ADR-0135](decisions/0135-agentic-automation-and-unified-consumer.md)
+> 상태: **진행 중** — 조각 1~4가 끝났고 다음은 조각 5(보상). [ADR-0135](decisions/0135-agentic-automation-and-unified-consumer.md)
 > 에이전틱 자동화(AI 작업)·External Task(외부 작업, C15)·하이브리드 자동화(통합 일꾼 + 보상)를 BPM의 이름 붙은 기능으로 세우고,
 > NowView의 일반 부분(일꾼 호스트·Agent 검증·대시보드의 일반 부분)은 통합 일꾼과 일꾼 콘솔로 들이고, 장면 코드는 Company1 저장소의
 > 업무 처리기로 보낸다 — **이 저장소에는 회사 업무 코드가 들어오지 않는다.** 그 뒤 NowView는 걷는다.
@@ -199,7 +199,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 조각 1 — **문서**: ADR-0135, 용어집, C11·C13·C15 `kind`·C11 「AI 작업」, C14 「보상」(합의), 09-gaps §3-30 — **됐다**
 - [x] 조각 2 — **일꾼 종류 칸** — **됐다**: 계약 모델(`Operation.kind`·`AdapterOperation.kind`(E3)·`LockedTask`·`ExternalTaskInfo`), Center 24판(`external_tasks.kind` — 올릴 때 manifest에서), 어댑터 일꾼 manifest, CON-01 「종류」 열 — `tests/server/test_center_external_tasks.py`
 - [x] 조각 3 — **통합 일꾼** `server/unified_consumer` — **됐다**: 업무 처리기를 엔트리 포인트 `bpm.consumer_handlers`로 찾고(깨진 것만 끈다, 설정 칸·데이터 폴더를 준다), 외부 확장 정의(`api`)를 어댑터 일꾼과 같은 코드로 함께 맡는다. 같은 토픽 둘은 뜨지 않는다. `rpa`는 시험용 가짜 처리기뿐 — `tests/server/test_unified_consumer.py`. **세 종류 기능 예제는 조각 5로 옮겼다**(같은 흐름에 RPA 실패 → 보상이 들어간다)
-- [ ] 조각 4 — **AI 작업 뼈대** `bpm.unified_consumer.ai`: 지식 원천, 러너 셋(`mock`·`llm`·`fail`), 검증, provenance
+- [x] 조각 4 — **AI 작업 뼈대** `bpm.unified_consumer.ai` — **됐다**: 지식 원천(`StaticKnowledge`·`FolderKnowledge`), 러너 셋(`MockRunner`·`LlmRunner`(`ServiceLlm`)·`FailingRunner`), 검증(필수 칸·근거 id·숫자 대조 — 버린 사유를 알려 다시 묻는다), provenance, 오류 `ai_rejected`·`ai_failed` — `tests/server/test_unified_consumer_ai.py`. NowView Agent의 검증 규칙을 일반화했다
 - [ ] 조각 5 — **보상**: C14 「구현됨」, 엔진, C14 검사, 기능 예제 하나(AI·API·RPA 세 종류를 부르고 RPA 실패 → 오류 경계 → 보상 던지기), M7 묶음
 - [ ] 조각 6 — **일꾼 콘솔** `consumer-console`(어느 회사든 같은 것만), 통합 일꾼 배포 묶음
 - [ ] 조각 7 — **Company1 저장소에서**: 장면 코드를 업무 처리기로 옮기고 BPM 패키지에 고정, NowView 걷기 (운영 반영은 따로 묻는다)

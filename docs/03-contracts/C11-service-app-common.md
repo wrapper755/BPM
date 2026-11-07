@@ -77,12 +77,12 @@
 
 ### AI 작업 (`kind: ai`)
 
-> 상태: **합의** — 조각 4(`bpm.unified_consumer.ai`)에서 구현한다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) §3).
+> 상태: **구현됨** — 뼈대 `bpm.unified_consumer.ai`(`AiOperation`·러너 셋 `MockRunner`·`LlmRunner`·`FailingRunner`·지식 원천 `StaticKnowledge`·`FolderKnowledge`)가 지킨다. `tests/server/test_unified_consumer_ai.py` ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) §3).
 
 `kind: ai`인 작업은 **결정 수행에서도 모델을 부른다**. 작업 정의가 그 사실을 드러내므로 「몰래」가 아니다. 대신 아래를 지킨다.
 
 - **출력에 `provenance`를 싣는다** — `{agent_id, agent_version, execution_id, model_called, prompt_version}`. `model_called`는 이번 수행에서 모델을 실제로 불렀는가다(결정론 러너·저장된 결과면 false).
-- **검증을 지난 응답만 낸다** — 출력 스키마, 근거 id가 그 수행에서 찾은 지식에 있는가, 본문의 숫자가 입력·도구 결과와 맞는가. 어긋나면 그 응답을 버리고, 정해진 횟수만큼 다시 묻고, 그래도 안 되면 실패한다(`retryable: false`). **자율 수행 폴백은 없다**(`fallback`과 상관없다).
+- **검증을 지난 응답만 낸다** — 필수 칸, 근거 id가 그 수행에서 찾은 지식(또는 처리기가 입력으로 준 결과 id)에 있는가, 본문의 숫자가 입력·근거에 있는가(퍼센트는 표시 반올림 0.05까지, 31 이하 정수는 날짜·건수로 보고 허용). 어긋나면 그 응답을 버리고 사유를 알려 다시 묻고(기본 세 번), 그래도 안 되면 `ai_rejected`다. 러너가 답을 내지 못하면 `ai_failed`다. **자율 수행 폴백은 없다**(`fallback`과 상관없다).
 - **숫자를 만들지 않는다** — 계산은 처리기·도구가 하고 모델은 인용한다.
 - 게이트웨이가 읽을 결정은 `output_schema`의 칸(권하는 이름 `decision`)으로 낸다.
 
@@ -174,6 +174,8 @@ AdminStatus:
 | `rate_limited` | 앱의 의존이 너무 많다고 함 | **그렇다** (C14 `retry.on` 429) |
 | `dependency_down` | 앱의 의존(LLM·DB)이 죽음 | **그렇다** (C14 `retry.on` 503) |
 | `llm_unavailable` | 모델이 필요한 작업인데 앱에 모델이 설정되지 않음 | 아니다 — 앱 운영자가 `BPM_SVC_<APP>__LLM__*`를 고친다 |
+| `ai_rejected` | AI 작업의 응답이 정해진 횟수 안에 검증을 지나지 못함 (`detail`에 `agent_id`·`execution_id`·`reasons`) | 아니다 — 그림의 오류 경계·사람 검토가 받는다 |
+| `ai_failed` | AI 작업의 러너가 답을 내지 못함 (JSON이 아님·실패 재현) | 아니다 |
 | `internal` | 작업 함수가 예상하지 못한 예외 | 아니다 |
 
 ## 호환 규칙
@@ -189,7 +191,7 @@ AdminStatus:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
-| 2026-11-08 | 1 | 작업에 **일꾼 종류** `kind`(`ai`·`api`·`rpa`, 기본 `ai` — 구현됨)와 「AI 작업」 규칙(provenance·검증·폴백 없음 — 합의, 조각 4)을 더했다. 선택 칸이라 판은 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
+| 2026-11-08 | 1 | 작업에 **일꾼 종류** `kind`(`ai`·`api`·`rpa`, 기본 `ai` — 구현됨)와 「AI 작업」 규칙(provenance·검증·폴백 없음 — 구현됨, 오류 `ai_rejected`·`ai_failed`)을 더했다. 선택 칸이라 판은 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 1 | 칸은 그대로다. `caller.type`의 아는 값에서 `worker`·`tool_ui`를 뺐고, `required_scopes`를 켜 줄 길(PC의 「셀렉터 등록」)이 없어졌다고 적었다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-29 | 1 | **앱이 일꾼이 된다** — `POST /v1/ops`·`/manifest`·앱 안의 키(`/v1/keys/self`·`/center/v1/keys`·`/center/v1/trust`)·관리 API의 키 발급을 걷고 C15 가져가기로 같은 작업을 수행한다. 폴백은 시험 일감일 때만, 추가 권한은 Center가 건다, 카탈로그는 일꾼이 올린다 | [0102](../decisions/0102-calling-outside-is-pull.md) |
 | 2026-10-25 | 1 | §Center가 발급하는 키 — `CENTER__URL`, `GET /center/v1/trust`, `POST /center/v1/keys`(C2 봉투 `service_key`, 해시만), 키 레코드 `issued_by`·`center_key_id`·`issued_for`. 새 경로·선택 칸이라 옛 부르는 쪽은 그대로다 | [0094](../decisions/0094-service-app-keys-ride-the-deployment.md) |
