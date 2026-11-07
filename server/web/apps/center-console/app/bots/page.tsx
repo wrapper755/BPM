@@ -1,26 +1,33 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Route } from "next";
-import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { ReactNode } from "react";
+import { Button, EmptyState, ErrorBanner, StatusBadge } from "@bpm/ui";
 import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
 import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
-import { PackageActions } from "@/components/PackageActions";
 import { namesOf, placeLine, workPlaceLabel } from "@/lib/organization";
 import { ServerRunners } from "@/components/ServerRunners";
 import { Schedules } from "@/components/Schedules";
 import { STATUS_LABEL, packageHref, time } from "@/app/packages/page";
-import { DeleteVersion } from "./tools";
+import { DeleteVersion, VersionMenu } from "./tools";
 import {
   NO_RUNS,
   SAMPLE,
   SCAN,
+  STATUS_FILTERS,
+  compareVersions,
   deployedPcs,
+  filterGroups,
   percent,
   placeOf,
+  sortGroups,
+  statusFilterOf,
   summarize,
   type BotRow,
+  type GroupSort,
+  type ProcessGroup,
   type Place,
   type RunFields,
 } from "@/lib/summary";
@@ -30,7 +37,7 @@ export { NO_RUNS, SAMPLE, SCAN, deployedPcs, percent, summarize };
 export type { BotRow, RunFields };
 
 /**
- * CON-02 BPM 프로세스 — BPM 프로세스·버전별 준비도.
+ * CON-02 BPM 프로세스 — BPM 프로세스·버전별 준비도. **BPM 프로세스마다 카드 하나**다 (판을 묶는다).
  *
  * **Center가 집계를 갖고 있지 않다.** 실행 요약(C3 `RunInfo`)·보고된 준비 상태(C4
  * `readiness`)·누락 리소스(C5 `missing_resources`)를 **콘솔에서 묶어** 보인다 — Center에 집계
@@ -93,10 +100,17 @@ function Rate({ part, whole, token }: { part: number; whole: number; token: stri
 
 
 
-export default async function BotsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function BotsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; q?: string; status?: string; sort?: string }>;
+}) {
   const found = await session();
   if (!found) redirect("/login");
-  const place: Place = (await searchParams).tab === "pc" ? "pc" : "server";
+  const query = await searchParams;
+  const place: Place = query.tab === "pc" ? "pc" : "server";
+  const status = statusFilterOf(query.status);
+  const sort: GroupSort = query.sort === "name" ? "name" : "trouble";
 
   let rows: BotRow[] = [];
   let pcs: BotUiInfo[] = [];
@@ -152,128 +166,21 @@ export default async function BotsPage({ searchParams }: { searchParams: Promise
           ...(counts.get(key) ?? NO_RUNS),
         } as BotRow;
       })
-      .sort((a, b) => a.id.localeCompare(b.id) || a.version.localeCompare(b.version));
+      .sort((a, b) => a.id.localeCompare(b.id) || compareVersions(a.version, b.version));
   } catch (cause) {
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
   }
 
-  const counts = { server: 0, pc: 0 };
-  for (const row of rows) counts[placeOf(row.run_location)] += 1;
-  // 탭은 **실행 위치로** 가른다 — 그래서 표에 「실행 위치」 열이 없다 (CON-02).
+  // 탭은 **실행 위치로** 가른다 — 그래서 카드에 「실행 위치」가 없다 (CON-02). 탭의 수는 BPM 프로세스 수다.
+  const counts = {
+    server: new Set(rows.filter((row) => placeOf(row.run_location) === "server").map((row) => row.id)).size,
+    pc: new Set(rows.filter((row) => placeOf(row.run_location) === "pc").map((row) => row.id)).size,
+  };
   rows = rows.filter((row) => placeOf(row.run_location) === place);
   const notReady = rows.filter((row) => row.blocked > 0);
   const incomplete = rows.filter((row) => row.missing.length > 0);
-
-  const columns: Array<Column<BotRow>> = [
-    {
-      key: "id",
-      header: "프로세스",
-      mono: true,
-      cell: (row) => (
-        <Link className="underline" href={packageHref(row)}>
-          {row.id}
-        </Link>
-      ),
-    },
-    { key: "version", header: "버전", width: "12ch", mono: true },
-    {
-      key: "status",
-      header: "상태",
-      width: "10ch",
-      cell: (row) => <StatusBadge group="패키지" label={STATUS_LABEL[row.status] ?? row.status} />,
-    },
-    {
-      key: "blocked",
-      header: "실행 불가",
-      width: "10ch",
-      align: "right",
-      cell: (row) =>
-        row.blocked === 0 ? (
-          <span className="text-text-muted">—</span>
-        ) : (
-          <span title={row.blocked_codes.join(", ") || undefined}>{row.blocked}대</span>
-        ),
-    },
-    {
-      key: "missing",
-      header: "경고",
-      width: "12ch",
-      cell: (row) =>
-        row.missing.length === 0 ? (
-          <span className="text-text-muted">—</span>
-        ) : (
-          <span title={row.missing.join(", ")}>리소스 {row.missing.length}개 없음</span>
-        ),
-    },
-    {
-      key: "successes",
-      header: "성공률",
-      width: "14ch",
-      cell: (row) => <Rate part={row.successes} whole={row.sample} token="done" />,
-    },
-    {
-      key: "replayed",
-      header: "재생률",
-      width: "14ch",
-      cell: (row) => <Rate part={row.replayed} whole={row.ai_tasks} token="replayed" />,
-    },
-    {
-      key: "confirmations",
-      header: "확인률",
-      width: "12ch",
-      align: "right",
-      // **분모는 그 칸을 보낸 실행 수**다 — 0이면 「—」다 (0.0회로 보이면 「확인이 없었다」로 읽힌다).
-      cell: (row) =>
-        row.confirm_sample === 0 ? (
-          <span className="text-text-muted" title={CONFIRM_NOTE}>
-            —
-          </span>
-        ) : (
-          <span className="tabular-nums" title={CONFIRM_NOTE}>
-            {(row.confirmations / row.confirm_sample).toFixed(1)}회
-          </span>
-        ),
-    },
-    {
-      key: "sample",
-      header: "표본 수",
-      width: "9ch",
-      align: "right",
-      cell: (row) => (row.sample === 0 ? <span className="text-text-muted">—</span> : `${row.sample}회`),
-    },
-    { key: "last_success", header: "최근 성공", width: "18ch", cell: (row) => time(row.last_success) },
-    {
-      key: "pcs",
-      header: "배포된 Bot",
-      width: "14ch",
-      align: "right",
-      // **건수가 아니라 PC 수**다 (ADR-0046). 건수는 툴팁에 — 같은 PC에 옛 배포가 살아 있으면
-      // 둘이 다르고, 그때 「왜 수가 적나」의 답이 그 자리에 있어야 한다.
-      cell: (row) =>
-        row.pcs === 0 ? (
-          <span className="text-text-muted">—</span>
-        ) : (
-          <span className="tabular-nums" title={`살아 있는 배포 ${row.deployments}건`}>
-            {row.pcs}대
-          </span>
-        ),
-    },
-    // 승인은 **이 줄에서** 한다 (ADR-0090 — Center가 서명한다). 배포는 「배포」 화면 한 곳이다.
-    ...(found.mode === "admin"
-      ? [
-          {
-            key: "actions",
-            header: "승인",
-            cell: (row: BotRow) => (
-              <PackageActions packageId={row.id} version={row.version} status={row.status} place={row.place_line} />
-            ),
-          } as Column<BotRow>,
-        ]
-      : []),
-  ];
-
-  // 「배포된 PC 실행기」는 PC BPM 프로세스의 것이다 — 서버 BPM 프로세스는 PC에 배포하지 않는다.
-  const shown = place === "pc" ? columns : columns.filter((column) => column.key !== "pcs");
+  const groups = sortGroups(filterGroups(rows, { q: query.q, status }), sort);
+  const admin = found.mode === "admin";
 
   return (
     <Shell mode={found.mode} actor={found.actor} current="/bots">
@@ -297,6 +204,54 @@ export default async function BotsPage({ searchParams }: { searchParams: Promise
           </Link>
         ))}
       </nav>
+
+      {/* [F] 거르기 — GET 폼이라 JS 없이 돌고 주소에 남는다. */}
+      <form className="filter-card mb-4 flex flex-wrap items-end gap-3" method="get">
+        <input type="hidden" name="tab" value={place} />
+        <label className="flex flex-col gap-1 text-body-sm">
+          이름
+          <input
+            name="q"
+            defaultValue={query.q ?? ""}
+            placeholder="(전체)"
+            className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-body-sm">
+          상태
+          <select
+            name="status"
+            defaultValue={status}
+            className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
+          >
+            {STATUS_FILTERS.map((one) => (
+              <option key={one.value} value={one.value}>
+                {one.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-body-sm">
+          정렬
+          <select
+            name="sort"
+            defaultValue={sort}
+            className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
+          >
+            <option value="trouble">문제 먼저</option>
+            <option value="name">이름순</option>
+          </select>
+        </label>
+        <Link
+          href={`/bots?tab=${place}` as Route}
+          className="ml-auto inline-flex h-9 items-center rounded-md px-3 text-body text-text-secondary hover:bg-bg-subtle"
+        >
+          초기화
+        </Link>
+        <Button type="submit" variant="secondary">
+          좁히기
+        </Button>
+      </form>
 
       {failure ? (
         <ErrorBanner message={failure} />
@@ -322,19 +277,22 @@ export default async function BotsPage({ searchParams }: { searchParams: Promise
             />
           ) : null}
 
-          <DataTable
-            columns={shown}
-            rows={rows}
-            rowKey={(row) => `${row.id}@${row.version}`}
-            caption="프로세스·버전별 준비도"
-          />
+          {groups.length === 0 ? (
+            <EmptyState title="조건에 맞는 프로세스가 없습니다." hint="거르기를 초기화하세요." />
+          ) : (
+            <ul className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3" aria-label="프로세스">
+              {groups.map((group) => (
+                <ProcessCard key={group.id} group={group} place={place} admin={admin} />
+              ))}
+            </ul>
+          )}
           <p className="text-body-sm text-text-muted">
             {CONFIRM_NOTE} 셈은 끝난 실행만 셉니다 — 도는 중인 실행은 표본에 들어가지 않습니다.
             프로세스마다 최근 {SCAN}건을 훑어 버전별로 {SAMPLE}회까지 셉니다 (그보다 적으면 표본 수가
             작게 보입니다).
           </p>
 
-          {found.mode === "admin" ? (
+          {admin ? (
             <DeleteVersion rows={rows.map((row) => ({ id: row.id, version: row.version }))} />
           ) : (
             <p className="text-body-sm text-text-muted">
@@ -354,5 +312,129 @@ export default async function BotsPage({ searchParams }: { searchParams: Promise
       {/* [S] 「일정」 — 타이머로 시작하는 그 탭의 배포 (C5 §일정). 없으면 영역이 없다. */}
       {failure ? null : <Schedules place={place} botUis={pcs} />}
     </Shell>
+  );
+}
+
+/** 비어 있는 셈 — 「—」 (0으로 보이면 「없었다」로 읽힌다). */
+const NONE = <span className="text-text-muted">—</span>;
+
+/** 확인률 — **분모는 그 칸을 보낸 실행 수**다. 0이면 「—」다. */
+function confirmRate(row: BotRow) {
+  return row.confirm_sample === 0 ? NONE : `${(row.confirmations / row.confirm_sample).toFixed(1)}회`;
+}
+
+/** 지표 한 칸 — 이름 위, 값 아래. */
+function Metric({ label, title, children }: { label: string; title?: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5" title={title}>
+      <dt className="text-body-sm text-text-muted">{label}</dt>
+      <dd className="text-body">{children}</dd>
+    </div>
+  );
+}
+
+/**
+ * [B] 카드 한 장 — BPM 프로세스 하나 (CON-02). 앞면은 **대표 판**의 지표이고 나머지 판은
+ * 「다른 판」에 접힌다. 승인 단추는 판마다 「...」 안에 있다.
+ */
+function ProcessCard({ group, place, admin }: { group: ProcessGroup; place: Place; admin: boolean }) {
+  const { lead } = group;
+  const blocked = group.troubled.filter((row) => row.blocked > 0);
+  const missing = group.troubled.filter((row) => row.missing.length > 0);
+  return (
+    <li className="flex flex-col gap-3 rounded-lg border border-border-default bg-bg-surface p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-col gap-1">
+          <Link className="truncate font-mono text-body font-semibold underline" href={packageHref(lead)}>
+            {group.id}
+          </Link>
+          {group.name ? <span className="truncate text-body-sm text-text-muted">{group.name}</span> : null}
+        </div>
+        {admin ? (
+          <VersionMenu packageId={lead.id} version={lead.version} status={lead.status} place={lead.place_line} />
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-body">{lead.version}</span>
+        <StatusBadge group="패키지" label={STATUS_LABEL[lead.status] ?? lead.status} />
+      </div>
+
+      {lead.sample === 0 ? (
+        <p className="text-body-sm text-text-muted">아직 끝난 실행이 없습니다.</p>
+      ) : (
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+          <Metric label="성공률">
+            <Rate part={lead.successes} whole={lead.sample} token="done" />
+          </Metric>
+          <Metric label="재생률">
+            <Rate part={lead.replayed} whole={lead.ai_tasks} token="replayed" />
+          </Metric>
+          <Metric label="확인률" title={CONFIRM_NOTE}>
+            <span className="tabular-nums">{confirmRate(lead)}</span>
+          </Metric>
+          <Metric label="표본 수">
+            <span className="tabular-nums">{lead.sample}회</span>
+          </Metric>
+          <Metric label="최근 성공">{time(lead.last_success)}</Metric>
+          {place === "pc" ? (
+            // **건수가 아니라 PC 수**다 (ADR-0046). 건수는 툴팁에.
+            <Metric label="배포된 Bot" title={`살아 있는 배포 ${lead.deployments}건`}>
+              {lead.pcs === 0 ? NONE : <span className="tabular-nums">{lead.pcs}대</span>}
+            </Metric>
+          ) : null}
+        </dl>
+      )}
+
+      {blocked.length > 0 || missing.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {blocked.map((row) => (
+            <span
+              key={`blocked-${row.version}`}
+              title={row.blocked_codes.join(", ") || undefined}
+              className="rounded-md bg-status-failed-bg px-2 py-0.5 text-body-sm text-status-failed-fg"
+            >
+              {row.version} 실행 불가 {row.blocked}대
+            </span>
+          ))}
+          {missing.map((row) => (
+            <span
+              key={`missing-${row.version}`}
+              title={row.missing.join(", ")}
+              className="rounded-md bg-status-warning-bg px-2 py-0.5 text-body-sm text-status-warning-fg"
+            >
+              {row.version} 리소스 {row.missing.length}개 없음
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {group.others.length > 0 ? (
+        <details className="border-t border-border-default pt-2">
+          <summary className="cursor-pointer text-body-sm text-text-secondary">
+            다른 판 ({group.others.length})
+          </summary>
+          <ul className="mt-2 flex flex-col gap-1">
+            {group.others.map((row) => (
+              <li key={row.version} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm">
+                <Link className="font-mono underline" href={packageHref(row)}>
+                  {row.version}
+                </Link>
+                <StatusBadge group="패키지" label={STATUS_LABEL[row.status] ?? row.status} />
+                <span className="tabular-nums">
+                  {percent(row.successes, row.sample) ?? "—"} · {row.sample === 0 ? "—" : `${row.sample}회`}
+                </span>
+                <span className="text-text-muted">{time(row.last_success)}</span>
+                {admin ? (
+                  <span className="ml-auto">
+                    <VersionMenu packageId={row.id} version={row.version} status={row.status} place={row.place_line} />
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </li>
   );
 }

@@ -504,3 +504,112 @@ export function taskPlace(row: Pick<ExternalTaskInfo, "node_id" | "node_instance
   const attempt = (row.attempt ?? 1) > 1 ? ` (${row.attempt}번째)` : "";
   return `${row.node_id}${instance}${attempt}`;
 }
+
+/**
+ * 판 견주기 — **숫자 마디로** 본다 (`0.10.0` > `0.9.0`). 글자로 견주면 `0.10.0`이 `0.9.0` 앞에 온다.
+ * 숫자가 아닌 마디(`1.0.0-rc1`의 `0-rc1`)는 글자로 견준다.
+ */
+export function compareVersions(a: string, b: string): number {
+  const left = a.split(".");
+  const right = b.split(".");
+  for (let at = 0; at < Math.max(left.length, right.length); at += 1) {
+    const x = left[at] ?? "0";
+    const y = right[at] ?? "0";
+    const nx = /^\d+$/.test(x) ? Number(x) : NaN;
+    const ny = /^\d+$/.test(y) ? Number(y) : NaN;
+    const diff = Number.isNaN(nx) || Number.isNaN(ny) ? x.localeCompare(y) : nx - ny;
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+/** CON-02 카드 한 장 — BPM 프로세스 하나와 그 판들. */
+export interface ProcessGroup {
+  id: string;
+  name: string | null;
+  /** 대표 판 — 카드 앞면의 지표가 이 판의 것이다. */
+  lead: BotRow;
+  /** 대표 판이 아닌 판들 (판이 높은 것부터) — 「다른 판」에 접힌다. */
+  others: BotRow[];
+  /** 철회되지 않은 판 중 「실행 불가」·「리소스 없음」이 있는 판. */
+  troubled: BotRow[];
+}
+
+/** 대표 판을 고르는 차례 — 지금 쓰는 판이 앞이다. */
+const LEAD_ORDER = ["approved", "candidate", "deprecated", "revoked"];
+
+function leadRank(status: string): number {
+  const at = LEAD_ORDER.indexOf(status);
+  return at === -1 ? LEAD_ORDER.length : at;
+}
+
+/** 판들을 BPM 프로세스마다 묶는다 (판 차례는 정하지 않는다 — `sortGroups`가 한다). */
+export function groupProcesses(rows: BotRow[]): ProcessGroup[] {
+  const byId = new Map<string, BotRow[]>();
+  for (const row of rows) byId.set(row.id, [...(byId.get(row.id) ?? []), row]);
+  return [...byId.entries()].map(([id, versions]) => {
+    const ordered = [...versions].sort(
+      (a, b) => leadRank(a.status) - leadRank(b.status) || compareVersions(b.version, a.version),
+    );
+    const lead = ordered[0]!;
+    return {
+      id,
+      name: lead.name ?? versions.find((one) => one.name)?.name ?? null,
+      lead,
+      others: ordered.slice(1).sort((a, b) => compareVersions(b.version, a.version)),
+      troubled: versions.filter(
+        (one) => one.status !== "revoked" && (one.blocked > 0 || one.missing.length > 0),
+      ),
+    };
+  });
+}
+
+/** 「상태」 거르기 — 기본은 철회를 뺀다 (되살아나지 않는 판이 화면을 차지하지 않게). */
+export const STATUS_FILTERS = [
+  { value: "active", label: "철회 빼고" },
+  { value: "all", label: "전체" },
+  { value: "approved", label: "승인됨" },
+  { value: "candidate", label: "후보" },
+  { value: "deprecated", label: "지원 종료" },
+  { value: "revoked", label: "철회" },
+] as const;
+
+export type StatusFilter = (typeof STATUS_FILTERS)[number]["value"];
+
+export function statusFilterOf(value: string | undefined): StatusFilter {
+  return STATUS_FILTERS.some((one) => one.value === value) ? (value as StatusFilter) : "active";
+}
+
+/**
+ * 판을 거른 뒤 묶는다 — **대표 판도 거르기를 지난 판 중에서** 고른다(「후보」로 거르면 후보가
+ * 앞면에 온다). 이름은 id·`name`에 든 글자로, 대소문자를 가리지 않는다.
+ */
+export function filterGroups(rows: BotRow[], query: { q?: string; status: StatusFilter }): ProcessGroup[] {
+  const q = (query.q ?? "").trim().toLowerCase();
+  const kept = rows.filter((row) => {
+    if (query.status === "active" && row.status === "revoked") return false;
+    if (query.status !== "active" && query.status !== "all" && row.status !== query.status) return false;
+    return !q || row.id.toLowerCase().includes(q) || (row.name ?? "").toLowerCase().includes(q);
+  });
+  return groupProcesses(kept);
+}
+
+export type GroupSort = "trouble" | "name";
+
+/**
+ * 「문제 먼저」 — 경고가 있는 것, 대표 판의 성공률이 낮은 것, 표본이 없는 것, 이름 차례.
+ * **판정이 아니라 차례만** 바꾼다 (CON-02 — 「투입 가능」 같은 판정은 두지 않는다).
+ */
+export function sortGroups(groups: ProcessGroup[], sort: GroupSort): ProcessGroup[] {
+  const rate = (group: ProcessGroup) =>
+    group.lead.sample > 0 ? group.lead.successes / group.lead.sample : Number.POSITIVE_INFINITY;
+  return [...groups].sort((a, b) => {
+    if (sort === "trouble") {
+      const trouble = Number(b.troubled.length > 0) - Number(a.troubled.length > 0);
+      if (trouble !== 0) return trouble;
+      const diff = rate(a) - rate(b);
+      if (diff !== 0 && !Number.isNaN(diff)) return diff;
+    }
+    return a.id.localeCompare(b.id);
+  });
+}
