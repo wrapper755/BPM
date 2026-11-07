@@ -8,8 +8,8 @@
 
 이 폴더에서 **생성물**은 `tokens.py`·`theme-light.qss`·`theme-dark.qss`다
 (`design/tokens.json` → `scripts/gen_tokens.py`). 색·크기를 여기 적지 않는다.
-`icon-*.svg`는 **Lucide를 그대로 옮긴 것**이다 (스타일 가이드 §6, ISC — `icons-LICENSE.txt`).
-웹의 `lucide-react`와 같은 판에서 꺼냈고 `currentColor`를 `icon()`이 칠한다.
+`icon-*.png`는 **우리가 그린 한 색 마스크**다 (스타일 가이드 §6, ADR-0132 — 검정 + 알파, 128px).
+만드는 길은 `spikes/s12-studio-icons/`에 있고, 색은 `icon()`이 토큰 색으로 칠한다.
 
 세 가지를 함께 적용한다. QSS만으로는 모자라기 때문이다.
 
@@ -30,7 +30,7 @@ from bpm.qt.theme import tokens
 
 if TYPE_CHECKING:  # QApplication을 타입으로만 쓴다 (import 비용을 줄인다)
     from PySide6.QtGui import QFont, QIcon, QPalette
-    from PySide6.QtWidgets import QApplication, QWidget
+    from PySide6.QtWidgets import QAbstractButton, QApplication, QDialogButtonBox, QWidget
 
 LOG = logging.getLogger(__name__)
 
@@ -222,26 +222,121 @@ def _follow_system(app: QApplication) -> None:
 ICON_SIZE = 20
 
 
-def icon(name: str, color: str) -> QIcon:
-    """Lucide 아이콘 하나 (`icon-<name>.svg`) — `currentColor`를 `color`(토큰에서 온 색)로 칠한다.
+def icon(name: str, color: str, *, sizes: tuple[int, ...] = (ICON_SIZE, ICON_SIZE * 2)) -> QIcon:
+    """아이콘 하나 (`icon-<name>.png`, 한 색 마스크) — 알파 모양대로 `color`(토큰에서 온 색)를 칠한다.
 
+    `sizes`마다 따로 줄여 그린다 (기본은 20과 고해상도용 40). 창 아이콘처럼 크게 보일 곳은 큰
+    크기를 함께 준다 — 작은 그림을 늘리면 흐리다. 원본은 128px이다.
     없는 이름은 `FileNotFoundError`다 — 빈 아이콘으로 조용히 넘어가지 않는다.
     """
-    from PySide6.QtCore import QByteArray, Qt  # noqa: PLC0415
-    from PySide6.QtGui import QIcon, QPainter, QPixmap  # noqa: PLC0415
-    from PySide6.QtSvg import QSvgRenderer  # noqa: PLC0415
+    from PySide6.QtCore import Qt  # noqa: PLC0415
+    from PySide6.QtGui import QColor, QIcon, QImage, QPainter, QPixmap  # noqa: PLC0415
 
-    svg = (files(__package__ or "bpm.qt.theme") / f"icon-{name}.svg").read_text(encoding="utf-8")
-    renderer = QSvgRenderer(QByteArray(svg.replace("currentColor", color).encode("utf-8")))
+    data = (files(__package__ or "bpm.qt.theme") / f"icon-{name}.png").read_bytes()
+    mask = QImage.fromData(data)
+    if mask.isNull():
+        raise ValueError(f"아이콘 그림을 읽지 못했습니다: icon-{name}.png")
     found = QIcon()
-    for size in (ICON_SIZE, ICON_SIZE * 2):
-        pixmap = QPixmap(size, size)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        renderer.render(painter)
+    for size in sizes:
+        shape = mask.scaled(
+            size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+        ).convertToFormat(QImage.Format.Format_ARGB32_Premultiplied)
+        painter = QPainter(shape)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+        painter.fillRect(shape.rect(), QColor(color))
         painter.end()
-        found.addPixmap(pixmap)
+        found.addPixmap(QPixmap.fromImage(shape))
     return found
+
+
+def button_icon(button: QAbstractButton, name: str) -> None:
+    """단추에 아이콘을 붙인다 — **그 단추의 글자색**으로 칠하고 테마가 바뀌면 다시 칠한다.
+
+    보조 단추(`Secondary`, 테두리)는 `ButtonText`, 주 단추(연한 채움)는 `primary`(팔레트 `Highlight`),
+    위험 단추(`Danger`)는 `danger.fg`다.
+    `setObjectName`은 보통 이 호출 **뒤에** 오므로 스타일을 입힐 때(`Polish`) 다시 고른다.
+    칠한 색이 그림에 박히므로 팔레트가 바뀔 때도 다시 그린다. 단추마다 `changeEvent`를 쓰지
+    않도록 작은 이벤트 필터를 단추에 붙인다 (단추와 함께 사라진다).
+    """
+    from PySide6.QtCore import QEvent, QObject  # noqa: PLC0415
+    from PySide6.QtGui import QPalette  # noqa: PLC0415
+
+    def paint() -> None:
+        # 글자색과 같게 — 보조 단추는 `ButtonText`, 위험 단추는 `danger.fg`, 주 단추(연한 채움)는 `primary`.
+        if button.objectName() == "Secondary":
+            color = button.palette().color(QPalette.ColorRole.ButtonText).name()
+        elif button.objectName() == "Danger":
+            dark = button.palette().color(QPalette.ColorRole.Window).lightness() < 128
+            color = tokens.colors(dark=dark)["danger.fg"]
+        else:
+            color = button.palette().color(QPalette.ColorRole.Highlight).name()
+        button.setIcon(icon(name, color))
+
+    class _Repaint(QObject):
+        def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802 — Qt 이름 그대로
+            if event.type() in (
+                QEvent.Type.Polish,
+                QEvent.Type.PaletteChange,
+                QEvent.Type.ApplicationPaletteChange,
+            ):
+                paint()
+            return False
+
+    paint()
+    button.installEventFilter(_Repaint(button))
+
+
+#: 대화상자 아래 단추의 아이콘 (스타일 가이드 §6) — **글자가 먼저**, 모르는 글자면 역할로 고른다.
+BOX_ICONS_BY_TEXT = {
+    "확인": "check", "적용": "check", "예": "check", "승인": "check", "나누기": "check",
+    "취소": "x", "닫기": "x", "아니요": "x", "반려": "x",
+    "저장": "save", "저장 안 함": "trash", "삭제": "trash", "올리기": "upload",
+    "실행": "play", "계속": "play", "중단": "square", "보내기": "send", "나중에": "clock",
+}
+
+
+def dress_button_box(box: QDialogButtonBox) -> None:
+    """대화상자 아래 단추를 우리 모양으로 — 우리 아이콘, **채운 단추는 받는 쪽 하나** (스타일 가이드 §6).
+
+    Qt 스타일이 붙이는 표준 아이콘(초록 체크·빨간 X)을 바꾸고, 받는 쪽 하나(`AcceptRole` → `YesRole` →
+    `ApplyRole` 차례로 처음 것)만 강조색으로 두고 나머지는 테두리(`Secondary`)다.
+    따로 이름(`Danger` 등)을 준 단추는 그대로.
+    대화상자가 **단추 글자를 다 정한 뒤**(「올리기」) 부른다 — 글자로 고른다. 여러 번 불러도 같다.
+    앱 전체 이벤트 필터로 저절로 입히지 않는다 — 모든 객체가 파이썬을 거쳐 Wayland·WebEngine에서
+    Studio가 시작하다 죽었다. Qt 표준 아이콘은 QSS(`dialogbuttonbox-buttons-have-icons`)가 끈다.
+    """
+    from PySide6.QtGui import QIcon  # noqa: PLC0415
+    from PySide6.QtWidgets import QDialogButtonBox  # noqa: PLC0415
+
+    role = QDialogButtonBox.ButtonRole
+    by_role = {
+        role.AcceptRole: "check", role.YesRole: "check", role.ApplyRole: "check",
+        role.RejectRole: "x", role.NoRole: "x", role.DestructiveRole: "trash", role.ResetRole: "refresh",
+    }
+    # 채울 단추 하나 — 받는 쪽(`AcceptRole`), 없으면 `YesRole`, 그것도 없으면 `ApplyRole`(「적용」만 있는 창).
+    # 따로 이름(`Danger` 등)을 준 단추는 고르지도 바꾸지도 않는다.
+    plain = [b for b in box.buttons() if b.objectName() in ("", "Secondary")]
+    chosen = next(
+        (b for kind in (role.AcceptRole, role.YesRole, role.ApplyRole) for b in plain if box.buttonRole(b) == kind),
+        None,
+    )
+    for button in box.buttons():
+        kind = box.buttonRole(button)
+        if button.objectName() in ("", "Secondary"):
+            wanted = "" if button is chosen else "Secondary"
+            if button.objectName() != wanted:
+                button.setObjectName(wanted)
+                style = button.style()
+                style.unpolish(button)
+                style.polish(button)
+        if button.property("bpmDressed"):
+            continue
+        button.setProperty("bpmDressed", True)
+        name = BOX_ICONS_BY_TEXT.get(button.text().replace("&", "").strip()) or by_role.get(kind)
+        if name is None:
+            button.setIcon(QIcon())  # Qt 표준 아이콘을 남기지 않는다
+        else:
+            button_icon(button, name)
 
 
 def set_role(widget: QWidget, role: str) -> None:
@@ -276,7 +371,10 @@ __all__ = [
     "THEME_DARK",
     "THEME_LIGHT",
     "THEME_SYSTEM",
+    "BOX_ICONS_BY_TEXT",
     "apply_theme",
+    "button_icon",
+    "dress_button_box",
     "current",
     "icon",
     "load_fonts",

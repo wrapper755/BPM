@@ -271,3 +271,32 @@ def test_the_record_is_json_with_utf8(tmp_path: Path) -> None:
     made = found.create("a.b", name="한글")
     raw = json.loads((made.folder / "process.json").read_text(encoding="utf-8"))
     assert raw == {"schema": 1, "id": "a.b", "name": "한글", "version": "0.1.0", "entry": "main.bpmn"}
+
+
+def _record(folder: Path, process_id: str) -> Path:
+    (folder / "process").mkdir(parents=True)
+    (folder / "process.json").write_text(json.dumps({"id": process_id}), encoding="utf-8")
+    return folder
+
+
+def test_outside_folders_are_grouped_by_their_parent_folder(tmp_path: Path) -> None:
+    """ADR-0131 — 제자리로 연 바깥 폴더도 그룹은 **상위 폴더 이름**이고, 같은 이름은 한 그룹이다."""
+    space = workspace(tmp_path)
+    space.create("a.b")
+    one = _record(tmp_path / "저장소1" / "기본" / "고객", "c.d")
+    two = _record(tmp_path / "저장소2" / "재무" / "월말", "e.f")
+    space.extra = [one, two, tmp_path / "없는 폴더"]
+    groups = {g.name: sorted(p.id for p in g.processes) for g in space.groups()}
+    assert groups == {"기본": ["a.b", "c.d"], "재무": ["e.f"]}
+    assert space.is_outside(one) and not space.is_outside(space.root / "기본" / "a.b")
+
+
+def test_an_outside_folder_hides_the_default_one_with_the_same_id(tmp_path: Path) -> None:
+    """바깥 것을 연 사람의 뜻이 이긴다 — 탐색기·`find`가 id로 가르므로 두 벌을 함께 보이지 않는다."""
+    space = workspace(tmp_path)
+    space.create("a.b")
+    outside = _record(tmp_path / "저장소" / "업무" / "a.b", "a.b")
+    space.extra = [outside]
+    found = space.find("a.b")
+    assert found is not None and found.folder == outside
+

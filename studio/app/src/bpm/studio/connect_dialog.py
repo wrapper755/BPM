@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.studio.center_enroll import Outcome, StudioEnrollment, waiting_text
 from bpm.studio.credentials import StudioCredentials
 from bpm.studio.settings import Settings
@@ -73,6 +73,7 @@ class CenterConnectDialog(QDialog):
         self.address.setPlaceholderText("http://center.example.com:8800")
         self.address.textChanged.connect(lambda _text: self._show())
         self.send = QPushButton("보내기")
+        button_icon(self.send, "send")
         self.send.clicked.connect(self.send_request)
         self.status = QLabel("")
         self.status.setWordWrap(True)
@@ -81,10 +82,16 @@ class CenterConnectDialog(QDialog):
         set_role(self.code, "h2")
         self.code.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.copy = QPushButton("복사")
+        button_icon(self.copy, "copy")
+        self.copy.setObjectName("Secondary")
         self.copy.clicked.connect(self._copy)
         self.later = QPushButton("나중에")
+        self.later.setObjectName("Secondary")
+        button_icon(self.later, "clock")
         self.later.clicked.connect(self.reject)
         self.again = QPushButton("다시 요청")
+        button_icon(self.again, "refresh")
+        self.again.setObjectName("Secondary")
         self.again.clicked.connect(self.ask_again)
 
         address_row = QHBoxLayout()

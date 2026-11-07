@@ -40,8 +40,10 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import ELEMENT_MODELS
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
+from bpm.qt.theme.tokens import SPACE_3
 from bpm.studio.dmn_table import Decisions
+from bpm.studio.long_text import LongText
 from bpm.studio.replay_specs import ReplaySpecs
 from bpm.studio.service_catalog import CallTarget, Catalog
 
@@ -253,22 +255,24 @@ class Properties(QWidget):
         self.head.setWordWrap(True)
         self.head.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.process_button = QPushButton(PROCESS_BUTTON, self)
+        button_icon(self.process_button, "process")
         self.process_button.setObjectName("Secondary")
         self.process_button.setToolTip("열린 정의 자체 — 모든 AI 태스크의 기본값(bpm:defaults)을 고칩니다.")
         self.process_button.clicked.connect(self.process_wanted)
         self.process_button.setEnabled(False)
 
         self.name_box = QLineEdit(self)
-        self.doc_box = QPlainTextEdit(self)
-        self.doc_box.setMaximumHeight(80)
+        # 여러 줄 글은 읽기 전용 상자, 누르면 편집 창 (ADR-0134). 설명(documentation)은 Markdown이다.
+        self.doc_box = LongText("설명", is_markdown=True, parent=self)
         self.condition_box = QLineEdit(self)
         self.condition_box.setPlaceholderText("비우면 항상 진행합니다 (bpm-expr)")
-        self.script_box = QPlainTextEdit(self)
+        self.script_box = LongText("스크립트", lines=6, parent=self)
         self.script_box.setPlaceholderText("변수 = 식  (한 줄에 하나, ADR-0025)")
 
         self.form = QWidget(self)
         outer = QVBoxLayout(self.form)
         form_layout = QFormLayout()
+        form_layout.setVerticalSpacing(SPACE_3)
         outer.addLayout(form_layout)
         # 칸들은 늘어나지 않는다 — 남는 높이를 아래로 모은다 (없으면 칸 사이가 벌어진다).
         outer.addStretch(1)
@@ -291,6 +295,7 @@ class Properties(QWidget):
         self.error.setWordWrap(True)
         set_role(self.error, "error")
         self.apply_button = QPushButton("적용", self)
+        button_icon(self.apply_button, "check")
         self.apply_button.clicked.connect(self.apply)
 
         bottom = QHBoxLayout()
@@ -553,6 +558,8 @@ class Properties(QWidget):
     def _holder_for(self, found: QWidget) -> QScrollArea:
         """**세로로 스크롤되게 담는다** — 창이 낮아도 편집기의 표가 한 줄로 찌그러지지 않는다."""
         holder = QScrollArea(self)
+        # 바탕은 카드와 같은 흰색 — 묶음 사이로 앱 바탕(회색)이 비치지 않게 (테마 QSS가 이 이름으로 칠한다).
+        holder.setObjectName("EditorHolder")
         holder.setWidgetResizable(True)
         holder.setFrameShape(QFrame.Shape.NoFrame)
         holder.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)

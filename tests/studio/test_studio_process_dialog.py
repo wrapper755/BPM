@@ -303,13 +303,11 @@ def test_there_is_no_key_table_and_a_written_reference_survives(space: Workspace
     assert json.loads(window.process_patch)["service_keys"] == {"ext-credit": "applied-ref"}
 
 
-def test_the_button_is_apply_and_says_where_things_go(space: Workspace) -> None:
+def test_the_button_is_apply(space: Workspace) -> None:
     from PySide6.QtWidgets import QDialogButtonBox
 
     window = dialog(space, imported(space))
-    apply = window.buttons.button(QDialogButtonBox.StandardButton.Apply)
+    apply = window.buttons.button(QDialogButtonBox.StandardButton.Ok)
     assert apply is not None and apply.text() == "적용"
     assert window.buttons.button(QDialogButtonBox.StandardButton.Save) is None
-    assert window.apply_note.text() == module.APPLY_NOTE
-    closed = dialog(space, imported(space, PC_EXAMPLE), editable=False)
-    assert closed.apply_note.text() == module.APPLY_NOTE_RECORD_ONLY
+    assert not hasattr(window, "apply_note")

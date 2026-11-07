@@ -73,6 +73,21 @@ def test_opening_lists_the_process_and_closing_takes_it_off(app: Any, tmp_path: 
     assert space.find("two") is not None  # 파일은 그대로다
 
 
+def test_the_picked_row_names_its_process(app: Any, tmp_path: Path) -> None:
+    """「BPM 프로세스 닫기」의 대상 — 정의 줄이면 그 위의 BPM 프로세스, 그룹 줄은 없음."""
+    explorer = Explorer(workspace(tmp_path), listed=["one"])
+    fired: list[None] = []
+    explorer.picked.connect(lambda: fired.append(None))
+    assert explorer.selected_process_id() is None
+    rows = {str(item.text()): item for item in explorer._model.rows()}
+    for text, want in (("하나", "one"), ("기본", None)):
+        explorer.setCurrentIndex(rows[text].index())
+        assert explorer.selected_process_id() == want
+    definition = rows["하나"].child(0, 0)
+    explorer.setCurrentIndex(definition.index())
+    assert explorer.selected_process_id() == "one" and fired
+
+
 def test_the_list_drops_what_left_the_work_folder(app: Any, tmp_path: Path) -> None:
     explorer = Explorer(workspace(tmp_path), listed=["one", "gone", "one"])
     assert explorer.listed == ["one"] and shown(explorer) == ["기본", "하나"]

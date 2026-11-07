@@ -23,6 +23,12 @@ import {
   NO_RUNS,
   SAMPLE,
   botLimitRows,
+  compareVersions,
+  filterGroups,
+  groupProcesses,
+  sortGroups,
+  statusFilterOf,
+  type BotRow,
   deployedPcs,
   elapsed,
   percent,
@@ -505,5 +511,76 @@ describe("CON-01 외부 작업 (C15)", () => {
     for (const label of Object.values(TASK_STATE)) {
       expect(Object.keys(STATUS_MAP["외부 작업"])).toContain(label);
     }
+  });
+});
+
+function version(id: string, ver: string, over: Partial<BotRow> = {}): BotRow {
+  return {
+    id,
+    version: ver,
+    name: null,
+    status: "approved",
+    run_location: null,
+    blocked: 0,
+    blocked_codes: [],
+    pcs: 0,
+    deployments: 0,
+    missing: [],
+    ...NO_RUNS,
+    ...over,
+  };
+}
+
+describe("CON-02 카드 — 판을 묶고 거르고 고른다", () => {
+  it("판은 숫자 마디로 견준다 (글자로 견주면 0.10.0이 0.9.0 앞에 온다)", () => {
+    expect(compareVersions("0.10.0", "0.9.0")).toBeGreaterThan(0);
+    expect(compareVersions("1.0", "1.0.0")).toBe(0);
+  });
+
+  it("대표 판은 승인됨이 먼저, 같은 상태면 높은 판이다", () => {
+    const [group] = groupProcesses([
+      version("a", "0.9.0", { status: "revoked" }),
+      version("a", "0.10.0", { status: "candidate" }),
+      version("a", "0.9.1"),
+    ]);
+    expect(group!.lead.version).toBe("0.9.1");
+    expect(group!.others.map((one) => one.version)).toEqual(["0.10.0", "0.9.0"]);
+  });
+
+  it("경고는 철회된 판의 것을 세지 않는다", () => {
+    const [group] = groupProcesses([
+      version("a", "1.0.0", { status: "revoked", blocked: 2 }),
+      version("a", "1.1.0"),
+    ]);
+    expect(group!.troubled).toEqual([]);
+  });
+
+  it("기본 거르기는 철회를 빼고, 철회만 남은 BPM 프로세스는 카드가 없다", () => {
+    const rows = [version("a", "1.0.0", { status: "revoked" }), version("b", "1.0.0")];
+    expect(filterGroups(rows, { status: statusFilterOf(undefined) }).map((one) => one.id)).toEqual(["b"]);
+    expect(filterGroups(rows, { status: "all" })).toHaveLength(2);
+  });
+
+  it("상태로 거르면 대표 판도 그 상태에서 고른다", () => {
+    const rows = [version("a", "1.0.0"), version("a", "1.1.0", { status: "candidate" })];
+    expect(filterGroups(rows, { status: "candidate" })[0]!.lead.version).toBe("1.1.0");
+  });
+
+  it("이름은 id와 name에서 대소문자 없이 찾는다", () => {
+    const rows = [version("company1.sc01", "1.0.0", { name: "Invoice" }), version("company1.sc02", "1.0.0")];
+    expect(filterGroups(rows, { q: "invoice", status: "all" }).map((one) => one.id)).toEqual(["company1.sc01"]);
+    expect(filterGroups(rows, { q: "SC02", status: "all" }).map((one) => one.id)).toEqual(["company1.sc02"]);
+  });
+
+  it("문제 먼저 — 경고, 낮은 성공률, 표본 없음, 이름 차례", () => {
+    const groups = groupProcesses([
+      version("d", "1.0.0"),
+      version("c", "1.0.0", { sample: 10, successes: 9 }),
+      version("b", "1.0.0", { sample: 10, successes: 5 }),
+      version("a", "1.0.0", { sample: 10, successes: 10, missing: ["service_app x (missing)"] }),
+      version("e", "1.0.0", { sample: 4, successes: 0 }),
+    ]);
+    expect(sortGroups(groups, "trouble").map((one) => one.id)).toEqual(["a", "e", "b", "c", "d"]);
+    expect(sortGroups(groups, "name").map((one) => one.id)).toEqual(["a", "b", "c", "d", "e"]);
   });
 });

@@ -31,7 +31,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
-    QPlainTextEdit,
     QPushButton,
     QRadioButton,
     QTableWidget,
@@ -41,8 +40,9 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import Approval, is_var_name
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
+from bpm.studio.long_text import LongText
 from bpm.studio.name_pick import attach
 
 #: 탭 이름 — 결재와 확인은 같은 `bpm:approval`이고 이름만 다르다 (C14).
@@ -51,16 +51,22 @@ TAB_CONFIRMATION = "확인"
 
 FIELD_COLUMNS = ("키 (변수명)", "라벨", "타입", "선택지 (쉼표)", "필수", "기본값")
 COL_KEY, COL_LABEL, COL_TYPE, COL_CHOICES, COL_REQUIRED, COL_DEFAULT = range(len(FIELD_COLUMNS))
+#: 「폼 칸」 표의 툴팁 — 화면에 줄로 두지 않는다.
+FIELDS_TIP = "답한 값은 같은 이름의 변수가 됩니다. 칸이 없으면 「승인 / 반려」 두 단추입니다."
 
 #: 폼 칸 타입 (C6 `KNOWN_FIELD_TYPES`) — 보이는 순서.
 FIELD_TYPES = ("text", "number", "bool", "choice")
 
-#: `bpm:approval.location` (C14 `APPROVAL_LOCATIONS`) — 보이는 글.
+#: 「데스크톱」의 뜻 — 서버에서는 꺼지고 툴팁이 까닭으로 바뀐다.
+FIELD_TIP = "현장 PC의 결재 창에서만 답합니다."
+#: `bpm:approval.location` (C14 `APPROVAL_LOCATIONS`) — 보이는 글과 뜻(툴팁).
 LOCATIONS = (
-    ("follow", "PC 실행기 설정을 따름"),
-    ("center", "Center로 올림"),
-    ("field", "현장 PC에서만"),
+    ("follow", "설정", "PC 실행기의 「결재를 Center로 올리기」 설정을 따릅니다."),
+    ("center", "서버", "Center 결재함으로 올립니다."),
+    ("field", "데스크톱", FIELD_TIP),
 )
+#: 「결재 위치」 묶음의 툴팁 — 설명 줄을 두지 않는다 (STU-04 결재 탭).
+LOCATION_TIP = "여기서 정한 것이 PC 실행기 설정보다 우선합니다."
 SERVER_NO_FIELD = "서버 BPM 프로세스는 현장 결재를 쓸 수 없습니다 (실행 전 검사 B6)."
 
 #: 담당자를 적는 두 갈래 (ADR-0080 — 이름 배열이거나 변수 이름 하나).
@@ -72,6 +78,10 @@ VISIBLE_ROWS = 3
 
 _TRUE = {"true", "예", "참", "1", "yes"}
 _FALSE = {"false", "아니오", "거짓", "0", "no"}
+
+
+#: 「설명」 칸에 보일 줄 수.
+DESCRIPTION_LINES = 5
 
 
 class ApprovalEditor(QWidget):
@@ -93,10 +103,10 @@ class ApprovalEditor(QWidget):
 
         self.title_box = QLineEdit(self)
         self.title_box.setPlaceholderText("결재 창 제목 (필수)")
-        self.description_box = QPlainTextEdit(self)
-        self.description_box.setPlaceholderText("결재하는 사람에게 보일 설명")
+        # 결재 설명은 Markdown이다 (C14 「결재 설명」) — 읽기 전용 상자, 누르면 편집 창 (ADR-0134).
+        self.description_box = LongText("설명", is_markdown=True, lines=DESCRIPTION_LINES, parent=self)
+        self.description_box.setPlaceholderText("결재하는 사람에게 보일 설명 — Markdown (# 제목, - 목록, **굵게**)")
         lines = self.fontMetrics().lineSpacing()
-        self.description_box.setFixedHeight(lines * 4)
         self.show_list = QListWidget(self)
         self.show_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         # 테마가 줄마다 안쪽 여백을 주므로 글 높이만으로 세면 셋째 줄이 잘린다 — 넉 줄이 보이게.
@@ -104,7 +114,10 @@ class ApprovalEditor(QWidget):
         self.show_input = QLineEdit(self)
         self.show_input.setPlaceholderText("변수 이름 — Enter로 추가 (목록이 비면 전부 보입니다)")
         self.add_show = QPushButton("추가", self)
+        button_icon(self.add_show, "plus")
+        self.add_show.setObjectName("Secondary")
         self.drop_show = QPushButton("삭제", self)
+        button_icon(self.drop_show, "trash")
         self.drop_show.setObjectName("Secondary")
         self.show_note = QLabel("", self)
         self.show_note.setWordWrap(True)
@@ -118,22 +131,25 @@ class ApprovalEditor(QWidget):
         header = self.fields.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(COL_REQUIRED, QHeaderView.ResizeMode.ResizeToContents)
+        # 타입 콤보가 잘리지 않게 — 늘어나는 열 사이에서 좁아지면 「choice」가 「choic」로 보인다.
+        header.setSectionResizeMode(COL_TYPE, QHeaderView.ResizeMode.ResizeToContents)
         _show_rows(self.fields, VISIBLE_ROWS)
         self.add_field = QPushButton("줄 더하기", self)
+        button_icon(self.add_field, "plus")
+        self.add_field.setObjectName("Secondary")
         self.drop_field = QPushButton("줄 삭제", self)
+        button_icon(self.drop_field, "trash")
         # 채운 단추는 영역마다 하나 (스타일 가이드 §3 Button).
         self.drop_field.setObjectName("Secondary")
 
         self.location_picks: dict[str, QRadioButton] = {}
         self.location_group = QButtonGroup(self)
-        for value, text in LOCATIONS:
+        for value, text, tip in LOCATIONS:
             one = QRadioButton(text, self)
+            one.setToolTip(tip)
             self.location_picks[value] = one
             self.location_group.addButton(one)
         self.location_picks["follow"].setChecked(True)
-        self.location_note = QLabel("", self)
-        self.location_note.setWordWrap(True)
-        set_role(self.location_note, "muted")
 
         self.assignee_mode = QComboBox(self)
         self.assignee_mode.addItem("이름 목록 (쉼표)", ASSIGNEE_NAMES)
@@ -188,15 +204,15 @@ class ApprovalEditor(QWidget):
         box = QGroupBox("내용", self)
         form = QFormLayout(box)
         _tight(form)
+        form.setVerticalSpacing(SPACE_3)
         form.addRow("제목", self.title_box)
         form.addRow("설명", self.description_box)
         form.addRow("표시 변수", self._show_area())
         return box
 
-    def _show_area(self) -> QWidget:
-        area = QWidget(self)
-        column = QVBoxLayout(area)
-        column.setContentsMargins(0, 0, 0, 0)
+    def _show_area(self) -> QVBoxLayout:
+        """레이아웃으로 모은다 — 맨 `QWidget` 그릇은 테마가 앱 바탕을 칠해 칸 사이로 회색이 보인다."""
+        column = QVBoxLayout()
         column.setSpacing(SPACE_2)
         row = QHBoxLayout()
         row.setSpacing(SPACE_2)
@@ -206,17 +222,16 @@ class ApprovalEditor(QWidget):
         column.addLayout(row)
         column.addWidget(self.show_note)
         column.addWidget(self.show_list)
-        return area
+        return column
 
     def _fields_box(self) -> QGroupBox:
         box = QGroupBox("폼 칸", self)
         column = QVBoxLayout(box)
         _tight(column)
+        # 뜻은 줄로 두지 않고 툴팁으로 (STU-04 결재 탭).
+        self.fields.setToolTip(FIELDS_TIP)
         row = QHBoxLayout()
-        hint = QLabel("답한 값은 같은 이름의 변수가 됩니다. 칸이 없으면 「승인 / 반려」 두 단추입니다.", box)
-        hint.setWordWrap(True)
-        set_role(hint, "muted")
-        row.addWidget(hint, 1)
+        row.addStretch(1)
         row.addWidget(self.add_field)
         row.addWidget(self.drop_field)
         column.addLayout(row)
@@ -227,15 +242,16 @@ class ApprovalEditor(QWidget):
         box = QGroupBox("결재 위치", self)
         column = QVBoxLayout(box)
         _tight(column)
+        box.setToolTip(LOCATION_TIP)
         for one in self.location_picks.values():
             column.addWidget(one)
-        column.addWidget(self.location_note)
         return box
 
     def _who_box(self) -> QGroupBox:
         box = QGroupBox("담당자·기한·답한 사람", self)
         form = QFormLayout(box)
         _tight(form)
+        form.setVerticalSpacing(SPACE_3)
         who = QHBoxLayout()
         who.setSpacing(SPACE_2)
         who.addWidget(self.assignee_mode)
@@ -413,14 +429,11 @@ class ApprovalEditor(QWidget):
         self.show_note.setVisible(bool(text))
 
     def _refresh_location(self) -> None:
-        """서버에서는 「현장 PC에서만」을 끄고 까닭을 적는다 — **이미 골라 둔 것은 지우지 않는다**."""
+        """서버에서는 「데스크톱」을 끄고 까닭을 그 툴팁에 적는다 — **이미 골라 둔 것은 지우지 않는다**."""
         on_server = self.run_location == "server"
         field = self.location_picks["field"]
         field.setEnabled(not on_server or field.isChecked())
-        if on_server:
-            self.location_note.setText(SERVER_NO_FIELD)
-        else:
-            self.location_note.setText("여기서 정한 것이 PC 실행기의 「결재를 Center로 올리기」보다 우선합니다.")
+        field.setToolTip(SERVER_NO_FIELD if on_server else FIELD_TIP)
 
     def _add_row(self, found: Mapping[str, Any]) -> None:
         quiet, self._quiet = self._quiet, True

@@ -1,7 +1,7 @@
 """STU-02 BPM 프로세스 탐색기 — 그룹 → BPM 프로세스 → 정의.
 
 **파일을 직접 여는 메뉴는 없다** (STU-01 U1). 목록은 **연 BPM 프로세스**다 — 작업 폴더 전부가
-아니다. 열면 올라가고 「BPM 프로세스 닫기」가 빼며, 다시 올리는 길은 「BPM 프로세스 열기...」다.
+아니다. 열면 올라가고 「프로세스 닫기」가 빼며, 다시 올리는 길은 「프로세스 열기...」다.
 
 열은 셋이다: 「BPM 프로세스 / 정의」, 「버전」, 「학습·검증」. 학습·검증 칸은 지금 AI 태스크 수만
 센다 — 학습·재생 검증·케이스 통과 수는 시험 실행이 생긴 뒤에 채운다 (조각 3e-3).
@@ -10,11 +10,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
+from typing import Any
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QStandardItem, QStandardItemModel
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, Qt, Signal
+from PySide6.QtGui import QFont, QGuiApplication, QIcon, QPalette, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QTreeView, QWidget
 
+from bpm.qt.theme import icon
 from bpm.studio.workspace import DEFAULT_GROUP, BpmProcess, Definition, Group, Workspace
 
 HEADERS = ("BPM 프로세스 / 정의", "버전", "학습·검증")
@@ -27,7 +29,10 @@ ROW_DEFINITION = "definition"
 _KIND = Qt.ItemDataRole.UserRole + 1
 _PAYLOAD = Qt.ItemDataRole.UserRole + 2
 
-EMPTY_TEXT = "열린 BPM 프로세스가 없습니다. 파일 → BPM 프로세스 열기...로 열거나 새 BPM 프로세스...로 만드세요."
+#: 줄 앞의 아이콘 (스타일 가이드 §6) — 첫 열에만.
+ROW_ICONS = {ROW_GROUP: "folder", ROW_PROCESS: "process", ROW_DEFINITION: "definition"}
+
+EMPTY_TEXT = "열린 BPM 프로세스가 없습니다. 파일 → 프로세스 열기...로 열거나 새 프로세스...로 만드세요."
 
 
 def ai_task_count(definition: Definition) -> int:
@@ -69,6 +74,20 @@ class ExplorerModel(QStandardItemModel):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setHorizontalHeaderLabels(list(HEADERS))
+        self._icons: dict[tuple[str, str], QIcon] = {}
+
+    def data(self, index: QModelIndex | QPersistentModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        """첫 열의 아이콘은 **그릴 때마다** 지금 팔레트의 글자색으로 — 테마가 바뀌어도 다시 칠할 일이 없다."""
+        if role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
+            name = ROW_ICONS.get(super().data(index, _KIND))
+            if name is not None:
+                return self._icon(name, QGuiApplication.palette().color(QPalette.ColorRole.Text).name())
+        return super().data(index, role)
+
+    def _icon(self, name: str, color: str) -> QIcon:
+        if (name, color) not in self._icons:
+            self._icons[(name, color)] = icon(name, color)
+        return self._icons[(name, color)]
 
     def fill(self, groups: list[Group], *, opened: str = "", listed: Iterable[str] | None = None) -> None:
         """`listed`가 있으면 그 id의 BPM 프로세스만 그린다 — 그룹은 「기본」과 고른 것이 든 것만."""
@@ -130,6 +149,8 @@ class Explorer(QTreeView):
 
     #: 열 정의의 경로 (`Definition.path`).
     opening = Signal(str)
+    #: 고른 줄이 바뀌었다 — 「BPM 프로세스 닫기」가 켜지는 조건이 이것을 본다 (STU-01).
+    picked = Signal()
 
     def __init__(
         self, workspace: Workspace, parent: QWidget | None = None, *, listed: Iterable[str] = ()
@@ -145,6 +166,7 @@ class Explorer(QTreeView):
         self.setSelectionBehavior(QTreeView.SelectionBehavior.SelectRows)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.doubleClicked.connect(lambda _: self.open_selected())
+        self.selectionModel().selectionChanged.connect(lambda *_: self.picked.emit())
         self.refresh()
 
     def refresh(self, *, opened: str = "", adding: Iterable[str] = ()) -> None:
@@ -182,6 +204,18 @@ class Explorer(QTreeView):
         if item is None:
             return None
         return str(item.data(_KIND)), item.data(_PAYLOAD)
+
+    def selected_process_id(self) -> str | None:
+        """고른 줄이 속한 BPM 프로세스 id — 정의 줄이면 그 위의 것. 그룹 줄·고른 것 없음은 `None`."""
+        indexes = self.selectedIndexes()
+        if not indexes:
+            return None
+        item = self._model.itemFromIndex(indexes[0].siblingAtColumn(0))
+        if item is not None and item.data(_KIND) == ROW_DEFINITION:
+            item = item.parent()
+        if item is None or item.data(_KIND) != ROW_PROCESS:
+            return None
+        return str(item.data(_PAYLOAD))
 
     def open_selected(self) -> None:
         found = self.selection()

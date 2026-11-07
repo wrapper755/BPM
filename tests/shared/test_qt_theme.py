@@ -109,7 +109,7 @@ def test_group_box_titles_have_room_and_labels_take_the_box_color() -> None:
     """테두리 입힌 QGroupBox는 제목 자리·::title이 없으면 제목이 첫 줄과 겹친다 (이슈 #3).
 
     제목은 **카드 안쪽 맨 위**다 (스타일 가이드 §3 Section) — 그래서 위 패딩이 제목 위 여백 +
-    제목 줄 + 제목 아래 간격을 모두 담아야 한다. 강조 막대와 진한 글자로 묶음을 가른다.
+    제목 줄 + 제목 아래 간격을 모두 담아야 한다. 진한 글자와 그 아래 옅은 선으로 묶음을 가른다.
     """
     import json  # noqa: PLC0415
     import math  # noqa: PLC0415
@@ -126,8 +126,12 @@ def test_group_box_titles_have_room_and_labels_take_the_box_color() -> None:
         pad_top = int(re.search(r"padding: (\d+)px", box).group(1))  # type: ignore[union-attr]
         top = int(re.search(r"top: (\d+)px", title).group(1))  # type: ignore[union-attr]
         assert pad_top > top + line, "제목 아래에 간격이 남아야 첫 줄과 붙지 않는다"
-        assert "border-left: 3px solid" in title
-        assert tokens["color"][theme]["text.primary"] in title
+        # 굵은 제목 + 아래 옅은 선 (스타일 가이드 §3 Section). 막대·이름표는 없다.
+        assert "border-left" not in title and "background-color" not in title
+        assert f"border-bottom: 1px solid {tokens['color'][theme]['border.default']};" in title
+        assert f"color: {tokens['color'][theme]['text.primary']};" in title
+        bottom = int(re.search(r"padding: 0 \d+px (\d+)px", title).group(1))  # type: ignore[union-attr]
+        assert top + line + bottom < pad_top, "선이 내용 첫 줄보다 위에 와야 한다"
         assert "QLabel, QCheckBox, QRadioButton { background-color: transparent; }" in sheet
 
 
@@ -498,7 +502,7 @@ def test_roles_are_given_through_set_role() -> None:
 
 
 def test_an_icon_is_drawn_in_the_color_given(app: Any) -> None:
-    """스타일 가이드 §6 — Lucide SVG의 `currentColor`를 토큰 색으로 칠한다 (20과 고해상도용 40)."""
+    """스타일 가이드 §6 — 한 색 마스크(PNG)의 모양대로 토큰 색을 칠한다 (20과 고해상도용 40)."""
     from PySide6.QtGui import QColor  # noqa: PLC0415
 
     from bpm.qt.theme import ICON_SIZE, icon  # noqa: PLC0415
@@ -516,8 +520,8 @@ def test_every_shipped_icon_loads_and_an_unknown_one_is_an_error(app: Any) -> No
 
     from bpm.qt.theme import icon  # noqa: PLC0415
 
-    names = [p.name[len("icon-"):-len(".svg")] for p in files("bpm.qt.theme").iterdir()
-             if p.name.startswith("icon-") and p.name.endswith(".svg")]
+    names = [p.name[len("icon-"):-len(".png")] for p in files("bpm.qt.theme").iterdir()
+             if p.name.startswith("icon-") and p.name.endswith(".png")]
     assert "play" in names
     for name in names:
         assert not icon(name, "#000000").isNull(), name
@@ -530,3 +534,20 @@ def test_an_open_menu_has_a_border() -> None:
     for theme in (THEME_LIGHT, THEME_DARK):
         color = tokens.colors(dark=theme == THEME_DARK)["border.strong"]
         assert f"border: 1px solid {color};" in qss(theme).split("QMenu {", 1)[1].split("}", 1)[0]
+
+
+def test_a_dialog_button_box_fills_one_button_and_uses_our_icons(app: Any) -> None:
+    """스타일 가이드 §6 — 받는 쪽 하나만 채우고 나머지는 테두리, 따로 이름 준 단추(`Danger`)는 그대로."""
+    from PySide6.QtWidgets import QDialogButtonBox  # noqa: PLC0415
+
+    from bpm.qt.theme import dress_button_box  # noqa: PLC0415
+
+    box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+    box.button(QDialogButtonBox.StandardButton.Ok).setText("올리기")
+    danger = box.addButton("지우기", QDialogButtonBox.ButtonRole.DestructiveRole)
+    danger.setObjectName("Danger")
+    dress_button_box(box)
+    dress_button_box(box)  # 두 번 불러도 같다
+    ok, cancel = box.button(QDialogButtonBox.StandardButton.Ok), box.button(QDialogButtonBox.StandardButton.Cancel)
+    assert (ok.objectName(), cancel.objectName(), danger.objectName()) == ("", "Secondary", "Danger")
+    assert not ok.icon().isNull() and not cancel.icon().isNull() and not danger.icon().isNull()

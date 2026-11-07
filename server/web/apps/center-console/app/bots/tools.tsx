@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
 import { deletePackage } from "@/app/actions";
+import { PackageActions, asksFor } from "@/components/PackageActions";
 
 /**
  * CON-02 관리자 「삭제...」 — **지울 버전을 골라** 지운다.
@@ -66,6 +67,64 @@ export function DeleteVersion({ rows }: { rows: Array<{ id: string; version: str
         }
         onCancel={() => setAsking(false)}
       />
+    </div>
+  );
+}
+
+/**
+ * CON-02 카드의 「...」 — 그 판의 승인 단추를 펼침 메뉴로 (ADR-0090 — Center가 서명한다).
+ *
+ * 카드마다 빨간 단추가 늘어서지 않게 접어 둔다. 단추와 확인 창은 CON-06과 **같은
+ * `PackageActions`**다. 할 수 있는 것이 없으면(철회) 「...」도 없다.
+ */
+export function VersionMenu({
+  packageId,
+  version,
+  status,
+  place,
+}: {
+  packageId: string;
+  version: string;
+  status: string;
+  place?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  // 바깥을 누르면 닫는다 — 확인 창(`<dialog>`)도 이 상자 안이라 누른 것으로 닫히지 않는다.
+  useEffect(() => {
+    if (!open) return;
+    const away = (event: MouseEvent) => {
+      if (box.current && !box.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", away);
+    return () => document.removeEventListener("mousedown", away);
+  }, [open]);
+
+  if (asksFor(status).length === 0) return null;
+  return (
+    <div ref={box} className="relative">
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-label={`${packageId} ${version} 승인 동작`}
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        ...
+      </Button>
+      {open ? (
+        <div className="absolute right-0 top-full z-10 min-w-[160px] border border-border-default bg-bg-surface p-2 shadow-md">
+          <PackageActions
+            packageId={packageId}
+            version={version}
+            status={status}
+            place={place}
+            stacked
+            onDone={() => setOpen(false)}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

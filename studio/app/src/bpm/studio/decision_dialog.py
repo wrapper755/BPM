@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.qt.messages import ask_unsaved
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, dress_button_box, set_role
 from bpm.qt.theme.tokens import SPACE_3
 from bpm.studio.dmn_table import (
     CELL_HELP,
@@ -95,6 +95,8 @@ class ColumnDialog(QDialog):
         self.type_box.setCurrentIndex(index)
 
         form = QFormLayout()
+
+        form.setVerticalSpacing(SPACE_3)
         if not output:
             form.addRow("라벨", self.label_box)
             form.addRow("식 이름", self.name_box)
@@ -103,6 +105,7 @@ class ColumnDialog(QDialog):
             form.addRow("이름", self.name_box)
         form.addRow("typeRef", self.type_box)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, self)
+        dress_button_box(buttons)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout = QVBoxLayout(self)
@@ -180,13 +183,21 @@ class DecisionDialog(QDialog):
         self.grid.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
         self.add_input_button = QPushButton("입력 열 더하기", self)
+        button_icon(self.add_input_button, "plus")
         self.add_output_button = QPushButton("출력 열 더하기", self)
+        button_icon(self.add_output_button, "plus")
         self.edit_column_button = QPushButton("열 고치기...", self)
+        button_icon(self.edit_column_button, "pencil")
         self.drop_column_button = QPushButton("열 삭제", self)
+        button_icon(self.drop_column_button, "trash")
         self.add_rule_button = QPushButton("규칙 더하기", self)
+        button_icon(self.add_rule_button, "plus")
         self.drop_rule_button = QPushButton("규칙 삭제", self)
+        button_icon(self.drop_rule_button, "trash")
         self.up_button = QPushButton("위로", self)
+        button_icon(self.up_button, "arrow-up")
         self.down_button = QPushButton("아래로", self)
+        button_icon(self.down_button, "arrow-down")
         for one in (
             self.add_input_button,
             self.add_output_button,
@@ -213,7 +224,9 @@ class DecisionDialog(QDialog):
         set_role(self.warning_label, "muted")
 
         self.save_button = QPushButton("저장", self)
+        button_icon(self.save_button, "save")
         self.close_button = QPushButton("닫기", self)
+        button_icon(self.close_button, "x")
         self.close_button.setObjectName("Secondary")
         self.save_button.setVisible(not read_only)
         bottom = QHBoxLayout()

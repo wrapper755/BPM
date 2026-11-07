@@ -1,4 +1,4 @@
-"""STU-10 설정 — 「외형」·「LLM」·「Center」·「확장별 설정」 (ADR-0073 — 「서비스 앱」은 없다, ADR-0102).
+"""STU-10 설정 — 「외형」·「LLM」·「서버」·「확장별 설정」 (ADR-0073 — 「서비스 앱」은 없다, ADR-0102).
 
 보는 것:
 
@@ -119,8 +119,19 @@ def test_only_the_categories_something_reads_are_listed(
     """ADR-0073 — 메일·비밀은 읽는 곳이 없어 없고, 남은 분류에 「(아직)」이 없다."""
     found = dialog(settings, extensions, Vault())
     labels = [found.categories.item(i).text() for i in range(found.categories.count())]
-    assert labels == list(CATEGORIES) == ["외형", "LLM", "Center", "확장별 설정"]
+    assert labels == list(CATEGORIES) == ["일반", "외형", "LLM", "서버", "확장별 설정", "정보"]
     assert found.categories.currentItem().text() == "LLM", "처음에는 모델 칸을 연다"
+
+
+def test_the_about_page_lists_the_environment_and_the_notices(
+    qt: Any, settings: Settings, extensions: Extensions
+) -> None:
+    """STU-10 「정보」 — 실행 환경 묶음과 오픈소스 고지 표. 읽기만 하는 자리다."""
+    found = dialog(settings, extensions, Vault())
+    names = [cell.text() for row in range(found.notices.rowCount()) if (cell := found.notices.item(row, 0))]
+    assert "bpmn-js" in names and "Pretendard" in names
+    assert any(name.lower().startswith("pyside6") for name in names)
+    assert found.notices.editTriggers() == found.notices.EditTrigger.NoEditTriggers
 
 
 def test_the_theme_goes_to_the_file(qt: Any, settings: Settings, extensions: Extensions) -> None:
@@ -132,6 +143,20 @@ def test_the_theme_goes_to_the_file(qt: Any, settings: Settings, extensions: Ext
     assert found.saved is not None and found.saved.theme == "dark"
     assert Settings.load(settings.path).theme == "dark"
     assert dialog(Settings.load(settings.path), extensions, Vault()).theme.currentData() == "dark"
+
+
+def test_the_default_folder_goes_to_the_file(
+    qt: Any, settings: Settings, extensions: Extensions, tmp_path: Path
+) -> None:
+    """ADR-0131 — 「일반」의 「기본 폴더」. 비우면 기본값(자리 글)이고, 적으면 새로 만드는 자리가 된다."""
+    found = dialog(settings, extensions, Vault())
+    assert found.workspace_root.text() == ""
+    assert found.workspace_root.placeholderText() == settings.default_workspace_dir.as_posix()
+    found.workspace_root.setText((tmp_path / "업무").as_posix())
+    found.save()
+    again = Settings.load(settings.path)
+    assert again.workspace_root == (tmp_path / "업무").as_posix()
+    assert again.workspace_dir == tmp_path / "업무"
 
 
 # ─────────────────────────── 확장별 설정 (C13 scope studio) ───────────────────────────
@@ -371,7 +396,7 @@ def test_an_empty_center_address_blocks_saving(qt: Any, settings: Settings, exte
     found = dialog(settings, extensions, Vault())
     found.center_url.setText("   ")
     found.save()
-    assert found.saved is None and "Center 주소가 비었습니다" in found.error.text()
+    assert found.saved is None and "서버 주소가 비었습니다" in found.error.text()
     assert not settings.path.exists()
 
 

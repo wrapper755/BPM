@@ -29,6 +29,8 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import VALUE_TYPES, BpmnProcess
+from bpm.qt.theme import button_icon, dress_button_box
+from bpm.qt.theme.tokens import SPACE_3
 from bpm.studio.split_actions import (
     DEFAULT_TYPE,
     UNKNOWN_HINT,
@@ -73,8 +75,12 @@ class SplitDialog(QDialog):
         self.inputs = self._table(("쓸 것", "이름", "타입"))
         self.outputs = self._table(("쓸 것", "이름"))
         add_input = QPushButton("입력 추가", self)
+        button_icon(add_input, "plus")
+        add_input.setObjectName("Secondary")
         add_input.clicked.connect(lambda: self._add_input("", DEFAULT_TYPE))
         add_output = QPushButton("출력 추가", self)
+        button_icon(add_output, "plus")
+        add_output.setObjectName("Secondary")
         add_output.clicked.connect(lambda: self._add_output(""))
 
         self.hint = QLabel("", self)
@@ -84,6 +90,8 @@ class SplitDialog(QDialog):
         self.error.setObjectName("splitError")
 
         form = QFormLayout()
+
+        form.setVerticalSpacing(SPACE_3)
         form.addRow("옮길 노드", self.node_box)
         form.addRow("새 PC BPM 프로세스 id", self.id_box)
         form.addRow("이름", self.name_box)
@@ -91,6 +99,7 @@ class SplitDialog(QDialog):
         buttons = QDialogButtonBox(self)
         self.split_button = buttons.addButton("나누기", QDialogButtonBox.ButtonRole.AcceptRole)
         buttons.addButton("취소", QDialogButtonBox.ButtonRole.RejectRole)
+        dress_button_box(buttons)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
 

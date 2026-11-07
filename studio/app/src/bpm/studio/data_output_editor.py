@@ -28,7 +28,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QPlainTextEdit,
     QRadioButton,
     QVBoxLayout,
     QWidget,
@@ -37,6 +36,7 @@ from PySide6.QtWidgets import (
 from bpm.contracts.bpmn_ext import APPENDABLE_FORMATS, FILE_FORMATS, DataOutput, is_var_name
 from bpm.qt.theme import set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
+from bpm.studio.long_text import LongText
 from bpm.studio.name_pick import attach
 
 #: 탭 이름.
@@ -70,7 +70,6 @@ class DataOutputEditor(QWidget):
         self._loaded: dict[str, Any] = {}
         self._both = False
         self._quiet = False
-        lines = self.fontMetrics().lineSpacing()
 
         self.on_box = QCheckBox("이 데이터 객체를 파일로 씁니다", self)
         self.on_box.setToolTip("끄면 bpm:dataOutput을 지웁니다 — 평범한 데이터 객체는 엔진이 건너뜁니다.")
@@ -96,9 +95,8 @@ class DataOutputEditor(QWidget):
         self.content_picks[CONTENT_TEMPLATE].setChecked(True)
         self.variables_box = QLineEdit(self)
         self.variables_box.setPlaceholderText("변수 이름, 쉼표로 여럿 — 사전 목록이면 표가 됩니다")
-        self.template_box = QPlainTextEdit(self)
+        self.template_box = LongText("템플릿", lines=7, parent=self)
         self.template_box.setPlaceholderText("텍스트에 {변수}를 끼웁니다 — {{·}}는 중괄호 한 개")
-        self.template_box.setFixedHeight(lines * 7)
 
         self.store_box = QLineEdit(self)
         self.store_box.setPlaceholderText("변수 이름 (필수)")
@@ -114,6 +112,7 @@ class DataOutputEditor(QWidget):
 
         self.file_group = QGroupBox("파일", self)
         file_form = QFormLayout(self.file_group)
+        file_form.setVerticalSpacing(SPACE_3)
         _tight(file_form)
         file_form.addRow("파일 경로", self.path_box)
         file_form.addRow("형식", self.format_box)
@@ -134,6 +133,7 @@ class DataOutputEditor(QWidget):
 
         self.store_group = QGroupBox("경로 저장", self)
         store = QFormLayout(self.store_group)
+        store.setVerticalSpacing(SPACE_3)
         _tight(store)
         store.addRow("변수", self.store_box)
 

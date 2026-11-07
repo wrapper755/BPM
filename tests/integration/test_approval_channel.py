@@ -114,7 +114,7 @@ def requested(run: Run) -> dict[str, Any]:
     [
         ("center", "field", "center"),  # BPM 프로세스가 정한 것이 이긴다
         ("field", "center", "field"),
-        ("follow", "center", "center"),  # 「PC 실행기 설정을 따름」 — BUI-03 「원격 결재」
+        ("follow", "center", "center"),  # 「설정」(PC 실행기 설정을 따름) — BUI-03 「원격 결재」
         ("follow", "field", "field"),
     ],
 )

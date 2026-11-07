@@ -42,7 +42,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.center_api import PackageInfo
-from bpm.qt.theme import status_color
+from bpm.qt.theme import button_icon, status_color
 from bpm.studio import install as installer
 from bpm.studio.services import CenterReader, CenterUnreachable
 from bpm.studio.workspace import BpmProcess, InstalledLib, Workspace
@@ -79,11 +79,11 @@ LOCAL_ONLY = "로컬만"
 #: 끄고 적는 까닭 (U3 — 끄고 **가까이에** 적는다).
 NO_PROCESS = "열린 BPM 프로세스가 없습니다 — 설치는 BPM 프로세스 하나에 하는 일입니다 (ADR-0048)."
 NO_SELECTION = "설치할 줄을 고르세요."
-NO_CENTER = "Center에 아직 들어오지 않았습니다 — 설정 → 「Center」에서 「연결 테스트」 (STU-16)."
+NO_CENTER = "Center에 아직 들어오지 않았습니다 — 설정 → 「서버」에서 「연결 테스트」 (STU-16)."
 
 #: 탭 위 한 줄 (STU-11 「각 탭 위에 한 줄 설명」).
 LIB_NOTE = (
-    "Center에 올라온 공유 BPM 프로세스입니다. 「공유 BPM 프로세스 Center로 올리기」로 올립니다. "
+    "Center에 올라온 공유 BPM 프로세스입니다. 서버 → 「공유 프로세스 올리기...」로 올립니다. "
     "「설치」는 **열린 BPM 프로세스**의 `libs/`에 풀어, 그 BPM 프로세스가 Call Activity로 "
     "부를 수 있게 합니다 (시험 실행도 현장과 같은 파일을 봅니다)."
 )
@@ -300,12 +300,19 @@ class CenterResourcesDialog(QDialog):
         self.note.setWordWrap(True)
 
         self.refresh_button = QPushButton("새로 고침", self)
+        button_icon(self.refresh_button, "refresh")
+        self.refresh_button.setObjectName("Secondary")
         self.refresh_button.clicked.connect(self.refresh)
         self.install_button = QPushButton("설치", self)
+        button_icon(self.install_button, "download")
         self.install_button.clicked.connect(self.install_selected)
         self.remove_button = QPushButton("제거...", self)
+        button_icon(self.remove_button, "trash")
+        self.remove_button.setObjectName("Secondary")
         self.remove_button.clicked.connect(self.remove_selected)
         self.close_button = QPushButton("닫기", self)
+        self.close_button.setObjectName("Secondary")
+        button_icon(self.close_button, "x")
         self.close_button.clicked.connect(self.reject)
 
         buttons = QHBoxLayout()

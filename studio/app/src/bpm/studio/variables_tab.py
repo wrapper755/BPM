@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from PySide6.QtCore import QAbstractItemModel, QEvent, QModelIndex, QPersistentModelIndex, QSize, Qt, Signal
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, QPersistentModelIndex, QSize, Qt, Signal
 from PySide6.QtGui import QPainter, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import INPUT_SOURCE_CALLER, INPUT_SOURCE_TYPES, InputDecl, ProcessInfo
-from bpm.qt.theme import icon, set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SIZE_ROW_COMPACT, SPACE_1, SPACE_2
 from bpm.studio.variables import (
     INPUT_SOURCES,
@@ -228,6 +228,11 @@ class VariablesTab(QWidget):
         for button in (self.add_input, self.add_output, self.drop_row):
             button.setObjectName("Secondary")  # 강조색은 「적용」 하나다
         self.apply_button = QPushButton("적용", self)
+        for button, name in (
+            (self.add_input, "plus"), (self.add_output, "plus"), (self.drop_row, "trash"),
+            (self.apply_button, "check"),
+        ):
+            button_icon(button, name)
 
         edits = _Edits(self)
         self.inputs_tree = self._tree(
@@ -307,7 +312,6 @@ class VariablesTab(QWidget):
         for tree in (self.inputs_tree, self.outputs_tree):
             tree.itemChanged.connect(lambda *_: self._changed())
             tree.currentItemChanged.connect(lambda *_: self._refresh_buttons())
-        self._paint_icons()
         self._regroup()
         self._section_changed(INPUTS)
 
@@ -623,19 +627,6 @@ class VariablesTab(QWidget):
         tree = self._editable_tree()
         self.drop_row.setEnabled(editable and tree is not None and tree.currentItem() is not None)
         self.apply_button.setEnabled(editable and self.unapplied and not self.error.text())
-
-    def _paint_icons(self) -> None:
-        """보조 단추 아이콘을 지금 팔레트의 글자색으로 칠한다 (테마가 바뀌면 다시 — `changeEvent`)."""
-        color = self.palette().color(QPalette.ColorRole.ButtonText).name()
-        self.add_input.setIcon(icon("plus", color))
-        self.add_output.setIcon(icon("plus", color))
-        self.drop_row.setIcon(icon("trash", color))
-
-    def changeEvent(self, event: QEvent) -> None:  # noqa: N802 — Qt 이름 그대로
-        if event.type() in (QEvent.Type.PaletteChange, QEvent.Type.ApplicationPaletteChange):
-            if hasattr(self, "drop_row"):  # 짓는 도중에도 올 수 있다
-                self._paint_icons()
-        super().changeEvent(event)
 
 
 __all__ = [

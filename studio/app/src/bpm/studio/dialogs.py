@@ -26,14 +26,14 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import BpmnReadError, read_process
+from bpm.qt.theme import dress_button_box
+from bpm.qt.theme.tokens import SPACE_3
 from bpm.studio.workspace import (
     DEFAULT_GROUP,
-    ID_PATTERN,
     BpmProcess,
     Definition,
     Workspace,
     WorkspaceError,
-    record_beside,
 )
 
 #: 저장소 뿌리에서 본 업무 예제 자리.
@@ -66,14 +66,17 @@ NO_OPEN_DEFINITION = "열린 정의가 없습니다"
 #: 「예제에서 가져오기」를 끌 때 옆에 적는 까닭 — 예제는 체크아웃에만 있다 (설치본에는 없다).
 NO_EXAMPLES = "예제를 찾지 못했습니다"
 
-#: 파일에서 가져올 때(「BPM 프로세스 열기...」) 안내 — 따라가지 않는 것을 미리 말한다 (STU-05).
-FILE_HINT = "그 파일 하나만 가져옵니다. 쓰는 결정(DMN)·호출 대상은 실행 전 검사가 알려 줍니다."
 
 
-def pick_bpmn_file(parent: QWidget | None, start: Path | None = None) -> Path | None:
-    """STU-01 「BPM 프로세스 열기...」의 첫 걸음 — `.bpmn` 하나 (`start` 폴더에서 시작한다)."""
+def pick_process_folder(parent: QWidget | None, start: Path | None = None) -> Path | None:
+    """STU-01 「BPM 프로세스 열기...」의 첫 걸음 — BPM 프로세스 폴더 하나 (`start` 폴더에서 시작한다).
+
+    파일도 보이게 둔다 — 폴더 안의 `process.json`을 보고 맞는 폴더인지 알 수 있다.
+    """
     where = start.as_posix() if start is not None else ""
-    path, _ = QFileDialog.getOpenFileName(parent, "BPM 프로세스 열기", where, "BPMN (*.bpmn)")
+    path = QFileDialog.getExistingDirectory(
+        parent, "BPM 프로세스 열기", where, QFileDialog.Option(0)
+    )
     return Path(path) if path else None
 
 
@@ -84,8 +87,8 @@ class NewProcessDialog(QDialog):
     복사」면 **그 파일을 작업 폴더가 복사한다** (`Workspace.create`의 `first`) — 그때 `made`의
     진입 정의가 이미 디스크에 있다.
 
-    **「BPM 프로세스 열기...」가 가져올 때도 이 창이다** (`imported`) — 파일은 메뉴가 먼저
-    고르고, 창은 「첫 정의」 대신 그 파일을 보이며 이름·id를 그림에서 채워 둔다.
+    바깥 파일을 복사해 들이는 길은 없다 — 바깥 BPM 프로세스 폴더는 「BPM 프로세스 열기...」가
+    제자리에서 연다 (ADR-0131).
 
     **「예제에서 가져오기」는 「첫 정의」의 셋째 줄이다** — 고른 예제로 id·이름을 채우되 사람이
     고쳐 적은 칸은 덮지 않는다. 「확인」은 `Workspace.import_example`로 DMN·호출 대상·케이스를
@@ -103,7 +106,6 @@ class NewProcessDialog(QDialog):
         *,
         source: BpmProcess | None = None,
         opened: Path | None = None,
-        imported: Path | None = None,
         examples: Path | None = None,
     ) -> None:
         super().__init__(parent)
@@ -113,16 +115,8 @@ class NewProcessDialog(QDialog):
         self._filled = ("", "")
         self.source = source
         self.opened = opened if opened is not None and opened.is_file() else None
-        self.imported = imported
         self.made: BpmProcess | None = None
-        #: 파일에서 가져오기가 새로 만들지 않고 기존 것의 진입 정의를 바꿨는가.
-        self.replaced = False
-        title = "새 BPM 프로세스"
-        if source is not None:
-            title = "다른 이름으로 저장"
-        elif imported is not None:
-            title = "파일에서 BPM 프로세스 가져오기"
-        self.setWindowTitle(title)
+        self.setWindowTitle("다른 이름으로 저장" if source is not None else "새 BPM 프로세스")
 
         self.id_box = QLineEdit(self)
         self.id_box.setPlaceholderText("finance.invoice-reconcile")
@@ -137,10 +131,10 @@ class NewProcessDialog(QDialog):
             self.name_box.setText(source.display)
             self.version_box.setText(source.version)
             self.group_box.setText(source.group)
-        if imported is not None:
-            self._fill_from(imported)
 
         form = QFormLayout()
+
+        form.setVerticalSpacing(SPACE_3)
         id_label = QLabel("id", self)
         id_label.setToolTip(HINT)
         form.addRow(id_label, self.id_box)
@@ -153,19 +147,12 @@ class NewProcessDialog(QDialog):
             self.owner_box = QLineEdit(self)
             form.addRow("설명", self.description_box)
             form.addRow("담당자", self.owner_box)
-            if imported is None:
-                form.addRow("첫 정의", self._first_choice())
-            else:
-                shown = QLabel(str(imported), self)
-                shown.setWordWrap(True)
-                form.addRow("가져올 파일", shown)
-                hint = QLabel(FILE_HINT, self)
-                hint.setWordWrap(True)
-                form.addRow("", hint)
+            form.addRow("첫 정의", self._first_choice())
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=self
         )
+        dress_button_box(buttons)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
 
@@ -235,43 +222,13 @@ class NewProcessDialog(QDialog):
             self.name_box.setText(wanted_name)
         self._filled = (wanted_id, wanted_name)
 
-    def _fill_from(self, path: Path) -> None:
-        """그림의 이름과 (C1 규칙에 맞으면) process id로 채워 둔다 — 못 읽으면 비워 둔다.
-
-        읽지 못하는 파일인지는 「확인」이 작업 폴더를 거쳐 말한다 (한 자리에서 거부한다).
-        """
-        try:
-            drawing = read_process(path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, BpmnReadError):
-            return
-        if drawing.name:
-            self.name_box.setText(drawing.name)
-        # **이미 있는 id여도 채운다** — 「확인」이 「기존 것을 바꾸기」를 묻는 입구다.
-        if ID_PATTERN.match(drawing.id):
-            self.id_box.setText(drawing.id)
-        # 옆에 BPM 프로세스 기록이 있으면 **그것이 이긴다** — 작업 폴더 밖에서 관리하는 원본이다.
-        beside = record_beside(path)
-        if ID_PATTERN.match(str(beside.get("id") or "")):
-            self.id_box.setText(str(beside["id"]))
-        if beside.get("name"):
-            self.name_box.setText(str(beside["name"]))
-        if beside.get("version"):
-            self.version_box.setText(str(beside["version"]))
-
     def first(self) -> Path | None:
         """고른 「첫 정의」 파일 — 빈 정의면 `None`."""
         if self.source is not None:
             return None
-        if self.imported is not None:
-            return self.imported
         return self.opened if self.opened_pick.isChecked() else None
 
     def accept(self) -> None:
-        if self.imported is not None:
-            existing = self.workspace.find(self.id_box.text().strip())
-            if existing is not None:
-                self._replace(existing, self.imported)
-                return
         group = self.group_box.text().strip() or DEFAULT_GROUP
         if not (self.workspace.root / group).is_dir():
             try:
@@ -315,45 +272,6 @@ class NewProcessDialog(QDialog):
             return
         super().accept()
 
-    def _replace(self, existing: BpmProcess, source: Path) -> None:
-        """같은 id가 있으면 막다른 오류 대신 「기존 것을 바꾸기」를 묻는다 (STU-05).
-
-        **기본은 「취소」다** — 덮어쓰기는 되돌릴 수 없다. 바꾸는 것은 진입 정의의 내용이고
-        창에 적은 이름·버전·그룹은 쓰지 않는다. 바깥 파일 옆에 같은 id의 기록이 있으면 이름·버전·
-        설명은 그것을 따른다 (`Workspace.replace_entry`).
-        """
-        beside = record_beside(source)
-        follows = beside.get("id") == existing.id
-        kept = (
-            "이름·버전은 파일 옆 process.json을 따릅니다 "
-            f"(v{beside.get('version') or existing.version}). 시험 케이스는 그대로 남습니다."
-            if follows
-            else "시험 케이스·이름·버전은 그대로 남습니다."
-        )
-        box = QMessageBox(self)
-        box.setIcon(QMessageBox.Icon.Question)
-        box.setWindowTitle(self.windowTitle())
-        box.setText(
-            f"같은 id의 BPM 프로세스가 있습니다: {existing.id}\n"
-            f"({existing.display} {existing.version})"
-        )
-        box.setInformativeText(
-            f"바꾸면 진입 정의 {existing.entry}가 이 파일로 바뀝니다.\n{kept}"
-        )
-        replace = box.addButton("기존 것을 바꾸기", QMessageBox.ButtonRole.AcceptRole)
-        cancel = box.addButton("취소", QMessageBox.ButtonRole.RejectRole)
-        box.setDefaultButton(cancel)
-        box.exec()
-        if box.clickedButton() is not replace:
-            return
-        try:
-            self.made = self.workspace.replace_entry(existing, source)
-        except (WorkspaceError, OSError) as e:
-            QMessageBox.warning(self, self.windowTitle(), str(e))
-            return
-        self.replaced = True
-        super().accept()
-
     @classmethod
     def ask(
         cls,
@@ -362,26 +280,26 @@ class NewProcessDialog(QDialog):
         *,
         source: BpmProcess | None = None,
         opened: Path | None = None,
-        imported: Path | None = None,
     ) -> BpmProcess | None:
-        dialog = cls(parent, workspace, source=source, opened=opened, imported=imported)
+        dialog = cls(parent, workspace, source=source, opened=opened)
         return dialog.made if dialog.exec() == QDialog.DialogCode.Accepted else None
 
 
 class ShareDefinitionsDialog(QDialog):
     """STU-12 「공유 BPM 프로세스로 내보내기...」 — 담을 정의를 고른다.
 
-    **「올리기」는 아직 없다** (Center 올리기 자체가 없다, `studio/docs/gaps.md` §4-5) — 창은 파일로
-    내보내는 쪽만 가진다. 읽지 못한 정의는 **고를 수 없게** 두고 사유를 옆에 적는다 (U3).
+    「공유 BPM 프로세스 서버로 올리기」도 이 창을 쓴다 — `upload=True`면 제목·단추·안내가 올리기다.
+    읽지 못한 정의는 **고를 수 없게** 두고 사유를 옆에 적는다 (U3).
     """
 
     #: 하나도 고르지 않으면 「내보내기」가 꺼진다 (STU-12 「하나 이상 필수」).
     HINT = "고른 정의가 공유 BPM 프로세스 패키지(`process_lib`)에 담깁니다. 결정(DMN)은 모두 함께 담깁니다."
+    UPLOAD_HINT = "후보 상태로 올라갑니다. 같은 버전은 다시 올릴 수 없으니 버전을 올리세요."
 
-    def __init__(self, parent: QWidget | None, process: BpmProcess) -> None:
+    def __init__(self, parent: QWidget | None, process: BpmProcess, *, upload: bool = False) -> None:
         super().__init__(parent)
         self.process = process
-        self.setWindowTitle("공유 BPM 프로세스로 내보내기")
+        self.setWindowTitle("공유 BPM 프로세스 서버로 올리기" if upload else "공유 BPM 프로세스로 내보내기")
 
         self.boxes: list[tuple[QCheckBox, Definition]] = []
         picks = QVBoxLayout()
@@ -398,7 +316,8 @@ class ShareDefinitionsDialog(QDialog):
         self.buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=self
         )
-        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setText("내보내기")
+        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setText("올리기" if upload else "내보내기")
+        dress_button_box(self.buttons)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
 
@@ -407,6 +326,8 @@ class ShareDefinitionsDialog(QDialog):
         layout.addWidget(QLabel("공유할 정의", self))
         layout.addLayout(picks)
         layout.addWidget(QLabel(self.HINT, self))
+        if upload:
+            layout.addWidget(QLabel(self.UPLOAD_HINT, self))
         layout.addWidget(self.buttons)
         self._refresh()
 
@@ -417,8 +338,10 @@ class ShareDefinitionsDialog(QDialog):
         return [d for box, d in self.boxes if box.isChecked() and d.process is not None]
 
     @classmethod
-    def ask(cls, parent: QWidget | None, process: BpmProcess) -> list[Definition] | None:
-        dialog = cls(parent, process)
+    def ask(
+        cls, parent: QWidget | None, process: BpmProcess, *, upload: bool = False
+    ) -> list[Definition] | None:
+        dialog = cls(parent, process, upload=upload)
         return dialog.picked() if dialog.exec() == QDialog.DialogCode.Accepted else None
 
 

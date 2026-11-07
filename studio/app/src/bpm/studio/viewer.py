@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from bpm.qt.theme import button_icon
 from bpm.studio.canvas import VIEW_PAGE, Canvas, CanvasError
 
 log = logging.getLogger(__name__)
@@ -58,6 +59,8 @@ class DiagramViewer(QDialog):
         self.canvas.opened.connect(self._on_ready)
 
         self.close_button = QPushButton("닫기", self)
+        self.close_button.setObjectName("Secondary")
+        button_icon(self.close_button, "x")
         self.close_button.clicked.connect(self.accept)
         buttons = QHBoxLayout()
         buttons.addStretch(1)

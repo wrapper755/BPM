@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 (「바꾸지 않는 것」의 Studio 중 메뉴 막대의 항목 글은 [ADR-0133](0133-studio-menus-say-process.md)이 「프로세스」로 대체) |
 | 날짜 | 2026-10-31 |
 | 관련 | [ADR-0111](0111-bpm-process-and-pc-runner-names.md)(Center 콘솔 몫만 대체), `docs/02-glossary.md` §0, 화면 `docs/06-screens/center-console.md` |
 

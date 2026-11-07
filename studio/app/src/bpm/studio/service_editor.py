@@ -42,7 +42,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3, SPACE_4
 from bpm.studio.name_pick import NameDelegate
 from bpm.studio.service_catalog import Catalog, Operation, Usage, missing_required, stale_fields
@@ -97,12 +97,8 @@ class ServiceTaskEditor(QWidget):
         self._plain_palette: Any = None
 
         self.app_box = QComboBox(self)
+        # 작업 설명·수행 모드는 여기 두지 않는다 — 탐색기의 「작업 설명 보기」가 보인다 (STU-14).
         self.operation_box = QComboBox(self)
-        self.operation_note = QLabel("", self)
-        self.operation_note.setWordWrap(True)
-        set_role(self.operation_note, "muted")
-        self.modes_note = QLabel("", self)
-        self.modes_note.setWordWrap(True)
 
         self.inputs = QTableWidget(0, len(INPUT_COLUMNS), self)
         self.inputs.setHorizontalHeaderLabels(list(INPUT_COLUMNS))
@@ -118,10 +114,16 @@ class ServiceTaskEditor(QWidget):
         self.outputs.setItemDelegateForColumn(OUTPUT_COLUMNS.index("저장할 변수"), NameDelegate(names, self))
 
         self.fill_inputs = QPushButton("기대 입력 채우기", self)
+        button_icon(self.fill_inputs, "wand")
+        self.fill_inputs.setObjectName("Secondary")
         self.same_names = QPushButton("모두 같은 이름으로", self)
+        self.same_names.setObjectName("Secondary")
+        button_icon(self.same_names, "copy")
         self.add_input = QPushButton("줄 더하기", self)
+        button_icon(self.add_input, "plus")
         self.add_output = QPushButton("줄 더하기", self)
-        # 채운 단추는 영역마다 하나 (스타일 가이드 §3 Button) — 「채우기」가 주된 일이다.
+        button_icon(self.add_output, "plus")
+        # 채운 단추는 영역마다 하나 (스타일 가이드 §6) — 속성 패널에서는 「적용」이다.
         for one in (self.add_input, self.add_output):
             one.setObjectName("Secondary")
 
@@ -162,11 +164,9 @@ class ServiceTaskEditor(QWidget):
         box = QGroupBox("작업", self)
         self.task_form = QFormLayout(box)
         _tight(self.task_form)
-        self.task_form.setVerticalSpacing(SPACE_2)
+        self.task_form.setVerticalSpacing(SPACE_3)
         self.task_form.addRow("서비스 앱", self.app_box)
         self.task_form.addRow("작업", self.operation_box)
-        self.task_form.addRow("", self.operation_note)
-        self.task_form.addRow("지원 수행 모드", self.modes_note)
         return box
 
     def _table_box(self, title: str, table: QTableWidget, buttons: list[QPushButton]) -> QGroupBox:
@@ -394,12 +394,6 @@ class ServiceTaskEditor(QWidget):
 
     def _retell(self) -> None:
         self._retell_app()
-        operation = self._operation()
-        self.operation_note.setText(operation.description if operation is not None else "")
-        self.modes_note.setText(", ".join(operation.modes) if operation is not None else "")
-        # 작업을 고르기 전에는 빈 줄이다 — 라벨만 덩그러니 남기지 않는다.
-        self.task_form.setRowVisible(self.operation_note, bool(self.operation_note.text()))
-        self.task_form.setRowVisible(self.modes_note, bool(self.modes_note.text()))
         codes = self._retry_on()
         self.retry_note.setText(
             f"다시 부를 상태 코드: {', '.join(str(one) for one in codes)}" if codes else ""

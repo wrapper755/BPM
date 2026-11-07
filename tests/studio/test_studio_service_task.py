@@ -256,9 +256,6 @@ def test_the_editor_draws_what_the_drawing_says(app: Any, catalog: Catalog) -> N
     assert made.app_box.currentData() == "hris"
     assert made.operation_box.currentData() == "register_leave"
     assert made.dump() == CALL
-    # 작업 설명과 지원 모드가 보인다 (STU-14).
-    assert made.operation_note.text() == "휴가 등록"
-    assert "deterministic" in made.modes_note.text()
 
 
 def test_the_editor_shows_every_schema_field_even_if_unused(app: Any, catalog: Catalog) -> None:
@@ -577,13 +574,9 @@ def test_each_section_is_its_own_group(app: Any, catalog: Catalog) -> None:
     assert titles == ["작업", "입력", "출력", "실행 제한"]  # 「API 키」는 없다 (ADR-0094 §4)
 
 
-def test_empty_rows_are_hidden_until_an_operation_is_picked(app: Any) -> None:
-    """작업을 고르기 전에는 설명·「지원 수행 모드」 줄이 없다 — 라벨만 덩그러니 남기지 않는다."""
-    made = editor(app, build([], []), CALL)
-    assert not made.task_form.isRowVisible(made.modes_note)
-    assert not made.task_form.isRowVisible(made.operation_note)
-
-
-def test_picked_operation_shows_its_modes(app: Any, catalog: Catalog) -> None:
+def test_the_task_group_holds_only_the_two_pickers(app: Any, catalog: Catalog) -> None:
+    """작업 설명·수행 모드는 편집기에 없다 — 탐색기의 「작업 설명 보기」가 보인다 (STU-14)."""
     made = editor(app, catalog, CALL)
-    assert made.task_form.isRowVisible(made.modes_note)
+    assert made.task_form.rowCount() == 2
+    labels = [made.task_form.itemAt(row, made.task_form.ItemRole.LabelRole).widget().text() for row in range(2)]
+    assert labels == ["서비스 앱", "작업"]

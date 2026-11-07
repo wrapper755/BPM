@@ -42,7 +42,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMessageBox,
-    QPlainTextEdit,
     QPushButton,
     QRadioButton,
     QSpinBox,
@@ -58,8 +57,9 @@ from bpm.contracts.replay import REPLAY_DEFAULT, ReplaySpec
 from bpm.core.engine import BUILTIN_NOW, BUILTIN_RUN_ID, BUILTIN_TODAY, goal_names
 from bpm.core.files import Workspace
 from bpm.core.tools import builtin_tools
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
+from bpm.studio.long_text import LongText
 from bpm.studio.name_pick import NameDelegate
 from bpm.studio.replay_specs import ReplaySpecs, SpecsUnreadable
 
@@ -160,13 +160,12 @@ class AiTaskEditor(QWidget):
         self._loaded: dict[str, Any] = {}
         self._quiet = False
         self._builtin = builtin_tool_descriptions()
-        lines = self.fontMetrics().lineSpacing()
 
         # 입력
-        self.goal_box = QPlainTextEdit(self)
+        self.goal_box = LongText("목표", is_markdown=True, lines=9, parent=self)
         self.goal_box.setPlaceholderText("Markdown — 값은 적지 않고 변수 이름으로 가리킵니다")
-        self.goal_box.setFixedHeight(lines * 9)
         self.outline_button = QPushButton("틀 넣기", self)
+        button_icon(self.outline_button, "wand")
         self.outline_button.setObjectName("Secondary")
         self.outline_button.setToolTip("권장 머리말(상황·할 일·판단하지 않는 것·반환)을 넣습니다. 목표가 비었을 때만.")
         self.goal_hint = QLabel("목표에 이름이 나오는 변수와 업무 파라미터만 모델에게 갑니다.", self)
@@ -196,6 +195,7 @@ class AiTaskEditor(QWidget):
         self.tool_input = QLineEdit(self)
         self.tool_input.setPlaceholderText("내장이 아닌 도구 이름 — 「추가」")
         self.add_tool = QPushButton("추가", self)
+        button_icon(self.add_tool, "plus")
         self.add_tool.setObjectName("Secondary")
         self.tools_note = QLabel("고른 도구만 모델에게 알려 줍니다. 밖의 도구를 부르면 실행 오류입니다.", self)
         self.tools_note.setWordWrap(True)
@@ -203,25 +203,27 @@ class AiTaskEditor(QWidget):
 
         self.params = _table(PARAM_COLUMNS, self)
         self.add_param = QPushButton("줄 더하기", self)
+        button_icon(self.add_param, "plus")
         self.add_param.setObjectName("Secondary")
         self.drop_param = QPushButton("줄 삭제", self)
+        button_icon(self.drop_param, "trash")
         self.drop_param.setObjectName("Secondary")
 
         # 출력
         self.results = _table(RESULT_COLUMNS, self)
         self.results.setItemDelegateForColumn(0, NameDelegate(names, self.results))
         self.add_result = QPushButton("줄 더하기", self)
+        button_icon(self.add_result, "plus")
         self.add_result.setObjectName("Secondary")
         self.drop_result = QPushButton("줄 삭제", self)
+        button_icon(self.drop_result, "trash")
         self.drop_result.setObjectName("Secondary")
 
         # 지시문 (ADR-0105)
-        self.forbidden_box = QPlainTextEdit(self)
+        self.forbidden_box = LongText("하지 않을 것", parent=self)
         self.forbidden_box.setPlaceholderText("예: 삭제 버튼을 누르지 않는다")
-        self.forbidden_box.setFixedHeight(lines * 4)
-        self.confirm_box = QPlainTextEdit(self)
+        self.confirm_box = LongText("멈추고 넘길 상황", parent=self)
         self.confirm_box.setPlaceholderText("예: 로그인 화면이 나타남")
-        self.confirm_box.setFixedHeight(lines * 4)
 
         # 재생·실행 제한
         self.replay_picks: dict[str, QRadioButton] = {}
@@ -238,6 +240,7 @@ class AiTaskEditor(QWidget):
         self.spec_tools.setWordWrap(True)
         set_role(self.spec_tools, "muted")
         self.forget_button = QPushButton(FORGET_TITLE, self)
+        button_icon(self.forget_button, "trash")
         self.forget_button.setObjectName("Secondary")
         self.forget_button.setToolTip(FORGET_TIP)
         self.max_steps_box = QSpinBox(self)
@@ -311,6 +314,7 @@ class AiTaskEditor(QWidget):
         column.addLayout(row)
         column.addWidget(self.domain_note)
         form = QFormLayout()
+        form.setVerticalSpacing(SPACE_3)
         form.setContentsMargins(0, 0, 0, 0)
         form.addRow("띄울 앱", self.app_box)
         self._domain_form = form
@@ -352,6 +356,7 @@ class AiTaskEditor(QWidget):
         column = QVBoxLayout(box)
         _tight(column)
         form = QFormLayout()
+        form.setVerticalSpacing(SPACE_3)
         form.setContentsMargins(0, 0, 0, 0)
         form.addRow("하지 않을 것", self.forbidden_box)
         form.addRow("", _muted(FORBIDDEN_NOTE, box))
@@ -378,6 +383,7 @@ class AiTaskEditor(QWidget):
         spec_row.addWidget(self.forget_button, 0, Qt.AlignmentFlag.AlignTop)
         column.addLayout(spec_row)
         form = QFormLayout()
+        form.setVerticalSpacing(SPACE_3)
         form.setContentsMargins(0, 0, 0, 0)
         form.addRow("최대 단계", self.max_steps_box)
         form.addRow("제한 시간(초)", self.timeout_box)
@@ -860,7 +866,7 @@ def _parse(text: str, kind: str) -> tuple[Any, str]:
     return None, f"타입을 모릅니다: {kind}"
 
 
-def _lines(box: QPlainTextEdit) -> list[str]:
+def _lines(box: LongText) -> list[str]:
     """줄마다 하나 — 빈 줄은 버린다."""
     return [line.strip() for line in box.toPlainText().splitlines() if line.strip()]
 

@@ -24,11 +24,13 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from bpm.qt.messages import ask_unsaved
 from bpm.studio.canvas import CanvasError
-from bpm.studio.dialogs import NewProcessDialog, pick_bpmn_file
+from bpm.studio.dialogs import NewProcessDialog, pick_process_folder
 from bpm.studio.workspace import (
+    RECORD_NAME,
     WorkspaceError,
     check_definition_name,
     definition_process_id,
+    read_record,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - 순환 import를 피한다 (창이 이 모듈을 부른다)
@@ -42,6 +44,10 @@ DISCARD_TEXT = "저장하지 않은 변경사항이 있습니다. 저장할까�
 LAID_OUT = "그림 좌표가 없어 자동 배치했습니다 — 저장하면 파일에 남습니다."
 #: 시험 실행 중에는 닫지 않는다 — 실행이 그 그림에 노드 상태를 칠한다.
 CLOSE_WHILE_RUNNING = "시험 실행 중에는 닫을 수 없습니다 — 먼저 「실행 중지」를 누르세요."
+#: 「BPM 프로세스 열기...」로 고른 폴더에 기록이 없을 때 — 여는 단위는 BPM 프로세스 폴더다 (U1).
+NOT_A_PROCESS_FOLDER = "BPM 프로세스 폴더가 아닙니다 — process.json이 있는 폴더를 고르세요."
+#: 「최근 BPM 프로세스」에 남기는 수 (STU-01).
+RECENT_LIMIT = 10
 
 
 def may_discard(window: MainWindow) -> bool:
@@ -86,6 +92,7 @@ def open_definition(window: MainWindow, path_text: str) -> None:
         window.preflight.setRowCount(0)
         window.retitle()
         window.explorer.refresh(opened=path.as_posix())
+        remember_last_opened(window)  # 「최근 BPM 프로세스」 맨 위로, 바깥 폴더는 경로로
         note = f" (경고 {count}개)" if count else ""
         window.say(f"열었습니다: {process.display} / {path.name}{note}")
         if laid_out:
@@ -230,38 +237,70 @@ def save_process_as(window: MainWindow) -> None:
 
 
 def open_process(window: MainWindow) -> None:
-    """STU-01 「BPM 프로세스 열기...」 (Ctrl+O) — `.bpmn` 하나를 고른다 (작업 폴더에서 시작).
+    """STU-01 「BPM 프로세스 열기...」 (Ctrl+O) — BPM 프로세스 폴더(`process.json`이 있는 폴더)를
+    고른다 (기본 폴더에서 시작). 고른 뒤는 `open_folder`다."""
+    folder = pick_process_folder(window, window.workspace.root)
+    if folder is not None:
+        open_folder(window, folder)
 
-    **이미 어느 BPM 프로세스의 정의면** 그것을 연다(탐색기 목록에 올라간다). 아니면 **가져온다**
-    — STU-05로 id·이름을 받아 그 파일 **하나만** 진입 정의로 복사한다 (`Workspace.create`의
-    `first` — 원본은 읽기만 한다). 그림 좌표가 없으면 **열 때** 캔버스가 배치한다 (ADR-0088).
-    BPM 프로세스 없이 파일만 열지 않는다 (U1).
+
+def open_folder(window: MainWindow, folder: Path) -> None:
+    """BPM 프로세스 폴더를 **제자리에서** 연다 (ADR-0131) — 복사하지 않는다.
+
+    탐색기 목록에 올리고 진입 정의를 연다. 기본 폴더 밖이면 `Workspace.extra`에 더한다 —
+    설정 `open_folders`에는 목록에 오른 뒤 `remember_last_opened`가 적는다. **같은 id가 목록의
+    다른 폴더에 있으면 열지 않는다** (패키지·Center·재생 명세가 id로 가른다). 맨 `.bpmn` 파일은
+    고르지 않는다 (U1 — 예제는 「새 BPM 프로세스...」가 들인다).
     """
-    picked = pick_bpmn_file(window, window.workspace.root)
-    if picked is None:
+    if not (folder / RECORD_NAME).is_file():
+        window.say(NOT_A_PROCESS_FOLDER)
         return
-    target = picked.resolve()
+    found = window.workspace.read(folder, folder.parent.name)
+    where = folder.resolve()
     for group in window.workspace.groups():
         for one in group.processes:
-            for definition in one.definitions:
-                if definition.path.resolve() == target:
-                    open_definition(window, definition.path.as_posix())
-                    return
-    if not may_discard(window):
+            if one.id == found.id and one.id in window.explorer.listed and one.folder.resolve() != where:
+                window.say(
+                    f"같은 id({one.id})의 BPM 프로세스가 이미 목록에 있습니다: {one.folder.as_posix()}"
+                    " — 그것을 닫고 다시 여세요."
+                )
+                return
+    if window.workspace.is_outside(folder) and where not in {f.resolve() for f in window.workspace.extra}:
+        window.workspace.extra.append(folder)
+    entry = found.entry_definition
+    if entry is None:
+        window.explorer.refresh(adding=[found.id])
+        remember_last_opened(window, also=folder)
+        window.say(f"{found.display}에 정의가 없습니다 — 「정의 추가...」로 만드세요.")
         return
-    # 같은 id가 있으면 창이 「기존 것을 바꾸기」를 묻는다 — 상태 줄이 무엇을 했는지 가른다.
-    known = {one.id for group in window.workspace.groups() for one in group.processes}
-    made = NewProcessDialog.ask(window, window.workspace, imported=picked)
-    if made is None:
+    open_definition(window, entry.path.as_posix())
+
+
+def open_recent(window: MainWindow, path_text: str) -> None:
+    """STU-01 「최근 BPM 프로세스」의 한 줄. 없어졌으면 그렇게 말하고 목록에서 뺀다."""
+    folder = Path(path_text)
+    if (folder / RECORD_NAME).is_file():
+        open_folder(window, folder)
         return
-    entry = made.entry_definition
-    window.explorer.refresh(opened=entry.path.as_posix() if entry is not None else "")
-    if made.id in known:
-        window.say(f"진입 정의를 바꿨습니다: {made.display} / {made.entry} ← {picked.name}")
-    else:
-        window.say(f"가져왔습니다: {made.display} — {picked.name}")
-    if entry is not None:
-        open_definition(window, entry.path.as_posix())
+    kept = tuple(one for one in window.settings.recent_processes if one != path_text)
+    window.settings = replace(window.settings, recent_processes=kept)
+    window.settings.save()
+    window.say(f"찾지 못했습니다: {path_text} — 최근 목록에서 뺐습니다.")
+
+
+def clear_recent(window: MainWindow) -> None:
+    """「최근 BPM 프로세스」 → 「목록 지우기」. 폴더는 그대로다."""
+    window.settings = replace(window.settings, recent_processes=())
+    window.settings.save()
+
+
+def recent_entries(window: MainWindow) -> list[tuple[str, str]]:
+    """「최근 BPM 프로세스」 하위 메뉴의 `(글, 경로)` — 이름은 그 폴더의 기록에서 읽는다."""
+    out = []
+    for path_text in window.settings.recent_processes:
+        name = str(read_record(Path(path_text)).get("name") or Path(path_text).name)
+        out.append((f"{name} — {path_text}", path_text))
+    return out
 
 
 def close_process(window: MainWindow) -> None:
@@ -269,9 +308,20 @@ def close_process(window: MainWindow) -> None:
 
     다음에 띄울 때도 열지 않는다. 파일은 지우지 않는다 — 다시 올리는 길은 `open_process`다.
 
+    닫는 것은 **탐색기에서 고른 줄의 BPM 프로세스**이고 고른 줄이 없으면 열린 것이다. 고른 것이
+    열린 것이 아니면 **목록에서만 뺀다** — 캔버스는 건드리지 않는다.
+
     저장 안 한 변경은 같은 관문(`may_discard`)이 묻는다. 시험 실행 중이면 닫지 않는다 — 실행이
     그 그림에 노드 상태를 칠하고, 끝나면 그 BPM 프로세스의 기록을 쓴다.
     """
+    picked = window.explorer.selected_process_id()
+    if picked is not None and (window.process is None or picked != window.process.id):
+        found = window.workspace.find(picked)
+        window.explorer.unlist(picked)
+        remember_last_opened(window)
+        window.refresh_menus()
+        window.say(f"목록에서 뺐습니다: {found.display if found is not None else picked}")
+        return
     if window.process is None:
         window.say(NO_PROCESS)
         return
@@ -297,12 +347,29 @@ def close_process(window: MainWindow) -> None:
     window.say(f"닫았습니다: {closed}")
 
 
-def remember_last_opened(window: MainWindow) -> None:
-    """마지막으로 열었던 정의와 탐색기 목록을 설정에 남긴다 (다음에 그대로 뜬다). **닫았으면 비운다**."""
+def remember_last_opened(window: MainWindow, *, also: Path | None = None) -> None:
+    """마지막으로 열었던 정의와 탐색기 목록을 설정에 남긴다 (다음에 그대로 뜬다). **닫았으면 비운다**.
+
+    기본 폴더 밖의 것은 목록에 남은 것만 `open_folders`(경로)로 남고, 열린 BPM 프로세스(또는 `also`)는
+    「최근 BPM 프로세스」 맨 위로 온다 (ADR-0131).
+    """
     opened = window.definition.as_posix() if window.definition is not None else ""
     listed = tuple(window.explorer.listed)
-    if (opened, listed) != (window.settings.last_opened, window.settings.open_processes):
-        window.settings = replace(window.settings, last_opened=opened, open_processes=listed)
+    by_id = {p.id: p for g in window.workspace.groups() for p in g.processes}
+    outside = [by_id[one].folder for one in listed if one in by_id and window.workspace.is_outside(by_id[one].folder)]
+    window.workspace.extra = outside
+    folders = tuple(f.as_posix() for f in outside)
+    recent = window.settings.recent_processes
+    newest = also or (window.process.folder if window.process is not None else None)
+    if newest is not None:
+        top = newest.as_posix()
+        recent = (top, *(one for one in recent if one != top))[:RECENT_LIMIT]
+    now = (opened, listed, folders, recent)
+    settings = window.settings
+    if now != (settings.last_opened, settings.open_processes, settings.open_folders, settings.recent_processes):
+        window.settings = replace(
+            settings, last_opened=opened, open_processes=listed, open_folders=folders, recent_processes=recent
+        )
         window.settings.save()
 
 
@@ -312,14 +379,20 @@ __all__ = [
     "DISCARD_TITLE",
     "LAID_OUT",
     "NO_DEFINITION",
+    "NOT_A_PROCESS_FOLDER",
     "NO_PROCESS",
+    "RECENT_LIMIT",
     "add_definition",
+    "clear_recent",
     "close_process",
     "make_entry",
     "may_discard",
     "new_process",
     "open_definition",
+    "open_folder",
     "open_process",
+    "open_recent",
+    "recent_entries",
     "remember_last_opened",
     "save",
     "save_process_as",

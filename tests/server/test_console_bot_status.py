@@ -360,8 +360,9 @@ def test_the_column_counts_pcs_and_does_not_resolve_a_wildcard(client: TestClien
     있는 것만 본다: 열 이름이 바뀌었는가, 화면이 그 함수를 쓰는가, `*`를 푸는 코드가 사라졌는가.
     """
     page = (CONSOLE / "app" / "bots" / "page.tsx").read_text(encoding="utf-8")
-    assert 'header: "배포된 Bot"' in page
-    assert 'header: "배포"' not in page, "건수로 보이던 열은 없다"
+    # CON-02는 카드다 — 지표 이름은 `Metric label`이다.
+    assert 'label="배포된 Bot"' in page
+    assert 'label="배포"' not in page, "건수로 보이던 칸은 없다"
     assert "deployedPcs" in page
 
     # CON-05 「새 작업」도 PC 쪽 `*`를 풀지 않는다 — 봉투 하나가 PC 하나를 가리킨다.

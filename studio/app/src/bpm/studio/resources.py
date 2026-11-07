@@ -52,6 +52,7 @@ from bpm.contracts.center_api import PackageInfo
 from bpm.contracts.extension import ResourceView
 from bpm.contracts.manifest import ProvidedProcess
 from bpm.contracts.resources import ContributedResource
+from bpm.qt.theme import button_icon
 from bpm.studio import service_catalog
 from bpm.studio.services import CenterReader, CenterUnreachable
 from bpm.studio.workspace import InstalledLib
@@ -78,7 +79,7 @@ NO_INSTALL = (
     "설치·제거는 「Center 공유 자원...」 창에서 합니다 — 설치는 열린 BPM 프로세스 하나에 "
     "하는 일입니다 (ADR-0048)."
 )
-NO_CENTER = "Center에 아직 들어오지 않았습니다 — 설정 → 「Center」에서 「연결 테스트」 (STU-16)."
+NO_CENTER = "Center에 아직 들어오지 않았습니다 — 설정 → 「서버」에서 「연결 테스트」 (STU-16)."
 
 #: 공유 BPM 프로세스로 **셋을 할 수 없는 까닭** (ADR-0051 — 끄고 적고 **STU-11로 보낸다**).
 #:
@@ -559,6 +560,8 @@ class DetailDialog(QDialog):
         self.body.setPlainText(text)
         layout.addWidget(self.body)
         close = QPushButton("닫기", self)
+        close.setObjectName("Secondary")
+        button_icon(close, "x")
         close.clicked.connect(self.accept)
         row = QHBoxLayout()
         row.addStretch(1)
@@ -620,6 +623,8 @@ class ResourceExplorer(QWidget):
         self.tree = Tree()
 
         self.reload_button = QPushButton("새로 고침", self)
+        button_icon(self.reload_button, "refresh")
+        self.reload_button.setObjectName("Secondary")  # 탭의 잔일 — 강조색으로 채우지 않는다
         self.reload_button.clicked.connect(self.reloading)
         top = QHBoxLayout()
         top.addWidget(self.reload_button)

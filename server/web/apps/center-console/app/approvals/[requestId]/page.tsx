@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Button, ErrorBanner, StatusBadge } from "@bpm/ui";
 import type { ApprovalInfo, FormField } from "@bpm/api-types/c6-approval-info";
 import { CenterError, center, session } from "@/lib/center";
+import { Markdown } from "@/components/Markdown";
 import { Shell } from "@/components/Shell";
 import { answerApproval } from "@/app/actions";
 import { WithdrawApproval } from "../withdraw";
@@ -166,7 +167,8 @@ export default async function ApprovalPage({
                 </>
               ) : null}
             </dl>
-            {info.description ? <p className="text-body text-text-secondary">{info.description}</p> : null}
+            {/* 결재 설명은 Markdown이다 (C14 「결재 설명」, ADR-0134). */}
+            {info.description ? <Markdown source={info.description} /> : null}
           </Section>
 
           {/* **값이 보이는 유일한 곳**이다 (C6). 접어 둔다 (U10). */}

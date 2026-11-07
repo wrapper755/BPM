@@ -122,6 +122,7 @@ class LoopEditor(QWidget):
 
         self.fields = QGroupBox("목록과 결과", self)
         form = QFormLayout(self.fields)
+        form.setVerticalSpacing(SPACE_3)
         _tight(form)
         form.addRow("목록", self.collection_box)
         form.addRow("한 건 이름", self.item_box)

@@ -125,7 +125,7 @@ def test_field_approval_is_off_on_the_server() -> None:
     """B6과 같은 판정 — 서버에서는 현장 결재를 쓸 수 없다."""
     made = loaded(run_location="server")
     assert not made.location_picks["field"].isEnabled()
-    assert made.location_note.text() == SERVER_NO_FIELD
+    assert made.location_picks["field"].toolTip() == SERVER_NO_FIELD  # 설명 줄이 아니라 툴팁
 
     # 그림에 이미 적혀 있으면 **지우지 않고** 막는다 (조용히 바꾸지 않는다).
     stuck = loaded({**BODY, "location": "field"}, run_location="server")
@@ -247,3 +247,53 @@ def test_a_bad_name_already_in_the_drawing_is_kept_but_blocks_apply() -> None:
     assert made.show_names() == ["원천ID", "검증 통과"], "적어 둔 것을 조용히 바꾸지 않는다"
     errors, _ = made.problems()
     assert any("검증 통과" in e for e in errors)
+
+
+def test_the_fields_hint_is_a_tooltip_not_a_line() -> None:
+    """「폼 칸」의 뜻은 화면에 줄로 두지 않고 표의 툴팁으로 (STU-04 결재 탭)."""
+    from PySide6.QtWidgets import QLabel  # noqa: PLC0415
+
+    made = loaded()
+    assert "같은 이름의 변수" in made.fields.toolTip()
+    assert not any("같은 이름의 변수" in one.text() for one in made.findChildren(QLabel))
+
+
+def test_form_rows_are_not_cramped() -> None:
+    """「내용」·「담당자·기한·답한 사람」 줄 사이는 `space.3` (STU-04 — 편집기 모두 같다)."""
+    from PySide6.QtWidgets import QFormLayout  # noqa: PLC0415
+
+    from bpm.qt.theme.tokens import SPACE_3  # noqa: PLC0415
+
+    made = loaded()
+    forms = made.findChildren(QFormLayout)
+    assert forms
+    assert all(one.verticalSpacing() == SPACE_3 for one in forms)
+
+
+def test_shown_names_row_has_no_grey_holder() -> None:
+    """「표시 변수」 줄은 레이아웃으로 모은다 — 맨 `QWidget` 그릇은 앱 바탕색을 칠한다 (스타일 가이드 §4-2)."""
+    from PySide6.QtWidgets import QFormLayout  # noqa: PLC0415
+
+    made = loaded()
+    form = next(one for one in made.findChildren(QFormLayout) if one.rowCount() == 3)
+    field = form.itemAt(2, QFormLayout.ItemRole.FieldRole)
+    assert field is not None and field.widget() is None and field.layout() is not None
+
+
+def test_the_description_box_shows_five_lines_under_the_theme() -> None:
+    """「설명」은 긴 글이라 다섯 줄이 보인다 — 테마의 한 줄 칸 높이(`control.md`)가 눌러 한 줄 반이 되면 안 된다."""
+    from PySide6.QtWidgets import QApplication  # noqa: PLC0415
+
+    from bpm.qt.theme import apply_theme  # noqa: PLC0415
+    from bpm.studio.approval_editor import DESCRIPTION_LINES  # noqa: PLC0415
+
+    app = QApplication.instance()
+    assert isinstance(app, QApplication)
+    apply_theme(app, choice="light")
+    made = loaded()
+    made.show()
+    app.processEvents()
+    box = made.description_box
+    assert box.minimumHeight() == box.maximumHeight() == box.height()
+    text_room = box.viewport().height() - int(box.document().documentMargin()) * 2
+    assert text_room >= box.fontMetrics().lineSpacing() * DESCRIPTION_LINES

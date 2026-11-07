@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
 
 from bpm.contracts.bpmn_ext import CASE_ANSWERER, Case, CaseMessage
 from bpm.qt.messages import ask_unsaved
-from bpm.qt.theme import set_role
+from bpm.qt.theme import button_icon, dress_button_box, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3, SPACE_4
 from bpm.studio.cases import (
     COMPARISONS,
@@ -98,8 +98,10 @@ class Block(QWidget):
         self.counted: Callable[[], None] = lambda: None
 
         add = QPushButton("추가", self)
+        button_icon(add, "plus")
         add.clicked.connect(self.add_row)
         drop = QPushButton("선택 줄 삭제", self)
+        button_icon(drop, "trash")
         drop.clicked.connect(self.drop_row)
 
         head = QHBoxLayout()
@@ -153,8 +155,12 @@ class CaseDialog(QDialog):
         self.list = QListWidget(self)
         self.list.currentRowChanged.connect(self._pick)
         add = QPushButton("추가", self)
+        button_icon(add, "plus")
+        add.setObjectName("Secondary")
         add.clicked.connect(self._add)
         drop = QPushButton("삭제", self)
+        button_icon(drop, "trash")
+        drop.setObjectName("Secondary")
         drop.clicked.connect(self._drop)
 
         self.names = declared_inputs(definition)
@@ -219,6 +225,7 @@ class CaseDialog(QDialog):
 
         mark = " — 진입" if definition is process.entry_definition else ""
         form = QFormLayout()
+        form.setVerticalSpacing(SPACE_3)
         form.addRow("대상 정의", QLabel(f"{definition.path.name}{mark}", self))
         form.addRow("이름", self.name_box)
         form.addRow("설명", self.description_box)
@@ -256,6 +263,7 @@ class CaseDialog(QDialog):
         )
         box.button(QDialogButtonBox.StandardButton.Save).setText("저장")
         box.button(QDialogButtonBox.StandardButton.Close).setText("닫기")
+        dress_button_box(box)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         box.accepted.connect(self.save)
         box.button(QDialogButtonBox.StandardButton.Save).clicked.connect(self.save)
         box.rejected.connect(self.reject)

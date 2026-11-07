@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFormLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -48,7 +49,8 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import BpmnProcess, ProcessInfo, server_blockers
-from bpm.qt.theme import set_role
+from bpm.qt.theme import dress_button_box, set_role
+from bpm.qt.theme.tokens import SIZE_CONTROL_MD, SPACE_3, SPACE_4
 from bpm.studio.workspace import BpmProcess, Definition, Workspace, WorkspaceError, write_record
 
 log = logging.getLogger(__name__)
@@ -62,12 +64,6 @@ LOCATIONS = (("server", "서버 — 대부분의 업무. 여러 건 동시에"),
 #: 생략하면 서버다 (C1 R1·ADR-0016).
 DEFAULT_LOCATION = "server"
 
-#: 단추 위 한 줄 — 「적용」이 어디로 가나 (STU-04 「적용」과 같은 말).
-APPLY_NOTE = (
-    "실행 위치는 그림에 적용됩니다 — 파일에는 Ctrl+S로 저장됩니다. "
-    "이름·버전·설명·담당자·태그는 바로 저장됩니다."
-)
-APPLY_NOTE_RECORD_ONLY = "이름·버전·설명·담당자·태그는 바로 저장됩니다."
 
 #: 그림을 고칠 수 없는 까닭 (U3 — 끄고 **가까이에** 적는다).
 NO_CANVAS = (
@@ -182,7 +178,7 @@ class ProcessInfoDialog(QDialog):
         self.description_box.setFixedHeight(72)
         self.owner_box = QLineEdit(process.owner, self)
         self.tags_box = QLineEdit(", ".join(process.tags), self)
-        self.tags_box.setPlaceholderText("재무, 월말")
+        self.tags_box.setPlaceholderText("쉼표로 구분 — 재무, 월말")
 
         self.location_box = QComboBox(self)
         for value, label in LOCATIONS:
@@ -200,32 +196,57 @@ class ProcessInfoDialog(QDialog):
         self.warning.setWordWrap(True)
         self.warning.setObjectName("serverWarning")
 
+        # [I] 읽기 전용 셋 — 흐린 글자로 위에 모은다 (STU-06 배치).
+        captions: list[QLabel] = []
+        facts = QFormLayout()
+        facts.setVerticalSpacing(SPACE_3)
+        facts.setHorizontalSpacing(SPACE_4)
+        for text, shown in (
+            ("id", self._fixed(process.id)),
+            ("폴더", self._path(process.folder.as_posix())),
+            ("학습 상태", self._fixed(learning(process))),
+        ):
+            caption = QLabel(text, self)
+            set_role(caption, "muted")
+            set_role(shown, "muted")
+            facts.addRow(caption, shown)
+            captions.append(caption)
+
+        # [F] 편집 칸 — 이름표는 한 줄 칸의 세로 가운데에 맞춘다 (설명은 첫 줄).
         form = QFormLayout()
-        form.addRow("id", self._fixed(process.id))
-        form.addRow("폴더", self._fixed(process.folder.as_posix()))
-        form.addRow("학습 상태", self._fixed(learning(process)))
-        form.addRow("이름", self.name_box)
-        form.addRow("버전", self.version_box)
-        form.addRow("설명", self.description_box)
-        form.addRow("담당자", self.owner_box)
-        form.addRow("태그 (쉼표)", self.tags_box)
-        form.addRow("실행 위치", self.location_box)
+        form.setVerticalSpacing(SPACE_3)
+        form.setHorizontalSpacing(SPACE_4)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        fields: tuple[tuple[str, QWidget], ...] = (
+            ("이름", self.name_box),
+            ("버전", self.version_box),
+            ("설명", self.description_box),
+            ("담당자", self.owner_box),
+            ("태그", self.tags_box),
+            ("실행 위치", self.location_box),
+        )
+        for text, field in fields:
+            caption = QLabel(text, self)
+            caption.setMinimumHeight(SIZE_CONTROL_MD)
+            caption.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            form.addRow(caption, field)
+            captions.append(caption)
+        # 두 묶음의 이름표 열을 같은 너비로 — 칸의 왼쪽 끝이 한 줄에 선다.
+        width = max(one.sizeHint().width() for one in captions)
+        for one in captions:
+            one.setMinimumWidth(width)
 
         #: 아래 한 줄 — 검사 오류와 안내를 여기로만 말한다 (STU-10과 같은 결).
         self.note = QLabel("", self)
         self.note.setWordWrap(True)
 
-        #: 단추 위 한 줄 — 「적용」이 어디로 가나 (STU-04 「적용」과 같은 말).
-        self.apply_note = QLabel(APPLY_NOTE if self._graph_open() else APPLY_NOTE_RECORD_ONLY, self)
-        self.apply_note.setWordWrap(True)
-        set_role(self.apply_note, "muted")
-
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Cancel, parent=self
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=self
         )
-        buttons.button(QDialogButtonBox.StandardButton.Apply).setText("적용")
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("적용")
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("취소")
-        buttons.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self.save)
+        dress_button_box(buttons)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
+        buttons.button(QDialogButtonBox.StandardButton.Ok).clicked.connect(self.save)
         buttons.rejected.connect(self.reject)
         self.buttons = buttons
 
@@ -235,15 +256,21 @@ class ProcessInfoDialog(QDialog):
         warning_row.addWidget(self.to_split)
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(SPACE_4, SPACE_4, SPACE_4, SPACE_4)
+        layout.setSpacing(SPACE_3)
+        layout.addLayout(facts)
+        layout.addWidget(self._rule())
         layout.addLayout(form)
         layout.addLayout(warning_row)
-        layout.addStretch(1)
         layout.addWidget(self.note)
-        layout.addWidget(self.apply_note)
+        layout.addWidget(self._rule())
         layout.addWidget(buttons)
 
         self._lock_graph_fields()
         self._refresh_warning()
+        self.note.setVisible(bool(self.note.text()))
+        # 창 높이는 내용에 맞춘다 — 남는 빈 곳을 두지 않는다 (STU-06 배치).
+        self.resize(DEFAULT_SIZE[0], self.sizeHint().height())
 
     # ── 짜기 ──
 
@@ -252,6 +279,20 @@ class ProcessInfoDialog(QDialog):
         found.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         found.setWordWrap(True)
         return found
+
+    def _path(self, text: str) -> QLabel:
+        """긴 경로는 가운데를 줄이고 툴팁이 전체다 (그래도 마우스로 고를 수 있다)."""
+        found = QLabel(self)
+        found.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        found.setToolTip(text)
+        room = DEFAULT_SIZE[0] - 2 * SPACE_4 - 120
+        found.setText(found.fontMetrics().elidedText(text, Qt.TextElideMode.ElideMiddle, room))
+        return found
+
+    def _rule(self) -> QFrame:
+        rule = QFrame(self)
+        rule.setObjectName("Rule")  # 토큰 색 가로선 (STU-01 「변수」 탭과 같은 것)
+        return rule
 
     def _graph_open(self) -> bool:
         return self.editable and self.entry is not None
@@ -332,6 +373,7 @@ class ProcessInfoDialog(QDialog):
         )
         if problem:
             self.note.setText(problem)
+            self.note.setVisible(True)
             self.note.setTextFormat(Qt.TextFormat.PlainText)
             return
 
@@ -351,6 +393,7 @@ class ProcessInfoDialog(QDialog):
             write_record(made)
         except (OSError, WorkspaceError) as e:
             self.note.setText(f"기록을 쓰지 못했습니다: {e}")
+            self.note.setVisible(True)
             return
 
         self.saved = made
@@ -376,8 +419,6 @@ __all__ = [
     "LOCATIONS",
     "NO_CANVAS",
     "NO_ENTRY",
-    "APPLY_NOTE",
-    "APPLY_NOTE_RECORD_ONLY",
     "NO_MEMORY",
     "TITLE",
     "ProcessInfoDialog",

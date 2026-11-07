@@ -81,6 +81,12 @@ class Settings:
     last_opened: str = ""
     #: STU-02 탐색기 목록에 올린 BPM 프로세스 id (올린 차례). 닫으면 빠진다.
     open_processes: tuple[str, ...] = ()
+    #: 목록에 올린 것 중 **기본 폴더 밖에서 제자리로 연** BPM 프로세스 폴더 (ADR-0131).
+    open_folders: tuple[str, ...] = ()
+    #: 파일 → 「최근 BPM 프로세스」 — BPM 프로세스 폴더 경로, 최근 것부터 (STU-01).
+    recent_processes: tuple[str, ...] = ()
+    #: STU-10 「일반」의 「기본 폴더」 — 새 BPM 프로세스가 만들어지는 자리. 비우면 `<data_dir>/workspace`.
+    workspace_root: str = ""
     #: STU-15에서 **사람이 꺼 둔** 확장 id ([ADR-0043](../../../../../docs/decisions/0043-turned-off-extensions.md)).
     #: **Studio의 것이다** — PC 실행기는 제 설정에 따로 둔다 (개발 도구의 실험이 현장 실행을 멈추지
     #: 않는다). 판은 적지 않는다 — 올려도 꺼 둔 채로 있는 것이 사람의 뜻이다.
@@ -95,9 +101,13 @@ class Settings:
         return dict(self.extensions.get(extension_id, {}))
 
     @property
-    def workspace_dir(self) -> Path:
-        """BPM 프로세스가 사는 곳 (STU-02 탐색기가 읽는다)."""
+    def default_workspace_dir(self) -> Path:
         return self.data_dir / "workspace"
+
+    @property
+    def workspace_dir(self) -> Path:
+        """새 BPM 프로세스가 만들어지는 기본 폴더 (ADR-0131 — 바깥 폴더는 제자리에서 연다)."""
+        return Path(self.workspace_root) if self.workspace_root else self.default_workspace_dir
 
     @property
     def outputs_dir(self) -> Path:
@@ -133,15 +143,15 @@ class Settings:
             "case_timeout_s": int,
             "last_opened": str,
             "theme": str,
+            "workspace_root": str,
         }
         values = {name: kind(raw[name]) for name, kind in known.items() if name in raw}
         for name in ("readable_dirs", "writable_dirs"):
             if name in raw:
                 values[name] = tuple(Path(p) for p in raw[name])
-        if isinstance(raw.get("open_processes"), list):
-            values["open_processes"] = tuple(
-                str(one) for one in raw["open_processes"] if isinstance(one, str) and one
-            )
+        for name in ("open_processes", "open_folders", "recent_processes"):
+            if isinstance(raw.get(name), list):
+                values[name] = tuple(str(one) for one in raw[name] if isinstance(one, str) and one)
         if isinstance(raw.get("disabled_extensions"), list):
             values["disabled_extensions"] = tuple(
                 str(one) for one in raw["disabled_extensions"] if isinstance(one, str) and one

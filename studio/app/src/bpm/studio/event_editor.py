@@ -199,6 +199,7 @@ class EventEditor(QWidget):
 
         self.timer_group = QGroupBox("타이머", self)
         form = QFormLayout(self.timer_group)
+        form.setVerticalSpacing(SPACE_3)
         _tight(form)
         form.addRow("값", self.timer_box)
         form.addRow("", self.timer_kind)
@@ -206,6 +207,7 @@ class EventEditor(QWidget):
 
         self.message_group = QGroupBox("메시지", self)
         form = QFormLayout(self.message_group)
+        form.setVerticalSpacing(SPACE_3)
         _tight(form)
         form.addRow("메시지 이름", self.message_box)
         form.addRow("", self.message_note)
@@ -215,12 +217,14 @@ class EventEditor(QWidget):
 
         self.signal_group = QGroupBox("신호", self)
         form = QFormLayout(self.signal_group)
+        form.setVerticalSpacing(SPACE_3)
         _tight(form)
         form.addRow("신호 이름", self.signal_box)
         form.addRow("", signal_note)
 
         self.error_group = QGroupBox("오류", self)
         form = QFormLayout(self.error_group)
+        form.setVerticalSpacing(SPACE_3)
         _tight(form)
         form.addRow("오류 코드", self.error_box)
         form.addRow("", error_note)

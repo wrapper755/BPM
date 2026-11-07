@@ -25,7 +25,6 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QLabel,
     QLineEdit,
-    QPlainTextEdit,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -35,12 +34,13 @@ from bpm.contracts.bpmn_ext import Defaults
 from bpm.qt.theme import set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
 from bpm.studio.ai_task_editor import CONFIRM_NOTE, FORBIDDEN_NOTE
+from bpm.studio.long_text import LongText
 
 #: 탭 이름.
 TAB_LABEL = "기본값"
 
 ELSEWHERE = (
-    "입력·출력은 아래 「변수」 탭, 실행 위치는 파일 → BPM 프로세스 정보(STU-06), "
+    "입력·출력은 아래 「변수」 탭, 실행 위치는 파일 → 프로세스 정보...(STU-06), "
     "외부 정의 고정은 확장 창(STU-15)에서 고칩니다."
 )
 TASK_WINS = (
@@ -62,7 +62,6 @@ class DefaultsEditor(QWidget):
         super().__init__(parent)
         self._loaded: dict[str, Any] = {}
         self._quiet = False
-        lines = self.fontMetrics().lineSpacing()
 
         self.max_steps_box = QSpinBox(self)
         self.max_steps_box.setRange(0, 500)
@@ -74,12 +73,10 @@ class DefaultsEditor(QWidget):
         self.timeout_box.setToolTip(
             "넘으면 업무 실패(TASK_FAILED)입니다 — 하던 호출은 끊지 않고 다음 일을 시작하기 전에 멈춥니다."
         )
-        self.forbidden_box = QPlainTextEdit(self)
+        self.forbidden_box = LongText("하지 않을 것", parent=self)
         self.forbidden_box.setPlaceholderText("예: 삭제 버튼을 누르지 않는다")
-        self.forbidden_box.setFixedHeight(lines * 4)
-        self.confirm_box = QPlainTextEdit(self)
+        self.confirm_box = LongText("멈추고 넘길 상황", parent=self)
         self.confirm_box.setPlaceholderText("예: 로그인 화면이 나타남")
-        self.confirm_box.setFixedHeight(lines * 4)
         self.app_box = QLineEdit(self)
         self.app_box.setPlaceholderText("앱 이름 (C14 `desktop.app`)")
         self.app_box.setToolTip("데스크톱 AI 태스크가 앱 이름을 적지 않았을 때 씁니다 (ADR-0033).")
@@ -93,6 +90,7 @@ class DefaultsEditor(QWidget):
 
         limits = QGroupBox("실행 제한", self)
         limits_form = QFormLayout(limits)
+        limits_form.setVerticalSpacing(SPACE_3)
         _tight(limits_form)
         limits_form.addRow("최대 단계", self.max_steps_box)
         limits_form.addRow("제한 시간(초)", self.timeout_box)
@@ -101,6 +99,7 @@ class DefaultsEditor(QWidget):
         column = QVBoxLayout(instructions)
         _tight(column)
         form = QFormLayout()
+        form.setVerticalSpacing(SPACE_3)
         form.setContentsMargins(0, 0, 0, 0)
         form.addRow("하지 않을 것", self.forbidden_box)
         form.addRow("", _muted(FORBIDDEN_NOTE, instructions))
@@ -111,6 +110,7 @@ class DefaultsEditor(QWidget):
 
         desktop = QGroupBox("데스크톱", self)
         desktop_form = QFormLayout(desktop)
+        desktop_form.setVerticalSpacing(SPACE_3)
         _tight(desktop_form)
         desktop_form.addRow("띄울 앱", self.app_box)
 
@@ -194,7 +194,7 @@ class DefaultsEditor(QWidget):
         self.problems()
 
 
-def _lines(box: QPlainTextEdit) -> list[str]:
+def _lines(box: LongText) -> list[str]:
     """줄마다 하나 — 빈 줄은 버린다."""
     return [line.strip() for line in box.toPlainText().splitlines() if line.strip()]
 

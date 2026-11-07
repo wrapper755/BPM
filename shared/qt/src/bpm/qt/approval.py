@@ -36,7 +36,9 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.approvals import Form, FormField, as_table, validate_answer
-from bpm.qt.theme import set_role
+from bpm.qt import markdown
+from bpm.qt.theme import dress_button_box, set_role
+from bpm.qt.theme.tokens import SPACE_3
 
 #: 확인(`confirmation`)은 업무 결재가 아니라 **실행 중 막힘**이다 (CMN-01 오른쪽 칸).
 CONFIRMATION = "confirmation"
@@ -126,8 +128,13 @@ class ApprovalDialog(QDialog):
         layout.addWidget(heading)
 
         if description:
-            said = QLabel(description, self)
+            # 결재 설명은 Markdown이다 (C14 「결재 설명」) — Studio 미리보기와 같은 함수로 그린다.
+            said = QLabel(markdown.to_html(description), self)
+            said.setTextFormat(Qt.TextFormat.RichText)
             said.setWordWrap(True)
+            said.setOpenExternalLinks(False)
+            said.linkActivated.connect(markdown.open_link)
+            self.description_label = said
             layout.addWidget(said)
 
         #: [R]의 표들 (시험이 본다).
@@ -172,6 +179,7 @@ class ApprovalDialog(QDialog):
 
     def _fields(self) -> QFormLayout:
         made = QFormLayout()
+        made.setVerticalSpacing(SPACE_3)
         for field in self.form.fields if self.form else []:
             widget = self._widget(field)
             self._widgets[field.key] = widget
@@ -218,6 +226,7 @@ class ApprovalDialog(QDialog):
             self.comment.setPlaceholderText("메모 (선택)")
         self.ok.clicked.connect(self.send)
         self.no.clicked.connect(self.refuse)
+        dress_button_box(box)  # 우리 아이콘·채운 단추 하나 (스타일 가이드 §6)
         return box
 
     # ── 답 ──
