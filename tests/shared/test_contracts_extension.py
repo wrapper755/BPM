@@ -201,6 +201,12 @@ def op_codes(**op_over: Any) -> list[str]:
     return codes(definition)
 
 
+def test_e3_an_adapter_operation_is_only_an_api_operation() -> None:
+    """일꾼 종류(ADR-0135) — 어댑터는 모델도 화면도 부르지 않는다."""
+    assert "adapter_invalid" not in op_codes(kind="api")
+    assert "adapter_invalid" in op_codes(kind="ai")
+
+
 def test_e3_requires_allowed_hosts() -> None:
     assert "adapter_invalid" in adapter_codes(allowed_hosts=[])
 

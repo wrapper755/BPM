@@ -175,6 +175,9 @@ class LockedTask(ContractModel):
     task_id: str
     topic: str
     operation: str
+    #: 일꾼 종류 (C11 `Operation.kind`, ADR-0135) — Center가 올릴 때 manifest에서 읽어 적는다.
+    #: 그 토픽의 manifest가 없을 때 올린 일감이면 비어 있다.
+    kind: str | None = None
     mode: str
     origin: str
     idempotency: Idempotency
@@ -240,6 +243,7 @@ class ExternalTaskInfo(ContractModel):
     task_id: str
     topic: str
     operation: str
+    kind: str | None = None  # 일꾼 종류 (`LockedTask.kind`와 같다)
     mode: str
     origin: str
     node_id: str

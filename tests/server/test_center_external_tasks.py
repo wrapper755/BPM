@@ -570,3 +570,29 @@ def test_a_failed_task_shows_its_code_but_not_its_words(center: TestClient, fiel
 def test_only_the_console_lists_a_runs_tasks(center: TestClient, field: str) -> None:
     assert center.get(f"/api/v1/external-tasks?run_id={RUN}", headers=bearer(field)).status_code == 403
     assert center.get("/api/v1/external-tasks", headers=ADMIN).status_code == 422
+
+
+def test_the_kind_comes_from_the_manifest_not_the_caller(center: TestClient, field: str) -> None:
+    """일꾼 종류(ADR-0135)는 Center가 manifest의 작업에서 읽어 일감에 적는다 — 올리는 쪽은 적지 않는다."""
+    first: dict[str, Any] = MANIFEST["operations"][0]  # type: ignore[index]
+    rpa = {**MANIFEST, "operations": [{**first, "kind": "rpa"}]}
+    token = consumer(center, manifest=rpa)
+    task_id = post(center, field).json()["task_id"]
+
+    got = fetch(center, token)["tasks"]
+    assert [(one["task_id"], one["kind"]) for one in got] == [(task_id, "rpa")]
+    listed = center.get(f"/api/v1/external-tasks?run_id={RUN}", headers=ADMIN).json()
+    assert [one["kind"] for one in listed] == ["rpa"]
+
+
+def test_an_operation_without_a_kind_is_an_ai_operation(center: TestClient, field: str) -> None:
+    token = consumer(center)
+    post(center, field)
+    assert [one["kind"] for one in fetch(center, token)["tasks"]] == ["ai"]
+
+
+def test_a_task_posted_before_any_manifest_has_no_kind(center: TestClient, field: str) -> None:
+    """아무 일꾼도 그 토픽의 manifest를 올리지 않았으면 종류를 모른다 — 지어내지 않는다."""
+    token = consumer(center, manifest=None)
+    post(center, field)
+    assert [one.get("kind") for one in fetch(center, token)["tasks"]] == [None]

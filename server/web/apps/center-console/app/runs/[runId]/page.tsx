@@ -5,7 +5,7 @@ import type { RunEvent } from "@bpm/api-types/c3-run-event";
 import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import type { ExternalTaskInfo } from "@bpm/api-types/c15-external-task-info";
 import { CenterError, center, session } from "@/lib/center";
-import { FINISHED, TASK_STATE, type ResumeRow, duration, resumes, taskPlace, waitTotals } from "@/lib/summary";
+import { FINISHED, TASK_KIND, TASK_STATE, type ResumeRow, duration, resumes, taskPlace, waitTotals } from "@/lib/summary";
 import { type NodeBar, type NodeRow, bars, llmSteps, timeline } from "@/lib/timeline";
 import { Shell } from "@/components/Shell";
 import { LABEL, loadOrgNames, seconds, time, where } from "../page";
@@ -267,6 +267,13 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
       key: "topic",
       header: "토픽",
       mono: true,
+    },
+    {
+      key: "kind",
+      header: "종류",
+      width: "6ch",
+      // 일꾼 종류 (C15 `kind`, ADR-0135) — 모르면 「—」, 모르는 값은 글자 그대로.
+      cell: (row) => (row.kind ? (TASK_KIND[row.kind] ?? row.kind) : "—"),
     },
     { key: "operation", header: "작업", mono: true },
     {

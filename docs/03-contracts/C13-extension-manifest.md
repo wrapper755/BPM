@@ -171,6 +171,7 @@ Operation:
 | `modes` | 허용 수행 모드. 외부 확장의 **기본값은 `["autonomous"]`.** 결정 수행에서 부르려면 `deterministic`을 명시해야 하고, 이것도 서명 대상이다 |
 | `server_ok` | 기본 true |
 | `idempotent` | 기본 **false**. false면 결과를 모르는 실패(시간 초과, 연결 끊김)를 자동으로 다시 부르지 않는다 |
+| `kind` | 일꾼 종류(C11). HTTP 어댑터 작업은 **기본 `api`**이고 다른 값을 적으면 검사 오류다(E3 — 어댑터는 모델도 화면도 부르지 않는다). 어댑터 일꾼이 manifest에 옮겨 싣는다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md)) |
 | `retry_on` | 요청이 처리되지 않았다는 뜻의 상태 코드 (예: `[429, 503]`). 이것만 다시 부른다 |
 | `input_schema`, `output_schema` | JSON Schema (STU-14 자동 폼) |
 | `request` | `{method, path, query?, headers?, body?}` |
@@ -297,6 +298,7 @@ Studio 「확장」(STU-15)의 「정의 파일 열기...」는 E1·E3을 로컬
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-08 | 2 | HTTP 어댑터 작업의 `kind`는 `api`다(기본, 다른 값은 검사 오류) — 선택 칸이라 schema는 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 2 | 외부 확장 등록은 **그 토픽의 일꾼이 정의를 올리는 것**이다(C15 `PUT …/self/extension`) — `POST/DELETE /resources/extensions`를 걷었다. 맡은 일꾼이 일꾼 폴더에서 빠지면 Center가 거둔다. 낮은 판은 409 `older_than_registered`. 정의 모양은 그대로다 | [0122](../decisions/0122-consumer-folder.md) |
 | 2026-10-31 | 2 | 기여 지점 `tool_ui.tools`·`bot_ui.panels`·`bot_ui.local_runtimes`·`agent_environments`, **E8**, 예약 키 `runtime.<id>.*`, `scope: tool_ui`, `requires_keys[].purpose: utility`를 걷었다 — UI 자동화 확장과 함께. 걷은 열쇠는 호스트가 경고하고 읽지 않는다(`LEGACY_CONTRIBUTION_KEYS`), E7은 옛 머리도 막는다. 열쇠가 모두 선택이라 schema는 그대로이고 `extension_api`는 **2.0.0**이다(이름을 지웠다 — 예시의 `api`는 `>=2,<3`) | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-30 | 2 | 수행기가 전환할 때 **사람에게 보일 검토 자료**(`TaskFailed(review=…)`)를 넘긴다 — `extension_api` **1.5**. 정의는 그대로다 | [0112](../decisions/0112-escalation-review-from-extensions.md) |

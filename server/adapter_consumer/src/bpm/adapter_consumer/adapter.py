@@ -67,6 +67,7 @@ def manifest_of(definition: ExtensionManifest) -> ServiceAppManifest:
             input_schema=one.input_schema,
             output_schema=one.output_schema,
             server_ok=one.server_ok,
+            kind=one.kind,
         )
         for one in (adapter.operations if adapter is not None else [])
     ]

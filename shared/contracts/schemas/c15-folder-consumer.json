@@ -54,6 +54,11 @@
           "default": null,
           "title": "Input Schema"
         },
+        "kind": {
+          "default": "ai",
+          "title": "Kind",
+          "type": "string"
+        },
         "modes": {
           "items": {
             "type": "string"

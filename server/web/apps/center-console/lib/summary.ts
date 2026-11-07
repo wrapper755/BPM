@@ -495,6 +495,13 @@ export const TASK_STATE: Record<string, string> = {
   cancelled: "거둠",
 };
 
+/** C15 일꾼 종류 → 「종류」 칸 (ADR-0135). **열린 문자열**이라 모르는 값은 그대로 보인다. */
+export const TASK_KIND: Record<string, string> = {
+  ai: "AI",
+  api: "API",
+  rpa: "RPA",
+};
+
 /**
  * 「노드」 칸 — 반복 안이면 「#<차례>」, 다시 부른 것이면 「(<n>번째)」를 붙인다 (화면 문서).
  * 첫 차례·첫 시도는 붙이지 않는다 (모든 줄에 「#1」이 서면 읽을 것이 늘 뿐이다).

@@ -288,6 +288,25 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 | 이정표 | `intermediateThrowEvent`에 **이벤트 정의를 두지 않는다** | 지나가기만 하면서 실행 기록에 `node_state`(`task_type: milestone`)를 남긴다. 「어디까지 왔는지」를 콘솔·Studio가 이것으로 보인다. 노드 `name`이 이정표 이름이다 (id 접두어 `Ms_`) |
 | 오류 경계 | `errorRef` → `bpmn:error errorCode` | 표준 코드: `TASK_FAILED`(AI·확장·서비스 앱 태스크 실패. **서비스 호출이 결과를 모르는 실패**(C15 `outcome_unknown`)면 PC 실행은 이 경계를 이름으로 달아 둔 경우에만 바로 여기로 오고, 달지 않았으면 현장 확인으로 멈춘다 — 「계속」은 `attempt`를 올려 다시 부르고 「중단」이 이 코드의 업무 실패다, [ADR-0107](../decisions/0107-outcome-unknown-asks-a-person.md). 서버는 늘 이 경계다), `SEND_FAILED`(메일·웹훅), `ESCALATED`(UI 태스크 전환 — 확장의 `escalate: confirmation` — 과 AI 태스크의 확인 트리거를 흐름으로 받을 때. **PC 실행에서는 이 경계를 이름으로 달아 둔 경우에만 여기로 오고**, 달지 않았으면 그 자리에서 현장 확인(CMN-01)으로 멈춘다 — 「계속」은 다시 하지 않고 결과 없이 넘어가고 「중단」이 이 코드의 업무 실패다(코드 없는 경계가 받는다, [ADR-0106](../decisions/0106-pc-escalation-asks-a-person.md)). 서버는 늘 이 경계다), `APPROVAL_WITHDRAWN`·`APPROVAL_EXPIRED`(Center 결재가 답 없이 끝남 — 관리자 회수·만료, C6·[ADR-0038](../decisions/0038-approval-request-channel.md)), `DELEGATION_FAILED`(PC 위임이 실패·거절됨, [ADR-0062](../decisions/0062-pc-delegation.md)). 오류 경로에는 `error_code`, `error_message`, `failed_task` 변수가 생긴다 |
 | 조건 시작 | `conditionalEventDefinition` | **schema 1에서 쓰지 않는다** (프로토타입의 폴더 감시). 외부 시스템 메시지나 타이머로 바꾼다 |
+| 보상 경계·보상 던지기 | `compensateEventDefinition` | 아래 「보상」. **구현 전**(조각 5) — 엔진·검사가 아직 이 요소를 모르니 쓰지 않는다 |
+
+### 보상
+
+> 상태: **합의** — 조각 5에서 엔진·검사·예제와 함께 구현한다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) §4). 구현 전에는 엔진·검사가 아래 요소를 모른다 — 쓰지 않는다.
+
+**보상**은 끝난 활동의 일을 되돌리는 것이다. 오류 경계가 「어디로 갈지」를 정한다면 보상은 「무엇을 되돌릴지」를 정한다. 그래서 장애를 되돌리는 그림은 **오류 경계 → 보상 던지기 종료 이벤트**가 된다.
+
+| 요소 | 쓰는 법 |
+| --- | --- |
+| 보상 경계 | 활동에 `boundaryEvent` + `compensateEventDefinition`. 흐름을 내지 않고 **연관(`association`) 하나**로 보상 처리기를 잇는다 |
+| 보상 처리기 | `isForCompensation="true"`인 활동(서비스 태스크·스크립트·하위 프로세스 …). **흐름을 받거나 내지 않는다.** 서비스 태스크면 C15 일감이 되고 멱등 키의 `node_id`는 처리기 노드다 |
+| 보상 던지기 | `intermediateThrowEvent`·`endEvent` + `compensateEventDefinition`. `activityRef`가 없으면 같은 범위 전부, 있으면 그 활동만 |
+
+- 던지기가 울리면 엔진은 **같은 범위**(그 BPM 프로세스 또는 하위 프로세스)에서 **끝난** 활동 중 보상 경계가 달린 것을 **끝난 순서의 거꾸로** 하나씩 돌린다. 시작했지만 끝나지 않은 활동, 이미 보상한 활동은 돌리지 않는다. 반복 안의 활동은 끝난 차례마다 한 번씩이다.
+- 처리기는 **그 활동이 끝났을 때의 변수**가 아니라 지금 변수를 본다(엔진의 변수 공간은 하나다). 되돌릴 값이 필요하면 그 활동의 출력 변수로 남겨 둔다.
+- 던지기는 보상이 모두 끝난 뒤 다음으로 간다(종료 이벤트면 거기서 끝난다). **처리기가 실패하면 업무 실패**다 — 그 던지기를 둔 범위의 오류 경계가 받고, 남은 보상은 돌리지 않는다.
+- 되살리기: 보상을 어디까지 돌렸는지를 실행 상태에 적는다. 다시 뜨면 남은 것부터 돈다. 실행 기록에는 처리기의 `node_state`가 `compensating`·`compensated`로 남는다.
+- 검사: 보상 처리기에 흐름이 있으면, 보상 경계에 연관이 없거나 둘 이상이면, `activityRef`가 같은 범위의 보상 경계 달린 활동이 아니면 **오류**다(새 규칙 번호는 구현 때 매긴다).
 
 ## 시험 케이스 형식 (Studio, 패키지에 넣지 않음)
 
@@ -397,6 +416,7 @@ B11은 **어림**이다. 식에서 변수를 이름으로 뽑되 문자열 상�
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-08 | 1 | 「보상」(보상 경계·처리기·던지기)을 **합의**로 적었다 — 표준 BPMN 요소라 schema는 그대로다. 구현·검사 번호는 조각 5 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-11-01 | 1 | **가상 직원을 없앴다** — 값 출처 `virtual_worker.id`·`.name`·`.supervisors`를 걷고 `company.*`·`department.*`·`staff.*`를 더했다(C16). B16은 Studio 경고로만 남는다 | [0125](../decisions/0125-organization-and-work-placement.md) |
 | 2026-10-31 | 1 | UI 태스크(`bpm:task type="ui_task"`) 줄과 B12의 UI 스텝 동작 대조를 걷었다 — UI 자동화 확장이 없다. `domain`의 `web`·`desktop`은 낱말로 남고 사전 점검 `missing_agent_environment`·엔진 `node_kind_unsupported`로 돌지 않는다. B6은 그대로다. 형식(그림)은 그대로다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-30 | 1 | 타이머 시작의 「일정이 읽는다」를 **Center**로 고쳐 적었다 — 서버 실행기·Bot UI에는 그 코드가 없었고 일정은 Center가 쥔다. 식의 문법(`L`·ISO 시작 생략)을 적었다. 그림은 그대로다 | [0110](../decisions/0110-center-keeps-the-schedule.md) |

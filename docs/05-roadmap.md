@@ -20,6 +20,7 @@
 | M7 | 서버 실행 | **끝** | 서버 실행기, 서버 BPM 프로세스 동시 실행, 상태 저장·재개, PC 위임, CON-12 | M6 |
 | M8 | 건넬 수 있게, 고칠 수 있게 | **진행 중** (남은 둘은 현장 PC 사람 몫) | Windows 설치 파일(빌드·CI 산출물·자동 시작·판 올리기), Center 저장소 옮기기 수단 | M7 |
 | M9 | 바깥 기능은 Pull로 | **끝** (조각 1~6과 C14·C1의 옛 키 칸 — ADR-0102·0103) | C15 외부 작업, 일꾼이 된 서비스 앱, 어댑터 일꾼, 주소·키 칸 없는 CON-07 | M7 |
+| M10 | 세 기둥 — AI 작업·외부 작업·통합 일꾼 | **진행 중** (조각 1·2 끝 — ADR-0135) | 일꾼 종류 칸, 통합 일꾼과 AI 작업 뼈대, 보상, 일꾼 콘솔. 업무 처리기는 Company1로 | M9 |
 
 ## M0. 문서 기준선
 
@@ -187,6 +188,21 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 조각 5 — **화면**: CON-07(주소·키 칸 → 일꾼 승인·토픽 상태), STU-10 — 화면 문서를 먼저 고친다 — **된다**: CON-07은 기능 목록·일꾼 승인 대기·토픽 표, STU-10에 서비스 앱 키 칸이 없고, CON-02의 「서비스 앱 키 참조」 열도 걷었다
 - [x] 조각 6 — **긴 작업**: 서버 실행기가 외부 작업을 기다리는 동안 스레드를 놓는다 (다섯째 기다림) — **돈다** ([ADR-0103](decisions/0103-long-external-tasks.md)): 한 번 기다려 끝나지 않으면 `external_task`로 멈추고 결과는 하트비트 주기마다 묻는다. M7 묶음이 서비스 호출 예제 넷을 **모든 호출을 넘긴 채로** 끝까지 돌린다
 - [x] 옛 키 칸 — C14 `bpm:serviceCall.key_ref`·`bpm:process.service_keys`, C1 `requires.service_apps[].key_ref`·`task_key_refs`·R4를 걷었다. 예제 생성기가 더 적지 않고(`key_ref`를 적으면 거부한다), 옛 파일은 모르는 칸으로 읽어 **B7이 경고 한 줄**로 말한다. 판은 올리지 않았다(선택 칸 — 원칙 3) — `tests/shared/test_contracts_bpmn_ext.py`·`test_contracts.py`
+
+## M10. 세 기둥 — AI 작업·외부 작업·통합 일꾼
+
+> 상태: **진행 중** — 조각 1·2가 끝났고 다음은 조각 3(통합 일꾼). [ADR-0135](decisions/0135-agentic-automation-and-unified-consumer.md)
+> 에이전틱 자동화(AI 작업)·External Task(외부 작업, C15)·하이브리드 자동화(통합 일꾼 + 보상)를 BPM의 이름 붙은 기능으로 세우고,
+> NowView의 일반 부분(일꾼 호스트·Agent 검증·대시보드의 일반 부분)은 통합 일꾼과 일꾼 콘솔로 들이고, 장면 코드는 Company1 저장소의
+> 업무 처리기로 보낸다 — **이 저장소에는 회사 업무 코드가 들어오지 않는다.** 그 뒤 NowView는 걷는다.
+
+- [x] 조각 1 — **문서**: ADR-0135, 용어집, C11·C13·C15 `kind`·C11 「AI 작업」, C14 「보상」(합의), 09-gaps §3-30 — **됐다**
+- [x] 조각 2 — **일꾼 종류 칸** — **됐다**: 계약 모델(`Operation.kind`·`AdapterOperation.kind`(E3)·`LockedTask`·`ExternalTaskInfo`), Center 24판(`external_tasks.kind` — 올릴 때 manifest에서), 어댑터 일꾼 manifest, CON-01 「종류」 열 — `tests/server/test_center_external_tasks.py`
+- [ ] 조각 3 — **통합 일꾼** `server/unified_consumer`: 업무 처리기 찾기, 종류 셋(`rpa`는 시험용 가짜), 어댑터 일꾼을 그 위로. 기능 예제 하나(세 종류)
+- [ ] 조각 4 — **AI 작업 뼈대** `bpm.unified_consumer.ai`: 지식 원천, 러너 셋(`mock`·`llm`·`fail`), 검증, provenance
+- [ ] 조각 5 — **보상**: C14 「구현됨」, 엔진, C14 검사, 예제(오류 경계 → 보상 던지기), M7 묶음
+- [ ] 조각 6 — **일꾼 콘솔** `consumer-console`(어느 회사든 같은 것만), 통합 일꾼 배포 묶음
+- [ ] 조각 7 — **Company1 저장소에서**: 장면 코드를 업무 처리기로 옮기고 BPM 패키지에 고정, NowView 걷기 (운영 반영은 따로 묻는다)
 
 ## 나중에 (범위 밖, 기록만)
 

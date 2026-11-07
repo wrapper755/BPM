@@ -70,9 +70,21 @@
 | `input_schema` / `output_schema` | JSON Schema | STU-14 입력·출력 표의 원본 |
 | `timeout_s` | int | 기본 60 |
 | `server_ok` | bool | 서버 실행기에서 불러도 되는가 (기본 true. 현장 PC에서만 의미 있는 작업은 false) |
+| `kind` | `ai` \| `api` \| `rpa` | **일꾼 종류** — 이 작업이 어떤 일인가 (기본 `ai`). `ai`는 **AI 작업**(모델을 부르고 출력을 검증한다, 아래 「AI 작업」), `api`는 외부 시스템 API 호출, `rpa`는 화면 조작(**자리만** — 지금 처리하는 일꾼이 없다). Center가 일감에 붙여 보인다(C15). 흐름·권한은 바꾸지 않는다 — 토픽은 그대로 앱 id다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md)). 열린 문자열이다 |
 | `required_scopes` | str[] | 이 작업을 부르려면 부르는 쪽에 켜져 있어야 하는 **추가 권한**. 비어 있으면 「불러도 되나」(C15)를 지난 누구나. **지금 Center에는 추가 권한을 켜 줄 길이 없다** — 적은 작업은 아무도 올리지 못하고 C15 올리기가 403 `scope_missing`이다 ([ADR-0114](../decisions/0114-remove-ui-automation.md)) |
 
 **추가 권한은 작업이 선언하고 Center가 건다** (C15 §올리기) — 일꾼·작업 함수는 부른 쪽을 들여다보지 않는다. 없으면 403 `scope_missing`.
+
+### AI 작업 (`kind: ai`)
+
+> 상태: **합의** — 조각 4(`bpm.unified_consumer.ai`)에서 구현한다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) §3).
+
+`kind: ai`인 작업은 **결정 수행에서도 모델을 부른다**. 작업 정의가 그 사실을 드러내므로 「몰래」가 아니다. 대신 아래를 지킨다.
+
+- **출력에 `provenance`를 싣는다** — `{agent_id, agent_version, execution_id, model_called, prompt_version}`. `model_called`는 이번 수행에서 모델을 실제로 불렀는가다(결정론 러너·저장된 결과면 false).
+- **검증을 지난 응답만 낸다** — 출력 스키마, 근거 id가 그 수행에서 찾은 지식에 있는가, 본문의 숫자가 입력·도구 결과와 맞는가. 어긋나면 그 응답을 버리고, 정해진 횟수만큼 다시 묻고, 그래도 안 되면 실패한다(`retryable: false`). **자율 수행 폴백은 없다**(`fallback`과 상관없다).
+- **숫자를 만들지 않는다** — 계산은 처리기·도구가 하고 모델은 인용한다.
+- 게이트웨이가 읽을 결정은 `output_schema`의 칸(권하는 이름 `decision`)으로 낸다.
 
 ### OpRequest (가져간 일감 → 작업 함수)
 
@@ -177,6 +189,7 @@ AdminStatus:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-08 | 1 | 작업에 **일꾼 종류** `kind`(`ai`·`api`·`rpa`, 기본 `ai` — 구현됨)와 「AI 작업」 규칙(provenance·검증·폴백 없음 — 합의, 조각 4)을 더했다. 선택 칸이라 판은 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 1 | 칸은 그대로다. `caller.type`의 아는 값에서 `worker`·`tool_ui`를 뺐고, `required_scopes`를 켜 줄 길(PC의 「셀렉터 등록」)이 없어졌다고 적었다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-29 | 1 | **앱이 일꾼이 된다** — `POST /v1/ops`·`/manifest`·앱 안의 키(`/v1/keys/self`·`/center/v1/keys`·`/center/v1/trust`)·관리 API의 키 발급을 걷고 C15 가져가기로 같은 작업을 수행한다. 폴백은 시험 일감일 때만, 추가 권한은 Center가 건다, 카탈로그는 일꾼이 올린다 | [0102](../decisions/0102-calling-outside-is-pull.md) |
 | 2026-10-25 | 1 | §Center가 발급하는 키 — `CENTER__URL`, `GET /center/v1/trust`, `POST /center/v1/keys`(C2 봉투 `service_key`, 해시만), 키 레코드 `issued_by`·`center_key_id`·`issued_for`. 새 경로·선택 칸이라 옛 부르는 쪽은 그대로다 | [0094](../decisions/0094-service-app-keys-ride-the-deployment.md) |

@@ -218,8 +218,9 @@ def _bot_requires(store: Store, poster: Poster, *, bot: str | None, version: str
     return topic in wanted
 
 
-def _authorize(store: Store, poster: Poster, task: ExternalTaskCreate) -> int:
-    """「불러도 되나」 (C15 §올리기 표). 통과하면 기한(초)을 돌려준다."""
+def _authorize(store: Store, poster: Poster, task: ExternalTaskCreate) -> tuple[int, str | None]:
+    """「불러도 되나」 (C15 §올리기 표). 통과하면 `(기한(초), 일꾼 종류)`를 돌려준다 — 종류는 manifest가
+    없으면(아직 아무 일꾼도 그 토픽을 올리지 않았다) 모른다."""
     run_id = task.idempotency.run_id
     if poster.kind == STUDIO:
         if not run_id.startswith(TEST_RUN_PREFIX):
@@ -240,6 +241,7 @@ def _authorize(store: Store, poster: Poster, task: ExternalTaskCreate) -> int:
             )
     manifest = _topic_manifest(store, task.topic)
     timeout = task.timeout_s
+    kind: str | None = None
     if manifest is not None:
         operation = manifest.operation(task.operation)
         if operation is None:
@@ -253,7 +255,8 @@ def _authorize(store: Store, poster: Poster, task: ExternalTaskCreate) -> int:
                 {"scopes": sorted(operation.required_scopes)},
             )
         timeout = timeout or operation.timeout_s
-    return timeout or DEFAULT_TIMEOUT_S
+        kind = operation.kind
+    return timeout or DEFAULT_TIMEOUT_S, kind
 
 
 def create(
@@ -284,20 +287,21 @@ def create(
             raise ApiError(409, "idempotency_conflict", "같은 멱등 칸에 다른 본문이다", {"task_id": task_id})
         if existing["acked_at"] is None:
             return ExternalTaskCreated(task_id=task_id, state=str(existing["state"])), False
-    timeout = _authorize(store, poster, task)
+    timeout, kind = _authorize(store, poster, task)
     with store.tx() as cur:
         if existing is not None:
             # **받아 간 뒤에 다시 올렸다** — 값은 이미 지웠으니 옛 일감을 돌려주면 빈 결과다. 다시 줄에
             # 세운다: 일꾼이 멱등 칸으로 저장해 둔 결과를 다시 준다 (C15 「최소 한 번」).
             cur.execute("DELETE FROM external_tasks WHERE task_id = ?", (task_id,))
         cur.execute(
-            "INSERT INTO external_tasks (task_id, topic, operation, mode, origin, idempotency_json, caller_json,"
-            " business_key, body_hash, poster_key_id, want_result, input_json, state, created_at, deadline)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO external_tasks (task_id, topic, operation, kind, mode, origin, idempotency_json,"
+            " caller_json, business_key, body_hash, poster_key_id, want_result, input_json, state, created_at,"
+            " deadline) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 task_id,
                 task.topic,
                 task.operation,
+                kind,
                 task.mode,
                 task.origin,
                 dumps(task.idempotency.to_json_dict()),
@@ -428,6 +432,7 @@ def _locked_task(row: Any) -> LockedTask:
         task_id=row["task_id"],
         topic=row["topic"],
         operation=row["operation"],
+        kind=row["kind"],
         mode=row["mode"],
         origin=row["origin"],
         idempotency=loads(row["idempotency_json"]),
@@ -695,6 +700,7 @@ def for_run(store: Store, *, run_id: str) -> list[ExternalTaskInfo]:
                 task_id=str(row["task_id"]),
                 topic=str(row["topic"]),
                 operation=str(row["operation"]),
+                kind=row["kind"],
                 mode=str(row["mode"]),
                 origin=str(row["origin"]),
                 node_id=str(key.get("node_id", "")),

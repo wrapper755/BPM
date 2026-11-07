@@ -108,7 +108,9 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 응답 `{tasks: [LockedTask], rotated_token?: str}`. 일감이 없으면 `wait_s`까지 물고 있다가 빈 목록을 준다.
 
-`LockedTask`: `task_id`·`topic`·`operation`·`mode`·`origin`·`idempotency`·`caller`·`business_key`·`input`·`lock_until`·`deadline`·`delivery`(몇 번째로 나가는가, 1부터).
+`LockedTask`: `task_id`·`topic`·`operation`·`kind`·`mode`·`origin`·`idempotency`·`caller`·`business_key`·`input`·`lock_until`·`deadline`·`delivery`(몇 번째로 나가는가, 1부터).
+
+- `kind`(`ai`·`api`·`rpa`)는 **일꾼 종류**다 — Center가 올릴 때 manifest의 작업에서 읽어 일감에 적는다(부르는 쪽이 지어내지 않는다, 올리기 본문에 없다). 가져가기를 종류로 거르지는 않는다 — 토픽이 이미 일꾼을 가른다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md)). 그 토픽의 manifest가 아직 없을 때 올린 일감이면 비어 있다(지어내지 않는다). Center 저장소 24판의 `external_tasks.kind`에 둔다.
 
 - 한 일감은 한 번에 **한 일꾼**에게만 잠긴다. 잠금 시간은 `lock_s`(기본 = 작업 `timeout_s`)이고 `deadline`을 넘지 않는다.
 - 잠금이 지나면 일감은 `pending`으로 돌아가 다른 일꾼(또는 같은 일꾼)에게 다시 나간다.
@@ -130,6 +132,7 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 | 필드 | 뜻 |
 | --- | --- |
 | `task_id`, `topic`, `operation`, `mode`, `origin` | 올릴 때의 것 |
+| `kind` | 일꾼 종류 (`LockedTask`와 같다). CON-01 「종류」 열 |
 | `node_id`, `node_instance`, `attempt`, `call_seq` | 멱등 칸 — 어느 노드의 몇 번째 차례·몇 번째 시도인가 |
 | `state` | 위 상태 (`pending`·`locked`·`completed`·`failed`·`expired`·`cancelled` — 열린 문자열) |
 | `created_at`, `finished_at`?, `acked_at`? | 올린 때·끝난 때·부른 쪽이 받은 때 |
@@ -255,6 +258,7 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-08 | 1 | `LockedTask`·`ExternalTaskInfo`에 **`kind`**(일꾼 종류 — Center가 manifest에서 붙인다). 받는 쪽은 모르는 칸을 무시하므로 판은 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 1 | **일꾼은 일꾼 폴더로만 들어온다** — `<이름>.consumer.json`(`FolderConsumer`, 토큰 해시), 토픽 고정, 만료·회전 없음. `POST /consumers/enroll`·`ConsumerEnrollRequest`를 걷었다. **외부 확장 정의는 일꾼이 올린다** — `PUT /consumers/self/extension` | [0122](../decisions/0122-consumer-folder.md) |
 | 2026-10-31 | 1 | **등록 세션(`reg_…`)과 거절 `registration_off`를 걷었다** — 셀렉터 등록 도구(Tool UI)와 「셀렉터 등록」 스위치가 없다. 부르는 쪽은 서버 실행기·실행 프로세스·Studio 셋이다. `required_scopes`를 적은 작업은 켜 줄 길이 없어 `scope_missing`이다. 경로·모양은 그대로다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-30 | 1 | **`GET /external-tasks?run_id=`**(콘솔 토큰, `ExternalTaskInfo[]`) — CON-01 「외부 작업」이 일감이 어디서 멈췄는지(기다림·일꾼이 쥠·다시 나감)를 본다. 값·오류 글은 싣지 않는다. 새 엔드포인트라 옛 쪽은 영향이 없다 | [0102](../decisions/0102-calling-outside-is-pull.md) |
