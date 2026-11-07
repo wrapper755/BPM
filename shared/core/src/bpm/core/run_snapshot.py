@@ -35,13 +35,23 @@ from bpm.contracts.bpmn_ext import BpmnProcess
 from bpm.contracts.replay import ReplaySpec
 from bpm.core.helpers import bind
 from bpm.core.run_log import RunLog
-from bpm.core.run_state import LoopState, Pending, Run, RunEnv, State, Token, Waiting
+from bpm.core.run_state import (
+    Compensable,
+    Compensation,
+    LoopState,
+    Pending,
+    Run,
+    RunEnv,
+    State,
+    Token,
+    Waiting,
+)
 
 #: 저장소에 글로 가는 칸.
 STORED = (
     "variables", "state", "tokens", "last_token_id", "pendings", "arrivals", "expected",
     "waits", "children", "nested", "mode", "executor", "version", "bpm_process_id", "started",
-    "instances", "call_seqs", "learned",
+    "instances", "call_seqs", "learned", "compensable",
 )
 #: 되살릴 때 **밖에서 다시 꽂는** 칸.
 REPLUGGED = ("process", "log", "env", "helpers")
@@ -79,14 +89,18 @@ def dump_token(token: Token) -> dict[str, Any]:
     }
     if token.loop is not None:
         out["loop"] = dataclasses.asdict(token.loop)
+    if token.compensation is not None:
+        out["compensation"] = dataclasses.asdict(token.compensation)
     return out
 
 
 def load_token(data: dict[str, Any]) -> Token:
     loop = data.get("loop")
+    compensation = data.get("compensation")
     return Token(
         id=data["id"], node_id=data["node_id"], scope=tuple(data["scope"]),
         waiting_for=data["waiting_for"], loop=LoopState(**loop) if loop else None,
+        compensation=Compensation(**compensation) if compensation else None,
     )
 
 
@@ -134,6 +148,7 @@ def dump(run: Run) -> dict[str, Any]:
         "instances": dict(run.instances),
         "call_seqs": dict(run.call_seqs),
         "learned": [s.model_dump(mode="json") for s in run.learned],
+        "compensable": [{**dataclasses.asdict(c), "scope": list(c.scope)} for c in run.compensable],
         # 되살릴 때 **그 그림이 맞나** 보는 거리 (판이 다른 패키지로 이어 가지 않는다).
         "process_id": run.process.id,
     }
@@ -174,6 +189,11 @@ def restore(data: dict[str, Any], *, process: BpmnProcess, log: RunLog, env: Run
         instances=dict(data["instances"]),
         call_seqs=dict(data["call_seqs"]),
         learned=[ReplaySpec.model_validate(s) for s in data["learned"]],
+        # ADR-0135 전에 담은 스냅샷에는 없다 — 그러면 되돌릴 것이 없다.
+        compensable=[
+            Compensable(node_id=c["node_id"], scope=tuple(c["scope"]), compensated=c["compensated"])
+            for c in data.get("compensable", [])
+        ],
         # **날짜 도우미는 실행 시작 시각에 묶인다** — 되살릴 때 「지금」으로 묶으면
         # `오늘()`·`지난달()`이 다른 답을 낸다 (`core.helpers.bind`).
         helpers=bind(now=started),

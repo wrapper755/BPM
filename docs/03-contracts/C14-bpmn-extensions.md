@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **구현됨** (2026-10-12). 모델·BPMN 읽기·검사 B1~B16, DMN 읽기·판정이 `contracts.bpmn_ext`·`contracts.dmn`에 있고 **쓰는 쪽이 셋**이다 — 엔진이 `bpm:*`를 수행하고(`core.nodes`), Studio가 그 모델로 편집·검사하고(STU-04·실행 전 검사), 업무 예제 48개가 이 형식으로 쓰여 시험이 읽고 검사한다. schema 1에서 **쓰지 않기로 적은 것**(조건 시작 이벤트, 경계 타이머 반복)은 범위 결정이고 빠진 구현이 아니다 |
+| 상태 | **구현됨** (2026-10-12). 모델·BPMN 읽기·검사 B1~B17, DMN 읽기·판정이 `contracts.bpmn_ext`·`contracts.dmn`에 있고 **쓰는 쪽이 셋**이다 — 엔진이 `bpm:*`를 수행하고(`core.nodes`), Studio가 그 모델로 편집·검사하고(STU-04·실행 전 검사), 업무 예제 48개가 이 형식으로 쓰여 시험이 읽고 검사한다. schema 1에서 **쓰지 않기로 적은 것**(조건 시작 이벤트, 경계 타이머 반복)은 범위 결정이고 빠진 구현이 아니다 |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | Studio(쓰기) → 패키지(C1 `process/*.bpmn`) → 실행기·서버 실행기(읽기·실행), Center(검사) |
 | 코드 위치 | `bpm.contracts.bpmn_ext` — 모델·`read_process()`·`validate()`. DMN 읽기·판정은 `bpm.contracts.dmn`. 확장 태스크의 속 내용은 각 확장의 `contracts/` |
@@ -288,11 +288,11 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 | 이정표 | `intermediateThrowEvent`에 **이벤트 정의를 두지 않는다** | 지나가기만 하면서 실행 기록에 `node_state`(`task_type: milestone`)를 남긴다. 「어디까지 왔는지」를 콘솔·Studio가 이것으로 보인다. 노드 `name`이 이정표 이름이다 (id 접두어 `Ms_`) |
 | 오류 경계 | `errorRef` → `bpmn:error errorCode` | 표준 코드: `TASK_FAILED`(AI·확장·서비스 앱 태스크 실패. **서비스 호출이 결과를 모르는 실패**(C15 `outcome_unknown`)면 PC 실행은 이 경계를 이름으로 달아 둔 경우에만 바로 여기로 오고, 달지 않았으면 현장 확인으로 멈춘다 — 「계속」은 `attempt`를 올려 다시 부르고 「중단」이 이 코드의 업무 실패다, [ADR-0107](../decisions/0107-outcome-unknown-asks-a-person.md). 서버는 늘 이 경계다), `SEND_FAILED`(메일·웹훅), `ESCALATED`(UI 태스크 전환 — 확장의 `escalate: confirmation` — 과 AI 태스크의 확인 트리거를 흐름으로 받을 때. **PC 실행에서는 이 경계를 이름으로 달아 둔 경우에만 여기로 오고**, 달지 않았으면 그 자리에서 현장 확인(CMN-01)으로 멈춘다 — 「계속」은 다시 하지 않고 결과 없이 넘어가고 「중단」이 이 코드의 업무 실패다(코드 없는 경계가 받는다, [ADR-0106](../decisions/0106-pc-escalation-asks-a-person.md)). 서버는 늘 이 경계다), `APPROVAL_WITHDRAWN`·`APPROVAL_EXPIRED`(Center 결재가 답 없이 끝남 — 관리자 회수·만료, C6·[ADR-0038](../decisions/0038-approval-request-channel.md)), `DELEGATION_FAILED`(PC 위임이 실패·거절됨, [ADR-0062](../decisions/0062-pc-delegation.md)). 오류 경로에는 `error_code`, `error_message`, `failed_task` 변수가 생긴다 |
 | 조건 시작 | `conditionalEventDefinition` | **schema 1에서 쓰지 않는다** (프로토타입의 폴더 감시). 외부 시스템 메시지나 타이머로 바꾼다 |
-| 보상 경계·보상 던지기 | `compensateEventDefinition` | 아래 「보상」. **구현 전**(조각 5) — 엔진·검사가 아직 이 요소를 모르니 쓰지 않는다 |
+| 보상 경계·보상 던지기 | `compensateEventDefinition` | 아래 「보상」 |
 
 ### 보상
 
-> 상태: **합의** — 조각 5에서 엔진·검사·예제와 함께 구현한다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) §4). 구현 전에는 엔진·검사가 아래 요소를 모른다 — 쓰지 않는다.
+> 상태: **구현됨** (엔진·읽기·검사 B17) — `contracts.bpmn_ext`(`compensation_handler`·`associations`), `core.engine`(`compensate`), `tests/shared/test_core_compensation.py`. 업무 예제는 아직 없다 — 그림 생성기(`exdsl.py`)가 보상을 쓰지 못한다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) §4, 로드맵 M10 조각 5b).
 
 **보상**은 끝난 활동의 일을 되돌리는 것이다. 오류 경계가 「어디로 갈지」를 정한다면 보상은 「무엇을 되돌릴지」를 정한다. 그래서 장애를 되돌리는 그림은 **오류 경계 → 보상 던지기 종료 이벤트**가 된다.
 
@@ -302,11 +302,13 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 | 보상 처리기 | `isForCompensation="true"`인 활동(서비스 태스크·스크립트·하위 프로세스 …). **흐름을 받거나 내지 않는다.** 서비스 태스크면 C15 일감이 되고 멱등 키의 `node_id`는 처리기 노드다 |
 | 보상 던지기 | `intermediateThrowEvent`·`endEvent` + `compensateEventDefinition`. `activityRef`가 없으면 같은 범위 전부, 있으면 그 활동만 |
 
-- 던지기가 울리면 엔진은 **같은 범위**(그 BPM 프로세스 또는 하위 프로세스)에서 **끝난** 활동 중 보상 경계가 달린 것을 **끝난 순서의 거꾸로** 하나씩 돌린다. 시작했지만 끝나지 않은 활동, 이미 보상한 활동은 돌리지 않는다. 반복 안의 활동은 끝난 차례마다 한 번씩이다.
+- 던지기가 울리면 엔진은 **같은 범위**(그 BPM 프로세스 또는 하위 프로세스)에서 **끝난** 활동 중 보상 경계가 달린 것을 **끝난 순서의 거꾸로** 하나씩 돌린다. 시작했지만 끝나지 않은 활동, 이미 보상한 활동은 돌리지 않는다. **반복이 붙은 활동은 다 돈 뒤 한 번** 끝난 것으로 센다(처리기도 한 번이다 — 차례마다 되돌릴 것은 처리기가 모은 결과 목록으로 본다). 같은 활동이 두 번 끝났으면(되돌아가는 흐름) 두 번 되돌린다.
 - 처리기는 **그 활동이 끝났을 때의 변수**가 아니라 지금 변수를 본다(엔진의 변수 공간은 하나다). 되돌릴 값이 필요하면 그 활동의 출력 변수로 남겨 둔다.
-- 던지기는 보상이 모두 끝난 뒤 다음으로 간다(종료 이벤트면 거기서 끝난다). **처리기가 실패하면 업무 실패**다 — 그 던지기를 둔 범위의 오류 경계가 받고, 남은 보상은 돌리지 않는다.
-- 되살리기: 보상을 어디까지 돌렸는지를 실행 상태에 적는다. 다시 뜨면 남은 것부터 돈다. 실행 기록에는 처리기의 `node_state`가 `compensating`·`compensated`로 남는다.
-- 검사: 보상 처리기에 흐름이 있으면, 보상 경계에 연관이 없거나 둘 이상이면, `activityRef`가 같은 범위의 보상 경계 달린 활동이 아니면 **오류**다(새 규칙 번호는 구현 때 매긴다).
+- 던지기는 보상이 모두 끝난 뒤 다음으로 간다(종료 이벤트면 거기서 끝난다). 던지기 노드의 `started`는 한 번이다(처리기를 돌고 돌아온 것은 두 번째 시작이 아니다). 돌릴 것이 없으면 그냥 지나간다.
+- **처리기가 실패하면 그 실패가 그대로 간다** — 처리기에는 흐름이 없어 자기 오류 경계를 달아도 갈 곳이 없으므로 **실행이 실패**하고 남은 보상은 돌리지 않는다. 되돌리기가 실패할 수 있는 일이면 처리기 안에서(하위 프로세스로) 받는다.
+- 되살리기: 끝난 활동 목록(`Run.compensable` — 보상했는가)과 토큰의 보상 상태(`Token.compensation` — 남은 것·돌아갈 던지기)를 스냅샷에 담는다. 처리기가 결재를 기다려도 되살리면 남은 것부터 돈다.
+- **실행 기록**: 처리기는 다른 노드처럼 `node_state`(`started`·`completed`)를 남기고, 엔진이 `log` 줄로 「보상을 시작한다」·「보상했다: <활동> (처리기 <노드>)」를 남긴다. `node_state`의 새 값은 없다(C3 그대로).
+- 검사는 **B17**이다.
 
 ## 시험 케이스 형식 (Studio, 패키지에 넣지 않음)
 
@@ -380,6 +382,7 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 | B13 | 웹훅 `body: all` (비밀이 섞일 수 있음), `location: field` 결재에 하루 넘는 시간 제한 | 경고 |
 | B14 | 병렬 분기와 합류의 가지 수가 맞다 (오류 경계의 대체 흐름을 병렬 합류에 바로 이으면 합류가 영원히 기다린다). 규칙 태스크의 `input`·`output`이 DMN 입력·출력 이름과 맞다. 호출의 `output`이 호출 대상의 `outputs`에 있다 — **PC 위임(`delegate`)은 패키지 안에서 찾지 않고** 그 BPM 프로세스가 선언한 `outputs`와 맞춰 보며(알 때만), `delegate`는 **실행 위치가 `server`일 때만** 쓸 수 있다 (자기 자신을 부르지 않는 것은 C1 R12가 본다). 타이머로 시작하는 BPM 프로세스에 기본값 없는 필수 입력이 없다 | 오류 |
 | B15 | 식·스크립트가 `bpm-expr` 문법 안에 있고, **도우미 함수 호출의 인자 모양**(인자 수·키워드 이름)이 그 도우미와 맞다 (`세기(전체, '주제')`는 `세기`가 인자 하나만 받으므로 오류) | 오류 |
+| B17 | **보상** — 보상 처리기(`isForCompensation`)가 흐름을 받거나 낸다, 보상 경계가 흐름을 낸다, 보상 경계의 연관이 하나가 아니다, 연관의 대상이 보상 처리기가 아니다, 던지기의 `activityRef`가 같은 범위의 보상 경계 달린 활동이 아니다 (ADR-0135) | 오류 (어느 경계에도 이어지지 않은 처리기는 경고) |
 | B16 | **결재 없는 일괄 기동** — 반복이 붙은 위임 호출에 ① 그 `collection`을 `show`하는 결재를 지나지 않고 닿는 경로가 있거나 ② 그 결재와 반복 사이에 `collection`을 만드는 노드가 있다 (만드는 것은 플랫폼이 아는 것만 센다 — 확장 태스크가 만드는 변수는 모른다). **막는 자리는 없다** — 사람 없이 도는 일괄도 올바른 그림이라 경고로만 알린다 ([ADR-0082](../decisions/0082-batch-start.md)·[ADR-0125](../decisions/0125-organization-and-work-placement.md) §6) | 경고 |
 
 `validate()`는 오류와 경고를 **함께** 돌려준다 (`Violation.severity`). Studio 「실행 전 검사」는 오류만으로 실행을 막고(`blocking()`), 경고는 보여 주고 사람이 판단한다.
@@ -416,7 +419,7 @@ B11은 **어림**이다. 식에서 변수를 이름으로 뽑되 문자열 상�
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
-| 2026-11-08 | 1 | 「보상」(보상 경계·처리기·던지기)을 **합의**로 적었다 — 표준 BPMN 요소라 schema는 그대로다. 구현·검사 번호는 조각 5 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
+| 2026-11-08 | 1 | 「보상」(보상 경계·처리기·던지기)과 **B17** — 엔진·읽기·검사가 돈다. 표준 BPMN 요소라 schema는 그대로다. `association`·`textAnnotation`은 노드로 읽지 않는다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-11-01 | 1 | **가상 직원을 없앴다** — 값 출처 `virtual_worker.id`·`.name`·`.supervisors`를 걷고 `company.*`·`department.*`·`staff.*`를 더했다(C16). B16은 Studio 경고로만 남는다 | [0125](../decisions/0125-organization-and-work-placement.md) |
 | 2026-10-31 | 1 | UI 태스크(`bpm:task type="ui_task"`) 줄과 B12의 UI 스텝 동작 대조를 걷었다 — UI 자동화 확장이 없다. `domain`의 `web`·`desktop`은 낱말로 남고 사전 점검 `missing_agent_environment`·엔진 `node_kind_unsupported`로 돌지 않는다. B6은 그대로다. 형식(그림)은 그대로다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-30 | 1 | 타이머 시작의 「일정이 읽는다」를 **Center**로 고쳐 적었다 — 서버 실행기·Bot UI에는 그 코드가 없었고 일정은 Center가 쥔다. 식의 문법(`L`·ISO 시작 생략)을 적었다. 그림은 그대로다 | [0110](../decisions/0110-center-keeps-the-schedule.md) |

@@ -23,6 +23,7 @@ from typing import Any
 
 from bpm.contracts.approvals import Form, normalize_assignees, request_id_for
 from bpm.contracts.bpmn_ext import (
+    COMPENSATE_DEFINITION,
     WEBHOOK_BODY_ALL,
     AiTask,
     Call,
@@ -104,8 +105,15 @@ def handle_pass(context: Context) -> Outcome:
 
 
 def handle_end(context: Context) -> Outcome:
-    """종료 이벤트. 하위 프로세스 안이면 **바깥 토큰을 깨워 그 노드를 지나게 한다.**"""
+    """종료 이벤트. 하위 프로세스 안이면 **바깥 토큰을 깨워 그 노드를 지나게 한다.**
+
+    보상 종료(`compensateEventDefinition`)면 끝나기 전에 같은 범위의 보상을 다 돈다 (C14 §보상).
+    """
     token, run = context.token, context.run
+    if COMPENSATE_DEFINITION in context.node.event_definitions:
+        detour = context.engine.compensate(context)
+        if detour is not None:
+            return detour
     if token.scope:
         parent_id = token.scope[-1]
         key = f"sub:{parent_id}"
@@ -1046,6 +1054,8 @@ def handle_throw(context: Context) -> Outcome:
     node = context.node
     if not node.event_definitions:
         return handle_milestone(context)
+    if COMPENSATE_DEFINITION in node.event_definitions:
+        return context.engine.compensate(context) or Go()
     if "signalEventDefinition" not in node.event_definitions:
         raise EngineError(
             f"아직 다루지 않는 중간 던지기다: {', '.join(node.event_definitions)}",
