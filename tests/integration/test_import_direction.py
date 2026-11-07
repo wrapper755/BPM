@@ -21,6 +21,7 @@ MEMBER_GLOBS = (
     "server/server_runner",
     "server/adapter_consumer",
     "server/service_kit",
+    "server/unified_consumer",
     "studio/app",
     "bot/app",
     "samples/*",

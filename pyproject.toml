@@ -7,6 +7,7 @@
 members = [
     "shared/*",
     "server/center", "server/server_runner", "server/adapter_consumer", "server/service_kit",
+    "server/unified_consumer",
     "studio/app",
     "bot/app",
     "samples/*",
@@ -84,6 +85,7 @@ mypy_path = [
     "bot/app/src",
     "server/server_runner/src",
     "server/adapter_consumer/src",
+    "server/unified_consumer/src",
     "server/center/src",
     "samples/mock_apps/src",
 ]

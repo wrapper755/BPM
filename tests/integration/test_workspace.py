@@ -23,6 +23,8 @@ MEMBERS = {
     "server/server_runner": "bpm.server_runner",
     # 외부 앱을 부르는 범용 일꾼 (C13 §4·C15, ADR-0102).
     "server/adapter_consumer": "bpm.adapter_consumer",
+    # 업무 처리기와 외부 확장을 함께 맡는 통합 일꾼 (ADR-0135).
+    "server/unified_consumer": "bpm.unified_consumer",
     "server/center": "bpm.center",
     # 제품이 아니다 — 업무 예제가 부르는 모의 앱 (01-architecture §8).
     "samples/mock_apps": "bpm.mock_apps",
@@ -36,6 +38,7 @@ MEMBER_GLOBS = (
     "server/server_runner",
     "server/adapter_consumer",
     "server/service_kit",
+    "server/unified_consumer",
     "studio/app",
     "bot/app",
     "samples/*",
