@@ -12,7 +12,8 @@ import { DeletePackage } from "../../tools";
 import { KIND_LABEL, STATUS_LABEL, packageHref, time } from "../../page";
 
 /**
- * CON-06 공통 패키지 (상세).
+ * CON-06 공통 패키지 (상세) — **CON-02 「프로세스 상세」도 같은 함수**(`PackageDetail`)로 그린다.
+ * 다른 것은 지금 자리(메뉴)와 BPM 프로세스에 없는 섹션뿐이다. 종류가 그 자리의 것이 아니면 맞는 주소로 넘긴다.
  *
  * 「제공 정의」는 **매니페스트의 `provides`**(C1)를 그린다 — Center가 짓지 않는다.
  * `provides`가 아예 없으면 **빈 표로 두지 않고** 「매니페스트에 없습니다」라고 말한다:
@@ -61,11 +62,24 @@ export default async function PackagePage({
 }: {
   params: Promise<{ packageId: string; version: string }>;
 }) {
+  return <PackageDetail params={await params} area="package" />;
+}
+
+/**
+ * 패키지 상세 — `area`가 지금 자리다: `process`는 「운영 현황 › 프로세스」(CON-02), `package`는
+ * 「배포·자원 › 공통 패키지」(CON-06). BPM 프로세스는 앞의 것, 나머지는 뒤의 것에만 보인다.
+ */
+export async function PackageDetail({
+  params,
+  area,
+}: {
+  params: { packageId: string; version: string };
+  area: "process" | "package";
+}) {
   const found = await session();
   if (!found) redirect("/login");
-  const asked = await params;
-  const packageId = decodeURIComponent(asked.packageId);
-  const version = decodeURIComponent(asked.version);
+  const packageId = decodeURIComponent(params.packageId);
+  const version = decodeURIComponent(params.version);
 
   let info: PackageInfo | null = null;
   let users: DependentInfo[] = [];
@@ -85,6 +99,9 @@ export default async function PackagePage({
   } catch (cause) {
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
   }
+
+  // 종류가 이 자리의 것이 아니면 맞는 상세로 넘긴다 (옛 링크·다른 화면의 링크).
+  if (info && (info.kind === "bpm_process") !== (area === "process")) redirect(packageHref(info));
 
   const provides = info?.manifest?.provides ?? null;
   const company = info?.company ? (companyNames[info.company] ?? info.company) : null;
@@ -145,7 +162,7 @@ export default async function PackagePage({
   ];
 
   return (
-    <Shell mode={found.mode} actor={found.actor} current="/packages">
+    <Shell mode={found.mode} actor={found.actor} current={area === "process" ? "/bots" : "/packages"}>
       <header className="mb-4">
         <h1 className="text-h1 font-bold">
           {info?.name ?? packageId} <span className="font-mono text-h2">{version}</span>
@@ -242,6 +259,8 @@ export default async function PackagePage({
             </section>
           ) : null}
 
+          {/* BPM 프로세스를 참조하는 패키지는 없다 — `requires.libs`는 공유 BPM 프로세스만 가리킨다. */}
+          {area === "package" ? (
           <section className="flex flex-col gap-2">
             <h2 className="text-h2 font-semibold">이 패키지를 쓰는 패키지</h2>
             {users.length === 0 ? (
@@ -255,6 +274,7 @@ export default async function PackagePage({
               />
             )}
           </section>
+          ) : null}
 
           {found.mode === "admin" ? (
             <section className="flex flex-col gap-3">
@@ -265,7 +285,7 @@ export default async function PackagePage({
                 status={info.status}
                 place={placeLine(company, place ?? "—")}
               />
-              <DeletePackage packageId={info.id} version={info.version} />
+              <DeletePackage packageId={info.id} version={info.version} back={area === "process" ? "/bots" : "/packages"} />
             </section>
           ) : null}
         </div>

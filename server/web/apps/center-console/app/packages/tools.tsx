@@ -9,9 +9,17 @@ import { deletePackage } from "@/app/actions";
  * CON-06 「삭제...」 — **되돌릴 수 없어** 확인 창을 거치고 기본은 「취소」다 (U9).
  *
  * 참조되면 409 `in_use`라 **아무것도 지워지지 않는다** — 막은 배포·패키지를 그 자리에 보인다.
- * 지워졌으면 이 상세 주소가 404가 되므로 목록으로 보낸다.
+ * 지워졌으면 이 상세 주소가 404가 되므로 목록으로 보낸다 — BPM 프로세스면 CON-02, 나머지는 CON-06이다.
  */
-export function DeletePackage({ packageId, version }: { packageId: string; version: string }) {
+export function DeletePackage({
+  packageId,
+  version,
+  back = "/packages",
+}: {
+  packageId: string;
+  version: string;
+  back?: "/packages" | "/bots";
+}) {
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -37,7 +45,7 @@ export function DeletePackage({ packageId, version }: { packageId: string; versi
               setError(result.error);
               return;
             }
-            router.push("/packages");
+            router.push(back);
           })
         }
         onCancel={() => setAsking(false)}

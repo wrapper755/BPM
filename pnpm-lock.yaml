@@ -20,6 +20,9 @@ importers:
       '@bpm/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      bpmn-js:
+        specifier: 18.31.0
+        version: 18.31.0
       next:
         specifier: 16.3.8
         version: 16.3.8(@types/node@26.6.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)

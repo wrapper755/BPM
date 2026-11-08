@@ -12,6 +12,7 @@ import type { JobInfo } from "@bpm/api-types/c5-job-info";
 import type { JobCreateRequest } from "@bpm/api-types/c5-job-create-request";
 import type { PackageInfo } from "@bpm/api-types/c5-package-info";
 import type { DependentInfo } from "@bpm/api-types/c5-dependent-info";
+import type { NodeLabel } from "@bpm/api-types/c5-node-label";
 import type { CenterKeyInfo } from "@bpm/api-types/c7-center-key-info";
 import type { EnrollmentInfo } from "@bpm/api-types/c5-enrollment-info";
 import type { EnrollmentDecision } from "@bpm/api-types/c5-enrollment-decision";
@@ -84,6 +85,8 @@ async function send<T>(path: string, init: RequestInit | undefined, token: strin
     throw new CenterError(response.status, body, body?.message ?? `Center가 ${response.status}를 돌려줬습니다`);
   }
   if (response.status === 204) return undefined as T;
+  // JSON이 아닌 답(C5 `diagram`의 BPMN XML)은 글자 그대로 돌려준다.
+  if (!(response.headers.get("content-type") ?? "").includes("json")) return (await response.text()) as T;
   return (await response.json()) as T;
 }
 
@@ -145,6 +148,10 @@ export const center = {
     call<DependentInfo[]>(
       `/api/v1/packages/${encodeURIComponent(packageId)}/${encodeURIComponent(version)}/dependents`,
     ),
+  /** 정의 안 노드의 이름 (C5 `nodes`, CON-01) — 실행 기록은 노드를 id로만 가리킨다. */
+  packageNodes: (packageId: string, version: string) => call<NodeLabel[]>(`${pkg(packageId, version)}/nodes`),
+  /** 진입 정의의 BPMN XML 그대로 (C5 `diagram`, CON-01 「다이어그램」 — ADR-0136). */
+  packageDiagram: (packageId: string, version: string) => call<string>(`${pkg(packageId, version)}/diagram`),
   /** 삭제 (C5). 배포나 다른 패키지가 참조하면 409 `in_use`다 — 아무것도 지워지지 않는다. */
   deletePackage: (packageId: string, version: string) =>
     call<void>(

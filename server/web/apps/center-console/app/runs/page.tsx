@@ -91,6 +91,33 @@ export async function loadOrgNames(): Promise<Record<"company" | "department" | 
   }
 }
 
+/**
+ * BPM 프로세스 이름표 (C5 `PackageInfo.name`) — 열쇠는 `<id>@<version>`. 실행 기록에는 id만 있다.
+ * **못 받아도 목록은 그린다** — 빈 표면 id 그대로 보인다 (U3).
+ */
+export async function loadProcessNames(): Promise<Map<string, string>> {
+  try {
+    const found = await center.packages({ kind: "bpm_process" });
+    return new Map(found.flatMap((one) => (one.name ? [[`${one.id}@${one.version}`, one.name] as const] : [])));
+  } catch {
+    return new Map();
+  }
+}
+
+/** 「BPM 프로세스」 칸 — **업무 이름만**, id는 마우스를 올리면. 이름이 없으면 id다 (화면 문서 CON-01). */
+function ProcessName({
+  id,
+  version,
+  names,
+}: {
+  id: string | null | undefined;
+  version: string | null | undefined;
+  names: Map<string, string>;
+}) {
+  if (!id) return <>—</>;
+  return <span title={id}>{names.get(`${id}@${version ?? ""}`) ?? id}</span>;
+}
+
 export function where(value: string | null | undefined): string {
   return value === "pc" ? "PC" : value === "server" ? "서버" : "—";
 }
@@ -141,6 +168,7 @@ export default async function RunsPage({
   }
   const pcName = new Map(pcs.map((one) => [one.bot_ui_id, one.name]));
   const org = await loadOrgNames();
+  const processNames = await loadProcessNames();
 
   const columns: Array<Column<RunInfo>> = [
     {
@@ -151,16 +179,15 @@ export default async function RunsPage({
       cell: (row) => <StatusBadge group="실행·노드" label={LABEL[row.status ?? ""] ?? row.status ?? "—"} />,
     },
     {
-      key: "run_id",
-      header: "실행 id",
-      mono: true,
+      key: "bpm_process_id",
+      header: "프로세스",
+      // 실행 id 열은 없다 — 업무 이름이 상세로 가는 링크다 (화면 문서 CON-01).
       cell: (row) => (
         <Link className="underline" href={`/runs/${encodeURIComponent(row.run_id)}`}>
-          {row.run_id}
+          <ProcessName id={row.bpm_process_id} version={row.version} names={processNames} />
         </Link>
       ),
     },
-    { key: "bpm_process_id", header: "프로세스", cell: (row) => row.bpm_process_id ?? "—" },
     { key: "version", header: "버전", width: "10ch", cell: (row) => row.version ?? "—" },
     { key: "run_location", header: "실행 위치", width: "10ch", cell: (row) => where(row.run_location) },
     { key: "executor", header: "실행한 쪽", width: "12ch", cell: (row) => EXECUTOR[row.executor ?? ""] ?? "—" },

@@ -908,6 +908,51 @@ def test_dependents_of_a_missing_package_is_404(client: TestClient) -> None:
     assert response.status_code == 404 and response.json()["code"] == "not_found"
 
 
+_NAMED_BPMN = """<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL">
+  <process id="Proc_invoice" name="세금계산서 확인">
+    <startEvent id="Start" />
+    <serviceTask id="Task_Validate" name="입력 검증" />
+    <subProcess id="Sub_Review" name="검토">
+      <userTask id="Approve_DQ" name="품질 결재" />
+    </subProcess>
+  </process>
+</definitions>"""
+
+
+def test_nodes_reads_names_from_the_definition(client: TestClient) -> None:
+    """실행 기록은 노드를 id로만 가리킨다 — 이름은 Center가 패키지 정의에서 읽을 때 꺼낸다 (C5 `nodes`).
+
+    하위 프로세스 안쪽도 펼치고, 이름이 없는 노드는 `name`이 비고, **읽히지 않는 정의는 건너뛴다**.
+    """
+    upload_common(client, extra={"process/main.bpmn": _NAMED_BPMN, "process/broken.bpmn": "<not xml"})
+    found = client.get("/api/v1/packages/invoice-check/1.0.0/nodes", headers=READ).json()
+    assert [(one["id"], one.get("name"), one["kind"]) for one in found] == [
+        ("Start", None, "startEvent"),
+        ("Task_Validate", "입력 검증", "serviceTask"),
+        ("Sub_Review", "검토", "subProcess"),
+        ("Approve_DQ", "품질 결재", "userTask"),
+    ]
+    missing = client.get("/api/v1/packages/없는것/1.0.0/nodes", headers=READ)
+    assert missing.status_code == 404 and missing.json()["code"] == "not_found"
+
+
+def test_diagram_returns_the_entry_definition_as_is(client: TestClient) -> None:
+    """CON-01 「다이어그램」 — 진입 정의를 **바꾸지 않고** 돌려준다 (C5 `diagram`, ADR-0136)."""
+    upload_common(client, extra={"process/main.bpmn": _NAMED_BPMN})
+    response = client.get("/api/v1/packages/invoice-check/1.0.0/diagram", headers=READ)
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("application/xml")
+    assert response.content.decode("utf-8") == _NAMED_BPMN
+
+
+def test_diagram_of_a_shared_process_or_missing_package_is_404(client: TestClient) -> None:
+    """`entry`가 없는 공유 BPM 프로세스·없는 패키지는 404 — 그리는 쪽이 「못 읽었다」고 말한다."""
+    upload_common(client, package_id="shared.approval", version="1.0.0", kind="process_lib")
+    for path in ("shared.approval/1.0.0", "없는것/1.0.0"):
+        response = client.get(f"/api/v1/packages/{path}/diagram", headers=READ)
+        assert response.status_code == 404 and response.json()["code"] == "not_found"
+
+
 def test_delete_removes_the_row_and_the_file(client: TestClient, packages_dir: Path) -> None:
     upload_common(client, package_id="shared.approval", version="1.0.0", kind="process_lib")
     assert list(packages_dir.glob("*.zip")), "zip이 저장되지 않았다"

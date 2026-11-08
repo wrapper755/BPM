@@ -135,7 +135,7 @@ export default async function OrganizationPage({ searchParams }: { searchParams:
       cell: (row) => {
         const version = row.versions?.[0];
         return version ? (
-          <Link className="underline" href={packageHref({ id: row.bpm_process_id, version })}>
+          <Link className="underline" href={packageHref({ id: row.bpm_process_id, version, kind: "bpm_process" })}>
             {row.bpm_process_id}
           </Link>
         ) : (

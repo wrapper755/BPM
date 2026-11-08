@@ -60,7 +60,6 @@ export function PackageActions({
   version,
   status,
   place,
-  stacked = false,
   onDone,
 }: {
   packageId: string;
@@ -71,8 +70,6 @@ export function PackageActions({
    * 골라 매니페스트에 실었고, 틀렸으면 승인하지 않고 Studio에서 다시 올린다.
    */
   place?: string;
-  /** 펼침 메뉴 안(CON-02 카드의 「...」)에서는 단추를 세로로 쌓는다. */
-  stacked?: boolean;
   /** 확인 창이 닫힌 뒤 — 메뉴를 닫는 데 쓴다. */
   onDone?: () => void;
 }) {
@@ -86,7 +83,7 @@ export function PackageActions({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className={stacked ? "flex flex-col gap-2" : "flex gap-2 whitespace-nowrap"}>
+      <div className="flex gap-2 whitespace-nowrap">
         {asks.map((one) => (
           <Button
             key={one}
