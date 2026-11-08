@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ConfirmDialog, Dialog, ErrorBanner, Field } from "@bpm/ui";
 import {
@@ -103,7 +103,10 @@ export function NewConsumer() {
               help="로그와 실행 상세에 보이는 이름입니다. 1~64자, 다른 일꾼과 겹치지 않게."
             />
             <TopicsField help={TOPICS_HELP} />
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={close}>
+                취소
+              </Button>
               <Button type="submit" variant="primary" disabled={pending}>
                 만들기
               </Button>
@@ -118,12 +121,32 @@ export function NewConsumer() {
 type Ask = "topics" | "token" | "delete";
 
 export function ConsumerMenu({ consumerId, name, topics }: { consumerId: string; name: string; topics: string[] }) {
-  const [menu, setMenu] = useState(false);
+  // 메뉴는 화면에 고정해 띄운다 — 표 상자는 넘치는 것을 자르므로 줄이 적으면 안에 그린 메뉴가 잘린다.
+  const [menu, setMenu] = useState<{ top: number; right: number } | null>(null);
   const [asking, setAsking] = useState<Ask | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!menu) return;
+    const shut = () => setMenu(null);
+    window.addEventListener("scroll", shut, true);
+    window.addEventListener("resize", shut);
+    document.addEventListener("click", shut);
+    return () => {
+      window.removeEventListener("scroll", shut, true);
+      window.removeEventListener("resize", shut);
+      document.removeEventListener("click", shut);
+    };
+  }, [menu]);
+
+  const closeToken = () => {
+    setToken(null);
+    setAsking(null);
+    router.refresh();
+  };
 
   const done = (result: { error?: string }) => {
     setError(result.error ?? null);
@@ -141,11 +164,23 @@ export function ConsumerMenu({ consumerId, name, topics }: { consumerId: string;
 
   return (
     <div className="relative flex flex-col items-start gap-1">
-      <Button size="sm" variant="ghost" aria-label={`${name} 일꾼 동작`} onClick={() => setMenu(!menu)}>
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-label={`${name} 일꾼 동작`}
+        onClick={(event) => {
+          event.stopPropagation();
+          const box = event.currentTarget.getBoundingClientRect();
+          setMenu(menu ? null : { top: box.bottom, right: window.innerWidth - box.right });
+        }}
+      >
         ...
       </Button>
       {menu ? (
-        <ul className="absolute right-0 top-full z-10 flex min-w-[200px] flex-col border border-border-default bg-bg-surface py-1 shadow-md">
+        <ul
+          className="fixed z-20 flex min-w-[200px] flex-col border border-border-default bg-bg-surface py-1 shadow-md"
+          style={{ top: menu.top, right: menu.right }}
+        >
           {items.map((item) => (
             <li key={item.ask}>
               <button
@@ -153,7 +188,7 @@ export function ConsumerMenu({ consumerId, name, topics }: { consumerId: string;
                 title={item.tip}
                 className="w-full px-3 py-2 text-left text-body hover:bg-bg-subtle"
                 onClick={() => {
-                  setMenu(false);
+                  setMenu(null);
                   setError(null);
                   setAsking(item.ask);
                 }}
@@ -173,7 +208,10 @@ export function ConsumerMenu({ consumerId, name, topics }: { consumerId: string;
         >
           {error ? <ErrorBanner message={error} /> : null}
           <TopicsField defaultValue={topics.join("\n")} help={`${TOPICS_HELP}. ${TOPICS_EFFECT}`} />
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setAsking(null)}>
+              취소
+            </Button>
             <Button type="submit" variant="primary" disabled={pending}>
               바꾸기
             </Button>
@@ -196,16 +234,17 @@ export function ConsumerMenu({ consumerId, name, topics }: { consumerId: string;
         }
         onCancel={() => setAsking(null)}
       />
-      <Dialog
-        open={token !== null}
-        title={`${name} 토큰`}
-        onClose={() => {
-          setToken(null);
-          setAsking(null);
-          router.refresh();
-        }}
-      >
-        {token ? <TokenView token={token} /> : null}
+      <Dialog open={token !== null} title={`${name} 토큰`} onClose={closeToken}>
+        {token ? (
+          <div className="flex flex-col gap-3">
+            <TokenView token={token} />
+            <div className="flex justify-end">
+              <Button variant="primary" onClick={closeToken}>
+                닫기
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </Dialog>
 
       <ConfirmDialog
