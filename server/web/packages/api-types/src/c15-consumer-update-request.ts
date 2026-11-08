@@ -3,9 +3,10 @@
    그다음 `pnpm --filter @bpm/api-types generate`. */
 
 /**
- * `PUT /api/v1/consumers/{consumer_id}` — 토픽 바꾸기 (ADR-0137). 다음 요청부터 반영된다.
+ * `PUT /api/v1/consumers/{consumer_id}` — 종류·토픽 바꾸기 (ADR-0137·0139). 다음 요청부터 반영된다.
  */
 export interface ConsumerUpdateRequest {
+  kinds?: ("ai" | "api" | "rpa")[];
   /**
    * @minItems 1
    */

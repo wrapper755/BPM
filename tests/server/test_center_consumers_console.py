@@ -5,6 +5,8 @@
 3. 토큰을 새로 발급하면 옛 토큰은 바로 거부되고 새 토큰이 된다.
 4. 지우면 토큰이 거부되고, 맡을 일꾼이 없어진 외부 확장은 **그 자리에서** 철회된다.
 5. Center 관리자만 — 보기 전용·회사 관리자는 못 바꾼다.
+6. 종류는 관리자가 정하고(비우면 정하지 않음, 편집에서 비우면 그대로), 토픽의 작업 종류는 manifest·외부 확장
+   정의에서 끌어낸다 — 모르는 토픽은 싣지 않는다 (ADR-0139).
 """
 
 from __future__ import annotations
@@ -53,8 +55,11 @@ def upload(client: TestClient, token: str) -> Any:
     return client.put("/api/v1/consumers/self/extension", json={"definition": definition()}, headers=bearer(token))
 
 
-def create(client: TestClient, name: str = "worker", topics: tuple[str, ...] = ("ext-ocr",)) -> dict[str, Any]:
-    got = client.post("/api/v1/consumers", json={"name": name, "topics": list(topics)}, headers=ADMIN)
+def create(
+    client: TestClient, name: str = "worker", topics: tuple[str, ...] = ("ext-ocr",), kinds: tuple[str, ...] = ()
+) -> dict[str, Any]:
+    body = {"name": name, "topics": list(topics), "kinds": list(kinds)}
+    got = client.post("/api/v1/consumers", json=body, headers=ADMIN)
     assert got.status_code == 201, got.text
     return dict(got.json())
 
@@ -133,3 +138,44 @@ def test_only_a_center_admin_may_change_workers(client: TestClient) -> None:
     session = accounts.login(store, username="acme-admin", password="abcdefgh1234").token
     got = client.post("/api/v1/consumers", json=body, headers=bearer(session))
     assert (got.status_code, got.json()["code"]) == (403, "center_admin_only")
+
+
+def test_an_admin_sets_the_kinds_and_an_empty_edit_keeps_them(client: TestClient) -> None:
+    made = create(client, kinds=("rpa", "ai", "ai"))
+    assert made["kinds"] == ["ai", "rpa"]  # 겹침 없이 ai·api·rpa 차례
+    assert create(client, name="folder-like")["kinds"] is None  # 비우면 정하지 않음
+
+    path = f"/api/v1/consumers/{made['consumer_id']}"
+    got = client.put(path, json={"topics": ["ext-ocr"], "kinds": ["api"]}, headers=ADMIN)
+    assert (got.status_code, got.json()["kinds"]) == (200, ["api"])
+    got = client.put(path, json={"topics": ["ext-ocr", "more"]}, headers=ADMIN)
+    assert (got.status_code, got.json()["kinds"]) == (200, ["api"])  # 비우면 그대로
+    got = client.put(path, json={"topics": ["ext-ocr"], "kinds": ["robot"]}, headers=ADMIN)
+    assert got.status_code == 422
+
+
+def test_topic_kinds_come_from_what_the_topics_hold(client: TestClient) -> None:
+    made = create(client, topics=("ext-ocr", "summarize", "nothing-yet"), kinds=("ai",))
+    listed = client.get("/api/v1/consumers", headers=READ).json()
+    assert (listed[0]["topic_kinds"], listed[0]["apps"]) == ({}, [])  # 아직 아무것도 올리지 않았다 — 모른다
+
+    assert upload(client, made["token"]).status_code in (200, 201)
+    manifest = {
+        "schema": 1,
+        "app_id": "summarize",
+        "name": "요약",
+        "version": "1.2.0",
+        "category": "business",
+        "console_url": "http://summarize.internal/console",
+        "operations": [
+            {"name": "click", "modes": ["deterministic"], "kind": "rpa"},
+            {"name": "summarize", "modes": ["deterministic"]},  # 비우면 ai
+        ],
+    }
+    got = client.put("/api/v1/consumers/self/manifest", json=manifest, headers=bearer(made["token"]))
+    assert got.status_code == 200, got.text
+
+    listed = client.get("/api/v1/consumers", headers=READ).json()
+    assert listed[0]["topic_kinds"] == {"ext-ocr": ["api"], "summarize": ["ai", "rpa"]}
+    assert listed[0]["kinds"] == ["ai"]  # 정한 종류는 그대로다 — 어긋남은 화면이 알린다
+    assert listed[0]["apps"] == ["summarize@1.2.0", "ext-ocr@1.0.0"]

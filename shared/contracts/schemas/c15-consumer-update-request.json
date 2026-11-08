@@ -1,8 +1,20 @@
 {
   "$id": "urn:bpm:contracts:c15-consumer-update-request",
   "additionalProperties": true,
-  "description": "`PUT /api/v1/consumers/{consumer_id}` — 토픽 바꾸기 (ADR-0137). 다음 요청부터 반영된다.",
+  "description": "`PUT /api/v1/consumers/{consumer_id}` — 종류·토픽 바꾸기 (ADR-0137·0139). 다음 요청부터 반영된다.",
   "properties": {
+    "kinds": {
+      "items": {
+        "enum": [
+          "ai",
+          "api",
+          "rpa"
+        ],
+        "type": "string"
+      },
+      "title": "Kinds",
+      "type": "array"
+    },
     "topics": {
       "items": {
         "pattern": "^[a-z0-9][a-z0-9.-]{0,63}$",

@@ -91,6 +91,21 @@
       "default": null,
       "title": "Key Prefix"
     },
+    "kinds": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Kinds"
+    },
     "last_fetch_at": {
       "anyOf": [
         {
@@ -118,6 +133,16 @@
       ],
       "default": null,
       "title": "Source"
+    },
+    "topic_kinds": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Topic Kinds",
+      "type": "object"
     },
     "topics": {
       "items": {

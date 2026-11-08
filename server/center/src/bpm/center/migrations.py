@@ -370,6 +370,11 @@ MIGRATIONS: tuple[Step, ...] = (
         "일꾼이 외부 앱을 부르는 주소 — 정의를 올릴 때 알린다, 토픽 → 주소 (C15 `address`, ADR-0138)",
         ("ALTER TABLE consumers ADD COLUMN addresses_json TEXT",),
     ),
+    Step(
+        26,
+        "일꾼의 종류 — Center 관리자가 정하고 가져가기가 거른다, 비면 정하지 않음 (C15 `kinds`, ADR-0139)",
+        ("ALTER TABLE consumers ADD COLUMN kinds_json TEXT",),
+    ),
 )
 
 

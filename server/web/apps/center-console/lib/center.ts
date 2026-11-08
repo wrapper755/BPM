@@ -243,12 +243,12 @@ export const center = {
    * **토큰 원문은 `ConsumerCreated`에만** 실린다 — 받은 쪽(서버 액션)이 그 창에 넘기고 남기지 않는다.
    */
   consumers: () => call<ConsumerInfo[]>("/api/v1/consumers"),
-  createConsumer: (body: { name: string; topics: string[] }) =>
+  createConsumer: (body: { name: string; topics: string[]; kinds: string[] }) =>
     call<ConsumerCreated>("/api/v1/consumers", { method: "POST", body: JSON.stringify(body) }),
-  updateConsumer: (consumerId: string, topics: string[]) =>
+  updateConsumer: (consumerId: string, body: { topics: string[]; kinds: string[] }) =>
     call<ConsumerInfo>(`/api/v1/consumers/${encodeURIComponent(consumerId)}`, {
       method: "PUT",
-      body: JSON.stringify({ topics }),
+      body: JSON.stringify(body),
     }),
   reissueConsumerToken: (consumerId: string) =>
     call<ConsumerCreated>(`/api/v1/consumers/${encodeURIComponent(consumerId)}/token`, { method: "POST" }),

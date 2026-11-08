@@ -227,8 +227,8 @@ def _bot_requires(store: Store, poster: Poster, *, bot: str | None, version: str
 
 
 def _authorize(store: Store, poster: Poster, task: ExternalTaskCreate) -> tuple[int, str | None]:
-    """「불러도 되나」 (C15 §올리기 표). 통과하면 `(기한(초), 일꾼 종류)`를 돌려준다 — 종류는 manifest가
-    없으면(아직 아무 일꾼도 그 토픽을 올리지 않았다) 모른다."""
+    """「불러도 되나」 (C15 §올리기 표). 통과하면 `(기한(초), 일꾼 종류)`를 돌려준다 — 종류는 manifest도
+    외부 확장 정의도 없으면(아직 아무 일꾼도 그 토픽을 올리지 않았다) 모른다."""
     run_id = task.idempotency.run_id
     if poster.kind == STUDIO:
         if not run_id.startswith(TEST_RUN_PREFIX):
@@ -264,6 +264,10 @@ def _authorize(store: Store, poster: Poster, task: ExternalTaskCreate) -> tuple[
             )
         timeout = timeout or operation.timeout_s
         kind = operation.kind
+    elif (ext := resources.live_extension(store, task.topic)) is not None and ext.adapter is not None:
+        # 외부 확장 토픽 — 정의의 작업에서 종류만 읽는다(작업 대조는 어댑터 일꾼이 한다, ADR-0139).
+        found = ext.adapter.operation(task.operation)
+        kind = found.kind if found is not None else None
     return timeout or DEFAULT_TIMEOUT_S, kind
 
 
@@ -463,14 +467,17 @@ def take(store: Store, consumer: Any, request: FetchRequest, *, now: str | None 
     sweep(store, now=at)
     wanted = min(request.max_tasks, MAX_TASKS_PER_FETCH)
     marks = ", ".join("?" for _ in request.topics)
+    # 일꾼의 종류로 거른다 — 정하지 않았으면 모두, 종류를 모르는 일감은 누구에게나 (ADR-0139).
+    kinds: list[str] = loads(consumer["kinds_json"]) or []
+    only = f" AND (kind IS NULL OR kind IN ({', '.join('?' for _ in kinds)}))" if kinds else ""
     consumer_id = str(consumer["consumer_id"])
     taken: list[str] = []
     with store.tx() as cur:
         cur.execute("UPDATE consumers SET last_fetch_at = ? WHERE consumer_id = ?", (at, consumer_id))
         rows = cur.execute(
             f"SELECT task_id, deadline, operation, topic, lockers_json FROM external_tasks"  # noqa: S608 — 자리표만 늘린다
-            f" WHERE state = ? AND topic IN ({marks}) ORDER BY created_at LIMIT ?",
-            (STATE_PENDING, *request.topics, wanted),
+            f" WHERE state = ? AND topic IN ({marks}){only} ORDER BY created_at LIMIT ?",
+            (STATE_PENDING, *request.topics, *kinds, wanted),
         ).fetchall()
         for one in rows:
             lock = request.lock_s or _operation_timeout(store, str(one["topic"]), str(one["operation"]))
@@ -695,22 +702,40 @@ FOLDER_MACHINE_PREFIX = "folder:"
 
 def consumer_info(store: Store, row: Any) -> ConsumerInfo:
     record = keys.get(store, str(row["key_id"]))
+    topics: list[str] = loads(row["topics_json"], []) or []
     return ConsumerInfo(
         consumer_id=row["consumer_id"],
         name=row["name"],
-        topics=loads(row["topics_json"], []) or [],
+        topics=topics,
         key_prefix=(record.prefix or None) if record else None,
         approved_at=row["approved_at"],
         approved_by=row["approved_by"],
         source="folder" if str(row["machine_id"]).startswith(FOLDER_MACHINE_PREFIX) else "console",
         last_fetch_at=row["last_fetch_at"],
-        apps=[f"{one.get('app_id')}@{one.get('version')}" for one in _held_manifests(row)],
+        apps=[f"{one.get('app_id')}@{one.get('version')}" for one in _held_manifests(row)]
+        + _held_extensions(store, topics),
+        kinds=loads(row["kinds_json"]) or None,
+        topic_kinds=resources.topic_kinds(store, topics),
         addresses={
             topic: ConsumerAddress.model_validate(one)
             for topic, one in (loads(row["addresses_json"], {}) or {}).items()
             if isinstance(one, dict)
         },
     )
+
+
+def _held_extensions(store: Store, topics: list[str]) -> list[str]:
+    """그 토픽에 일꾼이 올린 외부 확장 — 철회되지 않은 것 중 나중에 등록된 판 하나씩 (`id@version`, ADR-0139)."""
+    out = []
+    for topic in sorted(topics):
+        row = store.row(
+            "SELECT version FROM extensions WHERE id = ? AND source = ? AND revoked_json IS NULL"
+            " ORDER BY at DESC LIMIT 1",
+            (topic, EXTENSION_SOURCE),
+        )
+        if row is not None:
+            out.append(f"{topic}@{row['version']}")
+    return out
 
 
 def consumers(store: Store) -> list[ConsumerInfo]:

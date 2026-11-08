@@ -216,13 +216,17 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
         """**토큰 원문은 이 응답에만** 실린다 — Center는 해시만 둔다."""
         found = require_center_admin(authenticate(request))
         wanted = _model(ConsumerCreateRequest, await _json(request))
-        return consumers.create(app.state.store, name=wanted.name, topics=list(wanted.topics), by=found.actor)
+        return consumers.create(
+            app.state.store, name=wanted.name, topics=list(wanted.topics), kinds=list(wanted.kinds), by=found.actor
+        )
 
     @app.put(f"{API}/consumers/{{consumer_id}}")
     async def update_consumer(request: Request, consumer_id: str) -> Any:
         found = require_center_admin(authenticate(request))
         wanted = _model(ConsumerUpdateRequest, await _json(request))
-        return consumers.update_topics(app.state.store, consumer_id, list(wanted.topics), by=found.actor)
+        return consumers.update(
+            app.state.store, consumer_id, list(wanted.topics), kinds=list(wanted.kinds), by=found.actor
+        )
 
     @app.post(f"{API}/consumers/{{consumer_id}}/token")
     def reissue_consumer_token(request: Request, consumer_id: str) -> Any:

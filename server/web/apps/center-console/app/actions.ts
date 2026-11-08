@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { center, CenterError, session, signIn, signOut } from "@/lib/center";
-import { parseTopics } from "@/lib/consumers";
+import { parseKinds, parseTopics } from "@/lib/consumers";
 import { fromCaller } from "@/lib/inputs";
 import type { OrgKind } from "@/lib/organization";
 import { COOKIE_NAME, seal } from "@/lib/session";
@@ -507,9 +507,11 @@ export interface TokenResult extends ActionResult {
 export async function createConsumer(_previous: TokenResult, form: FormData): Promise<TokenResult> {
   const name = String(form.get("name") ?? "").trim();
   const topics = parseTopics(String(form.get("topics") ?? ""));
+  const kinds = parseKinds(form.getAll("kinds"));
   if (!name || topics.length === 0) return { error: "이름과 토픽을 하나 이상 넣으세요." };
+  if (kinds.length === 0) return { error: "종류를 하나 이상 고르세요." };
   try {
-    const made = await center.createConsumer({ name, topics });
+    const made = await center.createConsumer({ name, topics, kinds });
     revalidatePath("/consumers");
     return { token: made.token, name: made.name };
   } catch (cause) {
@@ -517,11 +519,13 @@ export async function createConsumer(_previous: TokenResult, form: FormData): Pr
   }
 }
 
-export async function updateConsumerTopics(consumerId: string, text: string): Promise<ActionResult> {
-  const topics = parseTopics(text);
+export async function updateConsumer(consumerId: string, form: FormData): Promise<ActionResult> {
+  const topics = parseTopics(String(form.get("topics") ?? ""));
+  const kinds = parseKinds(form.getAll("kinds"));
+  if (kinds.length === 0) return { error: "종류를 하나 이상 고르세요." };
   if (topics.length === 0) return { error: "토픽을 하나 이상 넣으세요." };
   try {
-    await center.updateConsumer(consumerId, topics);
+    await center.updateConsumer(consumerId, { topics, kinds });
   } catch (cause) {
     return { error: message(cause) };
   }

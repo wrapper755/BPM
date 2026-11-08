@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -39,7 +40,7 @@ from bpm.contracts.resources import (
     RuntimeResource,
     ServiceAppResource,
 )
-from bpm.contracts.service_app import ServiceAppManifest
+from bpm.contracts.service_app import KIND_AI, KIND_API, KIND_RPA, ServiceAppManifest
 
 #: 서비스 앱 상태 (C7). 열린 문자열이지만 Center가 짓는 것은 이 넷이다.
 OK = "ok"
@@ -86,6 +87,10 @@ def topic_state(store: Store, topic: str, *, now: str | None = None) -> tuple[st
     return OK, count, last
 
 
+#: 화면에 보이는 종류의 차례 (ADR-0139).
+KIND_ORDER = (KIND_AI, KIND_API, KIND_RPA)
+
+
 def app_manifests(store: Store) -> dict[str, tuple[ServiceAppManifest, str]]:
     """app_id → (manifest, 올린 때). 같은 토픽을 둘이 맡으면 **나중에 승인된 쪽**이 이긴다."""
     out: dict[str, tuple[ServiceAppManifest, str]] = {}
@@ -95,6 +100,47 @@ def app_manifests(store: Store) -> dict[str, tuple[ServiceAppManifest, str]]:
             if one.app_id in granted:
                 out[one.app_id] = (one, str(row["approved_at"]))
     return out
+
+
+def live_extension(store: Store, extension_id: str) -> Any:
+    """그 id로 등록돼 있고 철회되지 않은 외부 확장 정의 — 같은 id는 **나중에 등록된 판**(`_external_rows`와 같다)."""
+    from bpm.contracts.extension import ExtensionManifest  # noqa: PLC0415
+
+    row = store.row(
+        "SELECT definition_json FROM extensions WHERE id = ? AND revoked_json IS NULL ORDER BY at DESC LIMIT 1",
+        (extension_id,),
+    )
+    if row is None:
+        return None
+    try:
+        return ExtensionManifest.model_validate(json.loads(row["definition_json"]))
+    except ValueError:  # pragma: no cover — 등록할 때 검증했다
+        return None
+
+
+def topic_kinds(store: Store, topics: list[str]) -> dict[str, list[str]]:
+    """토픽 → 일꾼 종류 (ADR-0139). 근거는 일감에 종류를 붙일 때와 같다 — 일꾼이 올린 manifest, 없으면
+    등록된 외부 확장 정의의 작업. 근거가 없는 토픽은 싣지 않는다(모른다)."""
+    manifests = app_manifests(store)
+    out: dict[str, list[str]] = {}
+    for topic in topics:
+        if topic in manifests:
+            found = {op.kind for op in manifests[topic][0].operations}
+        elif (ext := live_extension(store, topic)) is not None and ext.adapter is not None:
+            found = {op.kind for op in ext.adapter.operations}
+        else:
+            continue
+        if found:
+            out[topic] = ordered_kinds(found)
+    return out
+
+
+def ordered_kinds(kinds: Iterable[str]) -> list[str]:
+    """종류를 겹침 없이 `ai`·`api`·`rpa` 차례로 — 모르는 값(열린 문자열)은 뒤에 이름 순 (ADR-0139)."""
+    def rank(kind: str) -> tuple[int, str]:
+        return (KIND_ORDER.index(kind) if kind in KIND_ORDER else len(KIND_ORDER), kind)
+
+    return sorted(set(kinds), key=rank)
 
 
 # ─────────────────────────── 서비스 앱 ───────────────────────────

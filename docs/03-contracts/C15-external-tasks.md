@@ -114,9 +114,11 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 응답 `{tasks: [LockedTask], rotated_token?: str}`. 일감이 없으면 `wait_s`까지 물고 있다가 빈 목록을 준다.
 
+**일꾼의 종류로 거른다** — 일꾼에 종류(§일꾼 관리 `kinds`)가 정해져 있으면 `kind`가 그 안에 있는 일감과 **`kind`가 빈 일감**만 준다. 정해져 있지 않으면 모두 준다. 요청에는 적지 않는다 — Center가 일꾼 행에서 읽는다 ([ADR-0139](../decisions/0139-consumer-kinds-are-set-in-the-console.md)).
+
 `LockedTask`: `task_id`·`topic`·`operation`·`kind`·`mode`·`origin`·`idempotency`·`caller`·`business_key`·`input`·`lock_until`·`deadline`·`delivery`(몇 번째로 나가는가, 1부터).
 
-- `kind`(`ai`·`api`·`rpa`)는 **일꾼 종류**다 — Center가 올릴 때 manifest의 작업에서 읽어 일감에 적는다(부르는 쪽이 지어내지 않는다, 올리기 본문에 없다). 가져가기를 종류로 거르지는 않는다 — 토픽이 이미 일꾼을 가른다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md)). 그 토픽의 manifest가 아직 없을 때 올린 일감이면 비어 있다(지어내지 않는다). Center 저장소 24판의 `external_tasks.kind`에 둔다.
+- `kind`(`ai`·`api`·`rpa`)는 **일꾼 종류**다 — Center가 올릴 때 manifest의 작업에서 읽어 일감에 적는다(부르는 쪽이 지어내지 않는다, 올리기 본문에 없다). 가져가기는 일꾼의 종류로 거른다(위) ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md)). 근거는 그 토픽에 일꾼이 올린 서비스 앱 manifest이고, 없으면 Center에 등록된(철회되지 않은, 같은 id는 나중에 등록된 판) **외부 확장 정의**의 작업이다 — HTTP 어댑터 작업은 `api`뿐이다(C13 E3) ([ADR-0139](../decisions/0139-consumer-kinds-are-set-in-the-console.md)). 둘 다 없을 때 올린 일감이면 비어 있다(지어내지 않는다). Center 저장소 24판의 `external_tasks.kind`에 둔다.
 
 - 한 일감은 한 번에 **한 일꾼**에게만 잠긴다. 잠금 시간은 `lock_s`(기본 = 작업 `timeout_s`)이고 `deadline`을 넘지 않는다.
 - 잠금이 지나면 일감은 `pending`으로 돌아가 다른 일꾼(또는 같은 일꾼)에게 다시 나간다.
@@ -172,8 +174,8 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 | 요청 | 본문 | 답 |
 | --- | --- | --- |
-| `POST /consumers` | `ConsumerCreateRequest` `{name, topics}` | 201 `ConsumerCreated` — `ConsumerInfo` + `token`(원문). 같은 이름이 있으면 409 `name_taken` |
-| `PUT /consumers/{consumer_id}` | `ConsumerUpdateRequest` `{topics}` | 200 `ConsumerInfo`. 빠진 토픽의 manifest는 버린다 |
+| `POST /consumers` | `ConsumerCreateRequest` `{name, topics, kinds?}` | 201 `ConsumerCreated` — `ConsumerInfo` + `token`(원문). 같은 이름이 있으면 409 `name_taken` |
+| `PUT /consumers/{consumer_id}` | `ConsumerUpdateRequest` `{topics, kinds?}` | 200 `ConsumerInfo`. 빠진 토픽의 manifest는 버린다. `kinds`가 없거나 비면 종류는 그대로다 |
 | `POST /consumers/{consumer_id}/token` | 없음 | 200 `ConsumerCreated` — 새 원문. 옛 토큰의 키는 폐기된다 |
 | `DELETE /consumers/{consumer_id}` | 없음 | 204. 토큰의 키를 폐기하고 행을 지운다. 쥔 일감은 잠금이 풀리면 다시 줄에 선다 |
 
@@ -182,6 +184,9 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 - 지우거나 토픽을 바꿔 **어느 일꾼의 토픽에도 없게 된 외부 확장**(일꾼이 올린 것)은 그 자리에서 철회한다(C2 `extension_revoke` 봉투).
 - 회사 관리자·보기 전용은 바꾸지 못한다(403 `center_admin_only`·`admin_only`) — 일꾼은 Center 공용이다 (C16).
 - `ConsumerInfo.source`는 들어온 길(`console` / `folder`), `approved_by`는 들인 관리자 또는 「일꾼 폴더」다. 폴더로 들어온 일꾼도 같은 요청으로 고친다.
+- `ConsumerInfo.apps`는 그 일꾼이 올린 manifest의 `app_id@version`과, 그 일꾼의 토픽에 **일꾼이 올린 외부 확장**(철회되지 않은 것 중 나중에 등록된 판)의 `id@version`이다.
+- **`kinds`는 일꾼의 종류**다 — `ai`·`api`·`rpa` 중 하나 이상(겹친 것은 하나로, 차례는 `ai`·`api`·`rpa`). 모르는 값은 422 `input_invalid`. 가져가기가 이것으로 거른다(§가져가기). `ConsumerInfo.kinds`가 `null`이면 **정하지 않은** 일꾼이다(일꾼 폴더로 들어왔거나 종류가 생기기 전에 만든 일꾼) — 모든 종류를 가져간다. 만들 때 `kinds`를 비우면 정하지 않은 일꾼이 된다 ([ADR-0139](../decisions/0139-consumer-kinds-are-set-in-the-console.md)).
+- `ConsumerInfo.topic_kinds`는 **토픽 → 그 토픽의 작업 종류**(`ai`·`api`·`rpa` 순)다. 일감에 `kind`를 붙일 때(§가져가기)와 같은 근거에서 모은다. 근거가 없는 토픽(아직 아무것도 올리지 않았다)은 싣지 않는다. 콘솔이 일꾼의 `kinds`와 어긋나는 자리를 알리는 데 쓴다.
 
 ```json
 {
@@ -193,6 +198,8 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
   "approved_by": "admin",
   "source": "console",
   "apps": [],
+  "kinds": ["api"],
+  "topic_kinds": {},
   "token": "bpm_ctr_Ab3dEf5gHi7jKl9mNo1pQr3sTu5vWx7yZa9bCd1e"
 }
 ```
@@ -314,6 +321,7 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-09 | 1 | **일꾼의 종류** — `ConsumerCreateRequest`·`ConsumerUpdateRequest`·`ConsumerInfo`에 `kinds`(관리자가 정한다), 가져가기는 그 종류의 일감과 종류가 빈 일감만 준다. `ConsumerInfo.topic_kinds`(토픽 → 작업 종류), `apps`에 일꾼이 올린 외부 확장. 일감의 `kind`는 manifest가 없으면 등록된 외부 확장 정의에서 읽는다. 선택 칸이라 판은 그대로다 | [0139](../decisions/0139-consumer-kinds-are-set-in-the-console.md) |
 | 2026-11-08 | 1 | **일꾼은 콘솔에서 다룬다** — `POST /consumers`·`PUT`·`POST …/token`·`DELETE /consumers/{consumer_id}`(Center 관리자, `ConsumerCreateRequest`·`ConsumerUpdateRequest`·`ConsumerCreated`), `ConsumerInfo`에 `approved_by`·`source`. 일꾼 폴더는 처음 들이기만 하고 빠져도 지우지 않는다. 새 엔드포인트와 선택 칸이라 판은 그대로다 | [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |
 | 2026-11-08 | 1 | `PUT /consumers/self/extension`에 **`address`**(선택 — 일꾼이 쓰는 주소), `ConsumerInfo`에 **`addresses`**(토픽 → 주소). Center는 보여 주기만 한다. 선택 칸이라 판은 그대로다 | [0138](../decisions/0138-console-app-catalog.md) |
 | 2026-11-08 | 1 | **`GET /external-topics/{topic}/operations`**(콘솔 토큰, `TopicOperationStatus[]`) — CON-18이 작업마다 기다림·처리 중·최근 7일 끝남·실패를 본다. 새 엔드포인트라 옛 쪽은 영향이 없다 | [0138](../decisions/0138-console-app-catalog.md) |

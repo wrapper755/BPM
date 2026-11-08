@@ -7,9 +7,11 @@ import {
   createConsumer,
   deleteConsumer,
   reissueConsumerToken,
-  updateConsumerTopics,
+  updateConsumer,
   type TokenResult,
 } from "@/app/actions";
+import { CONSUMER_KINDS } from "@/lib/consumers";
+import { TASK_KIND } from "@/lib/summary";
 
 /**
  * CON-17 일꾼의 손잡이들 (ADR-0137). 줄마다 「...」 하나이고 할 수 있는 일은 그 안에 있다. 토픽 모양·이름 겹침은
@@ -19,6 +21,25 @@ const TOPICS_HELP = "서비스 앱 id나 외부 확장 id — 영문 소문자·
 const TOPICS_EFFECT =
   "다음 가져가기부터 반영됩니다. 빠진 토픽의 일감은 이 일꾼이 더 가져가지 않고, 맡을 일꾼이 없어진 외부 확장은 등록이 해제됩니다.";
 const TEXTAREA = "rounded-md border border-border-strong bg-bg-surface p-2 font-mono text-body-sm";
+const KINDS_HELP = "이 일꾼이 가져갈 일감의 종류입니다. 고르지 않은 종류의 일감은 같은 토픽이어도 가져가지 않습니다.";
+
+/** 「종류」 체크박스 셋 — 하나 이상 (ADR-0139). 고른 것이 없으면 서버 액션이 막는다. */
+function KindsField({ defaultValue = [] }: { defaultValue?: string[] }) {
+  return (
+    <fieldset className="flex flex-col gap-1 text-body-sm">
+      <legend>종류</legend>
+      <div className="flex flex-wrap gap-4 py-1">
+        {CONSUMER_KINDS.map((kind) => (
+          <label key={kind} className="flex items-center gap-1">
+            <input type="checkbox" name="kinds" value={kind} defaultChecked={defaultValue.includes(kind)} />
+            {TASK_KIND[kind]}
+          </label>
+        ))}
+      </div>
+      <span className="text-text-muted">{KINDS_HELP}</span>
+    </fieldset>
+  );
+}
 
 function TopicsField({ defaultValue, help }: { defaultValue?: string; help: string }) {
   return (
@@ -102,6 +123,7 @@ export function NewConsumer() {
               maxLength={64}
               help="로그와 실행 상세에 보이는 이름입니다. 1~64자, 다른 일꾼과 겹치지 않게."
             />
+            <KindsField />
             <TopicsField help={TOPICS_HELP} />
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={close}>
@@ -118,9 +140,19 @@ export function NewConsumer() {
   );
 }
 
-type Ask = "topics" | "token" | "delete";
+type Ask = "edit" | "token" | "delete";
 
-export function ConsumerMenu({ consumerId, name, topics }: { consumerId: string; name: string; topics: string[] }) {
+export function ConsumerMenu({
+  consumerId,
+  name,
+  topics,
+  kinds,
+}: {
+  consumerId: string;
+  name: string;
+  topics: string[];
+  kinds: string[];
+}) {
   // 메뉴는 화면에 고정해 띄운다 — 표 상자는 넘치는 것을 자르므로 줄이 적으면 안에 그린 메뉴가 잘린다.
   const [menu, setMenu] = useState<{ top: number; right: number } | null>(null);
   const [asking, setAsking] = useState<Ask | null>(null);
@@ -157,7 +189,7 @@ export function ConsumerMenu({ consumerId, name, topics }: { consumerId: string;
   };
 
   const items: Array<{ ask: Ask; label: string; tip?: string }> = [
-    { ask: "topics", label: "토픽 바꾸기...", tip: TOPICS_EFFECT },
+    { ask: "edit", label: "편집...", tip: `종류와 토픽을 바꿉니다. ${TOPICS_EFFECT}` },
     { ask: "token", label: "토큰 새로 발급...", tip: "지금 토큰은 바로 거부되고 새 토큰을 한 번만 보입니다." },
     { ask: "delete", label: "삭제...", tip: "토큰을 폐기하고 목록에서 지웁니다." },
   ];
@@ -201,19 +233,20 @@ export function ConsumerMenu({ consumerId, name, topics }: { consumerId: string;
       ) : null}
       {error && asking === null ? <ErrorBanner message={error} /> : null}
 
-      <Dialog open={asking === "topics"} title={`${name}의 토픽 바꾸기`} onClose={() => setAsking(null)}>
+      <Dialog open={asking === "edit"} title={`${name} 편집`} onClose={() => setAsking(null)}>
         <form
           className="flex flex-col gap-3"
-          action={(form) => start(async () => done(await updateConsumerTopics(consumerId, String(form.get("topics") ?? ""))))}
+          action={(form) => start(async () => done(await updateConsumer(consumerId, form)))}
         >
           {error ? <ErrorBanner message={error} /> : null}
+          <KindsField defaultValue={kinds} />
           <TopicsField defaultValue={topics.join("\n")} help={`${TOPICS_HELP}. ${TOPICS_EFFECT}`} />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setAsking(null)}>
               취소
             </Button>
             <Button type="submit" variant="primary" disabled={pending}>
-              바꾸기
+              저장
             </Button>
           </div>
         </form>

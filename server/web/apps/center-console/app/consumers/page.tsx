@@ -2,13 +2,13 @@ import { redirect } from "next/navigation";
 import { DataTable, EmptyState, ErrorBanner, type Column } from "@bpm/ui";
 import type { ConsumerInfo } from "@bpm/api-types/c15-consumer-info";
 import { CenterError, center, session } from "@/lib/center";
-import { cameFrom } from "@/lib/consumers";
+import { KINDS_UNSET, cameFrom, kindMismatches, kindsLabel } from "@/lib/consumers";
 import { Shell } from "@/components/Shell";
 import { fullTime } from "@/app/bot-uis/page";
 import { ConsumerMenu, NewConsumer } from "./tools";
 
 /**
- * CON-17 일꾼 (ADR-0137). 일꾼의 원본은 Center DB이고 바꾼 것은 **다음 요청부터** 반영된다 — Center를
+ * CON-17 일꾼 (ADR-0137). 「종류」는 Center 관리자가 정하고, 토픽의 작업과 어긋나면 ⚠ (ADR-0139). 일꾼의 원본은 Center DB이고 바꾼 것은 **다음 요청부터** 반영된다 — Center를
  * 다시 띄우지 않는다. 목록은 콘솔 계정 모두, 「새 일꾼...」·「...」는 **Center 관리자만**(일꾼은 Center 공용, C16).
  */
 export default async function ConsumersPage() {
@@ -27,6 +27,27 @@ export default async function ConsumersPage() {
   const columns: Array<Column<ConsumerInfo>> = [
     { key: "name", header: "이름" },
     { key: "topics", header: "토픽", mono: true, cell: (row) => (row.topics ?? []).join(", ") },
+    {
+      key: "kinds",
+      header: "종류",
+      width: "14ch",
+      cell: (row) => {
+        const unset = !row.kinds || row.kinds.length === 0;
+        const mismatches = kindMismatches(row.kinds, row.topic_kinds);
+        return (
+          <span className="flex items-center gap-1">
+            <span className={unset ? "text-text-muted" : undefined} title={unset ? KINDS_UNSET : undefined}>
+              {kindsLabel(row.kinds)}
+            </span>
+            {mismatches.length ? (
+              <span className="text-status-warning-fg" title={mismatches.join("\n")} aria-label={mismatches.join(" ")}>
+                ⚠
+              </span>
+            ) : null}
+          </span>
+        );
+      },
+    },
     {
       key: "apps",
       header: "맡은 앱",
@@ -57,7 +78,7 @@ export default async function ConsumersPage() {
             header: "",
             width: "6ch",
             cell: (row: ConsumerInfo) => (
-              <ConsumerMenu consumerId={row.consumer_id} name={row.name} topics={row.topics ?? []} />
+              <ConsumerMenu consumerId={row.consumer_id} name={row.name} topics={row.topics ?? []} kinds={row.kinds ?? []} />
             ),
           },
         ]

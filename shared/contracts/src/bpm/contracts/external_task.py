@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
@@ -68,6 +68,8 @@ CALL_TOKEN_READ_PATH = "/api/v1/resources"
 TEST_RUN_PREFIX = "test_"
 
 Topic = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9.-]{0,63}$")]
+#: 관리자가 일꾼에 정하는 종류 — 아는 값만 받는다 (C11 `KINDS`, ADR-0139).
+ConsumerKind = Literal["ai", "api", "rpa"]
 TaskId = Annotated[str, Field(pattern=r"^xt_[0-9a-f]{24}$")]
 
 
@@ -289,10 +291,14 @@ class ConsumerInfo(ContractModel):
     #: `console` | `folder` (ADR-0137).
     source: str | None = None
     last_fetch_at: Timestamp | None = None
-    #: 이 일꾼이 올린 manifest들의 `app_id@version`.
+    #: 이 일꾼이 올린 manifest들의 `app_id@version`과 맡은 토픽에 일꾼이 올린 외부 확장의 `id@version` (ADR-0139).
     apps: list[str] = Field(default_factory=list)
     #: 토픽(외부 확장 id) → 이 일꾼이 쓴다고 알린 주소 (ADR-0138). 알리지 않은 토픽은 없다.
     addresses: dict[str, ConsumerAddress] = Field(default_factory=dict)
+    #: 이 일꾼의 종류 — Center 관리자가 정하고 가져가기가 이것으로 거른다. `None`은 정하지 않음(모두) (ADR-0139).
+    kinds: list[str] | None = None
+    #: 토픽 → 그 토픽의 작업 종류(`ai`·`api`·`rpa` 순) — 일감에 붙일 때와 같은 근거. 모르는 토픽은 없다 (ADR-0139).
+    topic_kinds: dict[str, list[str]] = Field(default_factory=dict)
 
 
 class ConsumerCreateRequest(ContractModel):
@@ -300,12 +306,16 @@ class ConsumerCreateRequest(ContractModel):
 
     name: str = Field(min_length=1, max_length=64)
     topics: list[Topic] = Field(min_length=1)
+    #: 일꾼의 종류 (ADR-0139). 비우면 정하지 않은 일꾼 — 모든 종류를 가져간다.
+    kinds: list[ConsumerKind] = Field(default_factory=list)
 
 
 class ConsumerUpdateRequest(ContractModel):
-    """`PUT /api/v1/consumers/{consumer_id}` — 토픽 바꾸기 (ADR-0137). 다음 요청부터 반영된다."""
+    """`PUT /api/v1/consumers/{consumer_id}` — 종류·토픽 바꾸기 (ADR-0137·0139). 다음 요청부터 반영된다."""
 
     topics: list[Topic] = Field(min_length=1)
+    #: 일꾼의 종류 (ADR-0139). 비우면 그대로 둔다.
+    kinds: list[ConsumerKind] = Field(default_factory=list)
 
 
 class ConsumerCreated(ConsumerInfo):
