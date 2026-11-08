@@ -112,6 +112,13 @@ AI 작업은 **서비스 태스크(`bpm:serviceCall`)가 부르는 `kind: ai` �
 - **옮기는 동안 NowView 저장소를 얼린다.** 옮김이 끝나면 NowView는 걷고 저장소는 읽기 전용으로 둔다. `www.nowview.work`를 어떻게 할지(일꾼 콘솔로 돌리기·내리기)는 운영 반영 때 따로 묻는다.
 - **이 저장소에는 Company1 코드가 들어오지 않는다.** BPM 쪽 시험은 시험용 업무 처리기(`tests/fake_handlers.py` — `tests/fake_extension.py`와 같은 결)로 돈다.
 
+**옮긴 뒤 표와 달라진 것**(2026-11-08, 조각 7 로컬까지 — Company1 `worker/`, PR wrapper755/Company1#1 머지 전):
+
+- 회사 설정의 매핑(BPM 프로세스 id → 업무)은 BPM 통합 일꾼 설정으로 오지 않고 업무 처리기의 **코드 표**(`company1_worker/config.py`)가 됐다 — 회사가 하나이고 장면 코드와 함께 바뀐다. 처리기 설정 칸은 `BPM_CONSUMER__HANDLERS__COMPANY1__<칸>`이다.
+- 작업 상태 저장소는 로컬에서 SQLite다(NowView 로컬 SQLite를 옮겨 왔다). Postgres는 설정 칸 `DATABASE_URL`로 고르며 운영 반영 때 정한다.
+- NowView 대시보드 중 회차 단위로 모아 보던 것(장면별 지표·결재 진행·회차별 일감)은 갈 곳이 아직 없다 — 09-gaps §3-30.
+- NowView 저장소는 지우지 않고 「걷었다」 표시만 했다. 운영(`www.nowview.work`, hetzner의 NowView 유닛)은 아직 그대로이고 운영의 일꾼도 아직 NowView 엔진이다.
+
 ### 6. 조각
 
 | 조각 | 내용 | 끝 |
