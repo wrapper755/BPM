@@ -6,7 +6,8 @@
 | `POST /consumers/fetch`, `…/tasks/{id}/complete·fail·extend`, `PUT …/self/manifest·extension` | 일꾼 토큰 |
 | `GET /consumers`, `GET /external-topics` | 콘솔 토큰 |
 
-일꾼은 **일꾼 폴더**로만 들어온다 (`consumer_folder`, ADR-0122) — 요청 코드·승인이 없다.
+일꾼은 Center 관리자가 콘솔에서 만들고(`bpm.center.consumers`, ADR-0137) 함께 배포되는 일꾼은 일꾼 폴더가 처음
+한 번 들인다(`consumer_folder`) — 요청 코드·승인이 없다.
 
 지키는 것:
 
@@ -85,7 +86,7 @@ from bpm.contracts.service_app import DEFAULT_TIMEOUT_S, ServiceAppManifest, Usa
 #: 일꾼의 일감 흐름 (ADR-0122 — 승인 없는 일꾼은 콘솔 대신 로그로 본다). **값은 찍지 않는다** (원칙 6).
 log = logging.getLogger(__name__)
 
-#: 일꾼이 올린 외부 확장의 출처 (`extensions.source`, ADR-0122) — 맡은 일꾼이 빠지면 일꾼 폴더가 거둔다.
+#: 일꾼이 올린 외부 확장의 출처 (`extensions.source`, ADR-0122) — 맡은 일꾼이 없어지면 거둔다 (`consumers`, ADR-0137).
 EXTENSION_SOURCE = "worker"
 
 router = APIRouter(prefix="/api/v1", tags=["external-tasks"])
@@ -631,7 +632,7 @@ def put_manifest(store: Store, consumer: Any, raw: dict[str, Any]) -> ConsumerIn
             "UPDATE consumers SET manifest_json = ? WHERE consumer_id = ?",
             (dumps(sorted(held, key=lambda one: str(one.get("app_id")))), consumer["consumer_id"]),
         )
-    return _consumer_info(store, store.row("SELECT * FROM consumers WHERE consumer_id = ?", (consumer["consumer_id"],)))
+    return consumer_info(store, store.row("SELECT * FROM consumers WHERE consumer_id = ?", (consumer["consumer_id"],)))
 
 
 def _held_manifests(row: Any) -> list[dict[str, Any]]:
@@ -641,7 +642,11 @@ def _held_manifests(row: Any) -> list[dict[str, Any]]:
     return [one for one in (found or []) if isinstance(one, dict)]
 
 
-def _consumer_info(store: Store, row: Any) -> ConsumerInfo:
+#: 일꾼 폴더가 들인 일꾼의 `machine_id` 머리 (`consumer_folder.MACHINE_PREFIX`와 같다 — 그쪽이 이 모듈을 부른다).
+FOLDER_MACHINE_PREFIX = "folder:"
+
+
+def consumer_info(store: Store, row: Any) -> ConsumerInfo:
     record = keys.get(store, str(row["key_id"]))
     return ConsumerInfo(
         consumer_id=row["consumer_id"],
@@ -649,13 +654,15 @@ def _consumer_info(store: Store, row: Any) -> ConsumerInfo:
         topics=loads(row["topics_json"], []) or [],
         key_prefix=(record.prefix or None) if record else None,
         approved_at=row["approved_at"],
+        approved_by=row["approved_by"],
+        source="folder" if str(row["machine_id"]).startswith(FOLDER_MACHINE_PREFIX) else "console",
         last_fetch_at=row["last_fetch_at"],
         apps=[f"{one.get('app_id')}@{one.get('version')}" for one in _held_manifests(row)],
     )
 
 
 def consumers(store: Store) -> list[ConsumerInfo]:
-    return [_consumer_info(store, row) for row in store.rows("SELECT * FROM consumers ORDER BY name")]
+    return [consumer_info(store, row) for row in store.rows("SELECT * FROM consumers ORDER BY name")]
 
 
 def topics(store: Store, *, now: str | None = None) -> list[TopicStatus]:
@@ -939,6 +946,7 @@ __all__ = [
     "ack",
     "cancel",
     "complete",
+    "consumer_info",
     "consumer_of",
     "consumers",
     "create",

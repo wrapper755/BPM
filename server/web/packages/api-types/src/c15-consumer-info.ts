@@ -3,15 +3,17 @@
    그다음 `pnpm --filter @bpm/api-types generate`. */
 
 /**
- * `GET /api/v1/consumers`의 한 줄 (CON-07 「일꾼」).
+ * `GET /api/v1/consumers`의 한 줄 (CON-17 「일꾼」).
  */
 export interface ConsumerInfo {
   approved_at?: string | null;
+  approved_by?: string | null;
   apps?: string[];
   consumer_id: string;
   key_prefix?: string | null;
   last_fetch_at?: string | null;
   name: string;
+  source?: string | null;
   topics?: string[];
   [k: string]: unknown;
 }

@@ -1,7 +1,7 @@
 """시험이 **일꾼**을 Center에 들이고 돌리는 길 — 자리가 하나다 (C15, ADR-0102).
 
-**이것은 제품 코드가 아니다.** 사람은 Center의 일꾼 폴더에 `<이름>.consumer.json`(토큰 해시)을 두고 Center를
-다시 띄운다 (ADR-0122). 시험은 Center를 다시 띄우지 않고 **폴더가 쓰는 함수 그대로**(`consumer_folder.admit`)로
+**이것은 제품 코드가 아니다.** 사람은 Center 콘솔 CON-17에서 일꾼을 만든다 (ADR-0137). 시험은 Center를 다시
+띄우지 않고 **폴더가 쓰는 함수 그대로**(`consumer_folder.admit`)로
 들인다 — 토큰 원문은 시험이 지어 `TokenFile`에 둔다.
 
 `client`는 `TestClient`(in-process)든 진짜 소켓의 `httpx.Client`든 된다. 일꾼을 **스레드에서** 오래

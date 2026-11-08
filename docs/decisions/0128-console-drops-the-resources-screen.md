@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · **「일꾼·폴더 키를 끊는 길은 폴더다」는 일꾼에 한해 [ADR-0137](0137-consumers-are-managed-in-the-console.md)이 대체한다** — 일꾼은 CON-17에서 끊는다 |
 | 날짜 | 2026-11-01 |
 | 관련 | 화면 CON-07·CON-11·CON-01, 계약 C7·C15(바뀌지 않는다), [ADR-0122](0122-consumer-folder.md), [ADR-0123](0123-folder-keys.md), [ADR-0124](0124-no-api-key-page.md) |
 

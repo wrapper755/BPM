@@ -14,7 +14,7 @@
 | --- | --- | --- |
 | [studio/docs/screens.md](../studio/docs/screens.md) | Studio (Windows 데스크톱, BPM 프로세스 설계) | STU-01 ~ STU-16 |
 | [bot/docs/screens.md](../bot/docs/screens.md) | PC 실행기 (Windows 트레이 기반 GUI, 항상 실행) | BUI-01 ~ BUI-11 (BUI-06~10 폐기) |
-| [server/docs/screens/center-console.md](../server/docs/screens/center-console.md) | Center 콘솔 (웹) — 관리자 계정으로 승인·배포까지 ([ADR-0090](decisions/0090-center-admin-accounts.md)) | CON-00 ~ CON-15 (CON-08~11 폐기) |
+| [server/docs/screens/center-console.md](../server/docs/screens/center-console.md) | Center 콘솔 (웹) — 관리자 계정으로 승인·배포까지 ([ADR-0090](decisions/0090-center-admin-accounts.md)) | CON-00 ~ CON-17 (CON-07~11 폐기) |
 | [server/docs/screens/service-app-console.md](../server/docs/screens/service-app-console.md) | 서비스 앱 관리 콘솔 (웹, 앱마다) | SVC-00 ~ SVC-03 |
 | 이 파일 §5 | 여러 앱이 같이 쓰는 창 | CMN-01 |
 
@@ -75,7 +75,7 @@
 
 새 업무 하나가 만들어져 운영되기까지 거치는 화면이다.
 
-0. **준비 (서버)** — 설치하는 사람이 `.env`에 첫 관리자 아이디·비밀번호를 적고 Center를 띄운다. 서비스 앱·어댑터 일꾼은 Center 일꾼 폴더에 일꾼 파일을 두고(`bpm-center consumer-file`) 찍힌 토큰과 Center 주소를 주어 띄운다 — 외부 확장 정의는 어댑터 일꾼이 들고 있다가 올리고, 외부 앱의 주소·키는 어댑터 일꾼의 설정에만 넣는다 ([ADR-0102](decisions/0102-calling-outside-is-pull.md), [ADR-0122](decisions/0122-consumer-folder.md)). 관리자는 [CON-07](../server/docs/screens/center-console.md#con-07-리소스-신규) 「일꾼 폴더」에서 들어왔는지 본다. 서버 BPM 프로세스를 쓸 거면 서버 실행기에 Center 주소를 주고 띄운 뒤, 로그의 요청 코드와 같은 줄을 [CON-12](../server/docs/screens/center-console.md#con-12-서버-실행-신규-m7) 「승인 대기」에서 승인한다 (컨테이너는 환경변수로 키를 준다 — C12).
+0. **준비 (서버)** — 설치하는 사람이 `.env`에 첫 관리자 아이디·비밀번호를 적고 Center를 띄운다. 서비스 앱·어댑터 일꾼은 관리자가 [CON-17](../server/docs/screens/center-console.md#con-17-일꾼-신규) 「일꾼」에서 만들고 받은 토큰과 Center 주소를 주어 띄운다(함께 배포되는 일꾼은 일꾼 폴더의 파일로 처음 한 번 들어온다 — `bpm-center consumer-file`) — 외부 확장 정의는 어댑터 일꾼이 들고 있다가 올리고, 외부 앱의 주소·키는 어댑터 일꾼의 설정에만 넣는다 ([ADR-0102](decisions/0102-calling-outside-is-pull.md), [ADR-0137](decisions/0137-consumers-are-managed-in-the-console.md)). 들어왔는지·마지막으로 가져간 때도 CON-17에서 본다. 서버 BPM 프로세스를 쓸 거면 서버 실행기에 Center 주소를 주고 띄운 뒤, 로그의 요청 코드와 같은 줄을 [CON-12](../server/docs/screens/center-console.md#con-12-서버-실행-신규-m7) 「승인 대기」에서 승인한다 (컨테이너는 환경변수로 키를 준다 — C12).
 1. **준비 (PC)** — 설치 담당자가 PC 실행기 설정에 Center 주소를 넣고([BUI-03](../bot/docs/screens.md#bui-03-설정등록)) 화면에 뜬 요청 코드를 관리자에게 알리면, 관리자가 [CON-03](../server/docs/screens/center-console.md#con-03-앱) 「승인 대기」에서 같은 코드를 승인한다 — 키는 Center가 내려 준다 ([ADR-0092](decisions/0092-keys-are-issued-and-delivered-by-center.md)). **서비스 앱 키는 없다** — BPM 프로세스는 바깥 기능을 Center의 외부 작업으로 부르고, 불러도 되는가는 7 「배포」가 정한다 (C15).
 3. **BPM 프로세스 만들기** — 설계자가 Studio에서 새 BPM 프로세스를 만들고 실행 위치를 정한다 — 기본은 서버, 현장 확인·PC 전용 자원이 필요하면 PC ([ADR-0016](decisions/0016-server-first.md)). [STU-05](../studio/docs/screens.md#stu-05-새-bpm-프로세스), [STU-06](../studio/docs/screens.md#stu-06-bpm-프로세스-정보)
 4. **그리기** — BPMN을 그리고 태스크마다 속성을 채운다. 서비스 앱 태스크는 리소스 탐색기의 작업을 고른다. [STU-01](../studio/docs/screens.md#stu-01-메인-창), [STU-03](../studio/docs/screens.md#stu-03-리소스-탐색기), [STU-14](../studio/docs/screens.md#stu-14-서비스-앱-태스크-편집기-신규)
@@ -164,6 +164,7 @@ Studio 시험 실행과 PC 실행기의 BPM 프로세스 실행에서 같은 창
 | CON-14 | 관리자 계정 | Center 콘솔 | 관리자 | — | 신규 ([ADR-0090](decisions/0090-center-admin-accounts.md)) |
 | CON-15 | 배포 | Center 콘솔 | 관리자 | — | 신규 (ADM-03을 옮겼다, ADR-0090) |
 | CON-16 | 앱 로그 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0121](decisions/0121-center-console-says-process.md)) |
+| CON-17 | 일꾼 | Center 콘솔 | Center 관리자 | — | 신규 ([ADR-0137](decisions/0137-consumers-are-managed-in-the-console.md)) |
 | SVC-00 | 공통 틀 | 서비스 앱 관리 콘솔 | 서비스 앱 관리자 | M2 | 신규 (`service_kit`) |
 | SVC-01 | 상태 | 서비스 앱 관리 콘솔 | 서비스 앱 관리자 | M2 | 신규 |
 | SVC-02 | API 키 — **없어졌다** (ADR-0102, 서비스 앱 키가 없다) | 서비스 앱 관리 콘솔 | — | M2 | 폐기 |

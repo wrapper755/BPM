@@ -223,7 +223,10 @@ from bpm.contracts.extension import check_size as check_extension_size
 from bpm.contracts.extension import validate as validate_extension
 from bpm.contracts.external_task import (
     CompleteRequest,
+    ConsumerCreated,
+    ConsumerCreateRequest,
     ConsumerInfo,
+    ConsumerUpdateRequest,
     ExtendRequest,
     ExternalTaskCreate,
     ExternalTaskCreated,
@@ -383,7 +386,10 @@ __all__ = [
     "place_violation",
     "staff_principal",
     "CompleteRequest",
+    "ConsumerCreateRequest",
+    "ConsumerCreated",
     "ConsumerInfo",
+    "ConsumerUpdateRequest",
     "FolderConsumer",
     "FolderKey",
     "ExtendRequest",

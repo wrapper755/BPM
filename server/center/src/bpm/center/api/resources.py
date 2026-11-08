@@ -545,7 +545,7 @@ def _newer_registered(store: Store, ext_id: str, version: str) -> str | None:
 def revoke_extension(store: Store, extension_id: str, version: str, *, reason: str, by: str) -> ExtensionResource:
     """등록 해제 — Center가 `extension_revoke` 봉투를 지어 서명한다 (C13·C2, ADR-0090).
 
-    콘솔·API 길은 없다 — 맡은 일꾼이 일꾼 폴더에서 빠지면 그 폴더가 부른다 (ADR-0122).
+    확장만 거두는 콘솔·API 길은 없다 — 콘솔에서 일꾼을 지우거나 토픽을 바꿔 맡을 일꾼이 없어지면 부른다 (ADR-0137).
 
     **쓰는 BPM 프로세스가 있어도 막지 않는다** (C13) — 확장 해제는 **정의에 문제가 있어 거두는 보안 동작**이라,
     쓰는 쪽이 있을 때 더 거둬야 한다. 몇 개가 실행 불가가 되는지는 화면이 미리 말한다 (CON-07).

@@ -17,6 +17,8 @@ import type { CenterKeyInfo } from "@bpm/api-types/c7-center-key-info";
 import type { EnrollmentInfo } from "@bpm/api-types/c5-enrollment-info";
 import type { EnrollmentDecision } from "@bpm/api-types/c5-enrollment-decision";
 import type { ExternalTaskInfo } from "@bpm/api-types/c15-external-task-info";
+import type { ConsumerInfo } from "@bpm/api-types/c15-consumer-info";
+import type { ConsumerCreated } from "@bpm/api-types/c15-consumer-created";
 import type { ScheduleInfo } from "@bpm/api-types/c5-schedule-info";
 import type { ErrorBody } from "@bpm/api-types/c5-error-body";
 import type { RunListing } from "@bpm/api-types/c3-run-listing";
@@ -215,6 +217,23 @@ export const center = {
       method: "PUT",
       body: JSON.stringify({ status: "deprecated" }),
     }),
+
+  /**
+   * 일꾼 (C15 §일꾼 관리·CON-17, ADR-0137). 목록은 콘솔 계정 모두, 바꾸기는 Center 관리자만.
+   * **토큰 원문은 `ConsumerCreated`에만** 실린다 — 받은 쪽(서버 액션)이 그 창에 넘기고 남기지 않는다.
+   */
+  consumers: () => call<ConsumerInfo[]>("/api/v1/consumers"),
+  createConsumer: (body: { name: string; topics: string[] }) =>
+    call<ConsumerCreated>("/api/v1/consumers", { method: "POST", body: JSON.stringify(body) }),
+  updateConsumer: (consumerId: string, topics: string[]) =>
+    call<ConsumerInfo>(`/api/v1/consumers/${encodeURIComponent(consumerId)}`, {
+      method: "PUT",
+      body: JSON.stringify({ topics }),
+    }),
+  reissueConsumerToken: (consumerId: string) =>
+    call<ConsumerCreated>(`/api/v1/consumers/${encodeURIComponent(consumerId)}/token`, { method: "POST" }),
+  deleteConsumer: (consumerId: string) =>
+    call<void>(`/api/v1/consumers/${encodeURIComponent(consumerId)}`, { method: "DELETE" }),
 
   /** 관리자 계정 (C5 §관리자 계정·CON-14). 관리자만. */
   accounts: () => call<AccountInfo[]>("/api/v1/accounts"),

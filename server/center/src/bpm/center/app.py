@@ -15,7 +15,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, Response
 
-from bpm.center import accounts, consumer_folder, keys, signer
+from bpm.center import accounts, consumer_folder, consumers, keys, signer
 from bpm.center.api import (
     approvals,
     bot_ui,
@@ -66,6 +66,7 @@ from bpm.contracts.center_api import (
 )
 from bpm.contracts.center_keys import CenterKeyCreated, CenterKeyCreateRequest
 from bpm.contracts.center_keys import validate_create as validate_key_create
+from bpm.contracts.external_task import ConsumerCreateRequest, ConsumerUpdateRequest
 
 API = "/api/v1"
 
@@ -206,6 +207,34 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
             password=wanted.password,
             data_dir=data_folder,
         )
+
+    # ─────────────────── 일꾼 관리 (C15 §일꾼 관리, CON-17, ADR-0137) ───────────────────
+    # 목록(`GET /consumers`)은 `external_tasks` 라우터에 있다. 바꾼 것은 일꾼의 다음 요청부터 반영된다.
+
+    @app.post(f"{API}/consumers", status_code=201)
+    async def create_consumer(request: Request) -> Any:
+        """**토큰 원문은 이 응답에만** 실린다 — Center는 해시만 둔다."""
+        found = require_center_admin(authenticate(request))
+        wanted = _model(ConsumerCreateRequest, await _json(request))
+        return consumers.create(app.state.store, name=wanted.name, topics=list(wanted.topics), by=found.actor)
+
+    @app.put(f"{API}/consumers/{{consumer_id}}")
+    async def update_consumer(request: Request, consumer_id: str) -> Any:
+        found = require_center_admin(authenticate(request))
+        wanted = _model(ConsumerUpdateRequest, await _json(request))
+        return consumers.update_topics(app.state.store, consumer_id, list(wanted.topics), by=found.actor)
+
+    @app.post(f"{API}/consumers/{{consumer_id}}/token")
+    def reissue_consumer_token(request: Request, consumer_id: str) -> Any:
+        """옛 토큰은 바로 거부된다. 새 원문은 이 응답에만 실린다."""
+        found = require_center_admin(authenticate(request))
+        return consumers.reissue(app.state.store, consumer_id, by=found.actor)
+
+    @app.delete(f"{API}/consumers/{{consumer_id}}", status_code=204)
+    def delete_consumer(request: Request, consumer_id: str) -> Response:
+        found = require_center_admin(authenticate(request))
+        consumers.delete(app.state.store, consumer_id, by=found.actor)
+        return Response(status_code=204)
 
     # ─────────────────── Center API 키 (C7, CON-11) ───────────────────
 
