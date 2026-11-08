@@ -20,7 +20,7 @@ from bpm.contracts._base import ContractModel, Timestamp
 from bpm.contracts._semver import InvalidVersion, satisfies
 from bpm.contracts.extension import AdapterOperation
 from bpm.contracts.manifest import Manifest
-from bpm.contracts.service_app import Operation
+from bpm.contracts.service_app import AppGroup, Operation, OperationGroup
 
 #: 리소스를 다시 읽는 주기 (`BPM_CENTER__RESOURCE__POLL_S`). 「새로 고침」은 즉시.
 STATUS_POLL_S = 60
@@ -135,6 +135,10 @@ class ServiceAppResource(ContractModel):
     used_by: list[str] = Field(default_factory=list)  # `id@version`
     #: 이 토픽을 가져가는 일꾼 수 (C15).
     consumers: int = 0
+    #: C11 manifest 그대로 — 연결 앱 목록(CON-17)이 묶고 찾는다 (ADR-0137).
+    app_group: AppGroup | None = None
+    keywords: list[str] = Field(default_factory=list)
+    groups: list[OperationGroup] = Field(default_factory=list)
 
     def operation(self, name: str) -> Operation | None:
         return next((o for o in self.operations if o.name == name), None)

@@ -74,6 +74,12 @@ class RecordingTopic:
         found: dict[str, Any] | None = getattr(self.inner, "extension_definition", None)
         return found
 
+    @property
+    def extension_address(self) -> dict[str, Any] | None:
+        """외부 확장 토픽이면 지금 쓰는 주소 — 정의와 함께 Center에 알린다 (ADR-0137)."""
+        found: dict[str, Any] | None = getattr(self.inner, "extension_address", None)
+        return found
+
     def execute(self, task: LockedTask) -> Outcome:
         started = time.monotonic()
         outcome = self.inner.execute(task)

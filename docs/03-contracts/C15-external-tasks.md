@@ -36,6 +36,7 @@ BPM 프로세스가 네트워크 건너의 기능을 부를 때, 부르는 쪽�
 | `PUT /api/v1/consumers/self/extension` | 일꾼 토큰 | 맡은 외부 확장의 정의 올리기 — Center가 검사·서명한다 (§외부 확장 정의 올리기) |
 | `PUT /api/v1/consumers/self/catalogs/{resource_type}` | 일꾼 토큰 | 기여 자원 카탈로그 올리기 (C13 §5 `Catalog`) |
 | `GET /api/v1/external-tasks?run_id=` | 콘솔 토큰 | 그 실행이 올린 일감들 (`ExternalTaskInfo[]`, 올린 순) — CON-01 「외부 작업」. **업무 값은 없다** |
+| `GET /api/v1/external-topics/{topic}/operations` | 콘솔 토큰 | 그 토픽의 작업별 일감 집계 (`TopicOperationStatus[]`, 작업 이름 순) — CON-17 「연결 앱」. **업무 값은 없다** |
 
 - **연결은 늘 Center 쪽으로 나간다.** Center는 일꾼에게도, 부르는 쪽에게도 먼저 연결하지 않는다.
 - 크기 한도: 입력·출력 각 1 MB (C11과 같다).
@@ -142,13 +143,31 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 입력·출력·오류 글은 싣지 않는다 (원칙 6) — 값은 부른 쪽이 받으면 지워지고, 남는 것은 누가·언제·성패다.
 
+### 작업별 일감 (`TopicOperationStatus`)
+
+`GET /api/v1/external-topics/{topic}/operations` — 그 토픽(외부 확장 id·서비스 앱 id)의 일감을 **작업마다** 센다. 콘솔 토큰(관리자·읽기·세션)만. 줄은 **그 토픽의 일꾼이 올린 manifest의 작업 전부**(일감이 없으면 셈이 0)와, manifest에 없지만 일감이 남은 작업이다. 모르는 토픽이면 빈 목록이다(404가 아니다 — 일감이 없는 토픽과 같다).
+
+| 필드 | 뜻 |
+| --- | --- |
+| `operation` | 작업 이름 |
+| `kind`? | 일꾼 종류 — manifest의 작업에서(일감에 붙이는 것과 같은 출처, ADR-0135). 외부 정의 앱도 이것이 실제 종류다. manifest에 없는 작업이면 없다 |
+| `waiting` | 지금 `pending`인 일감 수 (아무도 안 가져감) |
+| `working` | 지금 `locked`인 일감 수 (일꾼이 쥐고 있다) |
+| `completed_recent` | 최근 `recent_days`일 안에 `completed`로 끝난 수 |
+| `failed_recent` | 최근 `recent_days`일 안에 `failed`·`expired`로 끝난 수 (거둔 것은 세지 않는다) |
+| `recent_days` | 위 둘의 창 — 지금 **7** |
+| `last_finished_at`? | 마지막으로 끝난 때 (상태와 상관없이, 거둔 것 빼고) |
+| `last_error_code`? | 마지막으로 실패·만료된 일감의 오류 코드. **오류 글은 싣지 않는다** |
+
+세기 전에 기한·잠금을 쓴다(다른 읽기와 같은 `sweep`).
+
 ### 일꾼 들이기 (일꾼 폴더)
 
 일꾼은 **Center 쪽 일꾼 폴더의 파일로만** 들어온다 — 요청 코드·승인이 없다 ([ADR-0122](../decisions/0122-consumer-folder.md)). 배포가 일꾼 폴더(`BPM_CENTER__CONSUMERS_DIR`, 기본 `<데이터>/consumers`)에 `<이름>.consumer.json`(`FolderConsumer`)을 복사해 두면 Center가 **뜰 때** 그 일꾼을 들인다. 폴더에 쓸 수 있는 사람을 관리자로 본다. 일꾼 하나가 **토픽 여럿**을 맡을 수 있다(모의 앱 열셋, 어댑터 일꾼이 외부 확장 여럿을 맡는 것).
 
 | 필드 | 뜻 |
 | --- | --- |
-| `name` | 일꾼 이름 (CON-07·로그에 보인다) |
+| `name` | 일꾼 이름 (CON-17·로그에 보인다) |
 | `topics` | 맡는 토픽(서비스 앱 id·외부 확장 id) — **고정**이다. 밖의 토픽을 가져가려 하면 403 `topic_not_granted` |
 | `token_sha256` | 일꾼 토큰 **원문(UTF-8)의 SHA-256**, 소문자 16진 64자. Center는 원문을 모른다 |
 | `manifests`? | 서비스 앱 토픽의 manifest(`app_id` = 토픽). 비워도 된다 — 일꾼이 뜰 때 올린다 |
@@ -169,9 +188,10 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 ### 외부 확장 정의 올리기
 
-외부 확장의 정의는 **그것을 수행하는 일꾼이 들고 있다** — 일꾼은 뜰 때 `PUT /api/v1/consumers/self/extension` `{definition}`(C13 정의)을 올리고 Center가 C13 등록과 같은 관문(크기·모양·E1~E4)을 지나면 C2 `extension` 봉투에 서명한다 (ADR-0122). 답은 C7 `ExtensionResource`(정의·봉투 포함)이고 새로 등록하면 201, 같은 것이면 200이다.
+외부 확장의 정의는 **그것을 수행하는 일꾼이 들고 있다** — 일꾼은 뜰 때 `PUT /api/v1/consumers/self/extension` `{definition, address?}`(C13 정의)를 올리고 Center가 C13 등록과 같은 관문(크기·모양·E1~E4)을 지나면 C2 `extension` 봉투에 서명한다 (ADR-0122). 답은 C7 `ExtensionResource`(정의·봉투 포함)이고 새로 등록하면 201, 같은 것이면 200이다.
 
 - 정의의 `id`는 그 일꾼의 **토픽 안**이어야 한다 — 밖이면 403 `topic_not_granted`.
+- `address`(선택)는 **그 일꾼이 지금 쓰는 주소**다 — `{base_url, test_base_url?}`. 외부 앱 주소는 일꾼 설정(`BPM_ADAPTER__EXT__<확장>__BASE_URL`·`…__TEST_BASE_URL`)이 정하고 없으면 정의의 `base_url`이다(ADR-0102). Center는 **보여 주기만** 하고(CON-17 「쓰는 주소」) 일감 흐름에 쓰지 않는다. 사용자 정보·쿼리·조각은 떼고 둔다(키가 주소에 섞여 들어오지 않게). 정의가 거절돼도(409) 주소는 적는다 — 일꾼이 그 주소로 일하고 있어서다. 옛 일꾼은 칸을 보내지 않고, 그러면 「—」다.
 - 같은 판에 다른 내용은 409 `id_conflict`, 철회된 판은 409 `extension_revoked`, **더 높은 판이 이미 있으면 409 `older_than_registered`**(옛 일꾼이 다시 떠도 지금 판이 내려가지 않는다). 내용을 바꾸려면 판을 올린다.
 - 일꾼이 올린 확장 가운데 **어느 일꾼의 토픽에도 없게 된 것**은 Center가 뜰 때 철회한다(일꾼 파일이 빠졌다). 콘솔·API로 등록·해제하는 길은 없다.
 
@@ -247,7 +267,7 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 - **어댑터 일꾼은 맡은 외부 확장의 정의를 제가 들고 있다가 올린다** (ADR-0122, §외부 확장 정의 올리기) — `BPM_ADAPTER__DEFINITIONS`의 파일들이다. Center에서 받지 않는다.
 - 출력 검사는 **`output_schema.required`의 칸이 다 있는가**까지다 — 계약 패키지에 JSON Schema 검증기를 두지 않는다(입력 쪽도 그렇다). 더 깊은 모양은 일꾼과 엔진의 `output` 매핑이 본다.
 
-- `GET /consumers`·`GET /external-topics`는 콘솔 토큰으로 읽는 길로 남는다 — CON-07에는 그 표가 없다(지켜볼 것은 Center 로그에서 본다, ADR-0122).
+- `GET /consumers`(`ConsumerInfo` — 이름·토픽·마지막으로 가져간 때·**`addresses`**: 토픽 → 그 일꾼이 올린 주소)·`GET /external-topics`·`GET /external-topics/{topic}/operations`는 콘솔 토큰으로 읽는 길이다 — CON-17 「연결 앱」이 맡은 일꾼·토픽 상태·작업별 일감을 읽는다([ADR-0137](../decisions/0137-console-app-catalog.md)). 일꾼 폴더·키는 콘솔에 없다(ADR-0122·0128).
 
 ## 호환 규칙
 
@@ -258,6 +278,8 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-08 | 1 | `PUT /consumers/self/extension`에 **`address`**(선택 — 일꾼이 쓰는 주소), `ConsumerInfo`에 **`addresses`**(토픽 → 주소). Center는 보여 주기만 한다. 선택 칸이라 판은 그대로다 | [0137](../decisions/0137-console-app-catalog.md) |
+| 2026-11-08 | 1 | **`GET /external-topics/{topic}/operations`**(콘솔 토큰, `TopicOperationStatus[]`) — CON-17이 작업마다 기다림·처리 중·최근 7일 끝남·실패를 본다. 새 엔드포인트라 옛 쪽은 영향이 없다 | [0137](../decisions/0137-console-app-catalog.md) |
 | 2026-11-08 | 1 | `LockedTask`·`ExternalTaskInfo`에 **`kind`**(일꾼 종류 — Center가 manifest에서 붙인다). 받는 쪽은 모르는 칸을 무시하므로 판은 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 1 | **일꾼은 일꾼 폴더로만 들어온다** — `<이름>.consumer.json`(`FolderConsumer`, 토큰 해시), 토픽 고정, 만료·회전 없음. `POST /consumers/enroll`·`ConsumerEnrollRequest`를 걷었다. **외부 확장 정의는 일꾼이 올린다** — `PUT /consumers/self/extension` | [0122](../decisions/0122-consumer-folder.md) |
 | 2026-10-31 | 1 | **등록 세션(`reg_…`)과 거절 `registration_off`를 걷었다** — 셀렉터 등록 도구(Tool UI)와 「셀렉터 등록」 스위치가 없다. 부르는 쪽은 서버 실행기·실행 프로세스·Studio 셋이다. `required_scopes`를 적은 작업은 켜 줄 길이 없어 `scope_missing`이다. 경로·모양은 그대로다 | [0114](../decisions/0114-remove-ui-automation.md) |

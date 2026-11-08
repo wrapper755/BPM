@@ -25,7 +25,15 @@ from bpm.contracts._base import ContractModel, SchemaVersioned, Timestamp, Viola
 from bpm.contracts._semver import InvalidVersion, satisfies
 from bpm.contracts.hashing import canonical_json, sha256_hex
 from bpm.contracts.manifest import SemVer
-from bpm.contracts.service_app import KIND_API, MODE_AUTONOMOUS, MODES, OPERATION_PATTERN
+from bpm.contracts.service_app import (
+    KIND_API,
+    MODE_AUTONOMOUS,
+    MODES,
+    OPERATION_PATTERN,
+    AppGroup,
+    OperationGroup,
+    group_problems,
+)
 from bpm.contracts.signing import AdminKey, Envelope, ExtensionClaim, verify
 
 #: 확장 패키지 안에 두는 정의 파일 이름, 그리고 확장 호스트가 읽는 엔트리 포인트 그룹.
@@ -264,6 +272,10 @@ class AdapterOperation(ContractModel):
 
     name: OperationName
     description: str | None = None
+    #: 묶음 (`HttpAdapter.groups[].id`) — 사람이 많은 작업을 다룰 때 묶는 자리다. 실행에는 쓰이지 않는다 (ADR-0137).
+    group: str | None = None
+    #: 찾기용 낱말 (CON-17, Camunda 커넥터 작업의 `keywords`).
+    keywords: list[str] = Field(default_factory=list)
     modes: list[str] = Field(default_factory=lambda: [MODE_AUTONOMOUS])
     server_ok: bool = True
     idempotent: bool = False
@@ -289,6 +301,7 @@ class HttpAdapter(ContractModel):
     limits: AdapterLimits = Field(default_factory=AdapterLimits)
     health: AdapterHealth | None = None
     operations: list[AdapterOperation] = Field(default_factory=list)
+    groups: list[OperationGroup] = Field(default_factory=list)
 
     def operation(self, name: str) -> AdapterOperation | None:
         return next((o for o in self.operations if o.name == name), None)
@@ -340,6 +353,10 @@ class ExtensionManifest(SchemaVersioned):
     requires_keys: list[KeyNeed] = Field(default_factory=list)
     docs_url: str | None = None
     console_url: str | None = None
+    #: 연결 앱 목록(CON-17)에서 이 앱을 묶는 자리 — Camunda 요소 템플릿의 `category` (ADR-0137).
+    app_group: AppGroup | None = None
+    #: 찾기용 낱말 (CON-17).
+    keywords: list[str] = Field(default_factory=list)
 
     @property
     def is_external(self) -> bool:
@@ -580,6 +597,8 @@ def _check_e3(m: ExtensionManifest) -> list[Violation]:
                 out.append(_e3("type=header는 헤더 이름이 필요하다", "service.adapter.auth.name"))
             elif auth.name.lower() in FORBIDDEN_HEADERS - {"authorization"}:
                 out.append(_e3(f"인증에 쓸 수 없는 헤더다: {auth.name}", "service.adapter.auth.name"))
+
+    out += [_e3(one, "service.adapter.groups") for one in group_problems(adapter.groups, adapter.operations)]
 
     seen: set[str] = set()
     for i, op in enumerate(adapter.operations):

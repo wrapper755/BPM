@@ -78,6 +78,8 @@
 | `contributes` | Contributes | ✓ | 기여 (아래) |
 | `requires_keys` | KeyNeed[] | | 이 확장이 제 앱을 부르나 (이름은 옛것이다 — 키는 없다, 아래 KeyNeed) |
 | `docs_url`, `console_url` | str | | `http(s)://`만 (콘솔이 링크로 보이므로) |
+| `app_group` | `{id, name}` | | 연결 앱 목록(CON-17)에서 이 앱을 묶는 자리 — Camunda 요소 템플릿의 `category`와 같은 결 ([ADR-0137](../decisions/0137-console-app-catalog.md)). C11 manifest에도 같은 칸이 있다 |
+| `keywords` | str[] | | 찾기용 낱말 (CON-17 찾기) |
 
 ### Service
 
@@ -162,12 +164,15 @@
 | `limits` | `{timeout_s: 60, max_response_kb: 1024}` |
 | `health` | 선택. `{path, expect_status: 200}`. **지금 읽는 쪽이 없다** — Center는 외부 앱을 두드리지 않고 상태를 토픽에서 읽는다(C7·C15, [ADR-0102](../decisions/0102-calling-outside-is-pull.md)). 받아 두기만 한다 |
 | `operations` | 아래 Operation[] |
+| `groups` | 선택. 작업 묶음 `[{id, name, description?}]` — 적힌 순서가 보이는 순서다. 작업의 `group`이 이 `id`를 가리킨다 (OpenAPI 최상위 `tags`와 같은 결, [ADR-0137](../decisions/0137-console-app-catalog.md)). 실행에는 쓰이지 않고 사람이 140개쯤 되는 작업을 다룰 때 묶는 자리다 (CON-17) |
 
 Operation:
 
 | 필드 | 뜻 |
 | --- | --- |
 | `name`, `description` | C11과 같은 이름 규칙 |
+| `group` | 선택. `groups[].id` 하나 — 없으면 「기타」로 보인다. **`groups`에 없는 id면 검사 오류다** (E3) |
+| `keywords` | 선택. 찾기용 낱말 (Camunda 커넥터 작업의 `keywords`와 같은 결) |
 | `modes` | 허용 수행 모드. 외부 확장의 **기본값은 `["autonomous"]`.** 결정 수행에서 부르려면 `deterministic`을 명시해야 하고, 이것도 서명 대상이다 |
 | `server_ok` | 기본 true |
 | `idempotent` | 기본 **false**. false면 결과를 모르는 실패(시간 초과, 연결 끊김)를 자동으로 다시 부르지 않는다 |
@@ -281,7 +286,7 @@ Operation:
 | --- | --- | --- |
 | E1 | `tier=external`이면 `entry`가 있는 기여와 `configuration`·`task_types`가 없다 | 422 `external_code_not_allowed` |
 | E2 | `tier=builtin`·`internal`은 설치 파일에 든 확장만. Center에 외부로 등록할 수 없다 | 409 `id_conflict` |
-| E3 | `http-adapter`: `allowed_hosts`·https·템플릿 변수·경로 시작 `/`·제한 JSONPath·금지 헤더 규칙(§4). `requires_keys`에 `purpose: run`이 있으면 `adapter.auth`가 있다 (키를 실을 자리 — ADR-0091) | 422 `adapter_invalid` (`detail`에 칸별 사유) |
+| E3 | `http-adapter`: `allowed_hosts`·https·템플릿 변수·경로 시작 `/`·제한 JSONPath·금지 헤더 규칙(§4)·**작업의 `group`은 `groups`에 있는 id, `groups`의 id는 겹치지 않는다**. `requires_keys`에 `purpose: run`이 있으면 `adapter.auth`가 있다 (키를 실을 자리 — ADR-0091) | 422 `adapter_invalid` (`detail`에 칸별 사유) |
 | E4 | `task_types[].id`는 확장 사이에 겹치지 않는다 | 409 `task_type_conflict` |
 | E5 | 확장 호스트는 `api` 범위가 맞지 않는 확장을 켜지 않는다 (목록에 「호환 안 됨」) | — |
 | E6 | 외부 정의의 봉투(C2 `extension`)가 검증되고 `definition_hash`가 맞는다 | 400 `bad_envelope` / `hash_mismatch` |
@@ -298,6 +303,7 @@ Studio 「확장」(STU-15)의 「정의 파일 열기...」는 E1·E3을 로컬
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-08 | 2 | 연결 앱 카탈로그(CON-17) 칸 — 정의의 `app_group{id, name}`·`keywords`, `adapter.groups`와 작업의 `group`·`keywords`(모두 선택). E3가 없는 묶음 id를 거부한다. 선택 칸이라 schema는 그대로다 | [0137](../decisions/0137-console-app-catalog.md) |
 | 2026-11-08 | 2 | HTTP 어댑터 작업의 `kind`는 `api`다(기본, 다른 값은 검사 오류) — 선택 칸이라 schema는 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 2 | 외부 확장 등록은 **그 토픽의 일꾼이 정의를 올리는 것**이다(C15 `PUT …/self/extension`) — `POST/DELETE /resources/extensions`를 걷었다. 맡은 일꾼이 일꾼 폴더에서 빠지면 Center가 거둔다. 낮은 판은 409 `older_than_registered`. 정의 모양은 그대로다 | [0122](../decisions/0122-consumer-folder.md) |
 | 2026-10-31 | 2 | 기여 지점 `tool_ui.tools`·`bot_ui.panels`·`bot_ui.local_runtimes`·`agent_environments`, **E8**, 예약 키 `runtime.<id>.*`, `scope: tool_ui`, `requires_keys[].purpose: utility`를 걷었다 — UI 자동화 확장과 함께. 걷은 열쇠는 호스트가 경고하고 읽지 않는다(`LEGACY_CONTRIBUTION_KEYS`), E7은 옛 머리도 막는다. 열쇠가 모두 선택이라 schema는 그대로이고 `extension_api`는 **2.0.0**이다(이름을 지웠다 — 예시의 `api`는 `>=2,<3`) | [0114](../decisions/0114-remove-ui-automation.md) |

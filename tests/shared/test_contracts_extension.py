@@ -207,6 +207,32 @@ def test_e3_an_adapter_operation_is_only_an_api_operation() -> None:
     assert "adapter_invalid" in op_codes(kind="ai")
 
 
+def test_e3_an_operation_group_must_be_declared() -> None:
+    """작업 묶음 (ADR-0137) — 작업의 `group`은 `groups`에 있는 id, id는 겹치지 않는다."""
+    groups = [{"id": "intake", "name": "접수"}]
+    assert "adapter_invalid" not in adapter_codes(groups=groups)
+    definition = external()
+    definition["service"]["adapter"]["groups"] = groups
+    definition["service"]["adapter"]["operations"][0]["group"] = "intake"
+    assert "adapter_invalid" not in codes(definition)
+    definition["service"]["adapter"]["operations"][0]["group"] = "nowhere"
+    assert "adapter_invalid" in codes(definition)
+    assert "adapter_invalid" in adapter_codes(groups=groups * 2)
+
+
+def test_catalog_fields_are_optional_and_kept() -> None:
+    """연결 앱 카탈로그 칸 (ADR-0137) — 앱의 `app_group`·`keywords`, 작업의 `keywords`. 없어도 된다."""
+    definition = external()
+    definition["app_group"] = {"id": "company1", "name": "Company1 업무"}
+    definition["keywords"] = ["주문"]
+    definition["service"]["adapter"]["operations"][0]["keywords"] = ["발주"]
+    assert codes(definition) == codes(external())
+    found = ExtensionManifest.model_validate(definition)
+    assert found.app_group is not None and found.app_group.name == "Company1 업무"
+    assert found.service is not None and found.service.adapter is not None
+    assert found.service.adapter.operations[0].keywords == ["발주"]
+
+
 def test_e3_requires_allowed_hosts() -> None:
     assert "adapter_invalid" in adapter_codes(allowed_hosts=[])
 

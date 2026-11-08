@@ -72,7 +72,7 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 | `POST /call-tokens` (C15 호출 토큰) | — | — | ✓ | PC 실행기 키만 | — |
 | `POST /external-tasks`, `GET·POST /external-tasks/{id}…` (C15 — 부르는 쪽) | — | — | 호출 토큰·Studio 키 | 서버 실행기 키·호출 토큰 | — |
 | `/consumers/fetch·tasks…·self…` (C15 — 일꾼, 일꾼 폴더로만 들어온다 — ADR-0122) | 일꾼 토큰만 | | | | |
-| `GET /consumers`, `GET /external-topics`, `GET /external-tasks?run_id=` (CON-01) | ✓ | ✓ | — | — | — |
+| `GET /consumers`, `GET /external-topics`, `…/{topic}/operations` (CON-17), `GET /external-tasks?run_id=` (CON-01) | ✓ | ✓ | — | — | — |
 | `GET /schedules` (§일정, CON-02) | ✓ | ✓ | — | — | — |
 | `GET /signing-keys` (C7) | 인증 없음 | | | | |
 | `POST /bot-ui/enroll`, `POST /server-runner/enroll`, `GET …/enroll/{id}` (C4·C12) | 인증 없음 | | | | |

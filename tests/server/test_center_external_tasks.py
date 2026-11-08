@@ -359,6 +359,41 @@ def test_a_console_lists_consumers_and_topics(center: TestClient, field: str) ->
     assert center.get("/api/v1/consumers", headers=bearer(field)).status_code == 403
 
 
+def test_a_console_counts_tasks_per_operation(center: TestClient, field: str) -> None:
+    """CON-17 — 작업마다 기다림·처리 중·최근 끝남·실패, 마지막 오류 코드 (ADR-0137). 값은 싣지 않는다."""
+    token = consumer(center)
+
+    def one(node: str) -> str:
+        idem = {"run_id": RUN, "node_id": node, "node_instance": 1, "attempt": 1}
+        return str(post(center, field, idempotency=idem).json()["task_id"])
+
+    done = one("Task_a")
+    fetch(center, token, max_tasks=1)
+    center.post(f"/api/v1/consumers/tasks/{done}/complete", json={"output": {"receipt": "r"}}, headers=bearer(token))
+    failed = one("Task_b")
+    fetch(center, token, max_tasks=1)
+    center.post(
+        f"/api/v1/consumers/tasks/{failed}/fail",
+        json={"code": "input_invalid", "message": "주문 번호 없음"},
+        headers=bearer(token),
+    )
+    one("Task_c")
+    fetch(center, token, max_tasks=1)
+    one("Task_d")
+
+    listed = center.get(f"/api/v1/external-topics/{TOPIC}/operations", headers=ADMIN).json()
+    rows = {one["operation"]: one for one in listed}
+    row = rows[OPERATION]
+    assert (row["waiting"], row["working"], row["kind"]) == (1, 1, "ai")
+    # 일감이 없던 작업도 manifest에 있으면 0으로 줄이 있다.
+    assert all(one["waiting"] == 0 and one["completed_recent"] == 0 for name, one in rows.items() if name != OPERATION)
+    assert (row["completed_recent"], row["failed_recent"], row["recent_days"]) == (1, 1, 7)
+    assert row["last_error_code"] == "input_invalid" and row["last_finished_at"]
+    assert "주문 번호 없음" not in json.dumps(listed, ensure_ascii=False)
+    assert center.get("/api/v1/external-topics/nobody/operations", headers=ADMIN).json() == []
+    assert center.get(f"/api/v1/external-topics/{TOPIC}/operations", headers=bearer(field)).status_code == 403
+
+
 def test_another_consumer_cannot_finish_a_task_it_never_locked(center: TestClient, field: str) -> None:
     first = consumer(center, seed="a")
     second = consumer(center, seed="b")

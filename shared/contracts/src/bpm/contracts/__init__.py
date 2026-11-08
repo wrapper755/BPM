@@ -223,6 +223,7 @@ from bpm.contracts.extension import check_size as check_extension_size
 from bpm.contracts.extension import validate as validate_extension
 from bpm.contracts.external_task import (
     CompleteRequest,
+    ConsumerAddress,
     ConsumerInfo,
     ExtendRequest,
     ExternalTaskCreate,
@@ -234,6 +235,7 @@ from bpm.contracts.external_task import (
     FetchResponse,
     FolderConsumer,
     LockedTask,
+    TopicOperationStatus,
     TopicStatus,
 )
 from bpm.contracts.hashing import (
@@ -334,12 +336,14 @@ from bpm.contracts.server_runner import (
 from bpm.contracts.server_runner import validate_heartbeat as validate_runner_heartbeat
 from bpm.contracts.service_app import (
     AdminStatus,
+    AppGroup,
     Caller,
     CenterRegistration,
     Dependency,
     ExtensionRef,
     HealthResponse,
     Operation,
+    OperationGroup,
     OperationStatus,
     OpRequest,
     OpResponse,
@@ -383,6 +387,7 @@ __all__ = [
     "place_violation",
     "staff_principal",
     "CompleteRequest",
+    "ConsumerAddress",
     "ConsumerInfo",
     "FolderConsumer",
     "FolderKey",
@@ -394,6 +399,7 @@ __all__ = [
     "FetchRequest",
     "FetchResponse",
     "LockedTask",
+    "TopicOperationStatus",
     "TopicStatus",
     "ExternalTaskInfo",
     "ScheduleInfo",
@@ -618,6 +624,8 @@ __all__ = [
     "Executor",
     "ExtensionManifest",
     "HttpAdapter",
+    "AppGroup",
+    "OperationGroup",
     "KeyNeed",
     "PreflightContribution",
     "ResourceContribution",

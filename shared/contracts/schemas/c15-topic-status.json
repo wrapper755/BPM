@@ -1,7 +1,7 @@
 {
   "$id": "urn:bpm:contracts:c15-topic-status",
   "additionalProperties": true,
-  "description": "`GET /api/v1/external-topics`의 한 줄 (C15 「정한 것」의 제안 — CON-07 토픽 상태).",
+  "description": "`GET /api/v1/external-topics`의 한 줄 (C15 「정한 것」의 제안 — CON-17 토픽 상태).",
   "properties": {
     "consumers": {
       "default": 0,

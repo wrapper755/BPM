@@ -17,6 +17,11 @@ import type { CenterKeyInfo } from "@bpm/api-types/c7-center-key-info";
 import type { EnrollmentInfo } from "@bpm/api-types/c5-enrollment-info";
 import type { EnrollmentDecision } from "@bpm/api-types/c5-enrollment-decision";
 import type { ExternalTaskInfo } from "@bpm/api-types/c15-external-task-info";
+import type { ConsumerInfo } from "@bpm/api-types/c15-consumer-info";
+import type { TopicStatus } from "@bpm/api-types/c15-topic-status";
+import type { TopicOperationStatus } from "@bpm/api-types/c15-topic-operation-status";
+import type { ExtensionResource } from "@bpm/api-types/c7-extension-resource";
+import type { ServiceAppResource } from "@bpm/api-types/c7-service-app-resource";
 import type { ScheduleInfo } from "@bpm/api-types/c5-schedule-info";
 import type { ErrorBody } from "@bpm/api-types/c5-error-body";
 import type { RunListing } from "@bpm/api-types/c3-run-listing";
@@ -162,6 +167,24 @@ export const center = {
   /** 그 실행이 올린 일감 (C15, CON-01 「외부 작업」) — 값 없이 자리·상태·일꾼만. */
   externalTasks: (runId: string) =>
     call<ExternalTaskInfo[]>(`/api/v1/external-tasks?run_id=${encodeURIComponent(runId)}`),
+  /** 등록된 확장 (C7) — CON-17은 `tier: external`(외부 정의)만 쓴다. */
+  extensions: () =>
+    call<{ items: ExtensionResource[] }>("/api/v1/resources?type=extension").then((found) => found.items),
+  /** 확장 하나 — 외부면 정의와 봉투가 함께 온다 (C7·C13). */
+  extension: (extensionId: string) =>
+    call<ExtensionResource>(`/api/v1/resources/extensions/${encodeURIComponent(extensionId)}`),
+  /** 일꾼이 올린 앱 (C7 — C11 manifest, 외부 정의가 있는 토픽은 C7이 뺀다). CON-17 「일꾼 앱」. */
+  serviceApps: () =>
+    call<{ items: ServiceAppResource[] }>("/api/v1/resources?type=service_app").then((found) => found.items),
+  serviceApp: (appId: string) =>
+    call<ServiceAppResource>(`/api/v1/resources/service-apps/${encodeURIComponent(appId)}`),
+  /** 일꾼들 (C15) — 맡은 토픽으로 외부 앱의 일꾼을 찾는다 (CON-17). */
+  consumers: () => call<ConsumerInfo[]>("/api/v1/consumers"),
+  /** 토픽 상태 (C15) — 일꾼 수·마지막으로 가져간 때·기다리는 일감. */
+  externalTopics: () => call<TopicStatus[]>("/api/v1/external-topics"),
+  /** 그 토픽의 작업별 일감 집계 (C15, CON-17). 일감이 없었던 작업은 줄이 없다. */
+  topicOperations: (topic: string) =>
+    call<TopicOperationStatus[]>(`/api/v1/external-topics/${encodeURIComponent(topic)}/operations`),
   /** 타이머 시작의 일정 (C5 §일정, CON-02 「일정」). */
   schedules: () => call<ScheduleInfo[]>("/api/v1/schedules"),
 

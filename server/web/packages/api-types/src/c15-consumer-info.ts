@@ -3,9 +3,12 @@
    그다음 `pnpm --filter @bpm/api-types generate`. */
 
 /**
- * `GET /api/v1/consumers`의 한 줄 (CON-07 「일꾼」).
+ * `GET /api/v1/consumers`의 한 줄 (CON-17 「맡은 일꾼」).
  */
 export interface ConsumerInfo {
+  addresses?: {
+    [k: string]: ConsumerAddress;
+  };
   approved_at?: string | null;
   apps?: string[];
   consumer_id: string;
@@ -13,5 +16,15 @@ export interface ConsumerInfo {
   last_fetch_at?: string | null;
   name: string;
   topics?: string[];
+  [k: string]: unknown;
+}
+/**
+ * 일꾼이 외부 앱을 부르는 주소 — 정의를 올릴 때 함께 알린다 (C15 `address`, ADR-0137).
+ *
+ * Center는 보여 주기만 한다 (CON-17 「쓰는 주소」). 주소는 일꾼 설정이 정하고 없으면 정의의 `base_url`이다.
+ */
+export interface ConsumerAddress {
+  base_url?: string | null;
+  test_base_url?: string | null;
   [k: string]: unknown;
 }

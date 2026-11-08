@@ -10,11 +10,13 @@
  */
 export interface ExtensionManifest {
   api?: string | null;
+  app_group?: AppGroup | null;
   console_url?: string | null;
   contributes?: Contributes;
   description?: string | null;
   docs_url?: string | null;
   id: string;
+  keywords?: string[];
   name: string;
   publisher: string;
   requires_keys?: KeyNeed[];
@@ -25,6 +27,16 @@ export interface ExtensionManifest {
   service?: Service | null;
   tier: string;
   version: string;
+  [k: string]: unknown;
+}
+/**
+ * 연결 앱 목록(CON-17)에서 앱을 묶는 자리 — Camunda 요소 템플릿의 `category{id, name}` (ADR-0137).
+ *
+ * C11 `category`(업무용·시스템용)와는 다른 칸이다. C13 정의·C11 manifest가 같은 모양을 쓴다.
+ */
+export interface AppGroup {
+  id: string;
+  name: string;
   [k: string]: unknown;
 }
 /**
@@ -163,6 +175,7 @@ export interface HttpAdapter {
   allow_private_network?: boolean;
   allowed_hosts?: string[];
   auth?: AdapterAuth | null;
+  groups?: OperationGroup[];
   health?: AdapterHealth | null;
   limits?: AdapterLimits;
   operations?: AdapterOperation[];
@@ -174,6 +187,17 @@ export interface HttpAdapter {
 export interface AdapterAuth {
   name?: string | null;
   type: string;
+  [k: string]: unknown;
+}
+/**
+ * 앱 안 작업 묶음 하나 (C13 `adapter.groups`·C11 `groups`, OpenAPI 최상위 `tags`와 같은 결 — ADR-0137).
+ *
+ * 적힌 순서가 보이는 순서다. 실행에는 쓰이지 않는다.
+ */
+export interface OperationGroup {
+  description?: string | null;
+  id: string;
+  name: string;
   [k: string]: unknown;
 }
 /**
@@ -197,10 +221,12 @@ export interface AdapterLimits {
  */
 export interface AdapterOperation {
   description?: string | null;
+  group?: string | null;
   idempotent?: boolean;
   input_schema?: {
     [k: string]: unknown;
   } | null;
+  keywords?: string[];
   kind?: string;
   modes?: string[];
   name: string;

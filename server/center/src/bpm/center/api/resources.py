@@ -164,6 +164,9 @@ def service_apps(store: Store, *, probe: bool = True) -> list[ServiceAppResource
                 manifest_at=at,
                 used_by=_used_by(store, app_id),
                 consumers=count,
+                app_group=manifest.app_group,
+                keywords=list(manifest.keywords),
+                groups=list(manifest.groups),
             )
         )
     return out

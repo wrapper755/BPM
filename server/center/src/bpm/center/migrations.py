@@ -365,6 +365,11 @@ MIGRATIONS: tuple[Step, ...] = (
         "외부 작업의 일꾼 종류 — 올릴 때 manifest의 작업에서 옮겨 적는다 (C15 `kind`, ADR-0135)",
         ("ALTER TABLE external_tasks ADD COLUMN kind TEXT",),
     ),
+    Step(
+        25,
+        "일꾼이 외부 앱을 부르는 주소 — 정의를 올릴 때 알린다, 토픽 → 주소 (C15 `address`, ADR-0137)",
+        ("ALTER TABLE consumers ADD COLUMN addresses_json TEXT",),
+    ),
 )
 
 

@@ -1,5 +1,25 @@
 {
   "$defs": {
+    "AppGroup": {
+      "additionalProperties": true,
+      "description": "연결 앱 목록(CON-17)에서 앱을 묶는 자리 — Camunda 요소 템플릿의 `category{id, name}` (ADR-0137).\n\nC11 `category`(업무용·시스템용)와는 다른 칸이다. C13 정의·C11 manifest가 같은 모양을 쓴다.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "AppGroup",
+      "type": "object"
+    },
     "ExtensionRef": {
       "additionalProperties": true,
       "description": "이 서비스 앱이 어느 확장의 서버 부분인가 (C13). 내장·사내 확장이면 넣는다.",
@@ -41,6 +61,18 @@
           "title": "Fallback",
           "type": "string"
         },
+        "group": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group"
+        },
         "input_schema": {
           "anyOf": [
             {
@@ -53,6 +85,13 @@
           ],
           "default": null,
           "title": "Input Schema"
+        },
+        "keywords": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Keywords",
+          "type": "array"
         },
         "kind": {
           "default": "ai",
@@ -108,6 +147,38 @@
       "title": "Operation",
       "type": "object"
     },
+    "OperationGroup": {
+      "additionalProperties": true,
+      "description": "앱 안 작업 묶음 하나 (C13 `adapter.groups`·C11 `groups`, OpenAPI 최상위 `tags`와 같은 결 — ADR-0137).\n\n적힌 순서가 보이는 순서다. 실행에는 쓰이지 않는다.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "OperationGroup",
+      "type": "object"
+    },
     "ResourceCatalog": {
       "additionalProperties": true,
       "description": "이 앱이 **자기 기여 자원 카탈로그**를 내는 종류 (C7 §리소스 모으는 방식).\n\n**내장·사내 확장의 정의는 Center에 없어**(설치 파일에 들어 있다) 서버 부분이 자기 카탈로그를\n알린다 — 일꾼이 `PUT /consumers/self/catalogs/{type}`으로 올린다 (C15, ADR-0102). 응답 형식은\nC13 §5 `Catalog`다. `catalog_url`은 옛 manifest를 읽기 위해 남은 칸이고 Center는 그 주소를 부르지 않는다.",
@@ -145,6 +216,17 @@
   "additionalProperties": true,
   "description": "앱이 하는 일 — 일꾼이 `PUT /consumers/self/manifest`로 올리고 Center가 리소스 목록·작업 대조에 쓴다 (C7·C15).",
   "properties": {
+    "app_group": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AppGroup"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "app_id": {
       "title": "App Id",
       "type": "string"
@@ -167,6 +249,20 @@
         }
       ],
       "default": null
+    },
+    "groups": {
+      "items": {
+        "$ref": "#/$defs/OperationGroup"
+      },
+      "title": "Groups",
+      "type": "array"
+    },
+    "keywords": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Keywords",
+      "type": "array"
     },
     "name": {
       "title": "Name",

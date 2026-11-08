@@ -107,6 +107,15 @@ class AdapterService:
         return self.raw
 
     @property
+    def extension_address(self) -> dict[str, str | None]:
+        """지금 쓰는 주소 — 설정이 없으면 정의의 `base_url`이다 (Center에 알리기만 한다, C15 `address`)."""
+        service = self.definition.service
+        return {
+            "base_url": self._setting("BASE_URL") or (service.base_url if service else None),
+            "test_base_url": self._setting("TEST_BASE_URL"),
+        }
+
+    @property
     def manifest(self) -> ServiceAppManifest:
         if self._manifest is None:
             self._manifest = manifest_of(self.definition)

@@ -164,9 +164,12 @@ class Consumer:
             definition = getattr(service, "extension_definition", None)
             slot = f"extension:{service.app_id}"
             if isinstance(definition, dict) and (force or slot not in self._published):
-                answer = http.put(
-                    "/api/v1/consumers/self/extension", json={"definition": definition}, headers=self._headers()
-                )
+                body: dict[str, Any] = {"definition": definition}
+                # 지금 쓰는 주소도 함께 알린다 — Center 콘솔이 보여 주기만 한다 (C15 `address`, ADR-0137).
+                address = getattr(service, "extension_address", None)
+                if isinstance(address, dict):
+                    body["address"] = address
+                answer = http.put("/api/v1/consumers/self/extension", json=body, headers=self._headers())
                 if answer.status_code == 409:
                     # 같은 판에 다른 내용·철회된 판·더 높은 판이 이미 있다 — 사람이 판을 올려야 한다.
                     log.warning("외부 확장 %s의 정의를 Center가 받지 않았다: %s", service.app_id, answer.text)
