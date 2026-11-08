@@ -1,0 +1,100 @@
+{
+  "$id": "urn:bpm:contracts:c15-consumer-created",
+  "additionalProperties": true,
+  "description": "만들기·토큰 새로 발급의 답 — **토큰 원문은 여기에만** 실린다 (Center는 해시만 둔다).",
+  "properties": {
+    "approved_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approved At"
+    },
+    "approved_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approved By"
+    },
+    "apps": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Apps",
+      "type": "array"
+    },
+    "consumer_id": {
+      "title": "Consumer Id",
+      "type": "string"
+    },
+    "key_prefix": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Key Prefix"
+    },
+    "last_fetch_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Fetch At"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "source": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source"
+    },
+    "token": {
+      "title": "Token",
+      "type": "string"
+    },
+    "topics": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Topics",
+      "type": "array"
+    }
+  },
+  "required": [
+    "consumer_id",
+    "name",
+    "token"
+  ],
+  "title": "ConsumerCreated",
+  "type": "object"
+}

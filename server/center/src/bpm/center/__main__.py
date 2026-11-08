@@ -114,7 +114,8 @@ def consumer_file(argv: list[str]) -> int:
     path, raw = write_file(folder, found.name, topics)
     print(f"일꾼 파일을 썼다: {path}")
     print(f"토큰 (이번 한 번만 보인다 — 일꾼의 …CENTER__TOKEN에 넣으세요): {raw}")
-    print("Center를 다시 띄우면 들어온다.")
+    # 처음 한 번만 들인다 (ADR-0137) — 이미 있는 일꾼은 콘솔이 원본이다.
+    print("Center가 다음에 뜰 때 들어온다. 이미 들어온 일꾼이면 이 파일은 쓰이지 않는다 — 콘솔 「일꾼」에서 고친다.")
     return 0
 
 

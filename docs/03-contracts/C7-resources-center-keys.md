@@ -55,12 +55,12 @@
 | --- | --- | --- |
 | `GET /resources?type=extension\|service_app\|contributed\|runtime[&resource_type=<종류>]` | 읽기 | 목록 |
 | `GET /resources/extensions/{id}` | 읽기 | 확장 하나 (C13) |
-| `GET /resources/consumer-folder` | 읽기 | Center가 **마지막으로 뜰 때** 일꾼 폴더를 읽은 결과 (`ConsumerFolderScan`, ADR-0122) |
+| `GET /resources/consumer-folder` | 읽기 | Center가 **마지막으로 뜰 때** 일꾼 폴더를 읽은 결과 (`ConsumerFolderScan`, ADR-0122·0137) |
 | `GET /resources/service-apps/{app_id}` | 읽기 | 서비스 앱 하나 (manifest 전체) |
 | `GET /resources/contributed/{resource_type}/{id}` | 읽기 | 확장 기여 자원 하나 |
 | `GET /signing-keys` | **없음** (공개키다) | 믿는 키 목록 (C2 `AdminKey[]` — 하트비트의 `admin_keys`와 같은 것). 어댑터 일꾼이 외부 확장 봉투를 다시 검증하려고 받는다 |
 
-외부 확장은 **그 토픽의 일꾼이 정의를 올린다**(C15 `PUT …/consumers/self/extension` — Center가 봉투에 서명한다, ADR-0122). 콘솔·API로 등록·해제하는 길은 없다. 서비스 앱을 **등록하는 길도 없다** — 일꾼 폴더의 일꾼 파일(C15 §일꾼 들이기)이 그 자리다.
+외부 확장은 **그 토픽의 일꾼이 정의를 올린다**(C15 `PUT …/consumers/self/extension` — Center가 봉투에 서명한다, ADR-0122). 콘솔·API로 등록·해제하는 길은 없다. 서비스 앱을 **등록하는 길도 없다** — 일꾼(C15 §일꾼 관리)이 그 자리다.
 
 ## 모델
 
@@ -79,14 +79,14 @@
 
 ### ConsumerFolderScan (일꾼 폴더)
 
-일꾼 폴더(`BPM_CENTER__CONSUMERS_DIR`, 기본 `<데이터>/consumers`)의 일꾼 파일(`<이름>.consumer.json`, C15 §일꾼 들이기)을 Center가 뜰 때 한 번 읽은 결과다 (ADR-0122). 맡은 일꾼이 없어져 거둔 외부 확장도 함께 싣는다. 결과는 메모리에만 있고 다시 뜨면 새로 읽는다.
+일꾼 폴더(`BPM_CENTER__CONSUMERS_DIR`, 기본 `<데이터>/consumers`)의 일꾼 파일(`<이름>.consumer.json`, C15 §일꾼 들이기)과 키 파일(§폴더 키)을 Center가 뜰 때 한 번 읽은 결과다 (ADR-0122). **일꾼 파일은 처음 들이기만 한다** — 이미 있는 일꾼은 `unchanged`이고 파일이 빠져도 일꾼을 지우지 않는다(일꾼은 콘솔이 다룬다, ADR-0137). 결과는 메모리에만 있고 다시 뜨면 새로 읽는다.
 
 | 필드 | 뜻 |
 | --- | --- |
 | `configured` | 폴더가 있나(사람이 적었으면 늘 `true`). `false`면 나머지는 비어 있다 |
 | `dir`?, `scanned_at`? | 읽은 폴더와 때 |
 | `problem`? | 폴더 자체를 읽지 못한 까닭(없음·폴더가 아님). 있으면 `items`는 비어 있다 |
-| `items[]` | 하나마다 `{kind, file?, id?, version?, outcome, code?, message?}`. `kind`: `consumer`(`id`가 일꾼 이름) / `key`(키 파일의 키, `id`가 키 이름 — §폴더 키) / `extension`(맡은 일꾼이 없어 거둔 외부 확장). `outcome`: `registered`(들였다·바꿨다) / `unchanged`(그대로) / `refused`(`unreadable`·`input_invalid`·`token_revoked`·`token_in_use`) / `revoked`(**빠져서** 거뒀다 — `file`이 없다) |
+| `items[]` | 하나마다 `{kind, file?, id?, version?, outcome, code?, message?}`. `kind`: `consumer`(`id`가 일꾼 이름) / `key`(키 파일의 키, `id`가 키 이름 — §폴더 키) / `extension`(옛 Center가 맡은 일꾼이 없어 거둔 외부 확장 — 지금은 콘솔이 그 자리에서 거두어 나오지 않는다). `outcome`: `registered`(들였다·바꿨다 — 일꾼은 새로 들인 것만) / `unchanged`(그대로 — 일꾼은 이미 있으면 파일이 달라도 이것이고 `message`에 그 뜻을 단다) / `refused`(`unreadable`·`input_invalid`·`token_revoked`·`token_in_use`) / `revoked`(키 파일이 **빠져서** 거뒀다 — `file`이 없다) |
 
 ```json
 {
@@ -94,11 +94,11 @@
   "dir": "/consumers",
   "scanned_at": "2026-10-31T09:00:00+09:00",
   "items": [
-    {"kind": "consumer", "file": "worker.consumer.json", "id": "worker", "outcome": "unchanged"},
-    {"kind": "key", "file": "nowview.key.json", "id": "nowview", "outcome": "registered"},
-    {"kind": "consumer", "id": "old-worker", "outcome": "revoked", "message": "폴더에서 빠져 키를 폐기했습니다"},
-    {"kind": "extension", "id": "ext-ocr", "version": "1.0.0", "outcome": "revoked",
-     "message": "맡은 일꾼이 없어 등록을 해제했습니다"}
+    {"kind": "consumer", "file": "worker.consumer.json", "id": "worker", "outcome": "unchanged",
+     "message": "이미 들인 일꾼입니다 — 파일의 바뀐 값은 들이지 않습니다. 콘솔에서 고치세요"},
+    {"kind": "consumer", "file": "ocr.consumer.json", "id": "ocr", "outcome": "registered"},
+    {"kind": "key", "file": "site.key.json", "id": "site", "outcome": "registered"},
+    {"kind": "key", "id": "old-site", "outcome": "revoked", "message": "폴더에서 빠져 키를 폐기했습니다"}
   ]
 }
 ```
@@ -226,6 +226,7 @@ CenterKeyInfo 필드:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-08 | 1 | 일꾼 폴더는 일꾼을 **처음 들이기만** 한다 — 이미 있는 일꾼은 `unchanged`, 파일이 빠져도 일꾼을 지우지 않는다. 모양은 그대로다 | [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |
 | 2026-11-01 | 1 | §폴더 키 — 일꾼 폴더의 `<이름>.key.json`(`FolderKey`)으로 연동용·대리 답용 키를 들인다. `ConsumerFolderItem.kind`에 `key`. 선택 칸이라 schema는 그대로다 | [0123](../decisions/0123-folder-keys.md) |
 | 2026-10-31 | 1 | 일꾼 폴더 — `GET /resources/consumer-folder`(`ConsumerFolderScan`). 외부 확장의 출처가 **일꾼이 올린 정의**가 되었다(C15 `PUT …/self/extension`) — 등록·해제 경로는 C13에서 걷었다. 선택 칸이라 schema는 그대로다 | [0122](../decisions/0122-consumer-folder.md) |
 | 2026-10-31 | 1 | 칸은 그대로다. 확장 기여 자원의 예(UI 화면)를 걷고 `RuntimeResource.versions`에서 `worker`를 뺐다 — UI 자동화 확장이 없다 | [0114](../decisions/0114-remove-ui-automation.md) |

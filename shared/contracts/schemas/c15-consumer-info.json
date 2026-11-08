@@ -1,7 +1,7 @@
 {
   "$id": "urn:bpm:contracts:c15-consumer-info",
   "additionalProperties": true,
-  "description": "`GET /api/v1/consumers`의 한 줄 (CON-07 「일꾼」).",
+  "description": "`GET /api/v1/consumers`의 한 줄 (CON-17 「일꾼」).",
   "properties": {
     "approved_at": {
       "anyOf": [
@@ -14,6 +14,18 @@
       ],
       "default": null,
       "title": "Approved At"
+    },
+    "approved_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approved By"
     },
     "apps": {
       "items": {
@@ -53,6 +65,18 @@
     "name": {
       "title": "Name",
       "type": "string"
+    },
+    "source": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source"
     },
     "topics": {
       "items": {

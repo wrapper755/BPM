@@ -20,6 +20,7 @@ from pydantic import TypeAdapter
 from bpm.contracts import (
     ApprovalCreateRequest,
     Catalog,
+    ConsumerCreated,
     ConsumerFolderScan,
     Envelope,
     EventBatchResponse,
@@ -58,9 +59,10 @@ EXAMPLES: list[tuple[str, int, Any]] = [
     ("C13-extension-manifest", 0, Catalog),  # 공통 카탈로그 형식
     ("C13-extension-manifest", 1, ExtensionManifest),  # 내장 확장
     ("C13-extension-manifest", 2, ExtensionManifest),  # 외부 확장
-    ("C15-external-tasks", 0, FolderConsumer),  # 일꾼 파일 (ADR-0122)
-    ("C15-external-tasks", 1, ExternalTaskCreate),  # 일감 올리기
-    ("C15-external-tasks", 2, FetchResponse),  # 일꾼이 받은 것
+    ("C15-external-tasks", 0, ConsumerCreated),  # 콘솔에서 만든 일꾼 (ADR-0137)
+    ("C15-external-tasks", 1, FolderConsumer),  # 일꾼 파일 (ADR-0122)
+    ("C15-external-tasks", 2, ExternalTaskCreate),  # 일감 올리기
+    ("C15-external-tasks", 3, FetchResponse),  # 일꾼이 받은 것
     ("C16-organization", 0, StaffInfo),  # 직원 하나 (ADR-0125)
 ]
 

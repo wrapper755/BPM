@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { center, CenterError, session, signIn, signOut } from "@/lib/center";
+import { parseTopics } from "@/lib/consumers";
 import { fromCaller } from "@/lib/inputs";
 import type { OrgKind } from "@/lib/organization";
 import { COOKIE_NAME, seal } from "@/lib/session";
@@ -492,6 +493,59 @@ export async function revokeDeployment(deploymentId: string): Promise<ActionResu
   }
   revalidatePath("/deployments", "layout");
   revalidatePath("/bots", "layout");
+  return {};
+}
+
+// ─────────────────── 일꾼 (CON-17, ADR-0137) ───────────────────
+
+/** 만들기·토큰 새로 발급의 답 — `token`은 **그 창에만** 보이고 콘솔은 어디에도 남기지 않는다. */
+export interface TokenResult extends ActionResult {
+  token?: string;
+  name?: string;
+}
+
+export async function createConsumer(_previous: TokenResult, form: FormData): Promise<TokenResult> {
+  const name = String(form.get("name") ?? "").trim();
+  const topics = parseTopics(String(form.get("topics") ?? ""));
+  if (!name || topics.length === 0) return { error: "이름과 토픽을 하나 이상 넣으세요." };
+  try {
+    const made = await center.createConsumer({ name, topics });
+    revalidatePath("/consumers");
+    return { token: made.token, name: made.name };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+export async function updateConsumerTopics(consumerId: string, text: string): Promise<ActionResult> {
+  const topics = parseTopics(text);
+  if (topics.length === 0) return { error: "토픽을 하나 이상 넣으세요." };
+  try {
+    await center.updateConsumer(consumerId, topics);
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+  revalidatePath("/consumers");
+  return {};
+}
+
+export async function reissueConsumerToken(consumerId: string): Promise<TokenResult> {
+  try {
+    const made = await center.reissueConsumerToken(consumerId);
+    revalidatePath("/consumers");
+    return { token: made.token, name: made.name };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+export async function deleteConsumer(consumerId: string): Promise<ActionResult> {
+  try {
+    await center.deleteConsumer(consumerId);
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+  revalidatePath("/consumers");
   return {};
 }
 
