@@ -119,6 +119,7 @@ AI 작업은 **서비스 태스크(`bpm:serviceCall`)가 부르는 `kind: ai` �
 - NowView 대시보드 중 회차 단위로 모아 보던 것(장면별 지표·결재 진행·회차별 일감)은 갈 곳이 아직 없다 — 09-gaps §3-30.
 - **NowView 저장소는 읽기 전용으로 두지 않고 지운다**(2026-11-08 사용자 결정 — 위 「읽기 전용으로 둔다」를 바꾼다). `www.nowview.work`와 그 터널도 쓰지 않는다. 둘 다 운영 반영 때 한다 — 그때까지 운영(hetzner의 NowView 유닛)은 그대로이고 운영의 일꾼도 아직 NowView 엔진이다.
 - 작업 상태는 옮기지 않는다 — 구조가 바뀌어 NowView DB를 남길 까닭이 없다(백업하지 않는다). 로컬은 NowView DB와 그 사본을 지우고 업무 처리기를 빈 상태로 시작했다. 위 「NowView의 Postgres는 업무 처리기의 작업 상태 저장소로 함께 간다」는 이것으로 바뀐다.
+- 운영 반영(2026-11-08): 작업 상태 저장소는 운영에서도 데이터 폴더의 SQLite다 — NowView가 떠난 서버에서 Postgres를 쓰는 곳이 없어 껐다. 일꾼은 systemd 유닛 `company1-worker`이고 env·일꾼 토큰·연동용 키는 Company1 `deploy/bootstrap.sh`가 짓는다(폴더에는 해시만).
 
 ### 6. 조각
 
