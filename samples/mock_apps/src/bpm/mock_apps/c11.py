@@ -29,6 +29,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from bpm.contracts.service_app import (
+    KIND_AI,
     MODE_AUTONOMOUS,
     MODE_DETERMINISTIC,
     ExtensionRef,
@@ -84,6 +85,8 @@ class Op:
     answer: Answer
     modes: tuple[str, ...] = BOTH_MODES
     server_ok: bool = True
+    #: 일꾼 종류 (C11 `Operation.kind`, ADR-0135) — `ai`·`api`·`rpa`.
+    kind: str = KIND_AI
 
     def declared(self) -> Operation:
         return Operation(
@@ -91,6 +94,7 @@ class Op:
             description=self.description,
             modes=list(self.modes),
             server_ok=self.server_ok,
+            kind=self.kind,
         )
 
 

@@ -320,6 +320,7 @@ def coverage(examples: list[Example]) -> list[str]:
         ("시작 — 없음(작업 지시·호출)", has("start", kind="none")), ("시작 — 타이머", has("start", kind="timer")),
         ("시작 — 메시지", has("start", kind="message")),
         ("끝 — 종료(terminate)", has("end", kind="terminate")),
+        ("끝·중간 던지기 — 보상", lambda e: has("end", kind="compensate")(e) or has("throw", kind="compensate")(e)),
         ("스크립트", has("script")), ("AI 태스크 — llm", ai_domain("llm")), ("AI 태스크 — api", ai_domain("api")),
         ("AI 태스크 — doc", ai_domain("doc")), ("AI 태스크 — web", ai_domain("web")), ("AI 태스크 — desktop", ai_domain("desktop")),
         ("서비스 앱 태스크", has("svc")), ("규칙 (DMN)", has("rule")),
@@ -335,6 +336,7 @@ def coverage(examples: list[Example]) -> list[str]:
         ("반복 — 차례", loop(False)), ("반복 — 병렬", loop(True)),
         ("경계 — 타이머 중단", bnd("timer", True)), ("경계 — 타이머 비중단", bnd("timer", False)),
         ("경계 — 오류", bnd("error")), ("경계 — 메시지", bnd("message")), ("경계 — 신호", bnd("signal")),
+        ("경계 — 보상 (+ 보상 처리기)", bnd("compensate")),
         # **포맷 다섯과 덧붙이기를 모두 줄로 둔다** — 줄이 없으면 「아무도 밟지 않는다」가
         # 표에 보이지 않는다. csv·txt·`append`가 그렇게 숨어 있었다 (M7 조각 30).
         *[

@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **구현됨** (2026-10-12). 모델·BPMN 읽기·검사 B1~B17, DMN 읽기·판정이 `contracts.bpmn_ext`·`contracts.dmn`에 있고 **쓰는 쪽이 셋**이다 — 엔진이 `bpm:*`를 수행하고(`core.nodes`), Studio가 그 모델로 편집·검사하고(STU-04·실행 전 검사), 업무 예제 48개가 이 형식으로 쓰여 시험이 읽고 검사한다. schema 1에서 **쓰지 않기로 적은 것**(조건 시작 이벤트, 경계 타이머 반복)은 범위 결정이고 빠진 구현이 아니다 |
+| 상태 | **구현됨** (2026-10-12). 모델·BPMN 읽기·검사 B1~B17, DMN 읽기·판정이 `contracts.bpmn_ext`·`contracts.dmn`에 있고 **쓰는 쪽이 셋**이다 — 엔진이 `bpm:*`를 수행하고(`core.nodes`), Studio가 그 모델로 편집·검사하고(STU-04·실행 전 검사), 업무 예제 49개가 이 형식으로 쓰여 시험이 읽고 검사한다. schema 1에서 **쓰지 않기로 적은 것**(조건 시작 이벤트, 경계 타이머 반복)은 범위 결정이고 빠진 구현이 아니다 |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | Studio(쓰기) → 패키지(C1 `process/*.bpmn`) → 실행기·서버 실행기(읽기·실행), Center(검사) |
 | 코드 위치 | `bpm.contracts.bpmn_ext` — 모델·`read_process()`·`validate()`. DMN 읽기·판정은 `bpm.contracts.dmn`. 확장 태스크의 속 내용은 각 확장의 `contracts/` |
@@ -292,7 +292,7 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 
 ### 보상
 
-> 상태: **구현됨** (엔진·읽기·검사 B17) — `contracts.bpmn_ext`(`compensation_handler`·`associations`), `core.engine`(`compensate`), `tests/shared/test_core_compensation.py`. 업무 예제는 아직 없다 — 그림 생성기(`exdsl.py`)가 보상을 쓰지 못한다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) §4, 로드맵 M10 조각 5b).
+> 상태: **구현됨** (엔진·읽기·검사 B17) — `contracts.bpmn_ext`(`compensation_handler`·`associations`), `core.engine`(`compensate`), `tests/shared/test_core_compensation.py`. 업무 예제는 **FX-26**(세 종류 일꾼과 보상 — RPA 실패 → 오류 경계 → 보상 종료)이고 그림 생성기(`exdsl.py`)가 `bnd(…, "compensate", handler=…)`·`undo(…)`·`end(kind="compensate")`로 쓴다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) §4). B11은 처리기가 그 활동의 변수를 본다고 센다.
 
 **보상**은 끝난 활동의 일을 되돌리는 것이다. 오류 경계가 「어디로 갈지」를 정한다면 보상은 「무엇을 되돌릴지」를 정한다. 그래서 장애를 되돌리는 그림은 **오류 경계 → 보상 던지기 종료 이벤트**가 된다.
 

@@ -91,13 +91,14 @@ def test_every_operation_the_examples_call_exists(examples: dict[str, set[str]])
 
 
 def test_the_example_count_matches_the_handoff_tally(examples: dict[str, set[str]]) -> None:
-    """앱 15개·작업 29개 — 이 수가 바뀌면 조각의 범위가 바뀐 것이다.
+    """앱 16개·작업 33개 — 이 수가 바뀌면 조각의 범위가 바뀐 것이다.
 
     열여섯이었다 — BX-16이 PC 위임을 쓰게 되면서(ADR-0062) `center-jobs`가 **부르는 데가
     없어져** 걷어냈다. 위에 있는 「예제가 부르지 않는 작업」 검사가 그것을 바로 잡아 주었다.
+    다시 열여섯 — FX-26이 `order-desk`(작업 넷, 일꾼 종류 셋)를 부른다 (ADR-0135).
     """
-    assert len(examples) == 15
-    assert sum(len(ops) for ops in examples.values()) == 29
+    assert len(examples) == 16
+    assert sum(len(ops) for ops in examples.values()) == 33
 
 
 # ─────────────────────────── C11 (뼈대가 주는 것) ───────────────────────────
@@ -627,3 +628,20 @@ def test_handlers_take_the_request_and_the_scenario() -> None:
     from bpm.mock_apps.c11 import Scenario  # noqa: PLC0415
 
     assert found.answer(request, Scenario())["items"]
+
+
+def test_the_order_desk_declares_three_worker_kinds_and_its_fake_rpa_fails_on_a_changed_screen() -> None:
+    """FX-26 (ADR-0135) — 한 토픽에 `ai`·`api`·`rpa`. 가짜 RPA는 화면이 `정상`이 아니면 실패한다(케이스가 정한 값)."""
+    from bpm.mock_apps.apps.order_desk import APP  # noqa: PLC0415
+
+    assert {op.name: op.kind for op in APP.manifest().operations} == {
+        "draft_order": "ai",
+        "reserve_stock": "api",
+        "release_stock": "api",
+        "enter_order": "rpa",
+    }
+    _, made = client_for(APP)
+    ok = call(made, "enter_order", {"reservation_id": "RSV-브레이크패드-40", "화면": "정상"})
+    assert ok.response is not None and ok.response.output == {"order_no": "ORD-RSV-브레이크패드-40"}
+    changed = call(made, "enter_order", {"reservation_id": "RSV-브레이크패드-40", "화면": "바뀜"}, node_id="Task_2")
+    assert changed.code == "ui_element_missing" and changed.retryable is False

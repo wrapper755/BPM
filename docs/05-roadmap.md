@@ -20,7 +20,7 @@
 | M7 | 서버 실행 | **끝** | 서버 실행기, 서버 BPM 프로세스 동시 실행, 상태 저장·재개, PC 위임, CON-12 | M6 |
 | M8 | 건넬 수 있게, 고칠 수 있게 | **진행 중** (남은 둘은 현장 PC 사람 몫) | Windows 설치 파일(빌드·CI 산출물·자동 시작·판 올리기), Center 저장소 옮기기 수단 | M7 |
 | M9 | 바깥 기능은 Pull로 | **끝** (조각 1~6과 C14·C1의 옛 키 칸 — ADR-0102·0103) | C15 외부 작업, 일꾼이 된 서비스 앱, 어댑터 일꾼, 주소·키 칸 없는 CON-07 | M7 |
-| M10 | 세 기둥 — AI 작업·외부 작업·통합 일꾼 | **진행 중** (조각 1~5 끝 — ADR-0135) | 일꾼 종류 칸, 통합 일꾼과 AI 작업 뼈대, 보상, 일꾼 콘솔. 업무 처리기는 Company1로 | M9 |
+| M10 | 세 기둥 — AI 작업·외부 작업·통합 일꾼 | **진행 중** (조각 1~5b 끝 — ADR-0135) | 일꾼 종류 칸, 통합 일꾼과 AI 작업 뼈대, 보상, 일꾼 콘솔. 업무 처리기는 Company1로 | M9 |
 
 ## M0. 문서 기준선
 
@@ -142,7 +142,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] PC 위임: 서버 BPM 프로세스의 Call Activity가 **배포된 PC BPM 프로세스**을 부르면 PC 실행기에서 실행되고 결과로 이어 감 — ADR-0062의 「증명할 다섯」이 다 찼다. 그림은 `bpm:call.delegate`, 엔진은 네 번째 기다림(`WAIT_DELEGATION`), 실행기는 `CenterDelegator`, Center는 배포된·활성인·대기열이 짧은 PC를 고르고(`center/api/delegations.py`), 결과는 PC의 작업 ack `outputs`로 올라온다. Studio 시험 실행은 케이스의 `delegations`로 끝낸다(`CaseDelegator`). **PC 실행기는 일부러 꽂지 않는다**. 업무 예제 BX-16이 FX-19를 맡긴다
 - **서버의 확장 태스크** (ADR-0064): `run_locations`에 `server`를 적은 종류만 수행기를 낸다. 적지 않은 것은 사전 점검이 시작 전에 막는다(`task_types_wrong_location`)
 - [x] 콘솔 「서버 실행」(CON-12)에서 실행 중·기다리는 실행·대기열을 본다 — 목록(`/server-runners`)과 상세(`/server-runners/<id>`)다. 「실행 중」·「기다리는 실행」·「BPM 프로세스별 상한」은 실행기 하나의 것이라 상세에, 「대기열」은 목록 쪽에 있다
-- [x] **인수 시험:** 실행 위치 서버인 업무·기능 예제 전부가 서버 실행기에서 통과 — `tests/server/test_m7_server_rerun.py`가 실행 위치 `server`인 예제 **47개를 그림에서 읽어** 배포·설치는 전부 보고, 끝까지 도는 것은 **묶음 44개 + 전용 시험 둘**이다(`ELSEWHERE` — BX-16은 PC 위임, FX-24는 일괄 기동이라 발판이 더 필요하다). **BX-33은 일부러 실패하는** 교육 예제라(ADR-0039) 의도한 실패를 따로 본다. 갈래 셋을 합쳐 47개와 맞춰 보므로 조용히 빠지는 일이 없다. 결재는 Center 결재함(C6), 메시지는 Center 메시지 API(C12)에 넣는다. BX-03(며칠 대기)은 `tests/server/test_server_runner_resume.py`가 재시작을 끼워 넣어 보고, 시나리오 1·2·4(BX-10·BX-20·BX-30)가 여기 든다 ([ADR-0055](decisions/0055-m6-field-scenario-is-scenario-3.md))
+- [x] **인수 시험:** 실행 위치 서버인 업무·기능 예제 전부가 서버 실행기에서 통과 — `tests/server/test_m7_server_rerun.py`가 실행 위치 `server`인 예제 **48개를 그림에서 읽어** 배포·설치는 전부 보고, 끝까지 도는 것은 **묶음 45개 + 전용 시험 둘**이다(`ELSEWHERE` — BX-16은 PC 위임, FX-24는 일괄 기동이라 발판이 더 필요하다). **BX-33은 일부러 실패하는** 교육 예제라(ADR-0039) 의도한 실패를 따로 본다. 갈래 셋을 합쳐 48개와 맞춰 보므로 조용히 빠지는 일이 없다. 결재는 Center 결재함(C6), 메시지는 Center 메시지 API(C12)에 넣는다. BX-03(며칠 대기)은 `tests/server/test_server_runner_resume.py`가 재시작을 끼워 넣어 보고, 시나리오 1·2·4(BX-10·BX-20·BX-30)가 여기 든다 ([ADR-0055](decisions/0055-m6-field-scenario-is-scenario-3.md))
 
 ## M8. 건넬 수 있게, 고칠 수 있게
 
@@ -191,7 +191,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 
 ## M10. 세 기둥 — AI 작업·외부 작업·통합 일꾼
 
-> 상태: **진행 중** — 조각 1~5가 끝났고 다음은 조각 5b(세 종류 + 보상 기능 예제). [ADR-0135](decisions/0135-agentic-automation-and-unified-consumer.md)
+> 상태: **진행 중** — 조각 1~5b가 끝났고 다음은 조각 6(일꾼 콘솔). [ADR-0135](decisions/0135-agentic-automation-and-unified-consumer.md)
 > 에이전틱 자동화(AI 작업)·External Task(외부 작업, C15)·하이브리드 자동화(통합 일꾼 + 보상)를 BPM의 이름 붙은 기능으로 세우고,
 > NowView의 일반 부분(일꾼 호스트·Agent 검증·대시보드의 일반 부분)은 통합 일꾼과 일꾼 콘솔로 들이고, 장면 코드는 Company1 저장소의
 > 업무 처리기로 보낸다 — **이 저장소에는 회사 업무 코드가 들어오지 않는다.** 그 뒤 NowView는 걷는다.
@@ -201,7 +201,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 조각 3 — **통합 일꾼** `server/unified_consumer` — **됐다**: 업무 처리기를 엔트리 포인트 `bpm.consumer_handlers`로 찾고(깨진 것만 끈다, 설정 칸·데이터 폴더를 준다), 외부 확장 정의(`api`)를 어댑터 일꾼과 같은 코드로 함께 맡는다. 같은 토픽 둘은 뜨지 않는다. `rpa`는 시험용 가짜 처리기뿐 — `tests/server/test_unified_consumer.py`. **세 종류 기능 예제는 조각 5로 옮겼다**(같은 흐름에 RPA 실패 → 보상이 들어간다)
 - [x] 조각 4 — **AI 작업 뼈대** `bpm.unified_consumer.ai` — **됐다**: 지식 원천(`StaticKnowledge`·`FolderKnowledge`), 러너 셋(`MockRunner`·`LlmRunner`(`ServiceLlm`)·`FailingRunner`), 검증(필수 칸·근거 id·숫자 대조 — 버린 사유를 알려 다시 묻는다), provenance, 오류 `ai_rejected`·`ai_failed` — `tests/server/test_unified_consumer_ai.py`. NowView Agent의 검증 규칙을 일반화했다
 - [x] 조각 5 — **보상** — **됐다**: C14 「보상」 구현됨 — BPMN 읽기(`isForCompensation`·`activityRef`·`association`), 엔진(보상 던지기가 토큰을 처리기로 돌렸다 던지기로 되돌린다, 끝난 순서의 거꾸로·같은 범위·한 번만), 스냅샷, 검사 B17 — `tests/shared/test_core_compensation.py`
-- [ ] 조각 5b — **기능 예제**: 그림 생성기(`exdsl.py`)가 보상 경계·처리기·던지기를 쓰게 하고, AI·API·RPA 세 종류를 부르다 RPA 실패 → 오류 경계 → 보상 종료로 되돌리는 예제 하나 + 그것이 부를 모의 앱, M7 묶음
+- [x] 조각 5b — **기능 예제 FX-26** — **됐다**: 그림 생성기가 보상 경계·처리기·던지기를 쓴다(`bnd(…, "compensate", handler=…)`·`undo(…)`·`end(kind="compensate")`, 커버리지 표에 보상 두 줄). 모의 앱 `order-desk`(한 토픽에 `ai`·`api`·`rpa` 작업, RPA는 가짜). 케이스 둘(화면 정상 / 화면이 바뀌어 되돌림)이 M5 Studio 시험 실행·M7 서버 실행기에서 초록. B11은 처리기가 그 활동의 변수를 본다고 센다
 - [ ] 조각 6 — **일꾼 콘솔** `consumer-console`(어느 회사든 같은 것만), 통합 일꾼 배포 묶음
 - [ ] 조각 7 — **Company1 저장소에서**: 장면 코드를 업무 처리기로 옮기고 BPM 패키지에 고정, NowView 걷기 (운영 반영은 따로 묻는다)
 

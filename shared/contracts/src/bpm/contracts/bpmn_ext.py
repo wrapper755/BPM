@@ -1205,6 +1205,16 @@ def available_vars(
             if wanted != available[node.id]:
                 available[node.id] = wanted
                 changed = True
+        # **보상 처리기는 그 활동이 끝난 뒤에만 돈다** (C14 §보상) — 흐름이 없어 시작 자리로 보이지만
+        # 그 활동 자리의 변수와 그 활동이 만든 것을 들고 있다. 이것이 없으면 처리기가 읽는 활동의 출력이
+        # 모두 「출처 없음」이 된다 (FX-26).
+        for activity, handler in _compensation_pairs(process):
+            if activity not in available or handler not in available:
+                continue
+            wanted = available[activity] | produced[activity]
+            if wanted != available[handler]:
+                available[handler] = wanted
+                changed = True
         for _scope, scope_nodes, scope_flows in process.scopes():
             for node in scope_nodes:
                 incoming = process.incoming(node.id, scope_flows)
@@ -1236,6 +1246,15 @@ def available_vars(
                     available[node.id] = merged
                     changed = True
     return available
+
+
+def _compensation_pairs(process: BpmnProcess) -> list[tuple[str, str]]:
+    """(보상할 활동, 보상 처리기) — 보상 경계와 그 연관에서."""
+    out = []
+    for node in process.all_nodes():
+        if node.attached_to and COMPENSATE_DEFINITION in node.event_definitions:
+            out += [(node.attached_to, t) for s, t in process.associations if s == node.id]
+    return out
 
 
 def _check_b1_b2(process: BpmnProcess) -> list[Violation]:
