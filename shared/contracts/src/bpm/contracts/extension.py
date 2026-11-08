@@ -25,7 +25,7 @@ from bpm.contracts._base import ContractModel, SchemaVersioned, Timestamp, Viola
 from bpm.contracts._semver import InvalidVersion, satisfies
 from bpm.contracts.hashing import canonical_json, sha256_hex
 from bpm.contracts.manifest import SemVer
-from bpm.contracts.service_app import MODE_AUTONOMOUS, MODES, OPERATION_PATTERN
+from bpm.contracts.service_app import KIND_API, MODE_AUTONOMOUS, MODES, OPERATION_PATTERN
 from bpm.contracts.signing import AdminKey, Envelope, ExtensionClaim, verify
 
 #: 확장 패키지 안에 두는 정의 파일 이름, 그리고 확장 호스트가 읽는 엔트리 포인트 그룹.
@@ -268,6 +268,8 @@ class AdapterOperation(ContractModel):
     server_ok: bool = True
     idempotent: bool = False
     retry_on: list[int] = Field(default_factory=list)  # 요청이 처리되지 않았다는 뜻의 상태 코드
+    #: 일꾼 종류 (C11, ADR-0135) — 어댑터는 모델도 화면도 부르지 않으니 `api`만 된다 (E3).
+    kind: str = KIND_API
     input_schema: dict[str, Any] | None = None
     output_schema: dict[str, Any] | None = None
     request: AdapterRequest
@@ -501,6 +503,8 @@ def _check_adapter_operation(op: AdapterOperation, adapter: HttpAdapter, where: 
         if len(given) != 1:
             out.append(_e3(f"equals·not_equals·exists 중 하나만 쓴다 (준 것: {given})", f"{where}.response.error_when"))
 
+    if op.kind != KIND_API:
+        out.append(_e3(f"HTTP 어댑터 작업의 일꾼 종류는 `{KIND_API}`뿐이다 (준 것: {op.kind!r})", f"{where}.kind"))
     bad_codes = [c for c in op.retry_on if not 400 <= c <= 599]
     if bad_codes:
         out.append(_e3(f"재시도 상태 코드가 4xx·5xx가 아니다: {bad_codes}", f"{where}.retry_on"))

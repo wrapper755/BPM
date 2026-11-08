@@ -106,6 +106,7 @@ def test_the_definition_becomes_the_consumers_manifest() -> None:
     assert [(one.name, sorted(one.modes)) for one in made.operations] == [
         (one.name, sorted(one.modes)) for one in adapter.operations
     ]
+    assert {one.kind for one in made.operations} == {"api"}, "어댑터 작업은 API 일꾼의 일이다 (ADR-0135)"
     assert made.extension is None, "외부 확장은 등록된 정의가 원본이다 — 일꾼이 확장을 자처하지 않는다"
 
 

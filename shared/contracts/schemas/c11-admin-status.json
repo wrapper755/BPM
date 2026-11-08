@@ -125,6 +125,11 @@
           "title": "Fallback",
           "type": "string"
         },
+        "kind": {
+          "default": "ai",
+          "title": "Kind",
+          "type": "string"
+        },
         "modes": {
           "items": {
             "type": "string"
@@ -140,6 +145,18 @@
           "default": true,
           "title": "Server Ok",
           "type": "boolean"
+        },
+        "topic": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Topic"
         }
       },
       "required": [

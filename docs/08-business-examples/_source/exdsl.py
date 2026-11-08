@@ -43,7 +43,7 @@ class Flow:
 class Boundary:
     id: str
     attached: str
-    kind: str  # timer error signal message
+    kind: str  # timer error signal message compensate (compensate는 props `handler` — 보상 처리기 노드 id)
     name: str = ""
     interrupting: bool = True
     props: dict[str, Any] = field(default_factory=dict)
@@ -218,6 +218,12 @@ def catch(id, name, kind, **p):
     return Node(id, "catch", name, dict(kind=kind, **p))
 
 
+def undo(node: Node) -> Node:
+    """그 노드를 **보상 처리기**로 표시한다 (C14 §보상) — 흐름 없이 보상 경계의 연관으로만 이어진다."""
+    node.props["for_compensation"] = True
+    return node
+
+
 def f(src, dst, cond=None, name="", default=False):
     return Flow(src, dst, cond, name, default)
 
@@ -273,6 +279,8 @@ def validate(ex: Example) -> list[str]:
         dup = {i for i in ids if ids.count(i) > 1}
         errs.append(f"중복 id {dup}")
 
+    by_id_all = {n.id: n for n in all_nodes(ex.nodes)}
+
     def chk_scope(nodes, flows, bnds, where):
         nid = {n.id for n in nodes} | {b.id for b in bnds}
         for fl in flows:
@@ -281,6 +289,12 @@ def validate(ex: Example) -> list[str]:
         for n in nodes:
             ins = [x for x in flows if x.dst == n.id]
             outs = [x for x in flows if x.src == n.id]
+            if n.props.get("for_compensation"):
+                if ins or outs:
+                    errs.append(f"{where}: 보상 처리기 {n.id}에 흐름이 있다 (C14 B17)")
+                if not any(b.kind == "compensate" and b.props.get("handler") == n.id for b in bnds):
+                    errs.append(f"{where}: 보상 처리기 {n.id}를 잇는 보상 경계가 없다")
+                continue
             if n.kind != "start" and not ins:
                 errs.append(f"{where}: {n.id} 들어오는 흐름 없음")
             if n.kind != "end" and not outs:
@@ -315,6 +329,12 @@ def validate(ex: Example) -> list[str]:
         for b in bnds:
             if kinds.get(b.attached) in ("start", "end", "throw", "catch", "xgw", "igw", "pgw", None):
                 errs.append(f"{where}: 경계 {b.id}가 태스크가 아닌 {b.attached}에 붙음")
+            if b.kind == "compensate":
+                if any(x.src == b.id for x in flows):
+                    errs.append(f"{where}: 보상 경계 {b.id}는 흐름을 내지 않는다 (C14 B17)")
+                if not by_id_all.get(b.props.get("handler", ""), Node("", "")).props.get("for_compensation"):
+                    errs.append(f"{where}: 보상 경계 {b.id}의 handler가 보상 처리기가 아니다")
+                continue
             if not any(x.src == b.id for x in flows):
                 errs.append(f"{where}: 경계 {b.id} 나가는 흐름 없음")
 
@@ -386,6 +406,9 @@ def layout(nodes, flows, bnds, x0, y0):
     게이트웨이의 기본 흐름(없으면 첫 흐름)은 같은 줄에, 나머지 가지는 아래 줄에 둔다.
     """
     pos = {}
+    # 보상 처리기는 흐름이 없다 — 배치에서 빼고 맨 아래 띠에 그 활동 밑으로 둔다 (아래 끝).
+    handlers = [n for n in nodes if n.props.get("for_compensation")]
+    nodes = [n for n in nodes if not n.props.get("for_compensation")]
     by_id = {n.id: n for n in nodes}
     b_by_id = {b.id: b for b in bnds}
     back = back_edges(nodes, flows, bnds)
@@ -500,6 +523,14 @@ def layout(nodes, flows, bnds, x0, y0):
         pos[b.id] = (ax + aw - 40 - k * 45, ay + ah - 18, 36, 36)
     total_w = (x - x0 - 70) if col_w else 0
     total_h = (y - y0 - 70) if row_h else 0
+    if handlers:
+        band = y0 + total_h + 90
+        for n in handlers:
+            b = next(bb for bb in bnds if bb.kind == "compensate" and bb.props.get("handler") == n.id)
+            ax, _ay, aw, _ah = pos[b.attached]
+            w, h = SIZE[shape_kind(n)]
+            pos[n.id] = (ax + (aw - w) // 2 + 30, band, w, h)
+        total_h = band + 80 - y0
     return pos, total_w, total_h
 
 
@@ -510,6 +541,14 @@ def jtext(d):
 
 
 def node_xml(n: Node, ex: Example, flows_all, data_by_writer, ind="    "):
+    """노드 하나의 XML. 보상 처리기면 `isForCompensation="true"`를 단다 (C14 §보상)."""
+    xml = _node_xml(n, ex, flows_all, data_by_writer, ind)
+    if n.props.get("for_compensation"):
+        xml = xml.replace(f'id="{n.id}"', f'id="{n.id}" isForCompensation="true"', 1)
+    return xml
+
+
+def _node_xml(n: Node, ex: Example, flows_all, data_by_writer, ind="    "):
     inc = [fl for fl in flows_all if fl.dst == n.id]
     outg = [fl for fl in flows_all if fl.src == n.id]
     io = "".join(f"{ind}  <bpmn:incoming>{fl.id}</bpmn:incoming>\n" for fl in inc)
@@ -612,6 +651,11 @@ def event_def(p, ex, ind):
         return f'{ind}<bpmn:errorEventDefinition errorRef="Err_{p["error"]}" />\n'
     if kind == "terminate":
         return f"{ind}<bpmn:terminateEventDefinition />\n"
+    if kind == "compensate":
+        # 던지기는 `ref`(던지기 도우미의 칸)·`activity`로 그 활동만 되돌린다. 경계에는 없다.
+        target = p.get("activity") or p.get("ref")
+        ref = f' activityRef="{target}"' if target else ""
+        return f"{ind}<bpmn:compensateEventDefinition{ref} />\n"
     raise ValueError(kind)
 
 
@@ -622,7 +666,7 @@ def boundary_xml(b: Boundary, ex, flows, ind):
         io = (f"{ind}  <bpmn:extensionElements>\n{ind}    <bpm:receive>{jtext({'correlation': b.props['correlation']})}</bpm:receive>\n"
               f"{ind}  </bpmn:extensionElements>\n") + io
     ci = "" if b.interrupting else ' cancelActivity="false"'
-    ev = event_def(dict(kind=b.kind, **{k: v for k, v in b.props.items() if k != "correlation"}), ex, ind + "  ")
+    ev = event_def(dict(kind=b.kind, **{k: v for k, v in b.props.items() if k not in ("correlation", "handler")}), ex, ind + "  ")
     nm = escape(b.name, {'"': "&quot;"})
     return f'{ind}<bpmn:boundaryEvent id="{b.id}" name="{nm}" attachedToRef="{b.attached}"{ci}>\n{io}{ev}{ind}</bpmn:boundaryEvent>\n'
 
@@ -715,6 +759,10 @@ def to_bpmn(ex: Example) -> str:
         body += boundary_xml(b, ex, ex.flows, "    ")
     for fl in ex.flows:
         body += flow_xml(fl, "    ")
+    for b in ex.boundaries:
+        if b.kind == "compensate":
+            body += (f'    <bpmn:association id="As_{b.id}" associationDirection="One" '
+                     f'sourceRef="{b.id}" targetRef="{b.props["handler"]}" />\n')
     for d in ex.data:
         body += (f'    <bpmn:dataObject id="DO_{d.id}" />\n'
                  f'    <bpmn:dataObjectReference id="{d.id}" name="{escape(d.name)}" dataObjectRef="DO_{d.id}">\n'
@@ -835,6 +883,13 @@ def to_bpmn(ex: Example) -> str:
         return kinds.get(i, "event")
 
     s += edges(ex.flows, {b.id for b in ex.boundaries})
+    for b in ex.boundaries:
+        if b.kind == "compensate":
+            bx_, by_, bw_, bh_ = pos[b.id]
+            hx, hy, hw, _hh = pos[b.props["handler"]]
+            pts = [(bx_ + bw_ // 2, by_ + bh_), (bx_ + bw_ // 2, hy - 20), (hx + hw // 2, hy - 20), (hx + hw // 2, hy)]
+            wps = "".join(f'<di:waypoint x="{x}" y="{y}" />' for x, y in pts)
+            s.append(f'      <bpmndi:BPMNEdge id="As_{b.id}_di" bpmnElement="As_{b.id}">{wps}</bpmndi:BPMNEdge>')
     for n in all_nodes(ex.nodes):
         if n.kind == "sub":
             s += edges(n.flows, {b.id for b in n.boundaries})
@@ -898,6 +953,9 @@ def node_summary(n: Node) -> str:
             return f"오류 `{p['error']}`"
         if kd == "terminate":
             return "종료(전체)"
+        if kd == "compensate":
+            target = p.get("activity") or p.get("ref")
+            return f"보상 — `{target}`만" if target else "보상 — 같은 범위에서 끝난 활동 전부(거꾸로)"
         return "—"
     if k == "script":
         return f"`{p['code'].splitlines()[0][:70]}`" + (" …" if len(p["code"].splitlines()) > 1 or len(p["code"]) > 70 else "")
@@ -990,8 +1048,9 @@ def to_card(ex: Example, bpmn_rel: str, cases_rel: str) -> str:
                 out += rows(n.children, n.flows, n.boundaries, prefix="↳ ")
         for b in bnds:
             nxt = ", ".join(fl.dst for fl in flows if fl.src == b.id)
-            kind = {"timer": "타이머", "error": "오류", "signal": "신호", "message": "메시지"}[b.kind]
-            det = b.props.get("duration") or b.props.get("error") or b.props.get("signal") or b.props.get("message") or ""
+            kind = {"timer": "타이머", "error": "오류", "signal": "신호", "message": "메시지", "compensate": "보상"}[b.kind]
+            det = (b.props.get("duration") or b.props.get("error") or b.props.get("signal") or b.props.get("message")
+                   or (f"처리기 {b.props['handler']}" if b.kind == "compensate" else ""))
             out.append(f"| `{prefix}{b.id}` | {md_cell(b.name)} | 경계({kind}{', 비중단' if not b.interrupting else ''}) | `{b.attached}`에 붙음 · `{det}` | {nxt} |")
         return out
 

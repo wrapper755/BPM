@@ -27,6 +27,12 @@ MODE_AUTONOMOUS = "autonomous"
 MODE_DETERMINISTIC = "deterministic"
 MODES = frozenset({MODE_AUTONOMOUS, MODE_DETERMINISTIC})
 
+#: 일꾼 종류 (ADR-0135) — 작업이 어떤 일인가. 토픽(앱 id)과 권한은 바꾸지 않고 보이는 데만 쓴다.
+KIND_AI = "ai"  # AI 작업 — 모델을 부르고 출력을 검증한다 (C11 「AI 작업」)
+KIND_API = "api"  # 외부 시스템 API 호출
+KIND_RPA = "rpa"  # 화면 조작 — 자리만 있다 (처리하는 일꾼이 없다)
+KINDS = frozenset({KIND_AI, KIND_API, KIND_RPA})
+
 #: 작업 이름 규칙.
 OPERATION_PATTERN = r"^[a-z][a-z0-9_]{0,63}$"
 
@@ -63,6 +69,8 @@ class Operation(ContractModel):
     #: 이 작업을 부르려면 키에 있어야 하는 추가 권한 (키의 `extra_scopes`).
     #: **작업이 선언하고 뼈대가 건다** — 작업 함수가 키를 들여다보지 않는다.
     required_scopes: list[str] = Field(default_factory=list)
+    #: 일꾼 종류 (`KINDS`, ADR-0135). Center가 일감에 옮겨 적는다 (C15 `LockedTask.kind`).
+    kind: str = KIND_AI  # 열린 문자열 — 아는 값은 `KINDS` (원칙 10)
 
     def supports(self, mode: str) -> bool:
         return mode in self.modes
@@ -161,6 +169,8 @@ class UsageRecord(ContractModel):
     run_id: str | None = None
     caller_type: str | None = None
     usage: Usage | None = None
+    #: 일감의 토픽 — 통합 일꾼에서만 채운다 (`OperationStatus.topic`과 같은 규칙).
+    topic: str | None = None
 
 
 IdempotencyKey = tuple[str, str, str, int, int, int]
@@ -216,6 +226,10 @@ class OperationStatus(ContractModel):
     modes: list[str] = Field(default_factory=list)
     fallback: str = "none"
     server_ok: bool = True
+    #: 일꾼 종류 (`Operation.kind`, ADR-0135).
+    kind: str = KIND_AI
+    #: 그 작업의 토픽 — **토픽 여럿을 맡는 일꾼**(통합 일꾼)에서만 채운다. 서비스 앱 하나면 비어 있다.
+    topic: str | None = None
     calls_24h: int = 0
     errors_24h: int = 0
     #: 0.0~1.0. 호출이 없으면 0.

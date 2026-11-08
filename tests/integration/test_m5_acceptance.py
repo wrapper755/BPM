@@ -379,10 +379,10 @@ GREEN = [one for one in M5 if one not in REMAINING and one != BY_DESIGN]
 
 def test_the_bundle_is_read_from_the_examples() -> None:
     """묶음 목록을 사람이 옮겨 적지 않는다 — 어긋나는 순간 시험이 거짓말을 한다."""
-    assert len(M5) == 19
+    assert len(M5) == 20
     assert set(REMAINING) <= set(M5), f"남은 목록에 묶음 밖 예제가 있다: {set(REMAINING) - set(M5)}"
     assert BY_DESIGN in M5 and BY_DESIGN not in REMAINING
-    assert len(GREEN) == 18, f"초록이 {len(GREEN)}개다 — 막힌 것이 있으면 REMAINING에 이유를 적는다"
+    assert len(GREEN) == 19, f"초록이 {len(GREEN)}개다 — 막힌 것이 있으면 REMAINING에 이유를 적는다"
 
 
 def test_bx33_fails_on_the_branch_it_is_meant_to_fail_on(

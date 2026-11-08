@@ -125,6 +125,18 @@
           "title": "Input",
           "type": "object"
         },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
+        },
         "lock_until": {
           "title": "Lock Until",
           "type": "string"

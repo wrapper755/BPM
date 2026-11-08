@@ -13,6 +13,8 @@ import { Shell } from "@/components/Shell";
 
 const CATEGORY_LABEL: Record<string, string> = { business: "업무", system: "시스템" };
 const MODE_LABEL: Record<string, string> = { autonomous: "자율 수행", deterministic: "결정 수행" };
+// 일꾼 종류 (C11 `kind`, ADR-0135) — Center 콘솔 CON-01 「종류」와 같은 글.
+const KIND_LABEL: Record<string, string> = { ai: "AI", api: "API", rpa: "RPA" };
 const FALLBACK_LABEL: Record<string, string> = {
   none: "없음 (바로 실패)",
   retry: "다시 시도",
@@ -49,8 +51,20 @@ export default async function StatusPage() {
   if (!found) redirect("/login");
   const { status, failure, session } = found;
 
+  // 「토픽」은 토픽 여럿을 맡는 일꾼(통합 일꾼)일 때만 — 서비스 앱 하나면 비어 있다 (C11, ADR-0135).
+  const manyTopics = (status?.operations ?? []).some((row) => row.topic);
   const operations: Array<Column<OperationStatus>> = [
+    ...(manyTopics
+      ? [{ key: "topic", header: "토픽", width: "16ch", mono: true, cell: (row: OperationStatus) => row.topic ?? "—" }]
+      : []),
     { key: "name", header: "작업", width: "16ch", mono: true },
+    {
+      key: "kind",
+      header: "종류",
+      width: "6ch",
+      // 일꾼 종류 — 모르는 값은 글자 그대로 (C11 `kind`).
+      cell: (row) => KIND_LABEL[row.kind ?? "ai"] ?? row.kind ?? "—",
+    },
     { key: "description", header: "설명", cell: (row) => row.description ?? "—" },
     {
       key: "modes",

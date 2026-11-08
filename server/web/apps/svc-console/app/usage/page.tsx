@@ -44,9 +44,14 @@ export default async function UsagePage() {
     failure = reason(cause);
   }
 
+  // 「토픽」은 기록에 토픽이 있을 때만 (통합 일꾼 — C11 `UsageRecord.topic`, ADR-0135).
+  const manyTopics = rows.some((row) => row.topic);
   const columns: Array<Column<UsageRecord>> = [
     { key: "at", header: "시각", width: "20ch", cell: (row) => moment(row.at) },
     { key: "key_name", header: "부른 쪽", width: "24ch", mono: true },
+    ...(manyTopics
+      ? [{ key: "topic", header: "토픽", width: "14ch", mono: true, cell: (row: UsageRecord) => row.topic ?? "—" }]
+      : []),
     { key: "operation", header: "작업", width: "14ch", mono: true },
     { key: "mode", header: "수행 모드", width: "10ch", cell: (row) => MODE_LABEL[row.mode] ?? row.mode },
     {

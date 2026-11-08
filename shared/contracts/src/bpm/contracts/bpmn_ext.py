@@ -90,6 +90,9 @@ BOUNDARY_HOSTS = frozenset(
 #: 타이머를 적는 법 (C14 §이벤트). 시작은 `timeCycle`, 경계·중간은 `timeDuration`.
 TIMER_KINDS = ("timeDate", "timeDuration", "timeCycle")
 
+#: 보상 이벤트 정의 (C14 §보상, ADR-0135) — 경계에 달면 보상 경계, 던지기·종료에 달면 보상 던지기.
+COMPENSATE_DEFINITION = "compensateEventDefinition"
+
 #: `location: field` 결재의 시간 제한 경고 기준 (B13) — 하루.
 FIELD_APPROVAL_MAX_HOURS = 24
 
@@ -438,6 +441,10 @@ class Node:
     script: str | None = None
     called_element: str | None = None
     data_outputs: tuple[str, ...] = ()  # dataOutputAssociation의 대상 id
+    #: **보상 처리기**인가 (`isForCompensation="true"`) — 흐름을 받거나 내지 않는다 (C14 §보상).
+    is_for_compensation: bool = False
+    #: 보상 던지기의 `compensateEventDefinition activityRef` — 비면 같은 범위 전부를 되돌린다.
+    activity_ref: str | None = None
     #: 하위 프로세스의 안쪽 (범위가 따로다).
     children: list[Node] = field(default_factory=list)
     child_flows: list[Flow] = field(default_factory=list)
@@ -461,6 +468,8 @@ class BpmnProcess:
     messages: dict[str, str] = field(default_factory=dict)
     signals: dict[str, str] = field(default_factory=dict)
     bad_props: dict[str, str] = field(default_factory=dict)
+    #: `bpmn:association` (원천 id, 대상 id) — 모든 범위의 것. 보상 경계 → 보상 처리기를 잇는다 (C14 §보상).
+    associations: list[tuple[str, str]] = field(default_factory=list)
 
     def all_nodes(self) -> Iterator[Node]:
         """하위 프로세스 안쪽까지 (범위는 따로지만 노드는 모두 본다)."""
@@ -487,6 +496,27 @@ class BpmnProcess:
     def signal_name(self, ref: str | None) -> str | None:
         """`signalRef` → `bpmn:signal name` (`message_name`과 같은 규칙)."""
         return _event_name(self.signals, ref)
+
+    def compensation_boundary(self, activity_id: str) -> Node | None:
+        """그 활동에 붙은 보상 경계 (C14 §보상). 없으면 `None` — 그 활동은 되돌릴 것이 없다."""
+        return next(
+            (
+                n
+                for n in self.all_nodes()
+                if n.kind == "boundaryEvent"
+                and n.attached_to == activity_id
+                and COMPENSATE_DEFINITION in n.event_definitions
+            ),
+            None,
+        )
+
+    def compensation_handler(self, activity_id: str) -> Node | None:
+        """그 활동을 되돌리는 보상 처리기 — 보상 경계에서 연관으로 이어진 노드."""
+        boundary = self.compensation_boundary(activity_id)
+        if boundary is None:
+            return None
+        target = next((t for s, t in self.associations if s == boundary.id), None)
+        return self.node(target) if target is not None else None
 
     def of_kind(self, *kinds: str) -> list[Node]:
         return [n for n in self.all_nodes() if n.kind in kinds]
@@ -584,8 +614,10 @@ def _read_flows(scope: ElementTree.Element) -> list[Flow]:
 
 
 #: 노드가 아닌 요소 (흐름·확장·정의).
+#: 연관·주석도 노드가 아니다 — 연관은 `BpmnProcess.associations`로 따로 읽는다 (C14 §보상).
 _NOT_NODES = frozenset(
-    {"sequenceFlow", "extensionElements", "dataObject", "documentation", "laneSet", "incoming", "outgoing"}
+    {"sequenceFlow", "extensionElements", "dataObject", "documentation", "laneSet", "incoming", "outgoing",
+     "association", "textAnnotation"}
 )
 
 
@@ -608,6 +640,7 @@ def _read_nodes(scope: ElementTree.Element) -> list[Node]:
         message_ref = None
         signal_ref = None
         timer = None
+        activity_ref = None
         for child in el:
             if child.tag == f"{_BPMN}errorEventDefinition":
                 error_ref = child.get("errorRef")
@@ -617,6 +650,8 @@ def _read_nodes(scope: ElementTree.Element) -> list[Node]:
                 signal_ref = child.get("signalRef")
             elif child.tag == f"{_BPMN}timerEventDefinition":
                 timer = _read_timer(child)
+            elif child.tag == f"{_BPMN}{COMPENSATE_DEFINITION}":
+                activity_ref = child.get("activityRef")
         script_el = el.find(f"{_BPMN}script")
         node = Node(
             id=el.get("id", ""),
@@ -636,6 +671,8 @@ def _read_nodes(scope: ElementTree.Element) -> list[Node]:
             script=_text(script_el) if script_el is not None else None,
             called_element=el.get("calledElement"),
             data_outputs=_data_output_refs(el),
+            is_for_compensation=el.get("isForCompensation") == "true",
+            activity_ref=activity_ref,
         )
         if kind == "subProcess":
             node.children = _read_nodes(el)
@@ -695,6 +732,9 @@ def read_process(xml: str | bytes) -> BpmnProcess:
         messages={el.get("name", ""): el.get("id", "") for el in root.findall(f"{_BPMN}message")},
         signals={el.get("name", ""): el.get("id", "") for el in root.findall(f"{_BPMN}signal")},
         bad_props=bad,
+        associations=[
+            (el.get("sourceRef", ""), el.get("targetRef", "")) for el in process_el.iter(f"{_BPMN}association")
+        ],
     )
     return found
 
@@ -1165,6 +1205,16 @@ def available_vars(
             if wanted != available[node.id]:
                 available[node.id] = wanted
                 changed = True
+        # **보상 처리기는 그 활동이 끝난 뒤에만 돈다** (C14 §보상) — 흐름이 없어 시작 자리로 보이지만
+        # 그 활동 자리의 변수와 그 활동이 만든 것을 들고 있다. 이것이 없으면 처리기가 읽는 활동의 출력이
+        # 모두 「출처 없음」이 된다 (FX-26).
+        for activity, handler in _compensation_pairs(process):
+            if activity not in available or handler not in available:
+                continue
+            wanted = available[activity] | produced[activity]
+            if wanted != available[handler]:
+                available[handler] = wanted
+                changed = True
         for _scope, scope_nodes, scope_flows in process.scopes():
             for node in scope_nodes:
                 incoming = process.incoming(node.id, scope_flows)
@@ -1196,6 +1246,15 @@ def available_vars(
                     available[node.id] = merged
                     changed = True
     return available
+
+
+def _compensation_pairs(process: BpmnProcess) -> list[tuple[str, str]]:
+    """(보상할 활동, 보상 처리기) — 보상 경계와 그 연관에서."""
+    out = []
+    for node in process.all_nodes():
+        if node.attached_to and COMPENSATE_DEFINITION in node.event_definitions:
+            out += [(node.attached_to, t) for s, t in process.associations if s == node.id]
+    return out
 
 
 def _check_b1_b2(process: BpmnProcess) -> list[Violation]:
@@ -1394,6 +1453,8 @@ def _check_b9_b10(process: BpmnProcess) -> list[Violation]:
     out: list[Violation] = []
     for _scope, scope_nodes, scope_flows in process.scopes():
         for node in scope_nodes:
+            if node.is_for_compensation or (COMPENSATE_DEFINITION in node.event_definitions and node.attached_to):
+                continue  # 보상 처리기·보상 경계에는 흐름이 없다 — B17이 본다
             if node.kind not in _NO_INCOMING and not process.incoming(node.id, scope_flows):
                 out.append(_error("B9", f"{node.id}에 들어오는 흐름이 없다"))
             if node.kind not in _NO_OUTGOING and not process.outgoing(node.id, scope_flows):
@@ -1654,7 +1715,45 @@ def validate(
         *_check_b13(process),
         *_check_b14(process, dmn_decisions, called_processes, delegated_outputs),
         *_check_b16(process),
+        *_check_b17(process),
     ]
+
+
+def _check_b17(process: BpmnProcess) -> list[Violation]:
+    """B17. 보상 (C14 §보상, ADR-0135) — 경계·처리기·던지기가 맞물리는가."""
+    out: list[Violation] = []
+    nodes = {n.id: n for n in process.all_nodes()}
+    for scope, scope_nodes, scope_flows in process.scopes():
+        for node in scope_nodes:
+            if node.is_for_compensation and (
+                process.incoming(node.id, scope_flows) or process.outgoing(node.id, scope_flows)
+            ):
+                out.append(_error("B17", f"{node.id}: 보상 처리기는 흐름을 받거나 내지 않는다"))
+            if node.kind == "boundaryEvent" and COMPENSATE_DEFINITION in node.event_definitions:
+                if process.outgoing(node.id, scope_flows):
+                    out.append(_error("B17", f"{node.id}: 보상 경계는 흐름을 내지 않는다 — 연관으로 처리기를 잇는다"))
+                linked = [t for s, t in process.associations if s == node.id]
+                if len(linked) != 1:
+                    out.append(_error("B17", f"{node.id}: 보상 경계에는 연관이 하나여야 한다 (지금 {len(linked)}개)"))
+                elif linked[0] not in nodes or not nodes[linked[0]].is_for_compensation:
+                    out.append(
+                        _error("B17", f"{node.id}: 연관의 대상이 보상 처리기(isForCompensation)가 아니다: {linked[0]}")
+                    )
+            throws = node.kind in ("intermediateThrowEvent", "endEvent")
+            if throws and COMPENSATE_DEFINITION in node.event_definitions and node.activity_ref:
+                ids = {n.id for n in scope_nodes}
+                if node.activity_ref not in ids or process.compensation_boundary(node.activity_ref) is None:
+                    out.append(
+                        _error(
+                            "B17",
+                            f"{node.id}: activityRef {node.activity_ref}는 같은 범위({scope})의"
+                            " 보상 경계 달린 활동이 아니다",
+                        )
+                    )
+    for handler in (n for n in process.all_nodes() if n.is_for_compensation):
+        if not any(t == handler.id for _s, t in process.associations):
+            out.append(_warn("B17", f"{handler.id}: 어느 보상 경계에도 이어지지 않은 보상 처리기다"))
+    return out
 
 
 def _check_b16(process: BpmnProcess) -> list[Violation]:

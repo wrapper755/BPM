@@ -17,6 +17,7 @@ export interface ExternalTaskInfo {
   deliveries?: number;
   error_code?: string | null;
   finished_at?: string | null;
+  kind?: string | null;
   mode: string;
   node_id: string;
   node_instance?: number;

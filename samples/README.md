@@ -2,21 +2,21 @@
 
 > 상태: **구현됨** (M5 조각 13). 인수 시험이 쓰는 것은 M5 조각 14다.
 
-제품이 아니다. `docs/08-business-examples/`의 예제 48개가 서비스 앱 **15개**를 부르고
-(작업 **29개**), 그 앱이 하나도 없으면 M5 인수 시험을 돌릴 수 없다. 여기에 거짓 데이터로
+제품이 아니다. `docs/08-business-examples/`의 예제 49개가 서비스 앱 **16개**를 부르고
+(작업 **33개**), 그 앱이 하나도 없으면 M5 인수 시험을 돌릴 수 없다. 여기에 거짓 데이터로
 답하는 앱을 둔다.
 
-멤버는 하나다 — `samples/mock_apps` (import 이름 `bpm.mock_apps`). 앱 열다섯 개를
-`pyproject.toml` 열다섯 개로 쪼개지 않는다.
+멤버는 하나다 — `samples/mock_apps` (import 이름 `bpm.mock_apps`). 앱 열여섯 개를
+`pyproject.toml` 열여섯 개로 쪼개지 않는다.
 
 **아무 멤버도 `samples/`를 의존하지 않는다** (`tests/integration/test_import_direction.py`가 막는다).
 쓰는 쪽은 `tests/`와 사람이 띄우는 `bpm-mock-apps`뿐이다.
 
 ## 두 종류다
 
-| | C11 앱 열셋 (`apps/`) | 외부 앱 둘 (`external/`) |
+| | C11 앱 열넷 (`apps/`) | 외부 앱 둘 (`external/`) |
 | --- | --- | --- |
-| 무엇인가 | 사내 확장의 **서버 부분** | 우리 계약을 모르는 **남의 API** 흉내 |
+| 무엇인가 | 사내 확장의 **서버 부분** (`order-desk`는 작업마다 일꾼 종류 `ai`·`api`·`rpa`가 다르다 — FX-26, ADR-0135. RPA는 가짜다) | 우리 계약을 모르는 **남의 API** 흉내 |
 | 뼈대 | `server/service_kit` (C11) | 없다 — 평범한 FastAPI |
 | 붙는 길 | **일꾼**으로 Center에서 일감을 가져간다 (C15, `service_kit.consumer`) | **어댑터 일꾼**(`bpm-adapter-consumer`)이 HTTP 어댑터로 부른다 (C13 §4·C15) |
 | Center에 어떻게 아는가 | 일꾼이 뜰 때 **manifest를 올린다** (C15 — 일꾼은 Center 일꾼 폴더의 파일로 들어온다) | **어댑터 일꾼이 정의를 올리고** Center가 서명한다 (C13 E6, ADR-0122) |
@@ -36,8 +36,8 @@ uv run bpm-mock-apps serve --app erp      # 하나만, 그 앱의 기본 포트�
 ```
 
 `serve`를 앱 없이 부르면 **한 프로세스·한 포트**에 전부 붙는다(관리 API·시나리오 제어·외부 앱 둘).
-**C11 앱 열셋의 업무 호출은 그 포트로 받지 않는다** — 아래 「Center에 붙기」대로 일꾼 하나가 Center에서 가져간다.
-앱 열다섯 개를 따로 띄우지 않아도 된다.
+**C11 앱 열넷의 업무 호출은 그 포트로 받지 않는다** — 아래 「Center에 붙기」대로 일꾼 하나가 Center에서 가져간다.
+앱 열여섯 개를 따로 띄우지 않아도 된다.
 
 기본 포트는 `docs/04-setup.md` §6의 「서비스 앱: 8010부터 10씩」을 따른다
 (`catalog.port_of`가 유일한 자리다, ADR-0011). 옮기려면 `BPM_SVC_<앱 id>__PORT`.
@@ -48,8 +48,8 @@ uv run bpm-mock-apps serve --app erp      # 하나만, 그 앱의 기본 포트�
 BPM_MOCK_APPS__CENTER__URL=http://127.0.0.1:8800 uv run bpm-mock-apps serve
 ```
 
-C11 앱 열셋이 **일꾼 하나**로 Center에 붙는다 (C15, [ADR-0102](../docs/decisions/0102-calling-outside-is-pull.md)) —
-토픽 열셋을 한 토큰으로 맡는다. **들이기 요청·승인은 없다** ([ADR-0122](../docs/decisions/0122-consumer-folder.md)) —
+C11 앱 열넷이 **일꾼 하나**로 Center에 붙는다 (C15, [ADR-0102](../docs/decisions/0102-calling-outside-is-pull.md)) —
+토픽 열넷을 한 토큰으로 맡는다. **들이기 요청·승인은 없다** ([ADR-0122](../docs/decisions/0122-consumer-folder.md)) —
 Center 쪽에서 일꾼 파일을 짓고 Center를 다시 띄운 뒤, 찍힌 토큰을 `BPM_MOCK_APPS__CENTER__TOKEN`에 넣는다:
 
 ```bash

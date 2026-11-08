@@ -156,6 +156,30 @@ class LoopState:
 
 
 @dataclass
+class Compensable:
+    """끝난 활동 하나 — 보상 경계가 달려 있어 되돌릴 수 있다 (C14 §보상, ADR-0135). 끝난 순서로 쌓인다."""
+
+    node_id: str
+    #: 그 활동이 끝난 범위 — 보상 던지기는 **같은 범위**의 것만 되돌린다.
+    scope: tuple[str, ...] = ()
+    compensated: bool = False
+
+
+@dataclass
+class Compensation:
+    """보상 던지기를 밟는 토큰이 지금 도는 보상 (C14 §보상).
+
+    토큰은 처리기를 하나씩 밟고(`queue`의 앞이 지금 것) 다 돌면 던지기(`return_to`)로 돌아온다 —
+    그때 `finished`가 참이라 던지기는 보상을 다시 하지 않고 지나간다.
+    """
+
+    return_to: str
+    #: 되돌릴 활동 id — 끝난 순서의 거꾸로. 앞의 것이 지금 도는 처리기의 활동이다.
+    queue: list[str] = field(default_factory=list)
+    finished: bool = False
+
+
+@dataclass
 class Token:
     """실행 중인 자리 하나."""
 
@@ -166,6 +190,8 @@ class Token:
     #: 기다리는 것의 열쇠 (결재 `request_id`, 하위 프로세스 `sub:<노드>`).
     waiting_for: str | None = None
     loop: LoopState | None = None
+    #: 보상 던지기에서 처리기들을 도는 중이면 그 상태 (C14 §보상).
+    compensation: Compensation | None = None
 
     @property
     def waiting(self) -> bool:
@@ -341,6 +367,8 @@ class Run:
     #: 엔진은 파일을 쓰지 않는다 (배포된 BPM 프로세스는 기억을 읽기만 한다).
     learned: list[ReplaySpec] = field(default_factory=list)
     helpers: Mapping[str, Callable[..., Any]] = field(default_factory=dict)
+    #: 끝난, 되돌릴 수 있는 활동 — 끝난 순서 (C14 §보상).
+    compensable: list[Compensable] = field(default_factory=list)
 
     @property
     def identity(self) -> str:
@@ -441,7 +469,15 @@ class Consume:
     """이 토큰은 여기서 사라진다 (합류가 아직 안 찼거나, 끝났다)."""
 
 
-Outcome = Go | Wait | Consume
+@dataclass
+class Detour:
+    """보상 처리기로 돌아간다 — 지금 노드(보상 던지기)는 **끝나지 않았다** (C14 §보상). 처리기를 다 돌면
+    토큰이 이 노드로 돌아온다 (`Compensation.return_to`)."""
+
+    target: str
+
+
+Outcome = Go | Wait | Consume | Detour
 
 
 @dataclass
@@ -547,7 +583,10 @@ __all__ = [
     "ERROR_TASK_FAILED",
     "FAILED_TASK_VAR",
     "MAX_STEPS",
+    "Compensable",
+    "Compensation",
     "Consume",
+    "Detour",
     "Context",
     "EngineError",
     "ExtensionTasks",

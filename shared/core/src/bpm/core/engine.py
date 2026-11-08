@@ -78,8 +78,11 @@ from bpm.core.run_state import (
     WAIT_TIMER,
     WHERE_CENTER,
     WHERE_FIELD,
+    Compensable,
+    Compensation,
     Consume,
     Context,
+    Detour,
     EngineError,
     Go,
     Handler,
@@ -371,7 +374,9 @@ class Engine:
 
             self._prepare_iteration(context)
             # 노드의 시작은 **한 번**이다 — 차례로 돌면 첫 차례에, 함께 돌면 주인이 남긴다.
-            if loop is None or (loop.index == 0 and not loop.host):
+            # 보상을 다 돌고 던지기로 돌아온 것은 그 던지기의 두 번째 시작이 아니다 (C14 §보상).
+            returning = token.compensation is not None and token.compensation.finished
+            if not returning and (loop is None or (loop.index == 0 and not loop.host)):
                 run.instances[node.id] = run.instances.get(node.id, 0) + 1
                 run.log.emit("node_state", node_id=node.id, state="started", task_type=task_type(node))
             outcome = handler(context)
@@ -478,6 +483,11 @@ class Engine:
             run.tokens.remove(token)
             return self._settle(run)
 
+        if isinstance(outcome, Detour):
+            # 보상 처리기로 돌아간다 — 던지기는 아직 끝나지 않았다(「완료」를 남기지 않는다, C14 §보상).
+            token.node_id = outcome.target
+            return run.state
+
         # 반복이 남았으면 같은 노드를 다시 밟는다 (PC는 차례로, C14 §반복).
         loop = token.loop
         if loop is not None:
@@ -498,6 +508,7 @@ class Engine:
         # 쓰다 실패하면 완료로 남지 않고 오류 경계로 간다.
         self.write_data_outputs(context)
         run.log.emit("node_state", node_id=node.id, state="completed", task_type=task_type(node))
+        self._remember_compensable(run, token, node)
         return self._move(context, outcome.targets)
 
     def write_data_outputs(self, context: Context) -> None:
@@ -535,6 +546,8 @@ class Engine:
     def _move(self, context: Context, targets: list[str] | None) -> State:
         """토큰을 다음 자리로 옮긴다. `targets`가 비면 나가는 흐름을 따르고, 없으면 끝난다."""
         run, token, node = context.run, context.token, context.node
+        if targets is None and self._compensation_step(run, token, node):
+            return run.state
         if targets is None:
             targets = self._default_targets(run, token, node)
         if not targets:
@@ -559,7 +572,68 @@ class Engine:
         context = Context(engine=self, run=run, token=token, node=node)
         self.write_data_outputs(context)
         run.log.emit("node_state", node_id=node.id, state="completed", task_type=task_type(node))
+        self._remember_compensable(run, token, node)
         self._move(context, None)
+
+    # ── 보상 (C14 §보상, ADR-0135) ──
+
+    def _remember_compensable(self, run: Run, token: Token, node: Node) -> None:
+        """보상 경계가 달린 활동이 끝났다 — 되돌릴 수 있는 것으로 쌓는다 (끝난 순서)."""
+        if run.process.compensation_boundary(node.id) is not None:
+            run.compensable.append(Compensable(node_id=node.id, scope=token.scope))
+
+    def _handler_of(self, run: Run, activity_id: str) -> Node:
+        handler = run.process.compensation_handler(activity_id)
+        if handler is None:
+            raise EngineError(
+                f"{activity_id}의 보상 처리기를 찾지 못했다 (B17)", node_id=activity_id, code="compensation_unlinked"
+            )
+        return handler
+
+    def compensate(self, context: Context) -> Outcome | None:
+        """보상 던지기 — 같은 범위에서 끝난 활동의 처리기를 **끝난 순서의 거꾸로** 돌린다.
+
+        돌릴 것이 있으면 토큰을 첫 처리기로 보낸다(`Detour`). 처리기를 다 돌고 돌아왔거나 돌릴 것이 없으면
+        `None` — 던지기는 원래 하던 대로 지나간다(중간 던지기는 다음으로, 종료는 끝).
+        """
+        run, token, node = context.run, context.token, context.node
+        if token.compensation is not None and token.compensation.finished:
+            token.compensation = None
+            return None
+        due = [
+            one.node_id
+            for one in reversed(run.compensable)
+            if not one.compensated
+            and one.scope == token.scope
+            and (node.activity_ref is None or one.node_id == node.activity_ref)
+        ]
+        if not due:
+            context.emit("log", level="info", message="보상할 끝난 활동이 없다")
+            return None
+        token.compensation = Compensation(return_to=node.id, queue=due)
+        first = self._handler_of(run, due[0])
+        context.emit("log", level="info", message=f"보상을 시작한다 ({len(due)}건): {due[0]} → {first.id}")
+        return Detour(target=first.id)
+
+    def _compensation_step(self, run: Run, token: Token, node: Node) -> bool:
+        """처리기 하나가 끝났으면 다음 처리기로, 다 돌았으면 던지기로 돌려보낸다. 옮겼으면 참."""
+        state = token.compensation
+        if state is None or state.finished or not state.queue:
+            return False
+        if node.id != self._handler_of(run, state.queue[0]).id:
+            return False
+        done = state.queue.pop(0)
+        for one in run.compensable:
+            if one.node_id == done and one.scope == token.scope and not one.compensated:
+                one.compensated = True
+                break
+        run.log.emit("log", node_id=done, level="info", message=f"보상했다: {done} (처리기 {node.id})")
+        if state.queue:
+            token.node_id = self._handler_of(run, state.queue[0]).id
+        else:
+            state.finished = True
+            token.node_id = state.return_to
+        return True
 
     def _settle(self, run: Run) -> State:
         """토큰이 사라진 뒤 — 아무 토큰도 없으면 실행이 끝났다."""

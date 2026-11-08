@@ -75,7 +75,7 @@
 | C11 | **`bpm.service_kit`** | 계약을 지키는 일꾼 — 작업 함수를 받아 `create_app`(`/healthz`·관리 API)과 `service_kit.consumer`(`Consumer` 가져가기 루프·`Enrollment` 들이기·`TokenFile`)를 준다. 멱등, 수행 모드·폴백, 오류 형식, 사용 기록 | `tests/server/test_service_kit.py`·`tests/server/test_service_kit_consumer.py` |
 | C13 | `bpm.contracts.extension` | `validate()` — E1·E2·E3 + 모양. `task_type_conflicts()`(E4), `check_api()`(E5), `verify_external()`(E6), `check_size()`, `definition_hash()` | `tests/shared/test_contract_examples.py` |
 | C13 | **`bpm.core.extensions`** | 확장 호스트 — 엔트리 포인트로 찾기, 검사 규칙 적용, 기여 지점별 목록, `entry` 해석(그 확장 패키지 안으로 제한). 인터페이스는 `bpm.extension_api` | `tests/shared/test_extension_host.py` |
-| C14 | `bpm.contracts.bpmn_ext` | `read_process()`(BPMN 읽기, 표준 라이브러리만), `validate()` — B1~B16(오류·경고), `matches()` — 기대 결과 비교, `available_vars()` — 변수 흐름 | `tests/shared/test_contracts_bpmn_ext.py` (업무 예제 48개를 읽고 검사한다) |
+| C14 | `bpm.contracts.bpmn_ext` | `read_process()`(BPMN 읽기, 표준 라이브러리만), `validate()` — B1~B17(오류·경고), `matches()` — 기대 결과 비교, `available_vars()` — 변수 흐름 | `tests/shared/test_contracts_bpmn_ext.py` (업무 예제 49개를 읽고 검사한다) |
 | C15 | `bpm.contracts.external_task` + Center `api/external_tasks.py` | `task_id_for()`(멱등 칸 → 같은 일감 id), `body_hash()`(같은 칸·다른 본문 → 409), `missing_outputs()`(출력 검사). 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`server/adapter_consumer` | `tests/server/test_center_external_tasks.py`·`tests/server/test_c15_round_trip.py`·`tests/server/test_adapter_consumer.py` |
 
 V5~V8은 **역할에 따라 누가 검사하는지가 다르므로** 함수를 나눠 뒀다. Center는 `verify_time(..., check_not_before=False)`로 예약 배포를 받아 두고, 실행하는 쪽만 `not_before`를 본다.

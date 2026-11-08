@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "process": "Proc_fx26_hybrid_compensation",
+  "cases": [
+    {
+      "name": "화면 정상",
+      "description": "",
+      "inputs": {
+        "품목": "브레이크패드",
+        "수량": 40,
+        "화면": "정상"
+      },
+      "expected": {
+        "처리": "접수",
+        "주문번호": "ORD-RSV-브레이크패드-40",
+        "재고상태": "예약",
+        "결정": "proceed"
+      },
+      "approvals": {},
+      "manual": false
+    },
+    {
+      "name": "화면이 바뀌어 되돌림",
+      "description": "RPA 실패 → 오류 경계 → 보상 종료: 예약 해제 → 초안 폐기 (끝난 순서의 거꾸로)",
+      "inputs": {
+        "품목": "브레이크패드",
+        "수량": 40,
+        "화면": "바뀜"
+      },
+      "expected": {
+        "처리": "되돌림",
+        "재고상태": "해제",
+        "초안상태": "폐기",
+        "실패사유": "*"
+      },
+      "approvals": {},
+      "manual": false
+    }
+  ]
+}

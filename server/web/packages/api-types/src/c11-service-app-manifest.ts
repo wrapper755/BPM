@@ -37,6 +37,7 @@ export interface Operation {
   input_schema?: {
     [k: string]: unknown;
   } | null;
+  kind?: string;
   modes?: string[];
   name: string;
   output_schema?: {

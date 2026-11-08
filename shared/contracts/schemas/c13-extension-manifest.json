@@ -98,6 +98,11 @@
           "default": null,
           "title": "Input Schema"
         },
+        "kind": {
+          "default": "api",
+          "title": "Kind",
+          "type": "string"
+        },
         "modes": {
           "items": {
             "type": "string"

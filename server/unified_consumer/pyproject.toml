@@ -1,0 +1,29 @@
+[project]
+name = "bpm-unified-consumer"
+version = "0.1.0"
+description = "통합 일꾼 — 업무 처리기(AI·API·RPA 작업)와 외부 확장 정의를 일꾼 하나로 맡는다 (C15, ADR-0135)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "bpm-contracts",
+    "bpm-service-kit",      # 일꾼 루프·작업 수행기 (C11·C15)
+    "bpm-adapter-consumer", # 종류 api — 외부 확장 정의의 HTTP 어댑터 (C13 §4)
+    "platformdirs>=4.3",    # 데이터 위치
+    "fastapi>=0.115",       # 관리 API — 서비스 앱 콘솔(SVC)이 일꾼 콘솔이다
+    "uvicorn>=0.32",
+]
+
+[project.scripts]
+bpm-unified-consumer = "bpm.unified_consumer.main:main"
+
+[tool.uv.sources]
+bpm-contracts = { workspace = true }
+bpm-service-kit = { workspace = true }
+bpm-adapter-consumer = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# bpm는 PEP 420 네임스페이스 — src/bpm 밑에 __init__.py를 두지 않는다
+packages = ["src/bpm"]

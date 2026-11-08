@@ -20,6 +20,7 @@ from bpm.mock_apps.apps import (
     lms,
     mailer,
     observability,
+    order_desk,
     shop,
     ticketing,
     web_reader,
@@ -43,6 +44,7 @@ C11_APPS: tuple[MockApp, ...] = (
     kb_search.APP,
     observability.APP,
     web_reader.APP,
+    order_desk.APP,
 )
 
 #: 외부 앱 (C11이 아니다 — HTTP 어댑터로 붙는다, C13 §4).

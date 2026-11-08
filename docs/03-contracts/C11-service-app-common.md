@@ -70,9 +70,21 @@
 | `input_schema` / `output_schema` | JSON Schema | STU-14 입력·출력 표의 원본 |
 | `timeout_s` | int | 기본 60 |
 | `server_ok` | bool | 서버 실행기에서 불러도 되는가 (기본 true. 현장 PC에서만 의미 있는 작업은 false) |
+| `kind` | `ai` \| `api` \| `rpa` | **일꾼 종류** — 이 작업이 어떤 일인가 (기본 `ai`). `ai`는 **AI 작업**(모델을 부르고 출력을 검증한다, 아래 「AI 작업」), `api`는 외부 시스템 API 호출, `rpa`는 화면 조작(**자리만** — 지금 처리하는 일꾼이 없다). Center가 일감에 붙여 보인다(C15). 흐름·권한은 바꾸지 않는다 — 토픽은 그대로 앱 id다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md)). 열린 문자열이다 |
 | `required_scopes` | str[] | 이 작업을 부르려면 부르는 쪽에 켜져 있어야 하는 **추가 권한**. 비어 있으면 「불러도 되나」(C15)를 지난 누구나. **지금 Center에는 추가 권한을 켜 줄 길이 없다** — 적은 작업은 아무도 올리지 못하고 C15 올리기가 403 `scope_missing`이다 ([ADR-0114](../decisions/0114-remove-ui-automation.md)) |
 
 **추가 권한은 작업이 선언하고 Center가 건다** (C15 §올리기) — 일꾼·작업 함수는 부른 쪽을 들여다보지 않는다. 없으면 403 `scope_missing`.
+
+### AI 작업 (`kind: ai`)
+
+> 상태: **구현됨** — 뼈대 `bpm.unified_consumer.ai`(`AiOperation`·러너 셋 `MockRunner`·`LlmRunner`·`FailingRunner`·지식 원천 `StaticKnowledge`·`FolderKnowledge`)가 지킨다. `tests/server/test_unified_consumer_ai.py` ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) §3).
+
+`kind: ai`인 작업은 **결정 수행에서도 모델을 부른다**. 작업 정의가 그 사실을 드러내므로 「몰래」가 아니다. 대신 아래를 지킨다.
+
+- **출력에 `provenance`를 싣는다** — `{agent_id, agent_version, execution_id, model_called, prompt_version}`. `model_called`는 이번 수행에서 모델을 실제로 불렀는가다(결정론 러너·저장된 결과면 false).
+- **검증을 지난 응답만 낸다** — 필수 칸, 근거 id가 그 수행에서 찾은 지식(또는 처리기가 입력으로 준 결과 id)에 있는가, 본문의 숫자가 입력·근거에 있는가(퍼센트는 표시 반올림 0.05까지, 31 이하 정수는 날짜·건수로 보고 허용). 어긋나면 그 응답을 버리고 사유를 알려 다시 묻고(기본 세 번), 그래도 안 되면 `ai_rejected`다. 러너가 답을 내지 못하면 `ai_failed`다. **자율 수행 폴백은 없다**(`fallback`과 상관없다).
+- **숫자를 만들지 않는다** — 계산은 처리기·도구가 하고 모델은 인용한다.
+- 게이트웨이가 읽을 결정은 `output_schema`의 칸(권하는 이름 `decision`)으로 낸다.
 
 ### OpRequest (가져간 일감 → 작업 함수)
 
@@ -119,11 +131,13 @@ AdminStatus:
 | `app_id`, `name`, `version`, `category`, `console_url` | manifest와 같은 값 |
 | `extension` | `{id, version}` — 이 앱이 **어느 확장의 서버 부분인가**. 관리 콘솔이 이것으로 그 확장의 고유 화면(C13 `console.pages`)을 고른다 ([ADR-0042](../decisions/0042-extension-contributed-panels.md)) |
 | `started_at`, `uptime_s` | 가동 시간 |
-| `operations` | 작업마다 `{name, description, modes, fallback, server_ok, calls_24h, errors_24h, error_rate}` — 수는 **앱 안의 사용 기록**에서 센다 |
+| `operations` | 작업마다 `{name, description, modes, fallback, server_ok, kind, topic?, calls_24h, errors_24h, error_rate}` — 수는 **앱 안의 사용 기록**에서 센다. `kind`는 일꾼 종류, `topic`은 **토픽 여럿을 맡는 일꾼**(통합 일꾼)에서만 채운다 — 서비스 앱 하나면 비어 있다 |
 | `dependencies` | 바깥 의존마다 `{name, status, detail?}`. `status`는 `ok`·`degraded`·`unreachable`·`unknown`. 일꾼이면 `center` 줄이 붙는다(마지막으로 가져간 때·들인 상태) |
 | `center` | `{registered, base_url?, last_reported_at?}` — `registered`는 **일꾼으로 들었나**, `last_reported_at`은 마지막으로 가져간 때 |
 
 - 관리자 토큰이 설정되지 않았으면 관리 API 전체가 503 `admin_disabled`다. **빈 토큰으로 열리지 않는다.**
+- 사용 기록 한 줄(`UsageRecord`)에도 `topic`이 있다 — 통합 일꾼에서만 채운다.
+- **통합 일꾼도 같은 관리 API를 낸다** ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) — 일꾼 콘솔은 이 콘솔이다): `app_id`는 `unified-consumer`, `category`는 `system`, `operations`는 맡은 토픽 전부의 작업을 토픽 순으로 잇는다. 관리자 토큰은 `BPM_CONSUMER__ADMIN_TOKEN`이고 없으면 관리 API를 띄우지 않는다.
 
 ## 모델 연결
 
@@ -162,6 +176,8 @@ AdminStatus:
 | `rate_limited` | 앱의 의존이 너무 많다고 함 | **그렇다** (C14 `retry.on` 429) |
 | `dependency_down` | 앱의 의존(LLM·DB)이 죽음 | **그렇다** (C14 `retry.on` 503) |
 | `llm_unavailable` | 모델이 필요한 작업인데 앱에 모델이 설정되지 않음 | 아니다 — 앱 운영자가 `BPM_SVC_<APP>__LLM__*`를 고친다 |
+| `ai_rejected` | AI 작업의 응답이 정해진 횟수 안에 검증을 지나지 못함 (`detail`에 `agent_id`·`execution_id`·`reasons`) | 아니다 — 그림의 오류 경계·사람 검토가 받는다 |
+| `ai_failed` | AI 작업의 러너가 답을 내지 못함 (JSON이 아님·실패 재현) | 아니다 |
 | `internal` | 작업 함수가 예상하지 못한 예외 | 아니다 |
 
 ## 호환 규칙
@@ -177,6 +193,7 @@ AdminStatus:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-08 | 1 | 작업에 **일꾼 종류** `kind`(`ai`·`api`·`rpa`, 기본 `ai` — 구현됨, 관리 API `operations[].kind`·`topic?`와 `UsageRecord.topic`도)와 「AI 작업」 규칙(provenance·검증·폴백 없음 — 구현됨, 오류 `ai_rejected`·`ai_failed`)을 더했다. 선택 칸이라 판은 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 1 | 칸은 그대로다. `caller.type`의 아는 값에서 `worker`·`tool_ui`를 뺐고, `required_scopes`를 켜 줄 길(PC의 「셀렉터 등록」)이 없어졌다고 적었다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-29 | 1 | **앱이 일꾼이 된다** — `POST /v1/ops`·`/manifest`·앱 안의 키(`/v1/keys/self`·`/center/v1/keys`·`/center/v1/trust`)·관리 API의 키 발급을 걷고 C15 가져가기로 같은 작업을 수행한다. 폴백은 시험 일감일 때만, 추가 권한은 Center가 건다, 카탈로그는 일꾼이 올린다 | [0102](../decisions/0102-calling-outside-is-pull.md) |
 | 2026-10-25 | 1 | §Center가 발급하는 키 — `CENTER__URL`, `GET /center/v1/trust`, `POST /center/v1/keys`(C2 봉투 `service_key`, 해시만), 키 레코드 `issued_by`·`center_key_id`·`issued_for`. 새 경로·선택 칸이라 옛 부르는 쪽은 그대로다 | [0094](../decisions/0094-service-app-keys-ride-the-deployment.md) |

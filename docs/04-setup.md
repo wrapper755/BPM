@@ -138,6 +138,7 @@ sudo apt-get install -y --no-install-recommends \
 | Center 콘솔 (웹) | 8501 | 서버 | `BPM_CONSOLE__PORT` |
 | 서비스 앱 (관리 API) | 8010부터 10씩 | 서버 | `BPM_SVC_<앱 id>__PORT` |
 | 모의 앱 16개 (`samples/`, 개발·시험용) | 8010부터 10씩 — 순서는 `uv run bpm-mock-apps list` | **127.0.0.1** | `BPM_SVC_<앱 id>__PORT` |
+| 통합 일꾼 (관리 API — 일꾼 콘솔이 부른다) | 8770 | 127.0.0.1 기본 (`BPM_CONSUMER__HOST`) | `BPM_CONSUMER__PORT` — 관리자 토큰(`BPM_CONSUMER__ADMIN_TOKEN`)이 없으면 띄우지 않는다 |
 | 서비스 앱 관리 콘솔 (웹, `pnpm dev`) | 8001 | 개발 PC | — (`server/web/apps/svc-console/package.json`) |
 | PC 실행기 메시지 수신 (ReceiveTask·메시지 시작 이벤트) | 8790 | 127.0.0.1 기본 | `BPM_BOT_UI__WEBHOOK__PORT` |
 | Ollama | 11434 | 로컬 또는 서버 | `BPM_LLM__BASE_URL` |

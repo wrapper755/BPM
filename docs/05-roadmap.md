@@ -20,6 +20,7 @@
 | M7 | 서버 실행 | **끝** | 서버 실행기, 서버 BPM 프로세스 동시 실행, 상태 저장·재개, PC 위임, CON-12 | M6 |
 | M8 | 건넬 수 있게, 고칠 수 있게 | **진행 중** (남은 둘은 현장 PC 사람 몫) | Windows 설치 파일(빌드·CI 산출물·자동 시작·판 올리기), Center 저장소 옮기기 수단 | M7 |
 | M9 | 바깥 기능은 Pull로 | **끝** (조각 1~6과 C14·C1의 옛 키 칸 — ADR-0102·0103) | C15 외부 작업, 일꾼이 된 서비스 앱, 어댑터 일꾼, 주소·키 칸 없는 CON-07 | M7 |
+| M10 | 세 기둥 — AI 작업·외부 작업·통합 일꾼 | **진행 중** (조각 1~6 끝, 7은 Company1 저장소 — ADR-0135) | 일꾼 종류 칸, 통합 일꾼과 AI 작업 뼈대, 보상, 일꾼 콘솔. 업무 처리기는 Company1로 | M9 |
 
 ## M0. 문서 기준선
 
@@ -87,9 +88,9 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 서비스 앱 태스크를 BPM 프로세스가 부른다 (멱등 키·재시도·`service_call` 기록) — **C15 외부 작업으로** 부른다 ([ADR-0102](decisions/0102-calling-outside-is-pull.md)): `core.services.CenterServiceCaller`가 Center에 일감을 올리고 일꾼이 가져간다. 주소·키는 일꾼만 안다
 - [x] 결정 수행 재생 ([ADR-0028](decisions/0028-replay-memory.md)) — 재생 명세는 패키지 안 `memory/specs.json`이고 배포된 BPM 프로세스는 읽기만 한다. 태스크마다 `replay: plan|full|none`을 고르고 도구 인자는 `{변수}` 템플릿이다. 재생이 깨지면 몰래 자율로 넘어가지 않고 오류 경계로 간다
 - [x] 실행 이벤트가 로컬 큐 → Center로 전송, 콘솔 실행 로그(CON-01)에서 타임라인 조회 (C3) — **파일이 원본이다**: `runs/<run_id>.jsonl`에 먼저 쓰고 하트비트 뒤에 `core.run_shipping`이 보낸다. Center가 꺼져 있어도 실행은 돈다 (ADR-0007). 멱등(`(run_id, seq)`)이고 거부된 줄에서 멈추지 않는다. CON-01은 목록·상세(노드 타임라인·AI 단계·사람 개입·UI 태스크·이어 돈 기록·원본 이벤트)다
-- [x] Studio: 메인 창(STU-01), BPM 프로세스 탐색기, 속성 패널, 시험 실행 (Windows) — 캔버스는 QtWebEngine 안의 bpmn-js이고 배포본은 `server/web/`에서 판을 고정해 복사한다 ([ADR-0022](decisions/0022-studio-canvas.md)·[ADR-0029](decisions/0029-bpmn-js-vendoring.md)). 속성 패널(STU-04)은 요소별 폼과 C14 모델로 검증하는 「JSON」 탭이고 「적용」은 캔버스를 거친다. 아래 탭 「검사」가 B1~B16을 보인다. 시험 실행(STU-08·09)은 케이스의 결재·메시지·위임·`$now_plus`·`$test_receiver`를 다루고 **자율 수행이 배운 재생 명세를 패키지에 적는다**. 바깥으로 웹훅을 쏘지 않는다. 케이스 편집기(STU-07)는 엔진과 같은 `validate_answer`로 검증하고, 패키지 내보내기는 매니페스트를 그림에서 모은다(시험 케이스는 넣지 않는다)
+- [x] Studio: 메인 창(STU-01), BPM 프로세스 탐색기, 속성 패널, 시험 실행 (Windows) — 캔버스는 QtWebEngine 안의 bpmn-js이고 배포본은 `server/web/`에서 판을 고정해 복사한다 ([ADR-0022](decisions/0022-studio-canvas.md)·[ADR-0029](decisions/0029-bpmn-js-vendoring.md)). 속성 패널(STU-04)은 요소별 폼과 C14 모델로 검증하는 「JSON」 탭이고 「적용」은 캔버스를 거친다. 아래 탭 「검사」가 B1~B17을 보인다. 시험 실행(STU-08·09)은 케이스의 결재·메시지·위임·`$now_plus`·`$test_receiver`를 다루고 **자율 수행이 배운 재생 명세를 패키지에 적는다**. 바깥으로 웹훅을 쏘지 않는다. 케이스 편집기(STU-07)는 엔진과 같은 `validate_answer`로 검증하고, 패키지 내보내기는 매니페스트를 그림에서 모은다(시험 케이스는 넣지 않는다)
 - [x] 패키지 매니페스트에 `run_location`이 처음부터 들어가고, Studio 「실행 전 검사」가 서버 불가 태스크를 잡고 「실행 위치를 PC로 바꾸기」를 제안 (C1, 기본값 서버, 서버 실행은 M7) — 매니페스트의 `run_location`(없으면 **서버**)과 B6은 `contracts.bpmn_ext`에 있고 검사 탭이 보인다. 제안 단추는 화면 설계서대로 **STU-06**에 있다(`process_dialog.py` — 검사 탭에는 쓰기 단추를 두지 않는다). 세는 함수는 B6과 하나(`contracts.server_blockers`)다
-- [x] BPMN 확장 속성(C14)을 읽고 **쓰며**, 실행 전 검사가 화면에 보임 — 계약 쪽은 `contracts.bpmn_ext`(B1~B16), 식 자리 검사(B15)는 `core.expr_check`, 쓰기는 속성 패널이 캔버스를 거쳐 한다
+- [x] BPMN 확장 속성(C14)을 읽고 **쓰며**, 실행 전 검사가 화면에 보임 — 계약 쪽은 `contracts.bpmn_ext`(B1~B17), 식 자리 검사(B15)는 `core.expr_check`, 쓰기는 속성 패널이 캔버스를 거쳐 한다
 - [x] **인수 시험:** [업무 예제](08-business-examples/README.md#마일스톤별-인수-시험-묶음)의 M3 묶음이 Studio 시험 실행에서 케이스 모두 통과 (AI 태스크는 자율 수행 → 결정 수행 재생 둘 다) — **29개 모두 통과한다** (`tests/studio/test_m3_acceptance.py`, `REMAINING`이 비었다). 모델은 127.0.0.1에 띄운 OpenAI 호환 스텁이고 답은 시험이 정한다(`tests/canned_answers.py`), 표본 파일은 시험이 그 자리에서 만든다(`tests/sample_files.py`). 재생은 **판정이 같은 것**과 **정말 되밟은 것**(C3 `node_state: replayed`)을 함께 본다
 
 ## M4. UI 자동화
@@ -141,7 +142,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] PC 위임: 서버 BPM 프로세스의 Call Activity가 **배포된 PC BPM 프로세스**을 부르면 PC 실행기에서 실행되고 결과로 이어 감 — ADR-0062의 「증명할 다섯」이 다 찼다. 그림은 `bpm:call.delegate`, 엔진은 네 번째 기다림(`WAIT_DELEGATION`), 실행기는 `CenterDelegator`, Center는 배포된·활성인·대기열이 짧은 PC를 고르고(`center/api/delegations.py`), 결과는 PC의 작업 ack `outputs`로 올라온다. Studio 시험 실행은 케이스의 `delegations`로 끝낸다(`CaseDelegator`). **PC 실행기는 일부러 꽂지 않는다**. 업무 예제 BX-16이 FX-19를 맡긴다
 - **서버의 확장 태스크** (ADR-0064): `run_locations`에 `server`를 적은 종류만 수행기를 낸다. 적지 않은 것은 사전 점검이 시작 전에 막는다(`task_types_wrong_location`)
 - [x] 콘솔 「서버 실행」(CON-12)에서 실행 중·기다리는 실행·대기열을 본다 — 목록(`/server-runners`)과 상세(`/server-runners/<id>`)다. 「실행 중」·「기다리는 실행」·「BPM 프로세스별 상한」은 실행기 하나의 것이라 상세에, 「대기열」은 목록 쪽에 있다
-- [x] **인수 시험:** 실행 위치 서버인 업무·기능 예제 전부가 서버 실행기에서 통과 — `tests/server/test_m7_server_rerun.py`가 실행 위치 `server`인 예제 **47개를 그림에서 읽어** 배포·설치는 전부 보고, 끝까지 도는 것은 **묶음 44개 + 전용 시험 둘**이다(`ELSEWHERE` — BX-16은 PC 위임, FX-24는 일괄 기동이라 발판이 더 필요하다). **BX-33은 일부러 실패하는** 교육 예제라(ADR-0039) 의도한 실패를 따로 본다. 갈래 셋을 합쳐 47개와 맞춰 보므로 조용히 빠지는 일이 없다. 결재는 Center 결재함(C6), 메시지는 Center 메시지 API(C12)에 넣는다. BX-03(며칠 대기)은 `tests/server/test_server_runner_resume.py`가 재시작을 끼워 넣어 보고, 시나리오 1·2·4(BX-10·BX-20·BX-30)가 여기 든다 ([ADR-0055](decisions/0055-m6-field-scenario-is-scenario-3.md))
+- [x] **인수 시험:** 실행 위치 서버인 업무·기능 예제 전부가 서버 실행기에서 통과 — `tests/server/test_m7_server_rerun.py`가 실행 위치 `server`인 예제 **48개를 그림에서 읽어** 배포·설치는 전부 보고, 끝까지 도는 것은 **묶음 45개 + 전용 시험 둘**이다(`ELSEWHERE` — BX-16은 PC 위임, FX-24는 일괄 기동이라 발판이 더 필요하다). **BX-33은 일부러 실패하는** 교육 예제라(ADR-0039) 의도한 실패를 따로 본다. 갈래 셋을 합쳐 48개와 맞춰 보므로 조용히 빠지는 일이 없다. 결재는 Center 결재함(C6), 메시지는 Center 메시지 API(C12)에 넣는다. BX-03(며칠 대기)은 `tests/server/test_server_runner_resume.py`가 재시작을 끼워 넣어 보고, 시나리오 1·2·4(BX-10·BX-20·BX-30)가 여기 든다 ([ADR-0055](decisions/0055-m6-field-scenario-is-scenario-3.md))
 
 ## M8. 건넬 수 있게, 고칠 수 있게
 
@@ -187,6 +188,22 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 조각 5 — **화면**: CON-07(주소·키 칸 → 일꾼 승인·토픽 상태), STU-10 — 화면 문서를 먼저 고친다 — **된다**: CON-07은 기능 목록·일꾼 승인 대기·토픽 표, STU-10에 서비스 앱 키 칸이 없고, CON-02의 「서비스 앱 키 참조」 열도 걷었다
 - [x] 조각 6 — **긴 작업**: 서버 실행기가 외부 작업을 기다리는 동안 스레드를 놓는다 (다섯째 기다림) — **돈다** ([ADR-0103](decisions/0103-long-external-tasks.md)): 한 번 기다려 끝나지 않으면 `external_task`로 멈추고 결과는 하트비트 주기마다 묻는다. M7 묶음이 서비스 호출 예제 넷을 **모든 호출을 넘긴 채로** 끝까지 돌린다
 - [x] 옛 키 칸 — C14 `bpm:serviceCall.key_ref`·`bpm:process.service_keys`, C1 `requires.service_apps[].key_ref`·`task_key_refs`·R4를 걷었다. 예제 생성기가 더 적지 않고(`key_ref`를 적으면 거부한다), 옛 파일은 모르는 칸으로 읽어 **B7이 경고 한 줄**로 말한다. 판은 올리지 않았다(선택 칸 — 원칙 3) — `tests/shared/test_contracts_bpmn_ext.py`·`test_contracts.py`
+
+## M10. 세 기둥 — AI 작업·외부 작업·통합 일꾼
+
+> 상태: **진행 중** — 조각 1~6이 끝났고 남은 것은 조각 7(Company1 저장소에서 — 이 저장소 밖의 일). [ADR-0135](decisions/0135-agentic-automation-and-unified-consumer.md)
+> 에이전틱 자동화(AI 작업)·External Task(외부 작업, C15)·하이브리드 자동화(통합 일꾼 + 보상)를 BPM의 이름 붙은 기능으로 세우고,
+> NowView의 일반 부분(일꾼 호스트·Agent 검증·대시보드의 일반 부분)은 통합 일꾼과 일꾼 콘솔로 들이고, 장면 코드는 Company1 저장소의
+> 업무 처리기로 보낸다 — **이 저장소에는 회사 업무 코드가 들어오지 않는다.** 그 뒤 NowView는 걷는다.
+
+- [x] 조각 1 — **문서**: ADR-0135, 용어집, C11·C13·C15 `kind`·C11 「AI 작업」, C14 「보상」(합의), 09-gaps §3-30 — **됐다**
+- [x] 조각 2 — **일꾼 종류 칸** — **됐다**: 계약 모델(`Operation.kind`·`AdapterOperation.kind`(E3)·`LockedTask`·`ExternalTaskInfo`), Center 24판(`external_tasks.kind` — 올릴 때 manifest에서), 어댑터 일꾼 manifest, CON-01 「종류」 열 — `tests/server/test_center_external_tasks.py`
+- [x] 조각 3 — **통합 일꾼** `server/unified_consumer` — **됐다**: 업무 처리기를 엔트리 포인트 `bpm.consumer_handlers`로 찾고(깨진 것만 끈다, 설정 칸·데이터 폴더를 준다), 외부 확장 정의(`api`)를 어댑터 일꾼과 같은 코드로 함께 맡는다. 같은 토픽 둘은 뜨지 않는다. `rpa`는 시험용 가짜 처리기뿐 — `tests/server/test_unified_consumer.py`. **세 종류 기능 예제는 조각 5로 옮겼다**(같은 흐름에 RPA 실패 → 보상이 들어간다)
+- [x] 조각 4 — **AI 작업 뼈대** `bpm.unified_consumer.ai` — **됐다**: 지식 원천(`StaticKnowledge`·`FolderKnowledge`), 러너 셋(`MockRunner`·`LlmRunner`(`ServiceLlm`)·`FailingRunner`), 검증(필수 칸·근거 id·숫자 대조 — 버린 사유를 알려 다시 묻는다), provenance, 오류 `ai_rejected`·`ai_failed` — `tests/server/test_unified_consumer_ai.py`. NowView Agent의 검증 규칙을 일반화했다
+- [x] 조각 5 — **보상** — **됐다**: C14 「보상」 구현됨 — BPMN 읽기(`isForCompensation`·`activityRef`·`association`), 엔진(보상 던지기가 토큰을 처리기로 돌렸다 던지기로 되돌린다, 끝난 순서의 거꾸로·같은 범위·한 번만), 스냅샷, 검사 B17 — `tests/shared/test_core_compensation.py`
+- [x] 조각 5b — **기능 예제 FX-26** — **됐다**: 그림 생성기가 보상 경계·처리기·던지기를 쓴다(`bnd(…, "compensate", handler=…)`·`undo(…)`·`end(kind="compensate")`, 커버리지 표에 보상 두 줄). 모의 앱 `order-desk`(한 토픽에 `ai`·`api`·`rpa` 작업, RPA는 가짜). 케이스 둘(화면 정상 / 화면이 바뀌어 되돌림)이 M5 Studio 시험 실행·M7 서버 실행기에서 초록. B11은 처리기가 그 활동의 변수를 본다고 센다
+- [x] 조각 6 — **일꾼 콘솔 = 서비스 앱 콘솔** — **됐다**: 통합 일꾼이 같은 관리 API를 낸다(`bpm.unified_consumer.admin` — 모든 토픽의 일감을 한 사용 기록에 남기고 작업 줄에 `topic`·`kind`, 관리자 토큰 `BPM_CONSUMER__ADMIN_TOKEN`·포트 8770). SVC-01 「토픽」(여럿일 때만)·「종류」 열, SVC-03 「토픽」 열 — `tests/server/test_unified_consumer.py`
+- [ ] 조각 7 — **Company1 저장소에서**: 장면 코드를 업무 처리기로 옮기고 BPM 패키지에 고정, NowView 걷기 (운영 반영은 따로 묻는다)
 
 ## 나중에 (범위 밖, 기록만)
 

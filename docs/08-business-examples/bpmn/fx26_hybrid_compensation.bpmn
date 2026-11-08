@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpm="urn:chaeksas:bpmn:1"
+  id="Defs_fx26_hybrid_compensation" targetNamespace="urn:chaeksas:examples" exporter="bpm-examples" exporterVersion="1">
+  <bpmn:error id="Err_TASK_FAILED" name="TASK_FAILED" errorCode="TASK_FAILED" />
+  <bpmn:process id="Proc_fx26_hybrid_compensation" name="세 종류 일꾼과 보상" isExecutable="true">
+    <bpmn:extensionElements>
+      <bpm:process>{
+  "run_location": "server",
+  "extensions": [
+    {
+      "id": "order-desk",
+      "version": "&gt;=1,&lt;2"
+    }
+  ],
+  "outputs": [],
+  "inputs": [
+    {
+      "name": "품목",
+      "type": "string",
+      "required": true,
+      "description": ""
+    },
+    {
+      "name": "수량",
+      "type": "int",
+      "required": true,
+      "description": ""
+    },
+    {
+      "name": "화면",
+      "type": "string",
+      "required": true,
+      "description": "모의 RPA가 보는 기간계 화면 상태 — `정상`이 아니면 실패"
+    }
+  ]
+}</bpm:process>
+    </bpmn:extensionElements>
+    <bpmn:startEvent id="Start" name="시작">
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_Draft" name="주문 초안 (AI)">
+      <bpmn:extensionElements>
+        <bpm:serviceCall>{
+  "app_id": "order-desk",
+  "operation": "draft_order",
+  "input": {
+    "품목": "품목",
+    "수량": "수량"
+  },
+  "output": {
+    "초안": "draft",
+    "결정": "decision"
+  }
+}</bpm:serviceCall>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_02</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Reserve" name="재고 예약 (API)">
+      <bpmn:extensionElements>
+        <bpm:serviceCall>{
+  "app_id": "order-desk",
+  "operation": "reserve_stock",
+  "input": {
+    "품목": "품목",
+    "수량": "수량"
+  },
+  "output": {
+    "재고상태": "status",
+    "예약번호": "reservation_id"
+  }
+}</bpm:serviceCall>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_02</bpmn:incoming>
+      <bpmn:outgoing>Flow_03</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Enter" name="주문 화면 입력 (RPA)">
+      <bpmn:extensionElements>
+        <bpm:serviceCall>{
+  "app_id": "order-desk",
+  "operation": "enter_order",
+  "input": {
+    "reservation_id": "예약번호",
+    "화면": "화면"
+  },
+  "output": {
+    "주문번호": "order_no"
+  }
+}</bpm:serviceCall>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:scriptTask id="Task_Done" name="접수" scriptFormat="bpm-expr">
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+      <bpmn:script>처리 = '접수'</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:endEvent id="End_Ok" name="접수됨">
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:scriptTask id="Undo_Draft" isForCompensation="true" name="초안 폐기" scriptFormat="bpm-expr">
+      <bpmn:script>초안상태 = '폐기'</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:serviceTask id="Undo_Reserve" isForCompensation="true" name="예약 해제 (API)">
+      <bpmn:extensionElements>
+        <bpm:serviceCall>{
+  "app_id": "order-desk",
+  "operation": "release_stock",
+  "input": {
+    "reservation_id": "예약번호"
+  },
+  "output": {
+    "재고상태": "status"
+  }
+}</bpm:serviceCall>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:scriptTask id="Task_Failed" name="실패 기록" scriptFormat="bpm-expr">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:outgoing>Flow_07</bpmn:outgoing>
+      <bpmn:script>처리 = '되돌림'
+실패사유 = error_message</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:endEvent id="End_Undo" name="되돌리고 끝">
+      <bpmn:incoming>Flow_07</bpmn:incoming>
+      <bpmn:compensateEventDefinition />
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="Comp_Draft" name="되돌리기" attachedToRef="Task_Draft">
+      <bpmn:compensateEventDefinition />
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="Comp_Reserve" name="되돌리기" attachedToRef="Task_Reserve">
+      <bpmn:compensateEventDefinition />
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="Bnd_Enter" name="실패" attachedToRef="Task_Enter">
+      <bpmn:outgoing>Flow_06</bpmn:outgoing>
+      <bpmn:errorEventDefinition errorRef="Err_TASK_FAILED" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="Start" targetRef="Task_Draft" />
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_Draft" targetRef="Task_Reserve" />
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_Reserve" targetRef="Task_Enter" />
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_Enter" targetRef="Task_Done" />
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_Done" targetRef="End_Ok" />
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Bnd_Enter" targetRef="Task_Failed" />
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_Failed" targetRef="End_Undo" />
+    <bpmn:association id="As_Comp_Draft" associationDirection="One" sourceRef="Comp_Draft" targetRef="Undo_Draft" />
+    <bpmn:association id="As_Comp_Reserve" associationDirection="One" sourceRef="Comp_Reserve" targetRef="Undo_Reserve" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_1">
+    <bpmndi:BPMNPlane id="Plane_1" bpmnElement="Proc_fx26_hybrid_compensation">
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start"><dc:Bounds x="160" y="102" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="140" y="142" width="76" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Draft_di" bpmnElement="Task_Draft"><dc:Bounds x="266" y="80" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Reserve_di" bpmnElement="Task_Reserve"><dc:Bounds x="436" y="80" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Enter_di" bpmnElement="Task_Enter"><dc:Bounds x="606" y="80" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Done_di" bpmnElement="Task_Done"><dc:Bounds x="776" y="80" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Ok_di" bpmnElement="End_Ok"><dc:Bounds x="946" y="102" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="926" y="142" width="76" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Undo_Draft_di" bpmnElement="Undo_Draft"><dc:Bounds x="296" y="400" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Undo_Reserve_di" bpmnElement="Undo_Reserve"><dc:Bounds x="466" y="400" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Failed_di" bpmnElement="Task_Failed"><dc:Bounds x="776" y="230" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Undo_di" bpmnElement="End_Undo"><dc:Bounds x="946" y="252" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="926" y="292" width="76" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Comp_Draft_di" bpmnElement="Comp_Draft"><dc:Bounds x="326" y="142" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="322" y="180" width="44" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Comp_Reserve_di" bpmnElement="Comp_Reserve"><dc:Bounds x="496" y="142" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="492" y="180" width="44" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Bnd_Enter_di" bpmnElement="Bnd_Enter"><dc:Bounds x="666" y="142" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="662" y="180" width="44" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_01_di" bpmnElement="Flow_01"><di:waypoint x="196" y="120" /><di:waypoint x="266" y="120" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02_di" bpmnElement="Flow_02"><di:waypoint x="366" y="120" /><di:waypoint x="436" y="120" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03_di" bpmnElement="Flow_03"><di:waypoint x="536" y="120" /><di:waypoint x="606" y="120" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_04_di" bpmnElement="Flow_04"><di:waypoint x="706" y="120" /><di:waypoint x="776" y="120" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_05_di" bpmnElement="Flow_05"><di:waypoint x="876" y="120" /><di:waypoint x="946" y="120" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06_di" bpmnElement="Flow_06"><di:waypoint x="684" y="178" /><di:waypoint x="684" y="270" /><di:waypoint x="776" y="270" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_07_di" bpmnElement="Flow_07"><di:waypoint x="876" y="270" /><di:waypoint x="946" y="270" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="As_Comp_Draft_di" bpmnElement="As_Comp_Draft"><di:waypoint x="344" y="178" /><di:waypoint x="344" y="380" /><di:waypoint x="346" y="380" /><di:waypoint x="346" y="400" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="As_Comp_Reserve_di" bpmnElement="As_Comp_Reserve"><di:waypoint x="514" y="178" /><di:waypoint x="514" y="380" /><di:waypoint x="516" y="380" /><di:waypoint x="516" y="400" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

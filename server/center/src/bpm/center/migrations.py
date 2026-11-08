@@ -360,6 +360,11 @@ MIGRATIONS: tuple[Step, ...] = (
         "업무 자리는 매니페스트(C1 `place`)에서 읽는다 — 따로 된 자리 표를 지운다 (ADR-0127)",
         ("DROP TABLE process_places",),
     ),
+    Step(
+        24,
+        "외부 작업의 일꾼 종류 — 올릴 때 manifest의 작업에서 옮겨 적는다 (C15 `kind`, ADR-0135)",
+        ("ALTER TABLE external_tasks ADD COLUMN kind TEXT",),
+    ),
 )
 
 

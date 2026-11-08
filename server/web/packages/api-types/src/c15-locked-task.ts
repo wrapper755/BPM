@@ -14,6 +14,7 @@ export interface LockedTask {
   input?: {
     [k: string]: unknown;
   };
+  kind?: string | null;
   lock_until: string;
   mode: string;
   operation: string;
