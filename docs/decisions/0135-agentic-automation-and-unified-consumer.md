@@ -84,7 +84,7 @@ AI 작업은 **서비스 태스크(`bpm:serviceCall`)가 부르는 `kind: ai` �
 - **종류 `ai`**: AI 작업 뼈대(§3) 위의 처리기.
 - **종류 `api`**: 외부 확장 정의를 어댑터 일꾼과 **같은 코드**(`bpm.adapter_consumer`)로 통합 일꾼 안에서 돌린다. 업무 처리기 없이 정의만 주면 어댑터 일꾼과 같다 — `bpm-adapter-consumer`는 그 모양으로 남는다.
 - **종류 `rpa`**: **자리만 만든다** — 종류 값, C15·화면의 표기, 처리기 인터페이스, 시험용 가짜 RPA 일꾼. 실제 화면 조작과 「RPA 일꾼이 어느 PC에서 도는가」(PC 실행기와의 관계, ADR-0014)는 UI 자동화를 다시 들일 때 정한다(ADR-0114).
-- **일꾼 콘솔**(`server/web/apps/consumer-console`)은 **어느 회사든 같은 것만** 보인다 — 맡은 토픽·종류별 일감·최근 실패·BPM 프로세스별 진행. 회사별 업무 지표는 그 회사의 화면(Company1 사이트)이 보인다. NowView 대시보드에서 일반 부분만 가져온다. 다른 웹 앱처럼 토큰·`status_map`만 쓴다.
+- **일꾼 콘솔은 서비스 앱 콘솔(SVC-00~03)이다** — 새 웹 앱을 만들지 않는다. 통합 일꾼이 서비스 앱과 같은 관리 API(C11 `/admin/v1/status`·`usage`)를 내고 작업 줄에 `topic`·`kind`를 싣는다. 그래서 보이는 것은 **어느 회사든 같은 것**(맡은 토픽·작업별 종류·최근 24시간 호출·오류율·사용 기록)이다. BPM 프로세스별 진행은 Center 콘솔(CON-01·02)이, 회사별 업무 지표는 그 회사의 화면(Company1 사이트)이 보인다.
 
 **보상**은 C14와 엔진에 들인다.
 
@@ -102,7 +102,7 @@ AI 작업은 **서비스 태스크(`bpm:serviceCall`)가 부르는 `kind: ai` �
 | 일꾼 호스트(`consumer.py`의 토픽 → 처리기, `routed_by` — BPM 프로세스 id로 회사·업무 찾기), 일꾼 파일(`worker_file.py`) | BPM `server/unified_consumer` (`bpm.unified_consumer`) — 일반화한다 |
 | Agent 러너·검증(`sc01/agent.py`·`sc02/agent.py`의 공통 부분) | BPM `bpm.unified_consumer.ai` (AI 작업 뼈대) |
 | 회사 설정(`config.py`)의 일반 부분 — BPM 프로세스 id → 업무 처리기 매핑 | BPM `bpm.unified_consumer` 설정 |
-| 대시보드의 일반 부분(BPM 진행·일꾼 일감) | BPM 일꾼 콘솔 |
+| 대시보드의 일반 부분(일꾼 일감) | 서비스 앱 콘솔로 보는 통합 일꾼 (BPM 진행은 Center 콘솔) |
 | 장면 코드 sc01~07·s2·s3·platform, 회사 시스템 연결(`company.py`), 따라가기(`follower.py`), 경영 기록(`records.py`), 장면별 Agent 지시문·검증 칸, 확장 정의 `external.extension.json`, 그 시험 | **Company1 저장소의 업무 처리기** (예: `Company1/worker`, 엔트리 포인트 `bpm.consumer_handlers`) |
 | 대시보드의 회사별 지표 | Company1 사이트 |
 
@@ -121,7 +121,7 @@ AI 작업은 **서비스 태스크(`bpm:serviceCall`)가 부르는 `kind: ai` �
 | 3 | 통합 일꾼 `server/unified_consumer` — 업무 처리기 찾기, 종류 셋(`rpa`는 가짜), 외부 확장 정의를 어댑터 일꾼과 같은 코드로 | 시험용 처리기로 Center를 거쳐 끝까지 |
 | 4 | AI 작업 뼈대 `bpm.unified_consumer.ai` — 지식 원천, 러너 셋, 검증, provenance | 예제가 `mock`으로 끝까지 |
 | 5 | 보상 — C14 「구현됨」, 엔진, C14 검사, 기능 예제(AI·API·RPA 세 종류 + 오류 경계 → 보상), M7 묶음 | 예제·묶음 초록 |
-| 6 | 일꾼 콘솔 `consumer-console`(일반), 통합 일꾼 배포 묶음(`server/deploy`) | 화면 확인 |
+| 6 | 일꾼 콘솔 = 서비스 앱 콘솔 — 통합 일꾼의 관리 API(`topic`·`kind`), SVC-01·03 「토픽」·「종류」 열 | 화면 확인 |
 | 7 | **Company1 저장소에서**: 장면 코드를 업무 처리기로 옮기고 BPM 패키지에 고정, NowView 걷기 | Company1에서 장면 시험 초록, 로컬 compose 시연 한 바퀴. 운영 반영은 따로 묻는다 |
 
 ## 결과

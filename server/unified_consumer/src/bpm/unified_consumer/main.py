@@ -13,6 +13,9 @@
 3. 외부 확장 정의(종류 `api`)는 `BPM_CONSUMER__DEFINITIONS`(`os.pathsep`으로 여럿) — 어댑터 일꾼과 같은 규칙이고,
    그 앱의 주소·키도 같은 이름(`BPM_ADAPTER__EXT__<확장>__*`)으로 받는다.
 
+4. **관리 API**(일꾼 콘솔 = 서비스 앱 콘솔, C11) — `BPM_CONSUMER__ADMIN_TOKEN`이 있을 때만 `BPM_CONSUMER__HOST`·`PORT`에
+   띄운다. 콘솔은 `BPM_SVC_CONSOLE__APP_URL`을 이 주소로 둔다.
+
 업무 처리기도 정의도 없으면 맡을 것이 없어 뜨지 않는다. 업무 처리기 없이 정의만 주면 어댑터 일꾼과 같다.
 """
 
@@ -26,14 +29,19 @@ import sys
 import threading
 from pathlib import Path
 
+from fastapi import FastAPI
 from platformdirs import user_data_path
 
 from bpm.adapter_consumer.main import load_files
-from bpm.service_kit import Consumer, TokenFile
+from bpm.service_kit import Consumer, InMemoryUsageLog, TokenFile
 from bpm.unified_consumer import handlers
+from bpm.unified_consumer.admin import create_admin_app, recorded
 from bpm.unified_consumer.host import TopicClash, UnifiedConsumer
 
 ENV_PREFIX = "BPM_CONSUMER__"
+#: 관리 API의 기본 자리 — 기본값의 원본은 `docs/04-setup.md` §6이다 (ADR-0011).
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8770
 
 log = logging.getLogger("bpm.unified_consumer")
 
@@ -90,8 +98,15 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-    consumer = Consumer(host.services, center_url=found.center_url, tokens=tokens)
+    usage = InMemoryUsageLog()
+    services = recorded(host.services, usage)
+    consumer = Consumer(services, center_url=found.center_url, tokens=tokens)
     consumer.publish(force=True)
+    admin_token = _env("ADMIN_TOKEN")
+    if admin_token:
+        _serve_admin(create_admin_app(services, admin_token=admin_token, log=usage, center=consumer.registration))
+    else:
+        log.info("관리자 토큰(BPM_CONSUMER__ADMIN_TOKEN)이 없어 관리 API를 띄우지 않는다")
     for kind, names in host.describe()["by_kind"].items():
         log.info("종류 %s: %s", kind, ", ".join(names))
     print(f"일꾼으로 붙었다 — {', '.join(one.service.app_id for one in host.topics)}", flush=True)
@@ -103,4 +118,15 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-__all__ = ["ENV_PREFIX", "default_data_dir", "main"]
+def _serve_admin(app: FastAPI) -> None:
+    """관리 API를 데몬 스레드로 띄운다 — 일꾼 루프가 주인이고, 끝나면 함께 내려간다."""
+    import uvicorn  # noqa: PLC0415
+
+    host = _env("HOST") or DEFAULT_HOST
+    port = int(_env("PORT") or DEFAULT_PORT)
+    server = uvicorn.Server(uvicorn.Config(app, host=host, port=port, log_level="warning"))
+    threading.Thread(target=server.run, name="admin-api", daemon=True).start()
+    log.info("관리 API를 띄웠다 — http://%s:%d (일꾼 콘솔: BPM_SVC_CONSOLE__APP_URL)", host, port)
+
+
+__all__ = ["DEFAULT_HOST", "DEFAULT_PORT", "ENV_PREFIX", "default_data_dir", "main"]

@@ -131,11 +131,13 @@ AdminStatus:
 | `app_id`, `name`, `version`, `category`, `console_url` | manifest와 같은 값 |
 | `extension` | `{id, version}` — 이 앱이 **어느 확장의 서버 부분인가**. 관리 콘솔이 이것으로 그 확장의 고유 화면(C13 `console.pages`)을 고른다 ([ADR-0042](../decisions/0042-extension-contributed-panels.md)) |
 | `started_at`, `uptime_s` | 가동 시간 |
-| `operations` | 작업마다 `{name, description, modes, fallback, server_ok, calls_24h, errors_24h, error_rate}` — 수는 **앱 안의 사용 기록**에서 센다 |
+| `operations` | 작업마다 `{name, description, modes, fallback, server_ok, kind, topic?, calls_24h, errors_24h, error_rate}` — 수는 **앱 안의 사용 기록**에서 센다. `kind`는 일꾼 종류, `topic`은 **토픽 여럿을 맡는 일꾼**(통합 일꾼)에서만 채운다 — 서비스 앱 하나면 비어 있다 |
 | `dependencies` | 바깥 의존마다 `{name, status, detail?}`. `status`는 `ok`·`degraded`·`unreachable`·`unknown`. 일꾼이면 `center` 줄이 붙는다(마지막으로 가져간 때·들인 상태) |
 | `center` | `{registered, base_url?, last_reported_at?}` — `registered`는 **일꾼으로 들었나**, `last_reported_at`은 마지막으로 가져간 때 |
 
 - 관리자 토큰이 설정되지 않았으면 관리 API 전체가 503 `admin_disabled`다. **빈 토큰으로 열리지 않는다.**
+- 사용 기록 한 줄(`UsageRecord`)에도 `topic`이 있다 — 통합 일꾼에서만 채운다.
+- **통합 일꾼도 같은 관리 API를 낸다** ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) — 일꾼 콘솔은 이 콘솔이다): `app_id`는 `unified-consumer`, `category`는 `system`, `operations`는 맡은 토픽 전부의 작업을 토픽 순으로 잇는다. 관리자 토큰은 `BPM_CONSUMER__ADMIN_TOKEN`이고 없으면 관리 API를 띄우지 않는다.
 
 ## 모델 연결
 
@@ -191,7 +193,7 @@ AdminStatus:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
-| 2026-11-08 | 1 | 작업에 **일꾼 종류** `kind`(`ai`·`api`·`rpa`, 기본 `ai` — 구현됨)와 「AI 작업」 규칙(provenance·검증·폴백 없음 — 구현됨, 오류 `ai_rejected`·`ai_failed`)을 더했다. 선택 칸이라 판은 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
+| 2026-11-08 | 1 | 작업에 **일꾼 종류** `kind`(`ai`·`api`·`rpa`, 기본 `ai` — 구현됨, 관리 API `operations[].kind`·`topic?`와 `UsageRecord.topic`도)와 「AI 작업」 규칙(provenance·검증·폴백 없음 — 구현됨, 오류 `ai_rejected`·`ai_failed`)을 더했다. 선택 칸이라 판은 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 1 | 칸은 그대로다. `caller.type`의 아는 값에서 `worker`·`tool_ui`를 뺐고, `required_scopes`를 켜 줄 길(PC의 「셀렉터 등록」)이 없어졌다고 적었다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-29 | 1 | **앱이 일꾼이 된다** — `POST /v1/ops`·`/manifest`·앱 안의 키(`/v1/keys/self`·`/center/v1/keys`·`/center/v1/trust`)·관리 API의 키 발급을 걷고 C15 가져가기로 같은 작업을 수행한다. 폴백은 시험 일감일 때만, 추가 권한은 Center가 건다, 카탈로그는 일꾼이 올린다 | [0102](../decisions/0102-calling-outside-is-pull.md) |
 | 2026-10-25 | 1 | §Center가 발급하는 키 — `CENTER__URL`, `GET /center/v1/trust`, `POST /center/v1/keys`(C2 봉투 `service_key`, 해시만), 키 레코드 `issued_by`·`center_key_id`·`issued_for`. 새 경로·선택 칸이라 옛 부르는 쪽은 그대로다 | [0094](../decisions/0094-service-app-keys-ride-the-deployment.md) |

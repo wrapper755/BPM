@@ -58,8 +58,10 @@ export interface OperationStatus {
   error_rate?: number;
   errors_24h?: number;
   fallback?: string;
+  kind?: string;
   modes?: string[];
   name: string;
   server_ok?: boolean;
+  topic?: string | null;
   [k: string]: unknown;
 }

@@ -68,10 +68,13 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def operation_stats(manifest: ServiceAppManifest, log: UsageLog, *, now: str) -> list[OperationStatus]:
+def operation_stats(
+    manifest: ServiceAppManifest, log: UsageLog, *, now: str, topic: str | None = None
+) -> list[OperationStatus]:
     """작업별 선언 + 최근 24시간 통계 (SVC-01).
 
-    수는 **앱 안의 사용 기록**에서 센다 (C11 — 값은 기록하지 않지만 호출은 센다).
+    수는 **앱 안의 사용 기록**에서 센다 (C11 — 값은 기록하지 않지만 호출은 센다). `topic`을 주면
+    그 토픽의 기록만 세고 줄에 토픽을 적는다 — 토픽 여럿을 맡는 일꾼(통합 일꾼)이 쓴다 (ADR-0135).
     """
     since = datetime.fromisoformat(now) - timedelta(hours=STATS_WINDOW_H)
     counts: dict[str, list[int]] = {}
@@ -80,7 +83,7 @@ def operation_stats(manifest: ServiceAppManifest, log: UsageLog, *, now: str) ->
             at = datetime.fromisoformat(entry.at)
         except ValueError:  # pragma: no cover - 기록이 깨진 경우
             continue
-        if at < since:
+        if at < since or (topic is not None and entry.topic != topic):
             continue
         slot = counts.setdefault(entry.operation, [0, 0])
         slot[0] += 1
@@ -97,6 +100,8 @@ def operation_stats(manifest: ServiceAppManifest, log: UsageLog, *, now: str) ->
                 modes=operation.modes,
                 fallback=operation.fallback,
                 server_ok=operation.server_ok,
+                kind=operation.kind,
+                topic=topic,
                 calls_24h=calls,
                 errors_24h=errors,
                 error_rate=round(errors / calls, 4) if calls else 0.0,

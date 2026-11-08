@@ -169,6 +169,8 @@ class UsageRecord(ContractModel):
     run_id: str | None = None
     caller_type: str | None = None
     usage: Usage | None = None
+    #: 일감의 토픽 — 통합 일꾼에서만 채운다 (`OperationStatus.topic`과 같은 규칙).
+    topic: str | None = None
 
 
 IdempotencyKey = tuple[str, str, str, int, int, int]
@@ -224,6 +226,10 @@ class OperationStatus(ContractModel):
     modes: list[str] = Field(default_factory=list)
     fallback: str = "none"
     server_ok: bool = True
+    #: 일꾼 종류 (`Operation.kind`, ADR-0135).
+    kind: str = KIND_AI
+    #: 그 작업의 토픽 — **토픽 여럿을 맡는 일꾼**(통합 일꾼)에서만 채운다. 서비스 앱 하나면 비어 있다.
+    topic: str | None = None
     calls_24h: int = 0
     errors_24h: int = 0
     #: 0.0~1.0. 호출이 없으면 0.

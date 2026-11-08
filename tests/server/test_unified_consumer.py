@@ -154,3 +154,63 @@ def test_the_unified_consumer_finishes_ai_and_rpa_tasks_through_center(center: T
     assert outputs[order]["output"] == {"receipt": "ORD-7"}
     listed = center.get(f"/api/v1/external-tasks?run_id={RUN}", headers=ADMIN).json()
     assert {one["operation"]: one["kind"] for one in listed} == {"draft_review": "ai", "enter_order": "rpa"}
+
+
+# ─────────────────────────── 관리 API (일꾼 콘솔 = 서비스 앱 콘솔) ───────────────────────────
+
+
+def test_the_admin_api_lists_every_topics_operations_with_kind_and_counts_per_topic(
+    center: TestClient, tmp_path: Path
+) -> None:
+    """SVC-01이 그대로 그린다 — 작업 줄에 `topic`·`kind`, 수는 토픽마다 (C11, ADR-0135)."""
+    from bpm.service_kit import InMemoryUsageLog  # noqa: PLC0415
+    from bpm.unified_consumer.admin import APP_ID, create_admin_app, recorded  # noqa: PLC0415
+
+    loaded, _ = load(data_dir=tmp_path / "handlers", found=points(("fake-co", FACTORY)))
+    host = UnifiedConsumer.assemble(loaded, [service_of(EXTERNAL)])
+    usage = InMemoryUsageLog()
+    services = recorded(host.services, usage)
+    tokens = enroll(
+        center, topics=[TOPIC], manifests=[MANIFEST.to_json_dict()], folder=tmp_path / "consumer"
+    )
+    consumer = Consumer(services[:1], center_url="", tokens=tokens, wait_s=0, client=center)
+    made = center.post("/api/v1/center-keys", json={"name": "설계자", "type": "studio"}, headers=ADMIN)
+    studio = {"Authorization": f"Bearer {made.json()['key']}"}
+    calls: list[tuple[str, str, dict[str, Any]]] = [
+        ("Task_a", "draft_review", {"amount": 10}),
+        ("Task_b", "enter_order", {}),
+    ]
+    for node, operation, payload in calls:
+        body = {
+            "schema": 1, "topic": TOPIC, "operation": operation, "mode": "deterministic", "origin": "test",
+            "idempotency": {"run_id": RUN, "node_id": node, "node_instance": 1, "attempt": 1},
+            "caller": {"type": "studio", "host": "설계자 PC"}, "input": payload,
+        }
+        assert center.post("/api/v1/external-tasks", json=body, headers=studio).status_code == 201
+    consumer.run_once(wait_s=0)
+    consumer.run_once(wait_s=0)
+
+    admin = TestClient(create_admin_app(services, admin_token="t-consumer", log=usage))
+    assert admin.get("/admin/v1/status").status_code == 401
+    seen = admin.get("/admin/v1/status", headers={"Authorization": "Bearer t-consumer"}).json()
+    assert seen["app_id"] == APP_ID and seen["category"] == "system"
+    rows = {
+        (one["topic"], one["name"]): (one["kind"], one["calls_24h"], one["errors_24h"]) for one in seen["operations"]
+    }
+    assert rows == {
+        (TOPIC, "draft_review"): ("ai", 1, 0),
+        (TOPIC, "enter_order"): ("rpa", 1, 1),  # order_id가 없어 실패했다
+        ("ext-credit", "check_credit"): ("api", 0, 0),
+    }
+    used = admin.get("/admin/v1/usage", headers={"Authorization": "Bearer t-consumer"}).json()
+    assert {one["topic"] for one in used["items"]} == {TOPIC} and used["total"] == 2
+    assert all("input" not in one and "output" not in one for one in used["items"]), "업무 값은 없다"
+
+
+def test_without_an_admin_token_the_admin_api_stays_shut(tmp_path: Path) -> None:
+    from bpm.service_kit import InMemoryUsageLog  # noqa: PLC0415
+    from bpm.unified_consumer.admin import create_admin_app  # noqa: PLC0415
+
+    admin = TestClient(create_admin_app([], admin_token=None, log=InMemoryUsageLog()))
+    assert admin.get("/admin/v1/status", headers={"Authorization": "Bearer x"}).status_code == 503
+    assert admin.get("/healthz").json()["status"] == "ok"

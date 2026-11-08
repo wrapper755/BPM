@@ -337,7 +337,9 @@ dependencies = [
     { name = "bpm-adapter-consumer" },
     { name = "bpm-contracts" },
     { name = "bpm-service-kit" },
+    { name = "fastapi" },
     { name = "platformdirs" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
@@ -345,7 +347,9 @@ requires-dist = [
     { name = "bpm-adapter-consumer", editable = "server/adapter_consumer" },
     { name = "bpm-contracts", editable = "shared/contracts" },
     { name = "bpm-service-kit", editable = "server/service_kit" },
+    { name = "fastapi", specifier = ">=0.115" },
     { name = "platformdirs", specifier = ">=4.3" },
+    { name = "uvicorn", specifier = ">=0.32" },
 ]
 
 [[package]]

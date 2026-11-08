@@ -22,6 +22,7 @@ export interface UsageRecord {
   operation: string;
   run_id?: string | null;
   status: number;
+  topic?: string | null;
   usage?: Usage | null;
   [k: string]: unknown;
 }

@@ -20,7 +20,7 @@
 | M7 | 서버 실행 | **끝** | 서버 실행기, 서버 BPM 프로세스 동시 실행, 상태 저장·재개, PC 위임, CON-12 | M6 |
 | M8 | 건넬 수 있게, 고칠 수 있게 | **진행 중** (남은 둘은 현장 PC 사람 몫) | Windows 설치 파일(빌드·CI 산출물·자동 시작·판 올리기), Center 저장소 옮기기 수단 | M7 |
 | M9 | 바깥 기능은 Pull로 | **끝** (조각 1~6과 C14·C1의 옛 키 칸 — ADR-0102·0103) | C15 외부 작업, 일꾼이 된 서비스 앱, 어댑터 일꾼, 주소·키 칸 없는 CON-07 | M7 |
-| M10 | 세 기둥 — AI 작업·외부 작업·통합 일꾼 | **진행 중** (조각 1~5b 끝 — ADR-0135) | 일꾼 종류 칸, 통합 일꾼과 AI 작업 뼈대, 보상, 일꾼 콘솔. 업무 처리기는 Company1로 | M9 |
+| M10 | 세 기둥 — AI 작업·외부 작업·통합 일꾼 | **진행 중** (조각 1~6 끝, 7은 Company1 저장소 — ADR-0135) | 일꾼 종류 칸, 통합 일꾼과 AI 작업 뼈대, 보상, 일꾼 콘솔. 업무 처리기는 Company1로 | M9 |
 
 ## M0. 문서 기준선
 
@@ -191,7 +191,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 
 ## M10. 세 기둥 — AI 작업·외부 작업·통합 일꾼
 
-> 상태: **진행 중** — 조각 1~5b가 끝났고 다음은 조각 6(일꾼 콘솔). [ADR-0135](decisions/0135-agentic-automation-and-unified-consumer.md)
+> 상태: **진행 중** — 조각 1~6이 끝났고 남은 것은 조각 7(Company1 저장소에서 — 이 저장소 밖의 일). [ADR-0135](decisions/0135-agentic-automation-and-unified-consumer.md)
 > 에이전틱 자동화(AI 작업)·External Task(외부 작업, C15)·하이브리드 자동화(통합 일꾼 + 보상)를 BPM의 이름 붙은 기능으로 세우고,
 > NowView의 일반 부분(일꾼 호스트·Agent 검증·대시보드의 일반 부분)은 통합 일꾼과 일꾼 콘솔로 들이고, 장면 코드는 Company1 저장소의
 > 업무 처리기로 보낸다 — **이 저장소에는 회사 업무 코드가 들어오지 않는다.** 그 뒤 NowView는 걷는다.
@@ -202,7 +202,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 조각 4 — **AI 작업 뼈대** `bpm.unified_consumer.ai` — **됐다**: 지식 원천(`StaticKnowledge`·`FolderKnowledge`), 러너 셋(`MockRunner`·`LlmRunner`(`ServiceLlm`)·`FailingRunner`), 검증(필수 칸·근거 id·숫자 대조 — 버린 사유를 알려 다시 묻는다), provenance, 오류 `ai_rejected`·`ai_failed` — `tests/server/test_unified_consumer_ai.py`. NowView Agent의 검증 규칙을 일반화했다
 - [x] 조각 5 — **보상** — **됐다**: C14 「보상」 구현됨 — BPMN 읽기(`isForCompensation`·`activityRef`·`association`), 엔진(보상 던지기가 토큰을 처리기로 돌렸다 던지기로 되돌린다, 끝난 순서의 거꾸로·같은 범위·한 번만), 스냅샷, 검사 B17 — `tests/shared/test_core_compensation.py`
 - [x] 조각 5b — **기능 예제 FX-26** — **됐다**: 그림 생성기가 보상 경계·처리기·던지기를 쓴다(`bnd(…, "compensate", handler=…)`·`undo(…)`·`end(kind="compensate")`, 커버리지 표에 보상 두 줄). 모의 앱 `order-desk`(한 토픽에 `ai`·`api`·`rpa` 작업, RPA는 가짜). 케이스 둘(화면 정상 / 화면이 바뀌어 되돌림)이 M5 Studio 시험 실행·M7 서버 실행기에서 초록. B11은 처리기가 그 활동의 변수를 본다고 센다
-- [ ] 조각 6 — **일꾼 콘솔** `consumer-console`(어느 회사든 같은 것만), 통합 일꾼 배포 묶음
+- [x] 조각 6 — **일꾼 콘솔 = 서비스 앱 콘솔** — **됐다**: 통합 일꾼이 같은 관리 API를 낸다(`bpm.unified_consumer.admin` — 모든 토픽의 일감을 한 사용 기록에 남기고 작업 줄에 `topic`·`kind`, 관리자 토큰 `BPM_CONSUMER__ADMIN_TOKEN`·포트 8770). SVC-01 「토픽」(여럿일 때만)·「종류」 열, SVC-03 「토픽」 열 — `tests/server/test_unified_consumer.py`
 - [ ] 조각 7 — **Company1 저장소에서**: 장면 코드를 업무 처리기로 옮기고 BPM 패키지에 고정, NowView 걷기 (운영 반영은 따로 묻는다)
 
 ## 나중에 (범위 밖, 기록만)

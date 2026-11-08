@@ -8,6 +8,8 @@ dependencies = [
     "bpm-service-kit",      # 일꾼 루프·작업 수행기 (C11·C15)
     "bpm-adapter-consumer", # 종류 api — 외부 확장 정의의 HTTP 어댑터 (C13 §4)
     "platformdirs>=4.3",    # 데이터 위치
+    "fastapi>=0.115",       # 관리 API — 서비스 앱 콘솔(SVC)이 일꾼 콘솔이다
+    "uvicorn>=0.32",
 ]
 
 [project.scripts]
