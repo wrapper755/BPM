@@ -208,7 +208,7 @@ def test_e3_an_adapter_operation_is_only_an_api_operation() -> None:
 
 
 def test_e3_an_operation_group_must_be_declared() -> None:
-    """작업 묶음 (ADR-0137) — 작업의 `group`은 `groups`에 있는 id, id는 겹치지 않는다."""
+    """작업 묶음 (ADR-0138) — 작업의 `group`은 `groups`에 있는 id, id는 겹치지 않는다."""
     groups = [{"id": "intake", "name": "접수"}]
     assert "adapter_invalid" not in adapter_codes(groups=groups)
     definition = external()
@@ -221,7 +221,7 @@ def test_e3_an_operation_group_must_be_declared() -> None:
 
 
 def test_catalog_fields_are_optional_and_kept() -> None:
-    """연결 앱 카탈로그 칸 (ADR-0137) — 앱의 `app_group`·`keywords`, 작업의 `keywords`. 없어도 된다."""
+    """연결 앱 카탈로그 칸 (ADR-0138) — 앱의 `app_group`·`keywords`, 작업의 `keywords`. 없어도 된다."""
     definition = external()
     definition["app_group"] = {"id": "company1", "name": "Company1 업무"}
     definition["keywords"] = ["주문"]

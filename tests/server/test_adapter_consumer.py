@@ -176,7 +176,7 @@ def test_a_test_task_goes_to_the_test_address(credit: str, hits: Hits) -> None:
 
 
 def test_the_address_in_use_is_told_with_the_definition(credit: str, hits: Hits) -> None:
-    """Center 콘솔 「쓰는 주소」 (C15 `address`, ADR-0137) — 설정이 이기고, 없으면 정의의 `base_url`이다."""
+    """Center 콘솔 「쓰는 주소」 (C15 `address`, ADR-0138) — 설정이 이기고, 없으면 정의의 `base_url`이다."""
     one = service(credit, hits, TEST_BASE_URL=DEAD)
     assert one.extension_address == {"base_url": credit, "test_base_url": DEAD}
     bare = AdapterService(definition=definition("https://ocr.example.com"), environ={})

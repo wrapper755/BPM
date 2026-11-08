@@ -55,7 +55,7 @@ class HealthResponse(ContractModel):
 
 
 class AppGroup(ContractModel):
-    """연결 앱 목록(CON-17)에서 앱을 묶는 자리 — Camunda 요소 템플릿의 `category{id, name}` (ADR-0137).
+    """연결 앱 목록(CON-18)에서 앱을 묶는 자리 — Camunda 요소 템플릿의 `category{id, name}` (ADR-0138).
 
     C11 `category`(업무용·시스템용)와는 다른 칸이다. C13 정의·C11 manifest가 같은 모양을 쓴다.
     """
@@ -65,7 +65,7 @@ class AppGroup(ContractModel):
 
 
 class OperationGroup(ContractModel):
-    """앱 안 작업 묶음 하나 (C13 `adapter.groups`·C11 `groups`, OpenAPI 최상위 `tags`와 같은 결 — ADR-0137).
+    """앱 안 작업 묶음 하나 (C13 `adapter.groups`·C11 `groups`, OpenAPI 최상위 `tags`와 같은 결 — ADR-0138).
 
     적힌 순서가 보이는 순서다. 실행에는 쓰이지 않는다.
     """
@@ -106,9 +106,9 @@ class Operation(ContractModel):
     required_scopes: list[str] = Field(default_factory=list)
     #: 일꾼 종류 (`KINDS`, ADR-0135). Center가 일감에 옮겨 적는다 (C15 `LockedTask.kind`).
     kind: str = KIND_AI  # 열린 문자열 — 아는 값은 `KINDS` (원칙 10)
-    #: 묶음 (manifest `groups[].id`) — 연결 앱 화면(CON-17)이 묶는다 (ADR-0137).
+    #: 묶음 (manifest `groups[].id`) — 연결 앱 화면(CON-18)이 묶는다 (ADR-0138).
     group: str | None = None
-    #: 찾기용 낱말 (CON-17).
+    #: 찾기용 낱말 (CON-18).
     keywords: list[str] = Field(default_factory=list)
 
     def supports(self, mode: str) -> bool:
@@ -147,7 +147,7 @@ class ServiceAppManifest(SchemaVersioned):
     extension: ExtensionRef | None = None
     #: 이 앱이 주는 기여 자원 카탈로그 (C7 — Center가 읽어 리소스 목록에 싣는다).
     resources: list[ResourceCatalog] = Field(default_factory=list)
-    #: 연결 앱 목록(CON-17)에서 이 앱을 묶는 자리 (ADR-0137). `category`와 다른 칸이다.
+    #: 연결 앱 목록(CON-18)에서 이 앱을 묶는 자리 (ADR-0138). `category`와 다른 칸이다.
     app_group: AppGroup | None = None
     keywords: list[str] = Field(default_factory=list)
     #: 작업 묶음 — 작업의 `group`이 가리킨다. 없는·겹치는 id는 모델 검사가 거부한다.

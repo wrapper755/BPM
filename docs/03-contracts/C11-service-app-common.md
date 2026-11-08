@@ -52,7 +52,7 @@
 | `extension` | object | | `{id, version}`. 이 서비스 앱이 어느 확장의 서버 부분인가 (C13). 내장·사내 확장이면 넣는다 |
 | `operations` | Operation[] | ✓ | 작업 목록 |
 | `resources` | ResourceCatalog[] | | 이 앱이 주는 **기여 자원 카탈로그** (C7). 아래 |
-| `app_group` | `{id, name}` | | 연결 앱 목록(CON-17)에서 이 앱을 묶는 자리 (Camunda `category`와 같은 결, [ADR-0137](../decisions/0137-console-app-catalog.md)). `category`(업무용·시스템용)와는 다른 칸이다 |
+| `app_group` | `{id, name}` | | 연결 앱 목록(CON-18)에서 이 앱을 묶는 자리 (Camunda `category`와 같은 결, [ADR-0138](../decisions/0138-console-app-catalog.md)). `category`(업무용·시스템용)와는 다른 칸이다 |
 | `keywords` | str[] | | 찾기용 낱말 |
 | `groups` | `{id, name, description?}[]` | | 작업 묶음 — 적힌 순서가 보이는 순서. 작업의 `group`이 이 `id`를 가리킨다. **없는 id·겹치는 id는 manifest가 C11과 맞지 않는다**(Center 422) |
 
@@ -198,7 +198,7 @@ AdminStatus:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
-| 2026-11-08 | 1 | 연결 앱 카탈로그(CON-17) 칸 — manifest의 `app_group{id, name}`·`keywords`·`groups`, 작업의 `group`·`keywords`(모두 선택). 없는·겹치는 묶음 id는 모델 검사가 거부한다. 선택 칸이라 판은 그대로다 | [0137](../decisions/0137-console-app-catalog.md) |
+| 2026-11-08 | 1 | 연결 앱 카탈로그(CON-18) 칸 — manifest의 `app_group{id, name}`·`keywords`·`groups`, 작업의 `group`·`keywords`(모두 선택). 없는·겹치는 묶음 id는 모델 검사가 거부한다. 선택 칸이라 판은 그대로다 | [0138](../decisions/0138-console-app-catalog.md) |
 | 2026-11-08 | 1 | 작업에 **일꾼 종류** `kind`(`ai`·`api`·`rpa`, 기본 `ai` — 구현됨, 관리 API `operations[].kind`·`topic?`와 `UsageRecord.topic`도)와 「AI 작업」 규칙(provenance·검증·폴백 없음 — 구현됨, 오류 `ai_rejected`·`ai_failed`)을 더했다. 선택 칸이라 판은 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 1 | 칸은 그대로다. `caller.type`의 아는 값에서 `worker`·`tool_ui`를 뺐고, `required_scopes`를 켜 줄 길(PC의 「셀렉터 등록」)이 없어졌다고 적었다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-29 | 1 | **앱이 일꾼이 된다** — `POST /v1/ops`·`/manifest`·앱 안의 키(`/v1/keys/self`·`/center/v1/keys`·`/center/v1/trust`)·관리 API의 키 발급을 걷고 C15 가져가기로 같은 작업을 수행한다. 폴백은 시험 일감일 때만, 추가 권한은 Center가 건다, 카탈로그는 일꾼이 올린다 | [0102](../decisions/0102-calling-outside-is-pull.md) |

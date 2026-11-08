@@ -1,0 +1,221 @@
+"use client";
+
+import { useActionState, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Button, ConfirmDialog, Dialog, ErrorBanner, Field } from "@bpm/ui";
+import {
+  createConsumer,
+  deleteConsumer,
+  reissueConsumerToken,
+  updateConsumerTopics,
+  type TokenResult,
+} from "@/app/actions";
+
+/**
+ * CON-17 일꾼의 손잡이들 (ADR-0137). 줄마다 「...」 하나이고 할 수 있는 일은 그 안에 있다. 토픽 모양·이름 겹침은
+ * **Center가 본다** (한 자리에서만 판정한다). 토큰 원문은 서버 액션의 답으로 **이 창에만** 오고 남기지 않는다.
+ */
+const TOPICS_HELP = "서비스 앱 id나 외부 확장 id — 영문 소문자·숫자·.·-";
+const TOPICS_EFFECT =
+  "다음 가져가기부터 반영됩니다. 빠진 토픽의 일감은 이 일꾼이 더 가져가지 않고, 맡을 일꾼이 없어진 외부 확장은 등록이 해제됩니다.";
+const TEXTAREA = "rounded-md border border-border-strong bg-bg-surface p-2 font-mono text-body-sm";
+
+function TopicsField({ defaultValue, help }: { defaultValue?: string; help: string }) {
+  return (
+    <label className="flex flex-col gap-1 text-body-sm">
+      토픽 (한 줄에 하나)
+      <textarea name="topics" rows={4} required defaultValue={defaultValue} className={TEXTAREA} />
+      <span className="text-text-muted">{help}</span>
+    </label>
+  );
+}
+
+/** 토큰 창 — 원문 한 줄과 「복사」. 닫으면 다시 볼 수 없다. */
+function TokenView({ token }: { token: string }) {
+  const [said, setSaid] = useState<string | null>(null);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(token);
+      setSaid("복사했습니다.");
+    } catch {
+      setSaid("복사하지 못했습니다 — 글자를 골라 복사하세요.");
+    }
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="flex flex-wrap items-center gap-2">
+        <span className="break-all font-mono text-body text-text-primary" style={{ userSelect: "all" }}>
+          {token}
+        </span>
+        <Button size="sm" variant="ghost" onClick={copy}>
+          복사
+        </Button>
+      </p>
+      {said ? <span className="text-caption text-text-muted">{said}</span> : null}
+      <p className="text-body-sm text-text-secondary">
+        이 창을 닫으면 다시 볼 수 없습니다. 일꾼 설정의 Center 토큰에 넣으세요.
+      </p>
+    </div>
+  );
+}
+
+export function NewConsumer() {
+  const [open, setOpen] = useState(false);
+  // 원문은 이 창이 열려 있는 동안만 든다 — 닫으면 버린다.
+  const [shown, setShown] = useState<{ name: string; token: string } | null>(null);
+  const router = useRouter();
+  const [result, action, pending] = useActionState<TokenResult, FormData>(async (previous, form) => {
+    const made = await createConsumer(previous, form);
+    if (made.token) setShown({ name: made.name ?? "", token: made.token });
+    return { error: made.error };
+  }, {});
+  const close = () => {
+    setOpen(false);
+    if (shown) {
+      setShown(null);
+      router.refresh();
+    }
+  };
+  return (
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        새 일꾼...
+      </Button>
+      <Dialog open={open} title={shown ? `${shown.name} 토큰` : "새 일꾼"} onClose={close}>
+        {shown ? (
+          <div className="flex flex-col gap-3">
+            <TokenView token={shown.token} />
+            <div className="flex justify-end">
+              <Button variant="primary" onClick={close}>
+                닫기
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form action={action} className="flex flex-col gap-3">
+            {result.error ? <ErrorBanner message={result.error} /> : null}
+            <Field
+              label="이름"
+              name="name"
+              required
+              autoComplete="off"
+              maxLength={64}
+              help="로그와 실행 상세에 보이는 이름입니다. 1~64자, 다른 일꾼과 겹치지 않게."
+            />
+            <TopicsField help={TOPICS_HELP} />
+            <div className="flex justify-end">
+              <Button type="submit" variant="primary" disabled={pending}>
+                만들기
+              </Button>
+            </div>
+          </form>
+        )}
+      </Dialog>
+    </>
+  );
+}
+
+type Ask = "topics" | "token" | "delete";
+
+export function ConsumerMenu({ consumerId, name, topics }: { consumerId: string; name: string; topics: string[] }) {
+  const [menu, setMenu] = useState(false);
+  const [asking, setAsking] = useState<Ask | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+
+  const done = (result: { error?: string }) => {
+    setError(result.error ?? null);
+    if (!result.error) {
+      setAsking(null);
+      router.refresh();
+    }
+  };
+
+  const items: Array<{ ask: Ask; label: string; tip?: string }> = [
+    { ask: "topics", label: "토픽 바꾸기...", tip: TOPICS_EFFECT },
+    { ask: "token", label: "토큰 새로 발급...", tip: "지금 토큰은 바로 거부되고 새 토큰을 한 번만 보입니다." },
+    { ask: "delete", label: "삭제...", tip: "토큰을 폐기하고 목록에서 지웁니다." },
+  ];
+
+  return (
+    <div className="relative flex flex-col items-start gap-1">
+      <Button size="sm" variant="ghost" aria-label={`${name} 일꾼 동작`} onClick={() => setMenu(!menu)}>
+        ...
+      </Button>
+      {menu ? (
+        <ul className="absolute right-0 top-full z-10 flex min-w-[200px] flex-col border border-border-default bg-bg-surface py-1 shadow-md">
+          {items.map((item) => (
+            <li key={item.ask}>
+              <button
+                type="button"
+                title={item.tip}
+                className="w-full px-3 py-2 text-left text-body hover:bg-bg-subtle"
+                onClick={() => {
+                  setMenu(false);
+                  setError(null);
+                  setAsking(item.ask);
+                }}
+              >
+                {item.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {error && asking === null ? <ErrorBanner message={error} /> : null}
+
+      <Dialog open={asking === "topics"} title={`${name}의 토픽 바꾸기`} onClose={() => setAsking(null)}>
+        <form
+          className="flex flex-col gap-3"
+          action={(form) => start(async () => done(await updateConsumerTopics(consumerId, String(form.get("topics") ?? ""))))}
+        >
+          {error ? <ErrorBanner message={error} /> : null}
+          <TopicsField defaultValue={topics.join("\n")} help={`${TOPICS_HELP}. ${TOPICS_EFFECT}`} />
+          <div className="flex justify-end">
+            <Button type="submit" variant="primary" disabled={pending}>
+              바꾸기
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      <ConfirmDialog
+        open={asking === "token" && token === null}
+        title={`${name}의 토큰을 새로 발급할까요?`}
+        description="지금 토큰은 바로 거부됩니다 — 일꾼은 새 토큰을 넣고 다시 띄울 때까지 일감을 가져가지 못합니다. 새 토큰은 한 번만 보입니다."
+        confirmLabel="새로 발급"
+        onConfirm={() =>
+          start(async () => {
+            const made = await reissueConsumerToken(consumerId);
+            setError(made.error ?? null);
+            if (made.token) setToken(made.token);
+            else setAsking(null);
+          })
+        }
+        onCancel={() => setAsking(null)}
+      />
+      <Dialog
+        open={token !== null}
+        title={`${name} 토큰`}
+        onClose={() => {
+          setToken(null);
+          setAsking(null);
+          router.refresh();
+        }}
+      >
+        {token ? <TokenView token={token} /> : null}
+      </Dialog>
+
+      <ConfirmDialog
+        open={asking === "delete"}
+        title={`${name} 일꾼을 지울까요?`}
+        description="이 일꾼의 토큰을 폐기하고 목록에서 지웁니다. 쥐고 있던 일감은 잠금이 풀리면 다시 줄에 섭니다. 맡을 일꾼이 없어진 외부 확장은 등록이 해제됩니다. 되돌릴 수 없습니다."
+        confirmLabel="삭제"
+        onConfirm={() => start(async () => done(await deleteConsumer(consumerId)))}
+        onCancel={() => setAsking(null)}
+      />
+    </div>
+  );
+}

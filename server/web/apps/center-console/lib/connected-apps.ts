@@ -1,5 +1,5 @@
 /**
- * CON-17 연결 앱 — 외부 정의(C13)와 일꾼 앱(C11)을 같은 줄 모양으로 바꾸고 일감 집계(C15)와 맞춘다 (ADR-0137).
+ * CON-18 연결 앱 — 외부 정의(C13)와 일꾼 앱(C11)을 같은 줄 모양으로 바꾸고 일감 집계(C15)와 맞춘다 (ADR-0138).
  *
  * 앱 하나 = 토픽 하나다 (Camunda 커넥터와 같은 결). 화면을 모르는 순수 함수라 vitest가 잰다
  * (`connected-apps.test.ts`). 외부 정의는 `unknown`으로 오므로(C7 `definition`은 열린 객체다) 여기서만
@@ -55,7 +55,7 @@ export interface DefinitionHead {
   groups: OperationGroup[];
 }
 
-/** 작업 묶음 하나 (C13 `adapter.groups[]`, ADR-0137). */
+/** 작업 묶음 하나 (C13 `adapter.groups[]`, ADR-0138). */
 export interface OperationGroup {
   id: string;
   name: string;
@@ -76,7 +76,7 @@ export interface GroupSection {
   lastFinished: string | null;
 }
 
-/** 「기타」 — 묶음이 없는 작업 (화면 문서 CON-17). */
+/** 「기타」 — 묶음이 없는 작업 (화면 문서 CON-18). */
 export const OTHER_GROUP = "기타";
 
 const MODE: Record<string, string> = { autonomous: "자율", deterministic: "결정" };
@@ -89,7 +89,7 @@ export function kindLabel(kind: string | null | undefined): string {
   return KIND[kind] ?? kind;
 }
 
-/** 앱의 종류 — 작업들의 `kind`를 겹치지 않게, 정의 순서대로 (CON-17 목록 「종류」). */
+/** 앱의 종류 — 작업들의 `kind`를 겹치지 않게, 정의 순서대로 (CON-18 목록 「종류」). */
 export function kindsLabel(kinds: string[]): string {
   const seen = [...new Set(kinds)];
   return seen.length === 0 ? "—" : seen.map(kindLabel).join("·");
@@ -258,7 +258,7 @@ export function groupOperations(rows: OperationRow[], groups: OperationGroup[]):
   return sections.filter((one) => one.rows.length > 0);
 }
 
-/** 「쓰는 주소」 — 일꾼이 알린 주소가 이기고, 없으면 정의 기본값 (C15 `address`, ADR-0137). */
+/** 「쓰는 주소」 — 일꾼이 알린 주소가 이기고, 없으면 정의 기본값 (C15 `address`, ADR-0138). */
 export interface AddressView {
   url: string | null;
   /** 「정의 기본값」 / 「일꾼 설정」 */
@@ -301,7 +301,7 @@ export function filterOperations(rows: OperationRow[], query: string | null | un
 
 // ─────────────────────────── 앱 목록 ───────────────────────────
 
-/** 연결 앱 한 줄 — 외부 정의든 일꾼 앱이든 같은 모양 (CON-17 목록). */
+/** 연결 앱 한 줄 — 외부 정의든 일꾼 앱이든 같은 모양 (CON-18 목록). */
 export interface ConnectedApp {
   id: string;
   name: string;

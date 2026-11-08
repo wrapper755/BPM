@@ -1,18 +1,20 @@
-"""일꾼 폴더 — Center가 **뜰 때** 일꾼과 폴더 키를 들인다. 일꾼이 들어오는 길은 이것 하나다 (ADR-0122, C15).
+"""일꾼 폴더 — Center가 **뜰 때** 일꾼을 **처음 한 번** 들이고 폴더 키를 들인다 (ADR-0122·0137, C15).
 
-배포가 `<이름>.consumer.json`(C15 `FolderConsumer` — 이름·토픽·**토큰 해시**)을 일꾼 폴더
-(`BPM_CENTER__CONSUMERS_DIR`, 기본 `<데이터>/consumers`)에 복사해 두면 여기서 한 번 읽는다. 요청 코드·승인이 없다 —
-폴더에 쓸 수 있는 사람을 관리자로 본다.
+일꾼의 원본은 Center DB이고 Center 관리자가 콘솔(CON-17, `bpm.center.consumers`)에서 다룬다. 이 폴더는 함께
+배포되는 일꾼·시험·설치 스크립트의 **첫 설치**를 위한 길이다 — 배포가 `<이름>.consumer.json`(C15 `FolderConsumer` —
+이름·토픽·**토큰 해시**)을 일꾼 폴더(`BPM_CENTER__CONSUMERS_DIR`, 기본 `<데이터>/consumers`)에 복사해 두면 여기서
+들인다.
 
-- 토픽은 파일에 적은 것으로 고정이고 키에는 만료·회전이 없다(공개키가 없다). 일꾼의 자리는 파일 이름이 정한다.
-- 해시가 바뀌면 옛 키를 폐기한다. 폐기된 토큰은 되살아나지 않고, 다른 키가 쓰는 해시는 거절한다.
-- **폴더가 원본이다** — 파일이 빠지면 키를 폐기하고 일꾼을 지운다. 일꾼이 올린 외부 확장 가운데 어느 일꾼의
-  토픽에도 없게 된 것은 철회한다. 읽지 못한 파일이 있거나 폴더가 없으면 **아무것도 거두지 않는다**.
+- **이미 있는 일꾼은 건드리지 않는다** — 같은 파일에서 들인 일꾼이 있으면 파일이 달라도 `unchanged`(다르면 그 뜻을
+  단다). 같은 이름의 다른 일꾼이 있으면 `name_taken`으로 들이지 않는다.
+- **파일이 빠져도 일꾼을 지우지 않는다.** 지우는 것은 콘솔이다. 콘솔에서 지운 일꾼의 파일이 남아도 되살아나지 않는다
+  — 그 토큰은 폐기됐다(`token_revoked`).
 - **잘못된 파일이 Center를 막지 않는다** — 사유는 로그와 `GET /resources/consumer-folder`(C7)로 간다.
 
 같은 폴더의 `<이름>.key.json`(C7 `FolderKey`)은 **연동용·대리 답용 키**다 (ADR-0123) — 함께 설치되는 연동 시스템이
-설치 때 원문을 짓고 Center에는 해시만 둔다. 뜻은 일꾼 파일과 같다(한 번 읽음·해시가 바뀌면 옛 키 폐기·폐기된
-토큰은 되살아나지 않음·파일이 빠지면 폐기). 키의 자리는 `center_keys.folder_file`(파일 이름의 확장자 앞)이다.
+설치 때 원문을 짓고 Center에는 해시만 둔다. **키 파일은 여전히 폴더가 원본이다**(한 번 읽음·해시가 바뀌면 옛 키
+폐기·폐기된 토큰은 되살아나지 않음·파일이 빠지면 폐기). 키의 자리는 `center_keys.folder_file`(파일 이름의
+확장자 앞)이다.
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from bpm.center import keys
-from bpm.center.api import external_tasks, resources
+from bpm.center.api import external_tasks
 from bpm.center.storage import Store, dumps, loads, now_iso
 from bpm.contracts.center_keys import KEY_PREFIX, KEY_RANDOM_LEN, FolderKey
 from bpm.contracts.external_task import CONSUMER, FolderConsumer
@@ -38,12 +40,10 @@ log = logging.getLogger(__name__)
 SUFFIX = ".consumer.json"
 #: 연동용·대리 답용 키 파일 (ADR-0123).
 KEY_SUFFIX = ".key.json"
-#: 일꾼이 한 일(확장 올리기·거두기)의 「누가」 머리, 폴더가 거둘 때의 「누가」.
+#: 폴더가 들인 일꾼의 「들인 쪽」(`consumers.approved_by`).
 ACTOR = "일꾼 폴더"
-#: 일꾼이 올린 외부 확장의 출처 (`extensions.source`).
-SOURCE = external_tasks.EXTENSION_SOURCE
-#: 폴더가 들인 일꾼의 `machine_id` 머리 — 그 뒤는 파일 이름(확장자 앞)이다.
-MACHINE_PREFIX = "folder:"
+#: 폴더가 들인 일꾼의 `machine_id` 머리 — 그 뒤는 파일 이름(확장자 앞)이다. `ConsumerInfo.source`가 이것으로 가른다.
+MACHINE_PREFIX = external_tasks.FOLDER_MACHINE_PREFIX
 
 
 def scan(store: Store, folder: Path | None, *, required: bool = True) -> ConsumerFolderScan:
@@ -62,37 +62,43 @@ def scan(store: Store, folder: Path | None, *, required: bool = True) -> Consume
         return ConsumerFolderScan(configured=True, dir=where, scanned_at=at, problem=problem)
 
     items: list[ConsumerFolderItem] = []
-    present: set[str] = set()
-    topics: set[str] = set()
-    unreadable = False
     for path in sorted(folder.glob(f"*{SUFFIX}")):
         if not path.is_file():
             continue
-        stem = path.name[: -len(SUFFIX)]
-        # 읽지 못해도 **자리는 남긴다** — 파일이 있는 한 그 일꾼을 지우지 않는다.
-        present.add(stem)
         spec, why = _read(path)
         if spec is None:
-            unreadable = True
             items.append(_refused(path, None, *why))
             continue
-        topics |= set(spec.topics)
         try:
-            items.append(admit(store, stem, spec, file=path.name))
+            items.append(_first_time(store, path.name[: -len(SUFFIX)], spec, file=path.name))
         except Exception as e:  # noqa: BLE001 — 한 파일이 Center를 막지 않는다
             log.exception("일꾼 폴더 %s를 들이다 터졌다", path.name)
             items.append(_refused(path, spec.name, "internal", f"들이다 오류가 났습니다: {type(e).__name__}"))
-    items.extend(_drop_missing(store, present))
     items.extend(_scan_keys(store, folder))
-    if unreadable:
-        log.warning("일꾼 폴더: 읽지 못한 파일이 있어 일꾼이 올린 확장을 거두지 않는다")
-    else:
-        items.extend(_revoke_orphans(store, topics))
     return ConsumerFolderScan(configured=True, dir=where, scanned_at=at, items=items)
 
 
+def _first_time(store: Store, stem: str, spec: FolderConsumer, *, file: str) -> ConsumerFolderItem:
+    """**처음 한 번만** 들인다 (ADR-0137) — 이미 들인 일꾼은 콘솔이 원본이라 파일의 값으로 되돌리지 않는다."""
+    row = store.row("SELECT * FROM consumers WHERE machine_id = ?", (f"{MACHINE_PREFIX}{stem}",))
+    if row is not None:
+        held = store.row("SELECT key_hash FROM center_keys WHERE key_id = ?", (row["key_id"],))
+        same = (
+            row["name"] == spec.name
+            and (loads(row["topics_json"], []) or []) == sorted(set(spec.topics))
+            and held is not None
+            and held["key_hash"] == spec.token_sha256
+        )
+        message = None if same else "이미 들인 일꾼입니다 — 파일의 바뀐 값은 들이지 않습니다. 콘솔에서 고치세요"
+        return ConsumerFolderItem(file=file, id=spec.name, outcome="unchanged", message=message)
+    if store.row("SELECT 1 FROM consumers WHERE name = ?", (spec.name,)) is not None:
+        return _refused_at(file, spec.name, "name_taken", "같은 이름의 일꾼이 이미 있습니다 — 다른 이름으로 바꾸세요")
+    return admit(store, stem, spec, file=file)
+
+
 def admit(store: Store, stem: str, spec: FolderConsumer, *, file: str | None = None) -> ConsumerFolderItem:
-    """일꾼 하나를 들인다(또는 맞춘다). 폴더를 읽을 때 부르고, 시험도 같은 길로 들인다."""
+    """일꾼 하나를 들인다(또는 파일 값으로 맞춘다). 폴더는 **없는 일꾼에만** 부르고(`_first_time`), 시험은 이것으로
+    바로 들인다 (`tests/consumers.py`)."""
     machine_id = f"{MACHINE_PREFIX}{stem}"
     topics = sorted(set(spec.topics))
     manifests = [one.to_json_dict() for one in spec.manifests if one.app_id in topics]
@@ -148,51 +154,6 @@ def admit(store: Store, stem: str, spec: FolderConsumer, *, file: str | None = N
         )
     log.info("일꾼 폴더 %s: 일꾼 %s를 들였다 (토픽 %s)", file or stem, spec.name, ", ".join(topics))
     return ConsumerFolderItem(file=file, id=spec.name, outcome="registered")
-
-
-def _drop_missing(store: Store, present: set[str]) -> list[ConsumerFolderItem]:
-    """파일이 빠진 일꾼 — 키를 폐기하고 행을 지운다 (쥔 일감은 잠금이 풀리면 다시 줄에 선다)."""
-    out: list[ConsumerFolderItem] = []
-    now = now_iso()
-    for row in store.rows("SELECT * FROM consumers WHERE machine_id LIKE ?", (f"{MACHINE_PREFIX}%",)):
-        if str(row["machine_id"])[len(MACHINE_PREFIX) :] in present:
-            continue
-        with store.tx() as cur:
-            cur.execute(
-                "UPDATE center_keys SET revoked_at = ? WHERE key_id = ? AND revoked_at IS NULL", (now, row["key_id"])
-            )
-            cur.execute("DELETE FROM consumers WHERE consumer_id = ?", (row["consumer_id"],))
-        log.info("일꾼 폴더: 파일이 빠져 일꾼 %s를 내보냈다", row["name"])
-        out.append(
-            ConsumerFolderItem(id=str(row["name"]), outcome="revoked", message="폴더에서 빠져 키를 폐기했습니다")
-        )
-    return out
-
-
-def _revoke_orphans(store: Store, topics: set[str]) -> list[ConsumerFolderItem]:
-    """일꾼이 올렸는데 이제 어느 일꾼의 토픽에도 없는 확장 — 그 판들을 거둔다 (Center가 철회 봉투에 서명한다)."""
-    out: list[ConsumerFolderItem] = []
-    for row in store.rows(
-        "SELECT id, version FROM extensions WHERE source = ? AND revoked_json IS NULL ORDER BY id, version", (SOURCE,)
-    ):
-        ext_id, version = str(row["id"]), str(row["version"])
-        if ext_id in topics:
-            continue
-        try:
-            resources.revoke_extension(store, ext_id, version, reason="맡은 일꾼이 일꾼 폴더에서 빠졌다", by=ACTOR)
-        except Exception as e:  # noqa: BLE001
-            log.exception("일꾼 폴더: %s@%s를 거두다 터졌다", ext_id, version)
-            out.append(ConsumerFolderItem(
-                kind="extension", id=ext_id, version=version, outcome="refused", code="internal",
-                message=f"거두다 오류가 났습니다: {type(e).__name__}",
-            ))
-            continue
-        log.info("일꾼 폴더: 맡은 일꾼이 없어 %s@%s를 거뒀다", ext_id, version)
-        out.append(ConsumerFolderItem(
-            kind="extension", id=ext_id, version=version, outcome="revoked",
-            message="맡은 일꾼이 없어 등록을 해제했습니다",
-        ))
-    return out
 
 
 def _read(path: Path, model: type[Any] = FolderConsumer) -> tuple[Any, tuple[str, str]]:

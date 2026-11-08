@@ -1,0 +1,28 @@
+{
+  "$id": "urn:bpm:contracts:c15-consumer-create-request",
+  "additionalProperties": true,
+  "description": "`POST /api/v1/consumers` — 콘솔에서 일꾼 만들기 (C15 §일꾼 관리, ADR-0137). Center 관리자만.",
+  "properties": {
+    "name": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "topics": {
+      "items": {
+        "pattern": "^[a-z0-9][a-z0-9.-]{0,63}$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Topics",
+      "type": "array"
+    }
+  },
+  "required": [
+    "name",
+    "topics"
+  ],
+  "title": "ConsumerCreateRequest",
+  "type": "object"
+}

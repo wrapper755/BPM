@@ -1,10 +1,10 @@
-# ADR-0137. Center 콘솔에 연결 앱 카탈로그(CON-17)를 둔다 — 앱 하나 = 토픽 하나, 보기만 한다
+# ADR-0138. Center 콘솔에 연결 앱 카탈로그(CON-18)를 둔다 — 앱 하나 = 토픽 하나, 보기만 한다
 
 | 항목 | 값 |
 | --- | --- |
 | 상태 | 수락 |
 | 날짜 | 2026-11-08 |
-| 관련 | 화면 CON-17, 계약 C15(`GET /external-topics/{topic}/operations`, 정의 올릴 때 `address`)·C13·C11(`app_group`·`keywords`·`groups`·`group`)·C7, [ADR-0102](0102-calling-outside-is-pull.md), [ADR-0122](0122-consumer-folder.md), [ADR-0128](0128-console-drops-the-resources-screen.md), [ADR-0135](0135-agentic-automation-and-unified-consumer.md) |
+| 관련 | 화면 CON-18, 계약 C15(`GET /external-topics/{topic}/operations`, 정의 올릴 때 `address`)·C13·C11(`app_group`·`keywords`·`groups`·`group`)·C7, [ADR-0102](0102-calling-outside-is-pull.md), [ADR-0122](0122-consumer-folder.md), [ADR-0128](0128-console-drops-the-resources-screen.md), [ADR-0135](0135-agentic-automation-and-unified-consumer.md), [ADR-0137](0137-consumers-are-managed-in-the-console.md) |
 
 ## 배경
 
@@ -47,7 +47,7 @@ Camunda의 결은 **「앱(커넥터) = 단위, 앱 목록은 category로 묶고
 
 ## 결정
 
-**B·ㄱ·가 — 콘솔 「배포·자원 › 연결 앱」(CON-17)에 연결 앱 카탈로그를 두고 쓰기는 두지 않는다** (사용자 결정, 2026-11-08).
+**B·ㄱ·가 — 콘솔 「배포·자원 › 연결 앱」(CON-18)에 연결 앱 카탈로그를 두고 쓰기는 두지 않는다** (사용자 결정, 2026-11-08).
 
 - **앱 하나 = 토픽 하나**다. 외부 정의(C13 `tier: external`)와 일꾼이 올린 앱(C11 manifest, 외부 정의가 없는 토픽)이 한 목록에 「구현」(외부 정의 / 일꾼 앱)과 「종류」(작업들의 `kind` — AI·API·RPA)로 보인다.
 - **앱 수준 칸** (C13 정의·C11 manifest 둘 다, 선택): `app_group{id, name}` — 목록에서 앱을 묶는다(Camunda `category`. C11의 `category`(`business`·`system`)와 뜻이 달라 이름을 달리했다), `keywords[]` — 찾기.
@@ -55,7 +55,7 @@ Camunda의 결은 **「앱(커넥터) = 단위, 앱 목록은 category로 묶고
 - **주소는 가** — 일꾼이 정의를 올릴 때 `address{base_url, test_base_url?}`를 함께 올리고(C15) Center는 일꾼 줄에 적어 `ConsumerInfo.addresses`로 보인다. 외부 정의 앱만 해당한다.
 - 재료: C7 `GET /resources?type=extension`·`?type=service_app`·`GET /resources/extensions/{id}`, C15 `GET /consumers`·`GET /external-topics`, **새 C15 `GET /external-topics/{topic}/operations`**(작업마다 기다림·처리 중·최근 7일 끝남·실패·마지막으로 끝난 때 — 업무 값 없음, 원칙 6).
 - 정의 고치기·등록 해제·작업 끄기는 두지 않는다 — 정의의 원본은 일꾼 쪽이다(ADR-0122). 화면은 그 사실을 제목 툴팁으로만 말한다.
-- CON-07을 되살리는 것이 아니다 — 일꾼 폴더·키·기여 자원은 이 화면에 없다.
+- CON-07을 되살리는 것이 아니다 — 일꾼 폴더·키·기여 자원은 이 화면에 없다. 일꾼 자체(만들기·토픽·토큰)는 CON-17 「일꾼」이 다룬다(ADR-0137) — 이 화면은 맡은 일꾼의 이름만 보인다.
 
 ## 결과
 

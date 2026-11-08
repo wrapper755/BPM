@@ -6,7 +6,8 @@
 | `POST /consumers/fetch`, `…/tasks/{id}/complete·fail·extend`, `PUT …/self/manifest·extension` | 일꾼 토큰 |
 | `GET /consumers`, `GET /external-topics`, `GET /external-topics/{topic}/operations` | 콘솔 토큰 |
 
-일꾼은 **일꾼 폴더**로만 들어온다 (`consumer_folder`, ADR-0122) — 요청 코드·승인이 없다.
+일꾼은 Center 관리자가 콘솔에서 만들고(`bpm.center.consumers`, ADR-0137) 함께 배포되는 일꾼은 일꾼 폴더가 처음
+한 번 들인다(`consumer_folder`) — 요청 코드·승인이 없다.
 
 지키는 것:
 
@@ -92,7 +93,7 @@ log = logging.getLogger(__name__)
 #: 일꾼이 알린 주소의 길이 한도 — 넘으면 적지 않는다 (C15 `address`).
 MAX_ADDRESS_LEN = 2048
 
-#: 일꾼이 올린 외부 확장의 출처 (`extensions.source`, ADR-0122) — 맡은 일꾼이 빠지면 일꾼 폴더가 거둔다.
+#: 일꾼이 올린 외부 확장의 출처 (`extensions.source`, ADR-0122) — 맡은 일꾼이 없어지면 거둔다 (`consumers`, ADR-0137).
 EXTENSION_SOURCE = "worker"
 
 router = APIRouter(prefix="/api/v1", tags=["external-tasks"])
@@ -611,7 +612,7 @@ def put_extension(store: Store, consumer: Any, raw: dict[str, Any]) -> tuple[Any
     if isinstance(ext_id, str) and ext_id not in set(loads(consumer["topics_json"], []) or []):
         raise ApiError(403, "topic_not_granted", f"맡지 않은 토픽의 정의다: {ext_id}")
     if isinstance(ext_id, str):
-        # 주소는 정의가 거절돼도 적는다 — 일꾼은 그 주소로 이미 일하고 있다 (ADR-0137, 보여 주기만 한다).
+        # 주소는 정의가 거절돼도 적는다 — 일꾼은 그 주소로 이미 일하고 있다 (ADR-0138, 보여 주기만 한다).
         _note_address(store, consumer, ext_id, raw.get("address"))
     actor = f"일꾼 {consumer['name']}"
     try:
@@ -678,7 +679,7 @@ def put_manifest(store: Store, consumer: Any, raw: dict[str, Any]) -> ConsumerIn
             "UPDATE consumers SET manifest_json = ? WHERE consumer_id = ?",
             (dumps(sorted(held, key=lambda one: str(one.get("app_id")))), consumer["consumer_id"]),
         )
-    return _consumer_info(store, store.row("SELECT * FROM consumers WHERE consumer_id = ?", (consumer["consumer_id"],)))
+    return consumer_info(store, store.row("SELECT * FROM consumers WHERE consumer_id = ?", (consumer["consumer_id"],)))
 
 
 def _held_manifests(row: Any) -> list[dict[str, Any]]:
@@ -688,7 +689,11 @@ def _held_manifests(row: Any) -> list[dict[str, Any]]:
     return [one for one in (found or []) if isinstance(one, dict)]
 
 
-def _consumer_info(store: Store, row: Any) -> ConsumerInfo:
+#: 일꾼 폴더가 들인 일꾼의 `machine_id` 머리 (`consumer_folder.MACHINE_PREFIX`와 같다 — 그쪽이 이 모듈을 부른다).
+FOLDER_MACHINE_PREFIX = "folder:"
+
+
+def consumer_info(store: Store, row: Any) -> ConsumerInfo:
     record = keys.get(store, str(row["key_id"]))
     return ConsumerInfo(
         consumer_id=row["consumer_id"],
@@ -696,6 +701,8 @@ def _consumer_info(store: Store, row: Any) -> ConsumerInfo:
         topics=loads(row["topics_json"], []) or [],
         key_prefix=(record.prefix or None) if record else None,
         approved_at=row["approved_at"],
+        approved_by=row["approved_by"],
+        source="folder" if str(row["machine_id"]).startswith(FOLDER_MACHINE_PREFIX) else "console",
         last_fetch_at=row["last_fetch_at"],
         apps=[f"{one.get('app_id')}@{one.get('version')}" for one in _held_manifests(row)],
         addresses={
@@ -707,7 +714,7 @@ def _consumer_info(store: Store, row: Any) -> ConsumerInfo:
 
 
 def consumers(store: Store) -> list[ConsumerInfo]:
-    return [_consumer_info(store, row) for row in store.rows("SELECT * FROM consumers ORDER BY name")]
+    return [consumer_info(store, row) for row in store.rows("SELECT * FROM consumers ORDER BY name")]
 
 
 def topics(store: Store, *, now: str | None = None) -> list[TopicStatus]:
@@ -732,7 +739,7 @@ def topics(store: Store, *, now: str | None = None) -> list[TopicStatus]:
 
 
 def operations_of(store: Store, topic: str, *, now: str | None = None) -> list[TopicOperationStatus]:
-    """그 토픽의 작업별 일감 집계 (C15 `GET /external-topics/{topic}/operations`, CON-17).
+    """그 토픽의 작업별 일감 집계 (C15 `GET /external-topics/{topic}/operations`, CON-18).
 
     줄은 **일꾼이 올린 manifest의 작업 전부**(일감이 없으면 0)와 manifest에 없지만 일감이 남은 작업이다.
     `kind`는 manifest가 말한다 — 일감에 붙이는 것과 같은 출처다. 업무 값·오류 글은 싣지 않는다.
@@ -1041,6 +1048,7 @@ __all__ = [
     "ack",
     "cancel",
     "complete",
+    "consumer_info",
     "consumer_of",
     "consumers",
     "create",

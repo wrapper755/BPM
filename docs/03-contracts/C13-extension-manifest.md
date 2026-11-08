@@ -78,8 +78,8 @@
 | `contributes` | Contributes | ✓ | 기여 (아래) |
 | `requires_keys` | KeyNeed[] | | 이 확장이 제 앱을 부르나 (이름은 옛것이다 — 키는 없다, 아래 KeyNeed) |
 | `docs_url`, `console_url` | str | | `http(s)://`만 (콘솔이 링크로 보이므로) |
-| `app_group` | `{id, name}` | | 연결 앱 목록(CON-17)에서 이 앱을 묶는 자리 — Camunda 요소 템플릿의 `category`와 같은 결 ([ADR-0137](../decisions/0137-console-app-catalog.md)). C11 manifest에도 같은 칸이 있다 |
-| `keywords` | str[] | | 찾기용 낱말 (CON-17 찾기) |
+| `app_group` | `{id, name}` | | 연결 앱 목록(CON-18)에서 이 앱을 묶는 자리 — Camunda 요소 템플릿의 `category`와 같은 결 ([ADR-0138](../decisions/0138-console-app-catalog.md)). C11 manifest에도 같은 칸이 있다 |
+| `keywords` | str[] | | 찾기용 낱말 (CON-18 찾기) |
 
 ### Service
 
@@ -164,7 +164,7 @@
 | `limits` | `{timeout_s: 60, max_response_kb: 1024}` |
 | `health` | 선택. `{path, expect_status: 200}`. **지금 읽는 쪽이 없다** — Center는 외부 앱을 두드리지 않고 상태를 토픽에서 읽는다(C7·C15, [ADR-0102](../decisions/0102-calling-outside-is-pull.md)). 받아 두기만 한다 |
 | `operations` | 아래 Operation[] |
-| `groups` | 선택. 작업 묶음 `[{id, name, description?}]` — 적힌 순서가 보이는 순서다. 작업의 `group`이 이 `id`를 가리킨다 (OpenAPI 최상위 `tags`와 같은 결, [ADR-0137](../decisions/0137-console-app-catalog.md)). 실행에는 쓰이지 않고 사람이 140개쯤 되는 작업을 다룰 때 묶는 자리다 (CON-17) |
+| `groups` | 선택. 작업 묶음 `[{id, name, description?}]` — 적힌 순서가 보이는 순서다. 작업의 `group`이 이 `id`를 가리킨다 (OpenAPI 최상위 `tags`와 같은 결, [ADR-0138](../decisions/0138-console-app-catalog.md)). 실행에는 쓰이지 않고 사람이 140개쯤 되는 작업을 다룰 때 묶는 자리다 (CON-18) |
 
 Operation:
 
@@ -303,7 +303,7 @@ Studio 「확장」(STU-15)의 「정의 파일 열기...」는 E1·E3을 로컬
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
-| 2026-11-08 | 2 | 연결 앱 카탈로그(CON-17) 칸 — 정의의 `app_group{id, name}`·`keywords`, `adapter.groups`와 작업의 `group`·`keywords`(모두 선택). E3가 없는 묶음 id를 거부한다. 선택 칸이라 schema는 그대로다 | [0137](../decisions/0137-console-app-catalog.md) |
+| 2026-11-08 | 2 | 연결 앱 카탈로그(CON-18) 칸 — 정의의 `app_group{id, name}`·`keywords`, `adapter.groups`와 작업의 `group`·`keywords`(모두 선택). E3가 없는 묶음 id를 거부한다. 선택 칸이라 schema는 그대로다 | [0138](../decisions/0138-console-app-catalog.md) |
 | 2026-11-08 | 2 | HTTP 어댑터 작업의 `kind`는 `api`다(기본, 다른 값은 검사 오류) — 선택 칸이라 schema는 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 2 | 외부 확장 등록은 **그 토픽의 일꾼이 정의를 올리는 것**이다(C15 `PUT …/self/extension`) — `POST/DELETE /resources/extensions`를 걷었다. 맡은 일꾼이 일꾼 폴더에서 빠지면 Center가 거둔다. 낮은 판은 409 `older_than_registered`. 정의 모양은 그대로다 | [0122](../decisions/0122-consumer-folder.md) |
 | 2026-10-31 | 2 | 기여 지점 `tool_ui.tools`·`bot_ui.panels`·`bot_ui.local_runtimes`·`agent_environments`, **E8**, 예약 키 `runtime.<id>.*`, `scope: tool_ui`, `requires_keys[].purpose: utility`를 걷었다 — UI 자동화 확장과 함께. 걷은 열쇠는 호스트가 경고하고 읽지 않는다(`LEGACY_CONTRIBUTION_KEYS`), E7은 옛 머리도 막는다. 열쇠가 모두 선택이라 schema는 그대로이고 `extension_api`는 **2.0.0**이다(이름을 지웠다 — 예시의 `api`는 `>=2,<3`) | [0114](../decisions/0114-remove-ui-automation.md) |

@@ -26,7 +26,7 @@ export interface ServiceAppResource {
   [k: string]: unknown;
 }
 /**
- * 연결 앱 목록(CON-17)에서 앱을 묶는 자리 — Camunda 요소 템플릿의 `category{id, name}` (ADR-0137).
+ * 연결 앱 목록(CON-18)에서 앱을 묶는 자리 — Camunda 요소 템플릿의 `category{id, name}` (ADR-0138).
  *
  * C11 `category`(업무용·시스템용)와는 다른 칸이다. C13 정의·C11 manifest가 같은 모양을 쓴다.
  */
@@ -36,7 +36,7 @@ export interface AppGroup {
   [k: string]: unknown;
 }
 /**
- * 앱 안 작업 묶음 하나 (C13 `adapter.groups`·C11 `groups`, OpenAPI 최상위 `tags`와 같은 결 — ADR-0137).
+ * 앱 안 작업 묶음 하나 (C13 `adapter.groups`·C11 `groups`, OpenAPI 최상위 `tags`와 같은 결 — ADR-0138).
  *
  * 적힌 순서가 보이는 순서다. 실행에는 쓰이지 않는다.
  */

@@ -4,7 +4,7 @@ import { cn } from "@bpm/ui";
 import type { GroupSection, OperationRow } from "@/lib/connected-apps";
 
 /**
- * CON-17 작업 트리 격자 — 머리 줄 하나에 묶음(부모)과 작업(자식)이 **같은 열**로 선다.
+ * CON-18 작업 트리 격자 — 머리 줄 하나에 묶음(부모)과 작업(자식)이 **같은 열**로 선다.
  *
  * 표(`<table>`)는 줄을 `<details>`로 접을 수 없어 줄마다 같은 열 틀의 격자를 쓴다 — 열 폭은 `columns`의
  * `width`이고 첫 열만 남는 폭을 다 가져간다. JS 없이 접고 편다. 묶음 줄의 일감 열은 자식의 합이다.

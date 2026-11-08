@@ -1,12 +1,13 @@
-"""일꾼 폴더 — 일꾼은 폴더 파일로만 들어오고, 외부 확장 정의는 그 일꾼이 올린다 (ADR-0122).
+"""일꾼 폴더 — 일꾼을 처음 한 번 들이고, 외부 확장 정의는 그 일꾼이 올린다 (ADR-0122·0137).
 
 진짜 Center를 in-process로 띄우되 **같은 DB 파일로 여러 번** 띄워 「다시 떴을 때」를 본다.
 
 1. **파일 하나로 들어온다** — 요청 코드·승인 없이 그 토픽만 가져간다. 다시 떠도 같다(`unchanged`).
-2. **토큰을 바꾸면 옛 것이 막히고**, 폐기된 토큰·다른 키가 쓰는 토큰은 거절한다.
+2. **이미 들인 일꾼은 건드리지 않는다** — 파일을 바꿔도 빼도 그대로이고(콘솔이 원본이다, ADR-0137), 콘솔에서
+   지운 일꾼은 파일이 남아도 되살아나지 않는다. 다른 키가 쓰는 토큰·같은 이름은 거절한다.
 3. **일꾼이 제 정의를 올린다** — Center가 서명하고 현장이 같은 검증(E6)으로 다시 본다. 토픽 밖은 403, 낮은 판은 409.
-4. **폴더가 원본이다** — 파일이 빠지면 일꾼이 사라지고, 맡은 일꾼이 없게 된 확장은 철회된다. 읽지 못한 파일이
-   있거나 폴더가 붙지 않았으면 아무것도 거두지 않는다.
+4. 뜰 때 아무것도 거두지 않는다 — 맡은 일꾼이 없어진 확장은 콘솔이 그 자리에서 거둔다
+   (`test_center_consumers_console.py`).
 5. **잘못된 파일은 Center를 막지 않고** 사유가 `GET /resources/consumer-folder`로 나온다.
 6. 등록 요청(`POST /consumers/enroll`)과 콘솔 확장 등록(`POST /resources/extensions`)은 없다.
 7. **연동용·대리 답용 키도 같은 폴더의 `<이름>.key.json`으로 들어온다** (ADR-0123) — 권한은 콘솔 발급 키와 같다.
@@ -141,19 +142,38 @@ def test_there_is_no_enrollment_any_more(boot: Boot) -> None:
     assert client.post("/api/v1/resources/extensions", json={}, headers=ADMIN).status_code in (404, 405)
 
 
-def test_changing_the_token_shuts_the_old_one(boot: Boot, folder: Path) -> None:
+def test_a_changed_file_does_not_change_an_admitted_worker(boot: Boot, folder: Path) -> None:
     put(folder, "worker.consumer.json", worker(TOKEN_A))
     boot()
-    put(folder, "worker.consumer.json", worker(TOKEN_B))
+    put(folder, "worker.consumer.json", worker(TOKEN_B, topics=["ext-ocr", "other"]))
     client = boot()
 
-    assert outcomes(client) == {"worker.consumer.json": ("registered", None)}
-    assert fetch(client, TOKEN_A, ["ext-ocr"]).json()["code"] == "key_revoked"
-    assert fetch(client, TOKEN_B, ["ext-ocr"]).status_code == 200
-    # 폐기된 토큰은 되살아나지 않는다.
+    assert outcomes(client) == {"worker.consumer.json": ("unchanged", None)}
+    assert "콘솔" in scanned(client)["items"][0]["message"]
+    assert fetch(client, TOKEN_A, ["ext-ocr"]).status_code == 200
+    assert fetch(client, TOKEN_A, ["other"]).status_code == 403
+    assert fetch(client, TOKEN_B, ["ext-ocr"]).status_code == 401
+
+
+def test_a_worker_deleted_in_the_console_does_not_come_back(boot: Boot, folder: Path) -> None:
     put(folder, "worker.consumer.json", worker(TOKEN_A))
     client = boot()
+    [found] = client.get("/api/v1/consumers", headers=ADMIN).json()
+    assert found["source"] == "folder" and found["approved_by"] == "일꾼 폴더"
+    assert client.delete(f"/api/v1/consumers/{found['consumer_id']}", headers=ADMIN).status_code == 204
+
+    client = boot()
     assert outcomes(client) == {"worker.consumer.json": ("refused", "token_revoked")}
+    assert client.get("/api/v1/consumers", headers=ADMIN).json() == []
+
+
+def test_a_file_with_a_name_already_taken_is_refused(boot: Boot, folder: Path) -> None:
+    client = boot()
+    made = client.post("/api/v1/consumers", json={"name": "worker", "topics": ["ext-ocr"]}, headers=ADMIN)
+    assert made.status_code == 201
+    put(folder, "worker.consumer.json", worker(TOKEN_A))
+    client = boot()
+    assert outcomes(client) == {"worker.consumer.json": ("refused", "name_taken")}
 
 
 def test_two_worker_files_cannot_share_a_token(boot: Boot, folder: Path) -> None:
@@ -163,17 +183,15 @@ def test_two_worker_files_cannot_share_a_token(boot: Boot, folder: Path) -> None
     assert outcomes(client) == {"a.consumer.json": ("registered", None), "b.consumer.json": ("refused", "token_in_use")}
 
 
-def test_removing_the_worker_file_lets_it_out(boot: Boot, folder: Path) -> None:
+def test_removing_the_worker_file_keeps_the_worker(boot: Boot, folder: Path) -> None:
     path = put(folder, "worker.consumer.json", worker(TOKEN_A))
     boot()
     path.unlink()
     client = boot()
 
-    assert [(one["kind"], one["outcome"], one["id"]) for one in scanned(client)["items"]] == [
-        ("consumer", "revoked", "worker")
-    ]
-    assert fetch(client, TOKEN_A, ["ext-ocr"]).json()["code"] == "key_revoked"
-    assert client.get("/api/v1/consumers", headers=ADMIN).json() == []
+    assert scanned(client)["items"] == []
+    assert fetch(client, TOKEN_A, ["ext-ocr"]).status_code == 200
+    assert [one["name"] for one in client.get("/api/v1/consumers", headers=ADMIN).json()] == ["worker"]
 
 
 def test_bad_files_do_not_stop_center_and_keep_their_place(boot: Boot, folder: Path) -> None:
@@ -253,7 +271,7 @@ def test_the_worker_uploads_only_its_own_topics(boot: Boot, folder: Path) -> Non
 
 
 def test_the_worker_tells_the_address_it_uses(boot: Boot, folder: Path) -> None:
-    """CON-17 「쓰는 주소」 (ADR-0137) — 보여 주기만 한다. 사용자 정보·쿼리는 떼고, 알리지 않으면 지운다."""
+    """CON-18 「쓰는 주소」 (ADR-0138) — 보여 주기만 한다. 사용자 정보·쿼리는 떼고, 알리지 않으면 지운다."""
     put(folder, "worker.consumer.json", worker(TOKEN_A))
     client = boot()
     address = {"base_url": "https://user:secret@ocr.example.com:8443/v1?key=abc#x", "test_base_url": "ftp://nope"}
@@ -283,24 +301,6 @@ def test_versions_go_up_not_down(boot: Boot, folder: Path) -> None:
     got = upload(client, TOKEN_A, definition(version="1.1.0", name="다른 이름"))
     assert got.status_code == 409 and got.json()["code"] == "id_conflict"
     assert current(client)["version"] == "1.1.0"
-
-
-def test_an_extension_without_a_worker_is_revoked(boot: Boot, folder: Path) -> None:
-    path = put(folder, "worker.consumer.json", worker(TOKEN_A))
-    client = boot()
-    assert upload(client, TOKEN_A, definition()).status_code == 201
-
-    path.unlink()
-    client = boot()
-    rows = {(one["kind"], one["outcome"], one["id"]) for one in scanned(client)["items"]}
-    assert rows == {("consumer", "revoked", "worker"), ("extension", "revoked", "ext-ocr")}
-    assert client.get("/api/v1/resources/extensions/ext-ocr", headers=ADMIN).status_code == 404
-
-    # 같은 판은 되살아나지 않는다 — 판을 올린다.
-    put(folder, "worker.consumer.json", worker(TOKEN_B))
-    client = boot()
-    assert upload(client, TOKEN_B, definition()).json()["code"] == "extension_revoked"
-    assert upload(client, TOKEN_B, definition(version="1.0.1")).status_code == 201
 
 
 def test_an_unreadable_file_or_a_missing_folder_revokes_nothing(boot: Boot, folder: Path, tmp_path: Path) -> None:

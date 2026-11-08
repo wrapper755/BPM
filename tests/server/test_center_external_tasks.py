@@ -360,7 +360,7 @@ def test_a_console_lists_consumers_and_topics(center: TestClient, field: str) ->
 
 
 def test_a_console_counts_tasks_per_operation(center: TestClient, field: str) -> None:
-    """CON-17 — 작업마다 기다림·처리 중·최근 끝남·실패, 마지막 오류 코드 (ADR-0137). 값은 싣지 않는다."""
+    """CON-18 — 작업마다 기다림·처리 중·최근 끝남·실패, 마지막 오류 코드 (ADR-0138). 값은 싣지 않는다."""
     token = consumer(center)
 
     def one(node: str) -> str:

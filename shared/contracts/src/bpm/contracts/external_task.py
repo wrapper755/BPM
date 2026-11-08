@@ -262,9 +262,9 @@ class ExternalTaskInfo(ContractModel):
 
 
 class ConsumerAddress(ContractModel):
-    """일꾼이 외부 앱을 부르는 주소 — 정의를 올릴 때 함께 알린다 (C15 `address`, ADR-0137).
+    """일꾼이 외부 앱을 부르는 주소 — 정의를 올릴 때 함께 알린다 (C15 `address`, ADR-0138).
 
-    Center는 보여 주기만 한다 (CON-17 「쓰는 주소」). 주소는 일꾼 설정이 정하고 없으면 정의의 `base_url`이다.
+    Center는 보여 주기만 한다 (CON-18 「쓰는 주소」). 주소는 일꾼 설정이 정하고 없으면 정의의 `base_url`이다.
     """
 
     base_url: str | None = None
@@ -272,19 +272,46 @@ class ConsumerAddress(ContractModel):
     test_base_url: str | None = None
 
 
+#: 일꾼이 들어온 길 (`ConsumerInfo.source`, ADR-0137) — 콘솔에서 만들었나, 일꾼 폴더가 처음 들였나.
+CONSUMER_SOURCES = ("console", "folder")
+
+
 class ConsumerInfo(ContractModel):
-    """`GET /api/v1/consumers`의 한 줄 (CON-17 「맡은 일꾼」)."""
+    """`GET /api/v1/consumers`의 한 줄 (CON-17 「일꾼」·CON-18 「맡은 일꾼」)."""
 
     consumer_id: str
     name: str
     topics: list[str] = Field(default_factory=list)
     key_prefix: str | None = None
     approved_at: Timestamp | None = None
+    #: 들인 쪽 — 콘솔에서 만든 관리자, 또는 「일꾼 폴더」.
+    approved_by: str | None = None
+    #: `console` | `folder` (ADR-0137).
+    source: str | None = None
     last_fetch_at: Timestamp | None = None
     #: 이 일꾼이 올린 manifest들의 `app_id@version`.
     apps: list[str] = Field(default_factory=list)
-    #: 토픽(외부 확장 id) → 이 일꾼이 쓴다고 알린 주소 (ADR-0137). 알리지 않은 토픽은 없다.
+    #: 토픽(외부 확장 id) → 이 일꾼이 쓴다고 알린 주소 (ADR-0138). 알리지 않은 토픽은 없다.
     addresses: dict[str, ConsumerAddress] = Field(default_factory=dict)
+
+
+class ConsumerCreateRequest(ContractModel):
+    """`POST /api/v1/consumers` — 콘솔에서 일꾼 만들기 (C15 §일꾼 관리, ADR-0137). Center 관리자만."""
+
+    name: str = Field(min_length=1, max_length=64)
+    topics: list[Topic] = Field(min_length=1)
+
+
+class ConsumerUpdateRequest(ContractModel):
+    """`PUT /api/v1/consumers/{consumer_id}` — 토픽 바꾸기 (ADR-0137). 다음 요청부터 반영된다."""
+
+    topics: list[Topic] = Field(min_length=1)
+
+
+class ConsumerCreated(ConsumerInfo):
+    """만들기·토큰 새로 발급의 답 — **토큰 원문은 여기에만** 실린다 (Center는 해시만 둔다)."""
+
+    token: str
 
 
 class CatalogUpload(ContractModel):
@@ -295,7 +322,7 @@ class CatalogUpload(ContractModel):
 
 
 class TopicStatus(ContractModel):
-    """`GET /api/v1/external-topics`의 한 줄 (C15 「정한 것」의 제안 — CON-17 토픽 상태)."""
+    """`GET /api/v1/external-topics`의 한 줄 (C15 「정한 것」의 제안 — CON-18 토픽 상태)."""
 
     topic: str
     consumers: int = 0
@@ -309,7 +336,7 @@ RECENT_DAYS = 7
 
 
 class TopicOperationStatus(ContractModel):
-    """`GET /api/v1/external-topics/{topic}/operations`의 한 줄 — 작업 하나의 일감 집계 (CON-17, ADR-0137).
+    """`GET /api/v1/external-topics/{topic}/operations`의 한 줄 — 작업 하나의 일감 집계 (CON-18, ADR-0138).
 
     업무 값·오류 글은 싣지 않는다 (원칙 6). 줄은 일꾼이 올린 manifest의 작업 전부와, 그 밖에 일감이 남은 작업이다.
     """
@@ -356,8 +383,12 @@ __all__ = [
     "CallToken",
     "CatalogUpload",
     "CompleteRequest",
+    "CONSUMER_SOURCES",
     "ConsumerAddress",
+    "ConsumerCreateRequest",
+    "ConsumerCreated",
     "ConsumerInfo",
+    "ConsumerUpdateRequest",
     "ExternalTaskInfo",
     "ExtendRequest",
     "ExternalTaskCreate",

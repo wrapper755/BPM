@@ -135,7 +135,7 @@ class ServiceAppResource(ContractModel):
     used_by: list[str] = Field(default_factory=list)  # `id@version`
     #: 이 토픽을 가져가는 일꾼 수 (C15).
     consumers: int = 0
-    #: C11 manifest 그대로 — 연결 앱 목록(CON-17)이 묶고 찾는다 (ADR-0137).
+    #: C11 manifest 그대로 — 연결 앱 목록(CON-18)이 묶고 찾는다 (ADR-0138).
     app_group: AppGroup | None = None
     keywords: list[str] = Field(default_factory=list)
     groups: list[OperationGroup] = Field(default_factory=list)

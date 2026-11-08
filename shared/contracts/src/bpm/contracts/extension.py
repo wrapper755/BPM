@@ -272,9 +272,9 @@ class AdapterOperation(ContractModel):
 
     name: OperationName
     description: str | None = None
-    #: 묶음 (`HttpAdapter.groups[].id`) — 사람이 많은 작업을 다룰 때 묶는 자리다. 실행에는 쓰이지 않는다 (ADR-0137).
+    #: 묶음 (`HttpAdapter.groups[].id`) — 사람이 많은 작업을 다룰 때 묶는 자리다. 실행에는 쓰이지 않는다 (ADR-0138).
     group: str | None = None
-    #: 찾기용 낱말 (CON-17, Camunda 커넥터 작업의 `keywords`).
+    #: 찾기용 낱말 (CON-18, Camunda 커넥터 작업의 `keywords`).
     keywords: list[str] = Field(default_factory=list)
     modes: list[str] = Field(default_factory=lambda: [MODE_AUTONOMOUS])
     server_ok: bool = True
@@ -353,9 +353,9 @@ class ExtensionManifest(SchemaVersioned):
     requires_keys: list[KeyNeed] = Field(default_factory=list)
     docs_url: str | None = None
     console_url: str | None = None
-    #: 연결 앱 목록(CON-17)에서 이 앱을 묶는 자리 — Camunda 요소 템플릿의 `category` (ADR-0137).
+    #: 연결 앱 목록(CON-18)에서 이 앱을 묶는 자리 — Camunda 요소 템플릿의 `category` (ADR-0138).
     app_group: AppGroup | None = None
-    #: 찾기용 낱말 (CON-17).
+    #: 찾기용 낱말 (CON-18).
     keywords: list[str] = Field(default_factory=list)
 
     @property

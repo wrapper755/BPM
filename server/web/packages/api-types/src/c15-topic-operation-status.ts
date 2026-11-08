@@ -3,7 +3,7 @@
    그다음 `pnpm --filter @bpm/api-types generate`. */
 
 /**
- * `GET /api/v1/external-topics/{topic}/operations`의 한 줄 — 작업 하나의 일감 집계 (CON-17, ADR-0137).
+ * `GET /api/v1/external-topics/{topic}/operations`의 한 줄 — 작업 하나의 일감 집계 (CON-18, ADR-0138).
  *
  * 업무 값·오류 글은 싣지 않는다 (원칙 6). 줄은 일꾼이 올린 manifest의 작업 전부와, 그 밖에 일감이 남은 작업이다.
  */

@@ -2,7 +2,7 @@
   "$defs": {
     "AppGroup": {
       "additionalProperties": true,
-      "description": "연결 앱 목록(CON-17)에서 앱을 묶는 자리 — Camunda 요소 템플릿의 `category{id, name}` (ADR-0137).\n\nC11 `category`(업무용·시스템용)와는 다른 칸이다. C13 정의·C11 manifest가 같은 모양을 쓴다.",
+      "description": "연결 앱 목록(CON-18)에서 앱을 묶는 자리 — Camunda 요소 템플릿의 `category{id, name}` (ADR-0138).\n\nC11 `category`(업무용·시스템용)와는 다른 칸이다. C13 정의·C11 manifest가 같은 모양을 쓴다.",
       "properties": {
         "id": {
           "title": "Id",
@@ -149,7 +149,7 @@
     },
     "OperationGroup": {
       "additionalProperties": true,
-      "description": "앱 안 작업 묶음 하나 (C13 `adapter.groups`·C11 `groups`, OpenAPI 최상위 `tags`와 같은 결 — ADR-0137).\n\n적힌 순서가 보이는 순서다. 실행에는 쓰이지 않는다.",
+      "description": "앱 안 작업 묶음 하나 (C13 `adapter.groups`·C11 `groups`, OpenAPI 최상위 `tags`와 같은 결 — ADR-0138).\n\n적힌 순서가 보이는 순서다. 실행에는 쓰이지 않는다.",
       "properties": {
         "description": {
           "anyOf": [

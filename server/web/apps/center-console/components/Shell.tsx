@@ -66,8 +66,9 @@ const NAV: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { label: "공통 패키지", href: "/packages" },
       { label: "배포", href: "/deployments" },
-      // 연결 앱 카탈로그 — 외부 정의·일꾼 앱과 그 작업, 보기만 한다 (CON-17, ADR-0137).
+      // 연결 앱 카탈로그 — 외부 정의·일꾼 앱과 그 작업, 보기만 한다 (CON-18, ADR-0138).
       { label: "연결 앱", href: "/connected-apps" },
+      { label: "일꾼", href: "/consumers" },
     ],
   },
   {

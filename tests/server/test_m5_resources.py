@@ -245,7 +245,7 @@ def test_a_manifest_outside_the_granted_topics_is_refused(client: TestClient, tm
 
 
 def test_the_catalog_fields_ride_the_manifest(client: TestClient, tmp_path: Path) -> None:
-    """연결 앱 카탈로그 (CON-17, ADR-0137) — 앱 묶음·키워드·작업 묶음이 리소스 목록에 그대로 실린다."""
+    """연결 앱 카탈로그 (CON-18, ADR-0138) — 앱 묶음·키워드·작업 묶음이 리소스 목록에 그대로 실린다."""
     worker = consumer(client, tmp_path)
     ops = [{"name": "lookup", "modes": ["deterministic"], "group": "people", "keywords": ["사번"]}]
     catalog = {

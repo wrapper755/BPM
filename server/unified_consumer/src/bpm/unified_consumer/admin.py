@@ -76,7 +76,7 @@ class RecordingTopic:
 
     @property
     def extension_address(self) -> dict[str, Any] | None:
-        """외부 확장 토픽이면 지금 쓰는 주소 — 정의와 함께 Center에 알린다 (ADR-0137)."""
+        """외부 확장 토픽이면 지금 쓰는 주소 — 정의와 함께 Center에 알린다 (ADR-0138)."""
         found: dict[str, Any] | None = getattr(self.inner, "extension_address", None)
         return found
 

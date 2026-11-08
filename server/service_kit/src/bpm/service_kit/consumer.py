@@ -165,7 +165,7 @@ class Consumer:
             slot = f"extension:{service.app_id}"
             if isinstance(definition, dict) and (force or slot not in self._published):
                 body: dict[str, Any] = {"definition": definition}
-                # 지금 쓰는 주소도 함께 알린다 — Center 콘솔이 보여 주기만 한다 (C15 `address`, ADR-0137).
+                # 지금 쓰는 주소도 함께 알린다 — Center 콘솔이 보여 주기만 한다 (C15 `address`, ADR-0138).
                 address = getattr(service, "extension_address", None)
                 if isinstance(address, dict):
                     body["address"] = address

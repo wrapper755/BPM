@@ -367,7 +367,7 @@ MIGRATIONS: tuple[Step, ...] = (
     ),
     Step(
         25,
-        "일꾼이 외부 앱을 부르는 주소 — 정의를 올릴 때 알린다, 토픽 → 주소 (C15 `address`, ADR-0137)",
+        "일꾼이 외부 앱을 부르는 주소 — 정의를 올릴 때 알린다, 토픽 → 주소 (C15 `address`, ADR-0138)",
         ("ALTER TABLE consumers ADD COLUMN addresses_json TEXT",),
     ),
 )

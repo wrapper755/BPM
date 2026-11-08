@@ -27,7 +27,7 @@ import { OperationTree } from "./tree";
 import { Hint, SOURCE_NOTE, connectedAppHref, time } from "../page";
 
 /**
- * CON-17 연결 앱 (상세) — 앱 하나의 작업 표와 작업별 일감 집계 (C15 `TopicOperationStatus`, ADR-0137).
+ * CON-18 연결 앱 (상세) — 앱 하나의 작업 표와 작업별 일감 집계 (C15 `TopicOperationStatus`, ADR-0138).
  *
  * 외부 정의(C13)면 정의에서, 일꾼 앱(C11)이면 manifest에서 작업을 읽는다. 「찾기」는 주소 `?q=`에 남고
  * JS 없이 돈다. 집계를 못 읽으면 작업만 그린다 (일감 열은 「—」).
@@ -296,7 +296,7 @@ export default async function ConnectedAppPage({
           rows={rows}
           sections={sections}
           caption={`${name} 작업`}
-          // 기다림·실패가 있는 묶음과 찾기에 걸린 묶음은 펼쳐서 연다 (CON-17).
+          // 기다림·실패가 있는 묶음과 찾기에 걸린 묶음은 펼쳐서 연다 (CON-18).
           openOf={(one) => Boolean(query) || one.waiting > 0 || one.failed > 0}
           groupCells={(one) =>
             counts === null

@@ -48,7 +48,7 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 
 ### 엔드포인트별 권한
 
-> **회사가 정해진 계정**(역할 `company_admin`·회사 보기 전용, C16)은 아래 표의 관리자·읽기 권한을 **제 회사 것에만** 갖는다 — 남의 것은 404다. 계정·회사·서버 실행기·Center 키 쓰기는 Center 관리자(회사 없음)만이다. 업무 자리·장비의 회사·`company_mismatch`·`owner_stopped`는 [C16](C16-organization.md)에 있다.
+> **회사가 정해진 계정**(역할 `company_admin`·회사 보기 전용, C16)은 아래 표의 관리자·읽기 권한을 **제 회사 것에만** 갖는다 — 남의 것은 404다. 계정·회사·서버 실행기·일꾼·Center 키 쓰기는 Center 관리자(회사 없음)만이다. 업무 자리·장비의 회사·`company_mismatch`·`owner_stopped`는 [C16](C16-organization.md)에 있다.
 
 아래 표의 「읽기」는 보기 전용 계정·읽기 토큰, 「관리자」는 관리자 계정·관리자 토큰이다.
 
@@ -71,8 +71,9 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 | `GET /bot-uis…` (CON-03), `POST /bot-uis/{id}/disable·enable` | GET만 ✓ | ✓ | — | — | — |
 | `POST /call-tokens` (C15 호출 토큰) | — | — | ✓ | PC 실행기 키만 | — |
 | `POST /external-tasks`, `GET·POST /external-tasks/{id}…` (C15 — 부르는 쪽) | — | — | 호출 토큰·Studio 키 | 서버 실행기 키·호출 토큰 | — |
-| `/consumers/fetch·tasks…·self…` (C15 — 일꾼, 일꾼 폴더로만 들어온다 — ADR-0122) | 일꾼 토큰만 | | | | |
-| `GET /consumers`, `GET /external-topics`, `…/{topic}/operations` (CON-17), `GET /external-tasks?run_id=` (CON-01) | ✓ | ✓ | — | — | — |
+| `/consumers/fetch·tasks…·self…` (C15 — 일꾼) | 일꾼 토큰만 | | | | |
+| `POST /consumers`, `PUT·DELETE /consumers/{id}`, `POST /consumers/{id}/token` (C15 §일꾼 관리, CON-17 — ADR-0137) | — | Center 관리자만 | — | — | — |
+| `GET /consumers` (CON-17), `GET /external-topics`, `…/{topic}/operations` (CON-18), `GET /external-tasks?run_id=` (CON-01) | ✓ | ✓ | — | — | — |
 | `GET /schedules` (§일정, CON-02) | ✓ | ✓ | — | — | — |
 | `GET /signing-keys` (C7) | 인증 없음 | | | | |
 | `POST /bot-ui/enroll`, `POST /server-runner/enroll`, `GET …/enroll/{id}` (C4·C12) | 인증 없음 | | | | |
@@ -343,7 +344,7 @@ PC(PC 실행기)·서버 실행기·**Studio**가 보낸 **등록 요청**(C4·C
 | 메서드·경로 | 뜻 |
 | --- | --- |
 | `GET /enrollments?type=bot_ui\|server_runner\|studio&state=pending` | 요청 목록 (`state`는 쉼표로 여럿, 기본 `pending`) |
-| `POST /enrollments/{enrollment_id}/approve` `{name?}` | 승인. `name`을 비우면 요청의 `name`을 쓴다. 일꾼(C15)은 여기 오지 않는다 — 일꾼 폴더로만 들어온다 (ADR-0122) |
+| `POST /enrollments/{enrollment_id}/approve` `{name?}` | 승인. `name`을 비우면 요청의 `name`을 쓴다. 일꾼(C15)은 여기 오지 않는다 — 콘솔 CON-17에서 만든다 (ADR-0137) |
 | `POST /enrollments/{enrollment_id}/reject` `{reason?}` | 거절. 사유는 요청한 쪽에 그대로 보인다 (200자까지) |
 
 EnrollmentInfo 필드:
@@ -443,6 +444,7 @@ BotUiInfo 필드:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-08 | 1 | 권한표에 **일꾼 관리**(`POST /consumers`·`PUT·DELETE /consumers/{id}`·`POST …/token`, Center 관리자만) 줄을 더했다 | [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |
 | 2026-11-08 | 1 | **`GET …/diagram`을 더했다** — CON-01이 진입 정의를 그린다. 새 엔드포인트라 옛 쪽은 영향이 없다 | [0136](../decisions/0136-run-detail-shows-the-diagram.md) |
 | 2026-11-08 | 1 | **`GET …/nodes`(NodeLabel)를 더했다** — CON-01이 노드 id 옆에 이름을 보인다. 실행 기록은 그대로 id만 싣고 이름은 Center가 패키지 정의에서 읽을 때 꺼낸다. 새 엔드포인트라 옛 쪽은 영향이 없다 | — |
 | 2026-11-01 | 1 | **가상 직원을 없앴다** — §가상 직원(`/virtual-workers`, `VirtualWorkerRequest`·`Info`, `intake_*` 관문)·`JobCreateRequest.virtual_worker`·`JobInfo.virtual_worker`·`?virtual_worker=`를 걷었다. 업무 주체는 C16 직원이다 | [0125](../decisions/0125-organization-and-work-placement.md) |
