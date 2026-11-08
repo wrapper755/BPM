@@ -371,6 +371,25 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
             app.state.store, package_id, version, index=resources.index(app.state.store), company=company_scope(found)
         )
 
+    @app.get(f"{API}/packages/{{package_id}}/{{version}}/nodes")
+    def package_nodes(request: Request, package_id: str, version: str) -> Any:
+        """정의 안 노드의 이름 (C5 `nodes`·CON-01 — 실행 기록은 노드를 id로만 가리킨다)."""
+        found = require_package_read(authenticate(request))
+        _own_package(found, package_id, version)
+        return packages.node_labels(
+            app.state.store, package_dir=settings.package_dir, package_id=package_id, version=version
+        )
+
+    @app.get(f"{API}/packages/{{package_id}}/{{version}}/diagram")
+    def package_diagram(request: Request, package_id: str, version: str) -> Response:
+        """진입 정의의 BPMN 그대로 (C5 `diagram`·CON-01 「다이어그램」, ADR-0136)."""
+        found = require_package_read(authenticate(request))
+        _own_package(found, package_id, version)
+        body = packages.diagram(
+            app.state.store, package_dir=settings.package_dir, package_id=package_id, version=version
+        )
+        return Response(content=body, media_type="application/xml; charset=utf-8")
+
     @app.get(f"{API}/packages/{{package_id}}/{{version}}/dependents")
     def package_dependents(request: Request, package_id: str, version: str) -> Any:
         """이 패키지를 쓰는 패키지 (C5·CON-06 「이 패키지를 쓰는 패키지」)."""

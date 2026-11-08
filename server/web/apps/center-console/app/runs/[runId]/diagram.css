@@ -1,0 +1,26 @@
+/*
+ * CON-01 「다이어그램」의 상태 표시 (ADR-0136). 값은 토큰만 쓴다 — 색은 `--run-color`로 도형마다
+ * `status_map` 「실행·노드」 색이 꽂힌다 (diagram.tsx).
+ */
+.run-diagram {
+  height: calc(var(--space-12) * 10);
+  overflow: hidden;
+}
+
+.run-diagram .djs-element.run-state .djs-visual > :first-child,
+.run-diagram .djs-element.run-waiting .djs-visual > :first-child {
+  stroke: var(--run-color) !important;
+  stroke-width: var(--space-1) !important;
+}
+
+.run-diagram .djs-element.run-waiting .djs-visual > :first-child {
+  stroke-dasharray: var(--space-2) var(--space-1);
+}
+
+.run-diagram .djs-element.run-unvisited .djs-visual > * {
+  stroke: var(--border-default) !important;
+}
+
+.run-diagram .djs-element.run-unvisited .djs-visual text {
+  fill: var(--text-muted) !important;
+}

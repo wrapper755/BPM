@@ -247,6 +247,18 @@ class DependentInfo(ContractModel):
     pinned_hash: str | None = None
 
 
+class NodeLabel(ContractModel):
+    """`GET /packages/{id}/{version}/nodes`의 한 줄 — 정의 안 노드 하나의 이름.
+
+    실행 기록(C3)은 노드를 id로만 가리킨다. **읽을 때** 패키지 정의에서 꺼낸다 (저장하지 않는다).
+    """
+
+    id: str
+    name: str | None = None
+    #: BPMN 요소 이름 (`serviceTask`·`exclusiveGateway` …).
+    kind: str
+
+
 class BotUiKey(ContractModel):
     """그 PC 실행기가 쓰는 Center API 키 (C7). **원문·해시는 주지 않는다.**"""
 

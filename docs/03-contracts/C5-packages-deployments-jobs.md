@@ -54,7 +54,7 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 
 | 엔드포인트 | 읽기 | 관리자 | Studio 키 | PC 실행기·서버 실행기 키 | 연동용 키 |
 | --- | --- | --- | --- | --- | --- |
-| `GET /packages…` (목록·정보) | ✓ | ✓ | ✓ | — | — |
+| `GET /packages…` (목록·정보·참조·노드 이름·다이어그램) | ✓ | ✓ | ✓ | — | — |
 | `GET /packages/{id}/{v}` (내려받기) | — | ✓ | ✓ | 자기 배포분만 | — |
 | `POST /packages` | — | ✓ | ✓ | — | — |
 | `POST /auth/login` | 인증 없음 | | | | |
@@ -120,6 +120,8 @@ AccountInfo 필드: `username`, `role`, `state`(`active` / `disabled`), `created
 | `POST /packages/{id}/{version}/revoke` `{reason?}` | 승인 철회. Center가 C2 `package_revoke` 봉투에 서명한다. 상태가 `revoked`가 되고 배포가 모두 무효가 된다. **되살릴 수 없다** | 200 |
 | `PUT /packages/{id}/{version}/status` `{status: "deprecated"}` | 지원 종료 표시. 새 배포를 막는다. 서명이 필요 없다 (실행을 허용하는 쪽이 아니라 막는 쪽이라서) | 200 |
 | `GET /packages/{id}/{version}/dependents` | 이 패키지를 `requires`로 쓰는 패키지 | 200 DependentInfo[] |
+| `GET /packages/{id}/{version}/nodes` | 정의 안 노드의 이름 (CON-01이 노드 id 옆에 보인다) | 200 NodeLabel[] |
+| `GET /packages/{id}/{version}/diagram` | 진입 정의(`entry`)의 BPMN XML 그대로 (CON-01 「다이어그램」) | 200 `application/xml` / 404 |
 | `DELETE /packages/{id}/{version}` | 삭제. 배포나 다른 패키지가 참조하면 409 `in_use` | 204 |
 
 지원 종료(`PUT …/status`) 규칙:
@@ -161,6 +163,28 @@ DependentInfo 필드:
 - 참조는 **버전까지 같아야** 센다. `requires.libs`의 `<id>@<version>`을 그대로 맞춰 본다.
 - `pinned_hash`가 이 패키지의 `content_hash`와 다르면 **그래도 센다** — 참조하는 쪽이 낡은 해시를 고정해 둔 것이고, 그 패키지의 실행은 C1 R7·설치 검사에서 걸린다. 삭제를 막는 쪽에서는 「쓰는 데가 있다」가 맞다.
 - 자기 자신은 세지 않는다.
+
+### 노드 이름 (`nodes`)
+
+실행 기록(C3)은 노드를 **id로만** 가리킨다. 사람이 읽는 이름은 패키지의 정의(.bpmn)에 있으므로 Center가 **읽을 때** 패키지 zip에서 꺼내 준다 (저장하지 않는다 — `dependents`와 같은 결). 그래서 이 기능 전에 돈 실행도 이름이 보인다.
+
+NodeLabel 필드:
+
+| 필드 | 뜻 |
+| --- | --- |
+| `id` | BPMN 요소 id — C3 `node_id`와 같다 |
+| `name`? | BPMN 요소의 `name`. 없으면 비운다 (화면은 id만 보인다) |
+| `kind` | BPMN 요소 이름 (`serviceTask`·`userTask`·`exclusiveGateway` …) |
+
+- 읽는 정의는 `entry`가 먼저, 그다음 `process/`·`libs/`의 나머지 `.bpmn`이다. 하위 프로세스 안쪽 노드도 펼쳐 담는다. **같은 id가 둘이면 먼저 읽은 것**이다.
+- 읽히지 않는 정의는 건너뛴다(빈 목록일 수 있다) — 이름은 보이는 데 쓰는 것이라 오류로 막지 않는다.
+- `process_lib`·`bpm_process` 모두 답한다. 패키지가 없으면 404 `not_found`다.
+
+### 다이어그램 (`diagram`)
+
+진입 정의(매니페스트 `entry`)의 `.bpmn`을 **바꾸지 않고** 돌려준다(`application/xml; charset=utf-8`). 그림 좌표(BPMNDI)를 읽고 그리는 것은 받는 쪽이다 ([ADR-0136](../decisions/0136-run-detail-shows-the-diagram.md)). 정의에는 업무 값이 없다(원칙 6) — 권한은 패키지 정보와 같다.
+
+- 패키지가 없거나 `entry`가 없거나(`process_lib`) zip에 그 파일이 없으면 404 `not_found`다.
 
 ### 삭제 (`DELETE`)
 
@@ -419,6 +443,8 @@ BotUiInfo 필드:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-08 | 1 | **`GET …/diagram`을 더했다** — CON-01이 진입 정의를 그린다. 새 엔드포인트라 옛 쪽은 영향이 없다 | [0136](../decisions/0136-run-detail-shows-the-diagram.md) |
+| 2026-11-08 | 1 | **`GET …/nodes`(NodeLabel)를 더했다** — CON-01이 노드 id 옆에 이름을 보인다. 실행 기록은 그대로 id만 싣고 이름은 Center가 패키지 정의에서 읽을 때 꺼낸다. 새 엔드포인트라 옛 쪽은 영향이 없다 | — |
 | 2026-11-01 | 1 | **가상 직원을 없앴다** — §가상 직원(`/virtual-workers`, `VirtualWorkerRequest`·`Info`, `intake_*` 관문)·`JobCreateRequest.virtual_worker`·`JobInfo.virtual_worker`·`?virtual_worker=`를 걷었다. 업무 주체는 C16 직원이다 | [0125](../decisions/0125-organization-and-work-placement.md) |
 | 2026-10-31 | 1 | 등록 승인에서 **일꾼(`consumer`) 갈래를 걷었다** — `approve`의 `topics`·`EnrollmentInfo.topics`, 권한표의 `POST /consumers/enroll`·`POST/DELETE /resources/extensions`. 일꾼은 일꾼 폴더로만 들어오고 외부 확장 정의는 일꾼이 올린다 | [0122](../decisions/0122-consumer-folder.md) |
 | 2026-10-31 | 1 | `PUT /bot-uis/{id}/utility`(「셀렉터 등록」)와 `BotUiInfo.worker`·`selector_registration`을 걷었다 — 등록 세션을 여는 UI 자동화 확장이 없다. 권한표 줄 하나가 빠졌다 | [0114](../decisions/0114-remove-ui-automation.md) |

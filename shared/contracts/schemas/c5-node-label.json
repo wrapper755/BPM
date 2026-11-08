@@ -1,0 +1,33 @@
+{
+  "$id": "urn:bpm:contracts:c5-node-label",
+  "additionalProperties": true,
+  "description": "`GET /packages/{id}/{version}/nodes`의 한 줄 — 정의 안 노드 하나의 이름.\n\n실행 기록(C3)은 노드를 id로만 가리킨다. **읽을 때** 패키지 정의에서 꺼낸다 (저장하지 않는다).",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "title": "Kind",
+      "type": "string"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Name"
+    }
+  },
+  "required": [
+    "id",
+    "kind"
+  ],
+  "title": "NodeLabel",
+  "type": "object"
+}

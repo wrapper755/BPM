@@ -11,7 +11,8 @@ import { namesOf, placeLine, workPlaceLabel } from "@/lib/organization";
 import { ServerRunners } from "@/components/ServerRunners";
 import { Schedules } from "@/components/Schedules";
 import { STATUS_LABEL, packageHref, time } from "@/app/packages/page";
-import { DeleteVersion, VersionMenu } from "./tools";
+import { DeleteVersion } from "./tools";
+import { PackageActions } from "@/components/PackageActions";
 import {
   NO_RUNS,
   SAMPLE,
@@ -335,29 +336,37 @@ function Metric({ label, title, children }: { label: string; title?: string; chi
 
 /**
  * [B] 카드 한 장 — BPM 프로세스 하나 (CON-02). 앞면은 **대표 판**의 지표이고 나머지 판은
- * 「다른 판」에 접힌다. 승인 단추는 판마다 「...」 안에 있다.
+ * 「다른 판」에 접힌다. 승인 단추는 판마다 그 줄에 드러나 있다.
  */
+/** 승인 단추가 있는 상태 (`PackageActions`의 `asksFor`와 같다 — 철회는 끝이라 단추가 없다). */
+const ACTIONABLE = new Set(["candidate", "approved", "deprecated"]);
+
 function ProcessCard({ group, place, admin }: { group: ProcessGroup; place: Place; admin: boolean }) {
   const { lead } = group;
   const blocked = group.troubled.filter((row) => row.blocked > 0);
   const missing = group.troubled.filter((row) => row.missing.length > 0);
   return (
     <li className="flex flex-col gap-3 rounded-lg border border-border-default bg-bg-surface p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-col gap-1">
-          <Link className="truncate font-mono text-body font-semibold underline" href={packageHref(lead)}>
-            {group.id}
-          </Link>
-          {group.name ? <span className="truncate text-body-sm text-text-muted">{group.name}</span> : null}
-        </div>
-        {admin ? (
-          <VersionMenu packageId={lead.id} version={lead.version} status={lead.status} place={lead.place_line} />
-        ) : null}
+      {/* 업무 이름이 먼저, id는 그 아래 작게 (화면 문서 CON-02 [I]) — 이름이 없으면 id가 제목이다. */}
+      <div className="flex min-w-0 flex-col gap-1">
+        <Link
+          className={`truncate text-body font-semibold underline ${group.name ? "" : "font-mono"}`}
+          href={packageHref({ id: lead.id, version: lead.version, kind: "bpm_process" })}
+        >
+          {group.name ?? group.id}
+        </Link>
+        {group.name ? <span className="truncate font-mono text-body-sm text-text-muted">{group.id}</span> : null}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono text-body">{lead.version}</span>
         <StatusBadge group="패키지" label={STATUS_LABEL[lead.status] ?? lead.status} />
+        {/* 승인 단추는 숨기지 않고 드러내 둔다 (CON-02 [M]). */}
+        {admin && ACTIONABLE.has(lead.status) ? (
+          <span className="ml-auto">
+            <PackageActions packageId={lead.id} version={lead.version} status={lead.status} place={lead.place_line} />
+          </span>
+        ) : null}
       </div>
 
       {lead.sample === 0 ? (
@@ -417,7 +426,7 @@ function ProcessCard({ group, place, admin }: { group: ProcessGroup; place: Plac
           <ul className="mt-2 flex flex-col gap-1">
             {group.others.map((row) => (
               <li key={row.version} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm">
-                <Link className="font-mono underline" href={packageHref(row)}>
+                <Link className="font-mono underline" href={packageHref({ id: row.id, version: row.version, kind: "bpm_process" })}>
                   {row.version}
                 </Link>
                 <StatusBadge group="패키지" label={STATUS_LABEL[row.status] ?? row.status} />
@@ -425,9 +434,9 @@ function ProcessCard({ group, place, admin }: { group: ProcessGroup; place: Plac
                   {percent(row.successes, row.sample) ?? "—"} · {row.sample === 0 ? "—" : `${row.sample}회`}
                 </span>
                 <span className="text-text-muted">{time(row.last_success)}</span>
-                {admin ? (
+                {admin && ACTIONABLE.has(row.status) ? (
                   <span className="ml-auto">
-                    <VersionMenu packageId={row.id} version={row.version} status={row.status} place={row.place_line} />
+                    <PackageActions packageId={row.id} version={row.version} status={row.status} place={row.place_line} />
                   </span>
                 ) : null}
               </li>

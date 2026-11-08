@@ -17,7 +17,8 @@ from bpm.center.api.signing import STATUS_DEPRECATED, STATUS_REVOKED
 from bpm.center.errors import ApiError
 from bpm.center.settings import MAX_PACKAGE_MB
 from bpm.center.storage import Store, dumps, loads, now_iso
-from bpm.contracts.center_api import DependentInfo, PackageInfo
+from bpm.contracts.bpmn_ext import BpmnReadError, Node, read_process
+from bpm.contracts.center_api import DependentInfo, NodeLabel, PackageInfo
 from bpm.contracts.hashing import MANIFEST_NAME, content_hash_zip
 from bpm.contracts.manifest import Manifest
 from bpm.contracts.manifest import validate as validate_manifest
@@ -383,6 +384,58 @@ def remove(store: Store, *, package_dir: Path, package_id: str, version: str) ->
     with store.tx() as cur:
         cur.execute("DELETE FROM packages WHERE id = ? AND version = ?", (package_id, version))
     (package_dir / row["file_name"]).unlink(missing_ok=True)
+
+
+def node_labels(store: Store, *, package_dir: Path, package_id: str, version: str) -> list[NodeLabel]:
+    """정의 안 노드의 이름 (C5 `nodes`, CON-01). **읽을 때** zip에서 꺼낸다 — 저장하지 않는다.
+
+    `entry`가 먼저, 그다음 나머지 `.bpmn`(`process/`·`libs/`). 같은 id는 먼저 읽은 것이다.
+    읽히지 않는 정의는 건너뛴다 — 이름은 보이는 데만 쓴다.
+    """
+    row = store.row("SELECT * FROM packages WHERE id = ? AND version = ?", (package_id, version))
+    if row is None:
+        raise ApiError(404, "not_found", f"{package_id}@{version}이 없다")
+    path = package_dir / row["file_name"]
+    if not path.exists():
+        return []
+    entry = Manifest.model_validate(loads(row["manifest_json"], {})).entry
+    found: dict[str, NodeLabel] = {}
+
+    def walk(nodes: list[Node]) -> None:
+        for node in nodes:
+            found.setdefault(node.id, NodeLabel(id=node.id, name=node.name or None, kind=node.kind))
+            walk(node.children)
+
+    with _open_zip(path) as archive:
+        names = sorted(name for name in archive.namelist() if name.endswith(".bpmn"))
+        if entry in names:
+            names.remove(entry)
+            names.insert(0, entry)
+        for name in names:
+            try:
+                walk(read_process(archive.read(name)).nodes)
+            except BpmnReadError:
+                continue
+    return list(found.values())
+
+
+def diagram(store: Store, *, package_dir: Path, package_id: str, version: str) -> bytes:
+    """진입 정의(`entry`)의 BPMN 그대로 (C5 `diagram`, CON-01 — ADR-0136). **바꾸지 않고** 돌려준다.
+
+    없으면(패키지·`entry`·zip 안 파일) 404다 — 그리는 쪽이 「못 읽었다」고 말한다.
+    """
+    row = store.row("SELECT * FROM packages WHERE id = ? AND version = ?", (package_id, version))
+    if row is None:
+        raise ApiError(404, "not_found", f"{package_id}@{version}이 없다")
+    entry = Manifest.model_validate(loads(row["manifest_json"], {})).entry
+    path = package_dir / row["file_name"]
+    if not entry or not path.exists():
+        raise ApiError(404, "not_found", f"{package_id}@{version}에 진입 정의가 없다")
+    with _open_zip(path) as archive:
+        try:
+            return archive.read(entry)
+        except KeyError as e:
+            raise ApiError(404, "not_found", f"{package_id}@{version}에 {entry}가 없다") from e
 
 
 def file_path(store: Store, *, package_dir: Path, package_id: str, version: str) -> tuple[Path, str]:

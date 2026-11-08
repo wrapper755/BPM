@@ -8,6 +8,7 @@ import { CenterError, center, session } from "@/lib/center";
 import { FINISHED, TASK_KIND, TASK_STATE, type ResumeRow, duration, resumes, taskPlace, waitTotals } from "@/lib/summary";
 import { type NodeBar, type NodeRow, bars, llmSteps, timeline } from "@/lib/timeline";
 import { Shell } from "@/components/Shell";
+import { Diagram, type DiagramState } from "./diagram";
 import { LABEL, loadOrgNames, seconds, time, where } from "../page";
 import { orgName } from "@/lib/organization";
 
@@ -69,10 +70,11 @@ const HUMAN_LAYER: Record<string, string> = {
  * 「노드 타임라인」의 막대 — 노드마다 한 줄 (CON-01).
  *
  * 자리는 `lib/timeline.ts`의 `bars()`가 비율로 주고 색은 `status_map`의 「실행·노드」 색이다.
- * **줄 앞에 노드 id와 상태 글이 있다** — 색만으로 뜻을 전하지 않는다 (스타일 가이드 §7).
+ * **줄 앞에 노드 이름과 상태 글이 있다** — 색만으로 뜻을 전하지 않는다 (스타일 가이드 §7).
+ * 이름이 있으면 이름만 보이고 id는 마우스를 올리면 보인다. 없으면 id다.
  * 기다린 구간은 점선 테두리로 겹친다. 폭이 0인 막대(대기·재생만 찍힌 노드)는 눈금이다.
  */
-function Bars({ rows }: { rows: NodeBar[] }) {
+function Bars({ rows, names }: { rows: NodeBar[]; names: NodeNames }) {
   const pct = (value: number) => `${(value * 100).toFixed(2)}%`;
   return (
     <ul className="flex flex-col gap-1" aria-label="노드 타임라인 막대">
@@ -80,9 +82,9 @@ function Bars({ rows }: { rows: NodeBar[] }) {
         const label = NODE_STATE[row.state] ?? row.state;
         const token = statusToken("실행·노드", label) ?? "neutral";
         return (
-          <li key={row.node_id} className="grid grid-cols-[minmax(0,16ch)_10ch_1fr] items-center gap-2 text-body-sm">
-            <span className="truncate font-mono" title={row.node_id}>
-              {row.node_id}
+          <li key={row.node_id} id={`node-${row.node_id}`} className="grid grid-cols-[minmax(0,16ch)_10ch_1fr] items-center gap-2 text-body-sm">
+            <span className={`truncate ${names.get(row.node_id) ? "" : "font-mono"}`} title={row.node_id}>
+              {names.get(row.node_id) ?? row.node_id}
             </span>
             <span className="text-text-secondary">{label}</span>
             <span
@@ -121,6 +123,22 @@ function Bars({ rows }: { rows: NodeBar[] }) {
   );
 }
 
+/** 노드 id → 이름 (C5 `nodes`). 못 읽으면 비어 있고 화면은 id만 보인다. */
+type NodeNames = Map<string, string>;
+
+/** 표의 「노드」 칸 — 이름 옆에 id를 작은 회색 글로. 이름이 없으면 id 하나다 (화면 문서 CON-01). */
+function NodeCell({ id, names, suffix = "" }: { id: string | null | undefined; names: NodeNames; suffix?: string }) {
+  if (!id) return <>—</>;
+  const name = names.get(id);
+  if (!name) return <span className="font-mono">{`${id}${suffix}`}</span>;
+  return (
+    <span>
+      {name}
+      <span className="ml-2 font-mono text-body-sm text-text-muted">{`${id}${suffix}`}</span>
+    </span>
+  );
+}
+
 export function counts(events: RunEvent[]): Record<string, number> {
   const found: Record<string, number> = {};
   for (const event of events) found[event.kind] = (found[event.kind] ?? 0) + 1;
@@ -155,6 +173,27 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
   }
 
+  // 이름표 — BPM 프로세스 이름(C5 `PackageInfo.name`)과 노드 이름(C5 `nodes`). 실행 기록에는 id만
+  // 있다. **못 읽어도 상세는 그린다** — 패키지가 지워졌으면 id로 보인다.
+  let processName: string | null = null;
+  let names: NodeNames = new Map();
+  // 「다이어그램」의 재료 — 진입 정의 XML (C5 `diagram`, ADR-0136). 못 읽으면 그 까닭을 한 줄로.
+  let diagram: string | null = null;
+  let diagramFailure: string | null = info?.bpm_process_id && info.version ? null : "BPM 프로세스·판을 모르는 실행입니다";
+  if (info?.bpm_process_id && info.version) {
+    const [pkgInfo, labels, definition] = await Promise.allSettled([
+      center.packageInfo(info.bpm_process_id, info.version),
+      center.packageNodes(info.bpm_process_id, info.version),
+      center.packageDiagram(info.bpm_process_id, info.version),
+    ]);
+    if (definition.status === "fulfilled") diagram = definition.value;
+    else diagramFailure = definition.reason instanceof CenterError ? definition.reason.message : "알 수 없는 오류";
+    if (pkgInfo.status === "fulfilled") processName = pkgInfo.value.name ?? null;
+    if (labels.status === "fulfilled") {
+      names = new Map(labels.value.flatMap((one) => (one.name ? [[one.id, one.name] as const] : [])));
+    }
+  }
+
   const org = await loadOrgNames();
   const nodes = timeline(events);
   const llm = llmSteps(events);
@@ -173,6 +212,17 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
     now: new Date().toISOString(),
   });
 
+  // 다이어그램의 노드 상태 — 타임라인과 같은 줄에서 (색 토큰은 「실행·노드」 표기에서).
+  const diagramStates: Record<string, DiagramState> = Object.fromEntries(
+    nodes.map((row) => [
+      row.node_id,
+      {
+        token: statusToken("실행·노드", NODE_STATE[row.state] ?? row.state) ?? "neutral",
+        waiting: row.state === "waiting",
+      },
+    ]),
+  );
+
   // 「외부 작업」 — 그 실행이 Center에 올린 일감 (C15). **어디서 멈췄는지**(기다림·일꾼이 쥠·다시
   // 나감)는 실행 기록에 없고 Center의 일감에만 있다. 못 읽어도 나머지 상세는 그린다.
   let tasks: ExternalTaskInfo[] = [];
@@ -186,7 +236,7 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
   }
 
   const nodeColumns: Array<Column<NodeRow>> = [
-    { key: "node_id", header: "노드", mono: true },
+    { key: "node_id", header: "노드", cell: (row) => <NodeCell id={row.node_id} names={names} /> },
     {
       key: "state",
       header: "상태",
@@ -201,7 +251,7 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
   const agentColumns: Array<Column<RunEvent>> = [
     { key: "seq", header: "순번", width: "8ch", align: "right" },
     { key: "ts", header: "시각", width: "14ch", cell: (row) => time(row.ts) },
-    { key: "node_id", header: "노드", mono: true, cell: (row) => row.node_id ?? "—" },
+    { key: "node_id", header: "노드", cell: (row) => <NodeCell id={row.node_id} names={names} /> },
     { key: "action", header: "단계", width: "10ch", cell: (row) => String(row.data?.action ?? "—") },
     { key: "tool", header: "도구", cell: (row) => String(row.data?.tool ?? "—") },
   ];
@@ -210,7 +260,7 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
     { key: "seq", header: "순번", width: "8ch", align: "right" },
     { key: "ts", header: "시각", width: "14ch", cell: (row) => time(row.ts) },
     { key: "kind", header: "무엇", width: "12ch", cell: (row) => HUMAN_KIND[row.kind] ?? row.kind },
-    { key: "node_id", header: "노드", mono: true, cell: (row) => row.node_id ?? "—" },
+    { key: "node_id", header: "노드", cell: (row) => <NodeCell id={row.node_id} names={names} /> },
     {
       key: "layer",
       header: "종류",
@@ -227,7 +277,7 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
       width: "10ch",
       cell: (row) => WAITING_FOR[row.waiting_for] ?? row.waiting_for ?? "—",
     },
-    { key: "node_id", header: "노드", mono: true, cell: (row) => row.node_id ?? "—" },
+    { key: "node_id", header: "노드", cell: (row) => <NodeCell id={row.node_id} names={names} /> },
     { key: "since", header: "기다리기 시작", width: "14ch", cell: (row) => time(row.since) },
     {
       key: "until",
@@ -262,7 +312,11 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
   ];
 
   const taskColumns: Array<Column<ExternalTaskInfo>> = [
-    { key: "node_id", header: "노드", mono: true, cell: (row) => taskPlace(row) },
+    {
+      key: "node_id",
+      header: "노드",
+      cell: (row) => <NodeCell id={row.node_id} names={names} suffix={taskPlace(row).slice(row.node_id.length)} />,
+    },
     {
       key: "topic",
       header: "토픽",
@@ -315,7 +369,17 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
     <Shell mode={found.mode} actor={found.actor} current="/runs">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-h1 font-bold font-mono">{decodeURIComponent(runId)}</h1>
+          {/* 제목은 BPM 프로세스 이름, 그 아래 실행 id (화면 문서 CON-01). 이름을 못 읽으면 id다. */}
+          {processName || info?.bpm_process_id ? (
+            <>
+              <h1 className={`text-h1 font-bold ${processName ? "" : "font-mono"}`}>
+                {processName ?? info?.bpm_process_id}
+              </h1>
+              <p className="font-mono text-body-sm text-text-muted">{decodeURIComponent(runId)}</p>
+            </>
+          ) : (
+            <h1 className="text-h1 font-bold font-mono">{decodeURIComponent(runId)}</h1>
+          )}
         </div>
       </header>
 
@@ -382,12 +446,20 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
             {info.error_code ? <ErrorBanner message={`오류 코드: ${info.error_code}`} /> : null}
           </Section>
 
+          <Section title="다이어그램">
+            {diagram ? (
+              <Diagram xml={diagram} states={diagramStates} />
+            ) : (
+              <p className="text-body-sm text-text-muted">다이어그램을 읽지 못했습니다 — {diagramFailure}</p>
+            )}
+          </Section>
+
           <Section title="노드 타임라인">
             {nodes.length === 0 ? (
               <Empty kind="노드" />
             ) : (
               <>
-                <Bars rows={nodeBars} />
+                <Bars rows={nodeBars} names={names} />
                 {waits.length > 0 ? (
                   <p className="text-body-sm text-text-muted">점선은 그 노드가 기다린 구간입니다 (아래 「이어 돈 기록」).</p>
                 ) : null}
