@@ -15,8 +15,8 @@ uv run bpm-center consumer-file worker --topics external --dir server/deploy/con
 **연동용·대리 답용 키도 여기서 들인다** ([ADR-0123](../../../docs/decisions/0123-folder-keys.md)) — `<이름>.key.json`:
 
 ```bash
-uv run bpm-center key-file nowview --type integration --dir server/deploy/consumers
-uv run bpm-center key-file nowview-relay --type relay --dir server/deploy/consumers
+uv run bpm-center key-file company1-worker --type integration --dir server/deploy/consumers   # 업무 처리기의 연동용 키
+uv run bpm-center key-file company1-site --type relay --dir server/deploy/consumers            # 회사 사이트의 대리 답 키
 ```
 
 결과와 사유는 콘솔 CON-07 「일꾼 폴더」와 Center 로그에 보인다. 자리를 바꾸려면 `.env`에
