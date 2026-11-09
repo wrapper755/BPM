@@ -1,0 +1,250 @@
+{
+  "$defs": {
+    "AdminKey": {
+      "additionalProperties": true,
+      "description": "Admin 공개키 하나. 철회된 키도 `revoked_at`과 함께 내려온다 (C4로 배포된다).",
+      "properties": {
+        "key_id": {
+          "pattern": "^[0-9a-f]{16}$",
+          "title": "Key Id",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "public_key": {
+          "title": "Public Key",
+          "type": "string"
+        },
+        "revoked_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revoked At"
+        }
+      },
+      "required": [
+        "key_id",
+        "public_key"
+      ],
+      "title": "AdminKey",
+      "type": "object"
+    },
+    "ExtensionResource": {
+      "additionalProperties": true,
+      "description": "확장 하나 (C13 정의에서 모은 것).",
+      "properties": {
+        "checked_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checked At"
+        },
+        "contributes_summary": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Contributes Summary",
+          "type": "object"
+        },
+        "definition": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Definition"
+        },
+        "definition_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Definition Hash"
+        },
+        "envelope": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Envelope"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "installed_on": {
+          "$ref": "#/$defs/InstalledOn"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Protocol"
+        },
+        "publisher": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Publisher"
+        },
+        "service_app_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Service App Id"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "status": {
+          "default": "n/a",
+          "title": "Status",
+          "type": "string"
+        },
+        "status_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Status Reasons",
+          "type": "array"
+        },
+        "tier": {
+          "title": "Tier",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "tier"
+      ],
+      "title": "ExtensionResource",
+      "type": "object"
+    },
+    "InstalledOn": {
+      "additionalProperties": true,
+      "description": "이 확장을 가진 실행하는 쪽의 수와 버전 분포 (C4·C12 보고. Studio는 세지 않는다).",
+      "properties": {
+        "by_version": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "By Version",
+          "type": "object"
+        },
+        "hosts": {
+          "default": 0,
+          "title": "Hosts",
+          "type": "integer"
+        }
+      },
+      "title": "InstalledOn",
+      "type": "object"
+    }
+  },
+  "$id": "urn:bpm:contracts:c15-consumer-extensions",
+  "additionalProperties": true,
+  "description": "`GET /consumers/self/extensions` — 원본이 콘솔인 맡은 외부 확장 정의와 그 봉투를 검증할 공개키\n(C15 §콘솔이 원본인 정의 받기, ADR-0141). 일꾼은 `keys`로 봉투를 다시 검증한다(C13 E6).",
+  "properties": {
+    "extensions": {
+      "items": {
+        "$ref": "#/$defs/ExtensionResource"
+      },
+      "title": "Extensions",
+      "type": "array"
+    },
+    "keys": {
+      "items": {
+        "$ref": "#/$defs/AdminKey"
+      },
+      "title": "Keys",
+      "type": "array"
+    }
+  },
+  "title": "ConsumerExtensions",
+  "type": "object"
+}

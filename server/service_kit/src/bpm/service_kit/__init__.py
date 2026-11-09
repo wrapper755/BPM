@@ -22,7 +22,7 @@ from bpm.service_kit.app import (
     TopicService,
     create_app,
 )
-from bpm.service_kit.consumer import Consumer, TokenFile, start_in_thread
+from bpm.service_kit.consumer import Consumer, TokenFile, TopicSource, start_in_thread
 from bpm.service_kit.llm import LLM_UNAVAILABLE, LlmSettings, ServiceLlm, usage_of
 from bpm.service_kit.stores import (
     IdempotencyStore,
@@ -48,6 +48,7 @@ __all__ = [
     "Service",
     "ServiceLlm",
     "TokenFile",
+    "TopicSource",
     "TopicService",
     "UsageLog",
     "admin_guard",

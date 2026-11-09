@@ -27,6 +27,7 @@ export const CONTRACT_MODULES = [
   "c15-consumer-address-upload",
   "c15-consumer-create-request",
   "c15-consumer-created",
+  "c15-consumer-extensions",
   "c15-consumer-info",
   "c15-consumer-update-request",
   "c15-extend-request",

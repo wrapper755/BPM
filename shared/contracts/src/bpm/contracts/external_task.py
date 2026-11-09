@@ -21,7 +21,9 @@ from pydantic import Field
 from bpm.contracts._base import ContractModel, SchemaVersioned, Timestamp
 from bpm.contracts.enrollment import RotatedKey
 from bpm.contracts.extension import Catalog
+from bpm.contracts.resources import ExtensionResource
 from bpm.contracts.service_app import Caller, Operation, ServiceAppManifest, Usage
+from bpm.contracts.signing import AdminKey
 
 #: 롱폴링 한 번이 물고 있는 가장 긴 시간 (초). 더 길게 달라고 하면 이것으로 깎는다.
 MAX_WAIT_S = 25
@@ -285,6 +287,16 @@ class ConsumerAddressUpload(ContractModel):
     address: ConsumerAddress
 
 
+class ConsumerExtensions(ContractModel):
+    """`GET /consumers/self/extensions` — 원본이 콘솔인 맡은 외부 확장 정의와 그 봉투를 검증할 공개키
+    (C15 §콘솔이 원본인 정의 받기, ADR-0141). 일꾼은 `keys`로 봉투를 다시 검증한다(C13 E6)."""
+
+    #: 봉투를 검증할 공개키 (C2) — 서버 실행기가 하트비트로 받는 `admin_keys`와 같은 것이다.
+    keys: list[AdminKey] = Field(default_factory=list)
+    #: 외부 확장마다 철회하지 않은 판 모두 (정의·봉투 포함, 같은 id는 새 판부터).
+    extensions: list[ExtensionResource] = Field(default_factory=list)
+
+
 #: 일꾼이 들어온 길 (`ConsumerInfo.source`, ADR-0137) — 콘솔에서 만들었나, 일꾼 폴더가 처음 들였나.
 CONSUMER_SOURCES = ("console", "folder")
 
@@ -410,6 +422,7 @@ __all__ = [
     "ConsumerCreated",
     "ConsumerInfo",
     "ConsumerUpdateRequest",
+    "ConsumerExtensions",
     "ExternalTaskInfo",
     "ExtendRequest",
     "ExternalTaskCreate",

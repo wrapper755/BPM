@@ -243,12 +243,13 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 ### 콘솔이 원본인 정의 받기 ([ADR-0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md))
 
-> 상태: **Center 쪽이 돈다**(`center/api/external_tasks.py`) — 일꾼(어댑터 일꾼·통합 일꾼)이 받아 쓰는 쪽은 아직이다(`docs/09-gaps.md` §3-32).
+> 상태: **양쪽이 돈다** — Center(`center/api/external_tasks.py`)와 일꾼(`adapter_consumer.console.ConsoleDefinitions` — 어댑터 일꾼·통합 일꾼이 `service_kit.Consumer`의 `sources`로 꽂는다). `tests/server/test_adapter_consumer_console.py`가 지킨다. 콘솔 화면(CON-18)은 아직이다(`docs/09-gaps.md` §3-32).
 
-`GET /api/v1/consumers/self/extensions` → C7 `ExtensionResource[]` — 그 일꾼의 **토픽 안**이고 원본이 `console`인 외부 확장마다 **철회하지 않은 판 모두**(정의·봉투 포함, 새 판부터). 일꾼은 뜰 때 받고, 봉투를 다시 검증한다(C13 E6).
+`GET /api/v1/consumers/self/extensions` → `ConsumerExtensions{keys, extensions}` — `extensions`는 C7 `ExtensionResource[]`로 그 일꾼의 **토픽 안**이고 원본이 `console`인 외부 확장마다 **철회하지 않은 판 모두**(정의·봉투 포함, 새 판부터), `keys`는 봉투를 검증할 공개키(C2 — 서버 실행기가 하트비트로 받는 `admin_keys`와 같다)다. 일꾼은 뜰 때와 카탈로그를 다시 보는 주기마다 받고, 봉투를 `keys`로 다시 검증한다(C13 E6). 검증을 지나지 못한 판은 쓰지 않고 그 까닭을 로그에 남긴다.
 
 - 원본이 콘솔인 토픽의 일감에는 **`LockedTask.definition_version`**이 있다 — 그 일감을 부를 판이다 — 부른 BPM 프로세스가 정의를 고정했으면(C1 `definition_hash`) **그 해시의 판**, 아니면(시험 실행·시험 호출 포함) 올릴 때의 지금 판이다(ADR-0060·0141). 일꾼은 그 판을 들고 있지 않으면 이 길로 다시 받고, 그래도 없으면(철회됐다) 그 일감을 `fail` `definition_unavailable`로 끝낸다.
 - 일꾼이 **파일로 들고 있는 정의**(`BPM_ADAPTER__DEFINITIONS`·`BPM_CONSUMER__DEFINITIONS`)와 id가 겹치면 **Center 것을 쓰고** 파일 것은 올리지 않으며 경고를 남긴다.
+- 원본이 콘솔인 토픽에는 **manifest를 올리지 않는다** — 작업 대조·종류는 Center가 지금 판의 정의에서 읽는다(올린 manifest가 있으면 그것이 이기므로, 고친 판에 더한 작업이 옛 manifest에 막힌다).
 - 주소·키는 일꾼 설정이 이긴다(§외부 확장 정의 올리기). 그래서 일꾼은 받은 정의로도 `PUT …/self/extension`의 `address`처럼 쓰는 주소를 알린다 — `PUT /api/v1/consumers/self/address` `ConsumerAddressUpload{extension_id, address}`(같은 `ConsumerAddress`).
 
 ### manifest·카탈로그 올리기
@@ -334,7 +335,7 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
-| 2026-11-09 | 1 | **콘솔이 원본인 외부 확장** — `GET /consumers/self/extensions`·`PUT /consumers/self/address`, `LockedTask.definition_version`, `PUT …/self/extension`의 409 `source_is_console`, 실패 코드 `definition_unavailable`. 새 엔드포인트와 선택 칸이라 판은 그대로다 | [0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md) |
+| 2026-11-09 | 1 | **콘솔이 원본인 외부 확장** — `GET /consumers/self/extensions`(`ConsumerExtensions` — 정의와 공개키)·`PUT /consumers/self/address`, `LockedTask.definition_version`, `PUT …/self/extension`의 409 `source_is_console`, 실패 코드 `definition_unavailable`. 새 엔드포인트와 선택 칸이라 판은 그대로다 | [0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md) |
 | 2026-11-09 | 1 | **일꾼의 종류** — `ConsumerCreateRequest`·`ConsumerUpdateRequest`·`ConsumerInfo`에 `kinds`(관리자가 정한다), 가져가기는 그 종류의 일감과 종류가 빈 일감만 준다. `ConsumerInfo.topic_kinds`(토픽 → 작업 종류), `apps`에 일꾼이 올린 외부 확장. 일감의 `kind`는 manifest가 없으면 등록된 외부 확장 정의에서 읽는다. 선택 칸이라 판은 그대로다 | [0139](../decisions/0139-consumer-kinds-are-set-in-the-console.md) |
 | 2026-11-08 | 1 | **일꾼은 콘솔에서 다룬다** — `POST /consumers`·`PUT`·`POST …/token`·`DELETE /consumers/{consumer_id}`(Center 관리자, `ConsumerCreateRequest`·`ConsumerUpdateRequest`·`ConsumerCreated`), `ConsumerInfo`에 `approved_by`·`source`. 일꾼 폴더는 처음 들이기만 하고 빠져도 지우지 않는다. 새 엔드포인트와 선택 칸이라 판은 그대로다 | [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |
 | 2026-11-08 | 1 | `PUT /consumers/self/extension`에 **`address`**(선택 — 일꾼이 쓰는 주소), `ConsumerInfo`에 **`addresses`**(토픽 → 주소). Center는 보여 주기만 한다. 선택 칸이라 판은 그대로다 | [0138](../decisions/0138-console-app-catalog.md) |

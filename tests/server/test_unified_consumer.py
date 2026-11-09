@@ -103,8 +103,11 @@ def test_two_owners_of_one_topic_refuse_to_start(tmp_path: Path) -> None:
 
 
 def test_without_anything_to_take_it_does_not_start(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # 맡을 것이 없는지는 Center에 붙어 봐야 안다 — 콘솔이 원본인 외부 확장을 받아 오기 때문이다 (ADR-0141).
+    # 그래서 Center 주소가 없으면 그것부터 말한다.
     monkeypatch.delenv("BPM_CONSUMER__DEFINITIONS", raising=False)
-    assert main(["--data-dir", str(tmp_path), "--handlers", "nothing-installed"]) == 1
+    monkeypatch.delenv("BPM_CONSUMER__CENTER__URL", raising=False)
+    assert main(["--data-dir", str(tmp_path), "--handlers", "nothing-installed"]) == 2
 
 
 # ─────────────────────────── Center를 거쳐 ───────────────────────────

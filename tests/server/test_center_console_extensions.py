@@ -28,7 +28,8 @@ from bpm.center.app import create_app
 from bpm.center.migrations import MIGRATIONS, migrate
 from bpm.center.settings import Settings
 from bpm.center.storage import SCHEMA, Store, now_iso
-from bpm.contracts.extension import definition_hash
+from bpm.contracts.extension import definition_hash, verify_external
+from bpm.contracts.signing import AdminKey, Envelope
 
 API = "/api/v1"
 ADMIN = {"Authorization": "Bearer t-admin"}
@@ -58,7 +59,7 @@ def adapter(**over: Any) -> dict[str, Any]:
     """콘솔이 만드는 HTTP 어댑터 앱 — 판은 Center가 정한다."""
     found = definition(**over)
     found.pop("version", None)
-    return found
+    return dict(found)
 
 
 def make(client: TestClient, **over: Any) -> dict[str, Any]:
@@ -180,14 +181,18 @@ def test_the_worker_fetches_console_definitions_and_reports_its_address(client: 
     token = worker(client, topics=("ext-ocr", "ext-none"))
     got = client.get(f"{API}/consumers/self/extensions", headers=bearer(token))
     assert got.status_code == 200
-    assert [(one["id"], one["version"], one["source"]) for one in got.json()] == [
+    held = got.json()["extensions"]
+    assert [(one["id"], one["version"], one["source"]) for one in held] == [
         ("ext-ocr", "0.1.1", "console"),
         ("ext-ocr", "0.1.0", "console"),
     ]
-    assert all(one["envelope"] for one in got.json())
+    # 일꾼이 봉투를 다시 검증할 수 있다 — 같이 온 공개키로 (C13 E6).
+    keys = [AdminKey.model_validate(one) for one in got.json()["keys"]]
+    for one in held:
+        assert verify_external(one["definition"], Envelope.model_validate(one["envelope"]), keys=keys) == []
     # 맡지 않은 토픽의 정의는 오지 않는다.
     stranger = worker(client, "stranger", ("ext-none",))
-    assert client.get(f"{API}/consumers/self/extensions", headers=bearer(stranger)).json() == []
+    assert client.get(f"{API}/consumers/self/extensions", headers=bearer(stranger)).json()["extensions"] == []
 
     body = {"extension_id": "ext-ocr", "address": {"base_url": "https://user:pw@ocr.internal/v1?x=1"}}
     got = client.put(f"{API}/consumers/self/address", json=body, headers=bearer(token))

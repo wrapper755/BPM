@@ -19,6 +19,8 @@
   `<접두>CENTER__TOKEN`이 있으면 그것이 이긴다 (개발·CI·컨테이너).
 - 외부 확장을 맡은 토픽(`extension_definition`이 있는 것)은 **제 정의를 올린다** — Center가 검사·서명한다
   (`PUT /consumers/self/extension`, ADR-0122). 더 높은 판이 이미 있으면(409) 로그만 남기고 이어 간다.
+- 토픽을 Center에서 받아 오는 쪽(`sources` — 원본이 콘솔인 외부 확장, ADR-0141)은 올리기 전에 먼저 맞춘다.
+  그 토픽은 `services`에 더해지고 manifest를 올리지 않는다(`publishes_manifest`).
 """
 
 from __future__ import annotations
@@ -34,7 +36,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from bpm.contracts.enrollment import open_sealed
 from bpm.contracts.external_task import MAX_WAIT_S, FetchResponse, LockedTask
@@ -110,6 +112,13 @@ class TokenFile:
 # ─────────────────────────── 가져가기 ───────────────────────────
 
 
+class TopicSource(Protocol):
+    """토픽을 Center에서 받아 오는 쪽 — 원본이 콘솔인 외부 확장 (`adapter_consumer.ConsoleDefinitions`)."""
+
+    def sync(self, consumer: Consumer) -> None: ...
+
+
+
 @dataclass
 class Consumer:
     """여러 서비스 앱(토픽 여럿)을 맡을 수 있다 — 모의 앱 열셋이 일꾼 하나다."""
@@ -117,6 +126,8 @@ class Consumer:
     services: Sequence[TopicService]
     center_url: str
     tokens: TokenFile
+    #: 토픽을 Center에서 받아 오는 쪽 — `sync(consumer)`가 `services`를 고친다 (올리기 전마다, ADR-0141).
+    sources: Sequence[TopicSource] = ()
     workers: int = 4
     wait_s: int = MAX_WAIT_S
     client: Any | None = None
@@ -130,7 +141,14 @@ class Consumer:
     def topics(self) -> list[str]:
         return [one.app_id for one in self.services]
 
-    def _service(self, topic: str) -> TopicService | None:
+    def add_service(self, service: TopicService) -> None:
+        """받아 온 토픽을 더한다 (`sources`) — 다음 가져가기부터 그 토픽도 가져간다."""
+        self.services = [*self.services, service]
+
+    def drop_service(self, service: TopicService) -> None:
+        self.services = [one for one in self.services if one is not service]
+
+    def service(self, topic: str) -> TopicService | None:
         return next((one for one in self.services if one.app_id == topic), None)
 
     def _http(self) -> Any:
@@ -149,6 +167,17 @@ class Consumer:
             raise RuntimeError("일꾼 토큰이 없다 — Center 일꾼 폴더의 파일을 지을 때 받은 토큰을 주세요 (ADR-0122)")
         return {"Authorization": f"Bearer {token}"}
 
+    def get(self, path: str) -> Any:
+        """Center에 일꾼 토큰으로 GET — 받아 오는 쪽(`sources`)이 쓴다. 4xx·5xx는 예외다."""
+        answer = self._http().get(path, headers=self._headers())
+        answer.raise_for_status()
+        return answer.json()
+
+    def put(self, path: str, body: Any) -> Any:
+        answer = self._http().put(path, json=body, headers=self._headers())
+        answer.raise_for_status()
+        return answer.json()
+
     def registration(self) -> CenterRegistration:
         """SVC-01 「Center 연결」 — 들었는가, 마지막으로 가져간 때."""
         return CenterRegistration(
@@ -160,7 +189,9 @@ class Consumer:
     def publish(self, *, force: bool = False) -> None:
         """외부 확장 정의·manifest(뜰 때 한 번)와 카탈로그(판이 바뀌었을 때)를 올린다 (C15)."""
         http = self._http()
-        for service in self.services:
+        for topic_source in self.sources:
+            topic_source.sync(self)
+        for service in list(self.services):
             definition = getattr(service, "extension_definition", None)
             slot = f"extension:{service.app_id}"
             if isinstance(definition, dict) and (force or slot not in self._published):
@@ -177,7 +208,7 @@ class Consumer:
                     answer.raise_for_status()
                 self._published[slot] = True
             key = f"manifest:{service.app_id}"
-            if force or key not in self._published:
+            if getattr(service, "publishes_manifest", True) and (force or key not in self._published):
                 answer = http.put(
                     "/api/v1/consumers/self/manifest",
                     json=service.manifest.to_json_dict(),
@@ -231,7 +262,7 @@ class Consumer:
 
     def handle(self, task: LockedTask) -> None:
         """일감 하나 — 수행하고 끝냈다고 알린다. 실패해도 루프를 멈추지 않는다."""
-        service = self._service(task.topic)
+        service = self.service(task.topic)
         if service is None:
             outcome_body: dict[str, Any] = {"code": "operation_not_found", "message": f"토픽 {task.topic}을 모른다"}
             path = f"/api/v1/consumers/tasks/{task.task_id}/fail"
@@ -288,4 +319,4 @@ def start_in_thread(consumer: Consumer) -> tuple[threading.Thread, threading.Eve
     return thread, stop
 
 
-__all__ = ["BACKOFF_S", "TOKEN_FILE", "Consumer", "TokenFile", "start_in_thread"]
+__all__ = ["BACKOFF_S", "TOKEN_FILE", "Consumer", "TokenFile", "TopicSource", "start_in_thread"]

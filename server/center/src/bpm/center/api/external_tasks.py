@@ -68,6 +68,7 @@ from bpm.contracts.external_task import (
     CompleteRequest,
     ConsumerAddress,
     ConsumerAddressUpload,
+    ConsumerExtensions,
     ConsumerInfo,
     ExtendRequest,
     ExternalTaskCreate,
@@ -1092,10 +1093,12 @@ async def put_self_extension(request: Request) -> Any:
 
 @router.get("/consumers/self/extensions")
 def get_self_extensions(request: Request) -> Any:
-    """원본이 콘솔인 맡은 외부 확장 정의 (C15, ADR-0141) — 일꾼이 받아 봉투를 다시 검증한다."""
+    """원본이 콘솔인 맡은 외부 확장 정의와 공개키 (C15, ADR-0141) — 일꾼이 받아 봉투를 다시 검증한다."""
+    from bpm.center.api.signing import admin_keys  # noqa: PLC0415 — 순환 import를 피한다 (resources와 같다)
+
     store = _store(request)
     consumer = consumer_of(store, _caller(request))
-    return [one.to_json_dict() for one in self_extensions(store, consumer)]
+    return ConsumerExtensions(keys=admin_keys(store), extensions=self_extensions(store, consumer)).to_json_dict()
 
 
 @router.put("/consumers/self/address")

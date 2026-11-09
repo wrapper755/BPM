@@ -80,6 +80,11 @@ class RecordingTopic:
         found: dict[str, Any] | None = getattr(self.inner, "extension_address", None)
         return found
 
+    @property
+    def publishes_manifest(self) -> bool:
+        """원본이 콘솔인 외부 확장이면 manifest를 올리지 않는다 (ADR-0141)."""
+        return bool(getattr(self.inner, "publishes_manifest", True))
+
     def execute(self, task: LockedTask) -> Outcome:
         started = time.monotonic()
         outcome = self.inner.execute(task)
@@ -112,14 +117,16 @@ def recorded(services: Sequence[TopicService], log: UsageLog) -> list[RecordingT
 
 
 def create_admin_app(
-    services: Sequence[TopicService],
+    services: Sequence[TopicService] | Callable[[], Sequence[TopicService]],
     *,
     admin_token: str | None,
     log: UsageLog,
     center: Callable[[], CenterRegistration] | None = None,
     now: Callable[[], str] = _now,
 ) -> FastAPI:
-    """`/healthz`와 관리 API. `services`는 맡은 토픽들(순서대로 작업 줄을 잇는다)."""
+    """`/healthz`와 관리 API. `services`는 맡은 토픽들(순서대로 작업 줄을 잇는다) — 콘솔 원본 토픽이 나중에
+    더해지므로 지금 목록을 주는 함수여도 된다 (ADR-0141)."""
+    topics = services if callable(services) else lambda: services
     app = FastAPI(title=APP_NAME, version=_version())
     app.state.admin_token = admin_token
     started_at = now()
@@ -136,7 +143,7 @@ def create_admin_app(
         at = now()
         uptime = int((datetime.fromisoformat(at) - datetime.fromisoformat(started_at)).total_seconds())
         operations = [
-            row for one in services for row in operation_stats(one.manifest, log, now=at, topic=one.app_id)
+            row for one in topics() for row in operation_stats(one.manifest, log, now=at, topic=one.app_id)
         ]
         return AdminStatus(
             schema=1,
