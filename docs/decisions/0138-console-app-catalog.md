@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · **「쓰기는 두지 않는다」·주소 「가」는 HTTP 어댑터 앱 몫만 대체됨([ADR-0141](0141-adapter-definitions-are-edited-in-the-console.md))** — 어댑터 정의는 Center가 원본이고 콘솔에서 고친다. 업무 처리기 앱은 그대로 보기만 한다 |
 | 날짜 | 2026-11-08 |
 | 관련 | 화면 CON-18, 계약 C15(`GET /external-topics/{topic}/operations`, 정의 올릴 때 `address`)·C13·C11(`app_group`·`keywords`·`groups`·`group`)·C7, [ADR-0102](0102-calling-outside-is-pull.md), [ADR-0122](0122-consumer-folder.md), [ADR-0128](0128-console-drops-the-resources-screen.md), [ADR-0135](0135-agentic-automation-and-unified-consumer.md), [ADR-0137](0137-consumers-are-managed-in-the-console.md) |
 

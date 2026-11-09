@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 제안 |
+| 상태 | 수락 (2026-11-09) |
 | 날짜 | 2026-11-09 |
 | 관련 | 계약 C15(일꾼 토큰·가져가기), `server/deploy/compose.yaml`, [ADR-0100](0100-server-runner-secrets-dir.md)(비밀 볼륨), [ADR-0122](0122-consumer-folder.md)(일꾼 폴더), [ADR-0135](0135-agentic-automation-and-unified-consumer.md)(통합 일꾼·업무 처리기), [ADR-0137](0137-consumers-are-managed-in-the-console.md)(CON-17), [ADR-0141](0141-adapter-definitions-are-edited-in-the-console.md) |
 
@@ -23,7 +23,7 @@
 
 ## 결정
 
-> 제안: **B.** 사용자 확인 전이다.
+**B** (사용자 결정, 2026-11-09).
 
 1. **`unified-consumer` 서비스**를 `server/deploy/compose.yaml`에 둔다. 이미지는 `server/deploy/Dockerfile.unified-consumer`(BPM 패키지만 — 처리기 없음)이다. 처리기가 없는 통합 일꾼은 `BPM_CONSUMER__DEFINITIONS`의 외부 정의만 돌리는 API 일꾼이다(ADR-0135 §4).
 2. **기본으로는 뜨지 않는다** — compose 프로필 `consumer`에 둔다. 일꾼 토큰이 없는 서버에서 `docker compose up`이 실패하지 않게 하기 위해서다. 쓰는 서버는 `.env`의 `COMPOSE_PROFILES=consumer`로 켠다.

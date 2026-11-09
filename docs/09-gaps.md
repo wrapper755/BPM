@@ -120,6 +120,14 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 **정한 것.** Company1은 BPM 패키지를 git 커밋 고정으로 받는다(`52cb5672`). BPM 프로세스 id → 업무 매핑은 BPM 설정이 아니라 업무 처리기 코드 표(`company1_worker/config.py`)로 갔다 — 회사 하나이고 장면 코드와 함께 바뀐다.
 
+### 3-31. 통합 일꾼이 서버 compose에 없다
+
+[ADR-0140](decisions/0140-unified-consumer-runs-in-the-server-compose.md) 수락, 코드는 아직. **남은 것**: ① `server/deploy/Dockerfile.unified-consumer`와 compose `unified-consumer` 서비스(프로필 `consumer`, 볼륨 `unified-consumer-data`, 관리 API는 망 안) ② `server/docs/setup.md`·`server/deploy/README.md`에 회사 처리기 이미지(`FROM`)·덧붙임 파일 쓰는 법 ③ 운영 서버의 일꾼을 compose로 옮기기(사람 몫 — 백업부터).
+
+### 3-32. HTTP 어댑터 정의를 콘솔에서 고칠 길이 없다
+
+[ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md) 수락, 계약·화면·코드는 아직. **먼저 정할 것**: 화면 구성(CON-18 만들기·고치기 창 — 사용자에게 먼저 보인다). **남은 것**: ① C13 관리자 등록·고치기 길과 정의의 원본 칸(`console`·`consumer`) ② C15 일꾼이 맡은 토픽의 정의를 Center에서 받는 길, 파일과 겹칠 때 ③ 고치기 전 「이 판을 고정한 배포」 보이기 ④ 어댑터 일꾼·통합 일꾼(`api`)이 판이 바뀌면 다시 받기 ⑤ 고친 변환을 시험할 길(`origin: test`).
+
 ### 3-28. UI 자동화 확장을 다시 들인다
 
 **무엇이 없나.** 화면 조작이 없다 — UI 자동화 확장(서비스 앱·Worker 프로세스·UI 태스크·셀렉터 등록)과 그것만 쓰던
