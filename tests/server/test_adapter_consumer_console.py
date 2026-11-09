@@ -78,8 +78,9 @@ def console_definition(base: str, **over: Any) -> dict[str, Any]:
     return found
 
 
-def make(center: TestClient, base: str) -> None:
-    got = center.post(f"{API}/resources/extensions", json={"definition": console_definition(base)}, headers=ADMIN)
+def make(center: TestClient, base: str, **over: Any) -> None:
+    body = {"definition": console_definition(base, **over)}
+    got = center.post(f"{API}/resources/extensions", json=body, headers=ADMIN)
     assert got.status_code == 201, got.text
 
 
@@ -146,9 +147,12 @@ def test_the_worker_takes_the_console_definition_and_reports_its_address(
 def test_a_console_test_call_goes_through_the_worker_to_the_app(
     center: TestClient, tmp_path: Path, outbound: httpx.Client, credit: str
 ) -> None:
-    make(center, credit)
+    # 운영 주소에는 아무도 없다 — 시험 호출은 정의의 시험 주소(`test_base_url`)로 간다 (C7).
+    dead = "http://127.0.0.1:9"
+    make(center, dead, service={**console_definition(dead)["service"], "test_base_url": credit})
     consumer, _ = worker(center, tmp_path, outbound, credit)
     consumer.publish(force=True)
+    assert consumer_info(center)["addresses"][APP]["test_base_url"] == credit
     call = {"operation": "lookup", "input": {"biz_no": "123-45-67890"}, "wait_s": 0}
     started = center.post(f"{API}/resources/extensions/{APP}/test-calls", json=call, headers=ADMIN)
     assert started.status_code == 200, started.text

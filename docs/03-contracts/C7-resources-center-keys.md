@@ -87,7 +87,7 @@
 
 ### 콘솔에서 고치는 외부 확장 ([ADR-0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md))
 
-> 상태: **Center API가 돌고**(`center/api/console_extensions.py`) 일꾼이 받아 쓴다(C15 §콘솔이 원본인 정의 받기) — 콘솔 화면(CON-18)은 아직이다(`docs/09-gaps.md` §3-32).
+> 상태: **돈다** — Center API(`center/api/console_extensions.py`), 일꾼(C15 §콘솔이 원본인 정의 받기), 콘솔 CON-18(`app/connected-apps/editor.tsx`).
 
 **HTTP 어댑터 앱의 정의는 Center가 원본일 수 있다** — 관리자가 CON-18에서 만들면 원본이 `console`이고, 그 뒤로 그 id는 일꾼이 올리지 못한다(C15 409 `source_is_console`). 반대로 일꾼이 올린 id(원본 `consumer`)는 콘솔에서 만들거나 고치지 못한다(409 `source_is_consumer`). **정의마다 원본은 하나다.**
 

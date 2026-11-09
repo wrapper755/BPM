@@ -313,6 +313,8 @@ export interface ConnectedApp {
   keywords: string[];
   operations: number;
   status: string | null;
+  /** 원본 — `console`이면 콘솔(CON-18)에서 고친다 (C7 `source`, ADR-0141). 일꾼 앱은 늘 `consumer`. */
+  source: "console" | "consumer";
 }
 
 export const IMPL_LABEL: Record<ConnectedApp["impl"], string> = { external: "외부 정의", worker: "일꾼 앱" };
@@ -332,7 +334,15 @@ function appGroupOf(value: unknown): ConnectedApp["appGroup"] {
  * 같은 id가 둘이면 외부 정의 쪽이 이긴다(정의가 더 많이 말한다). 이름 순.
  */
 export function connectedApps(
-  extensions: Array<{ id: string; tier: string; name?: string | null; version: string; status?: string; definition?: unknown }>,
+  extensions: Array<{
+    id: string;
+    tier: string;
+    name?: string | null;
+    version: string;
+    status?: string;
+    definition?: unknown;
+    source?: string | null;
+  }>,
   serviceApps: Array<{
     app_id: string;
     name?: string | null;
@@ -358,6 +368,7 @@ export function connectedApps(
       keywords: strings(one.keywords),
       operations: head.operations.length,
       status: one.status ?? null,
+      source: "consumer",
     });
   }
   for (const one of extensions.filter((ext) => ext.tier === "external")) {
@@ -373,6 +384,7 @@ export function connectedApps(
       keywords: strings(definition?.keywords),
       operations: head.operations.length,
       status: one.status ?? null,
+      source: one.source === "console" ? "console" : "consumer",
     });
   }
   return [...out.values()].sort((a, b) => a.name.localeCompare(b.name, "ko"));

@@ -243,7 +243,7 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 ### 콘솔이 원본인 정의 받기 ([ADR-0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md))
 
-> 상태: **양쪽이 돈다** — Center(`center/api/external_tasks.py`)와 일꾼(`adapter_consumer.console.ConsoleDefinitions` — 어댑터 일꾼·통합 일꾼이 `service_kit.Consumer`의 `sources`로 꽂는다). `tests/server/test_adapter_consumer_console.py`가 지킨다. 콘솔 화면(CON-18)은 아직이다(`docs/09-gaps.md` §3-32).
+> 상태: **양쪽이 돈다** — Center(`center/api/external_tasks.py`)와 일꾼(`adapter_consumer.console.ConsoleDefinitions` — 어댑터 일꾼·통합 일꾼이 `service_kit.Consumer`의 `sources`로 꽂는다). `tests/server/test_adapter_consumer_console.py`가 지킨다. 콘솔 CON-18에서 만들고 고친다.
 
 `GET /api/v1/consumers/self/extensions` → `ConsumerExtensions{keys, extensions}` — `extensions`는 C7 `ExtensionResource[]`로 그 일꾼의 **토픽 안**이고 원본이 `console`인 외부 확장마다 **철회하지 않은 판 모두**(정의·봉투 포함, 새 판부터), `keys`는 봉투를 검증할 공개키(C2 — 서버 실행기가 하트비트로 받는 `admin_keys`와 같다)다. 일꾼은 뜰 때와 카탈로그를 다시 보는 주기마다 받고, 봉투를 `keys`로 다시 검증한다(C13 E6). 검증을 지나지 못한 판은 쓰지 않고 그 까닭을 로그에 남긴다.
 

@@ -22,6 +22,10 @@ import type { TopicStatus } from "@bpm/api-types/c15-topic-status";
 import type { TopicOperationStatus } from "@bpm/api-types/c15-topic-operation-status";
 import type { ExtensionResource } from "@bpm/api-types/c7-extension-resource";
 import type { ServiceAppResource } from "@bpm/api-types/c7-service-app-resource";
+import type { ExtensionDependent } from "@bpm/api-types/c7-extension-dependent";
+import type { ExtensionRevoked } from "@bpm/api-types/c7-extension-revoked";
+import type { ExtensionTestResult } from "@bpm/api-types/c7-extension-test-result";
+import type { ExtensionVersionInfo } from "@bpm/api-types/c7-extension-version-info";
 import type { ConsumerCreated } from "@bpm/api-types/c15-consumer-created";
 import type { ScheduleInfo } from "@bpm/api-types/c5-schedule-info";
 import type { ErrorBody } from "@bpm/api-types/c5-error-body";
@@ -175,6 +179,29 @@ export const center = {
   extension: (extensionId: string) =>
     call<ExtensionResource>(`/api/v1/resources/extensions/${encodeURIComponent(extensionId)}`),
   /** 일꾼이 올린 앱 (C7 — C11 manifest, 외부 정의가 있는 토픽은 C7이 뺀다). CON-18 「일꾼 앱」. */
+  // 콘솔이 원본인 HTTP 어댑터 앱 (C7 §콘솔에서 고치는 외부 확장, ADR-0141) — 쓰기는 Center 관리자만.
+  createExtension: (definition: Record<string, unknown>) =>
+    call<ExtensionResource>("/api/v1/resources/extensions", { method: "POST", body: JSON.stringify({ definition }) }),
+  updateExtension: (extensionId: string, definition: Record<string, unknown>, baseVersion: string) =>
+    call<ExtensionResource>(`/api/v1/resources/extensions/${encodeURIComponent(extensionId)}`, {
+      method: "PUT",
+      body: JSON.stringify({ definition, base_version: baseVersion }),
+    }),
+  revokeExtension: (extensionId: string) =>
+    call<ExtensionRevoked>(`/api/v1/resources/extensions/${encodeURIComponent(extensionId)}`, { method: "DELETE" }),
+  extensionVersions: (extensionId: string) =>
+    call<ExtensionVersionInfo[]>(`/api/v1/resources/extensions/${encodeURIComponent(extensionId)}/versions`),
+  extensionDependents: (extensionId: string) =>
+    call<ExtensionDependent[]>(`/api/v1/resources/extensions/${encodeURIComponent(extensionId)}/dependents`),
+  startTestCall: (extensionId: string, body: { operation: string; input: Record<string, unknown>; wait_s: number }) =>
+    call<ExtensionTestResult>(`/api/v1/resources/extensions/${encodeURIComponent(extensionId)}/test-calls`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  testCallResult: (extensionId: string, taskId: string, waitS: number) =>
+    call<ExtensionTestResult>(
+      `/api/v1/resources/extensions/${encodeURIComponent(extensionId)}/test-calls/${encodeURIComponent(taskId)}?wait_s=${waitS}`,
+    ),
   serviceApps: () =>
     call<{ items: ServiceAppResource[] }>("/api/v1/resources?type=service_app").then((found) => found.items),
   serviceApp: (appId: string) =>

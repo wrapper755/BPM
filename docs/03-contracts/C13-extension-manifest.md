@@ -9,7 +9,7 @@
 | 관련 ADR | [0018](../decisions/0018-extensions.md), [0010](../decisions/0010-service-apps.md), [0013](../decisions/0013-api-keys.md), [0041](../decisions/0041-extension-run-events.md), [0042](../decisions/0042-extension-contributed-panels.md), [0112](../decisions/0112-escalation-review-from-extensions.md), [0114](../decisions/0114-remove-ui-automation.md) |
 | 관련 화면 | BUI-03·11, STU-03·14·15, SVC-00 |
 
-> 상태: **외부 확장 등록이 돈다** — 그 토픽을 맡은 **일꾼이** `PUT /consumers/self/extension`(C15)으로 정의를 올리면 E1·E2·E3·E4를 검사하고 **Center가 C2 `extension` 봉투에 서명해**(ADR-0090) 정의와 봉투를 **그대로** 보관한다 — 실행하는 쪽이 다시 검증한다(E6). 맡은 일꾼이 일꾼 폴더에서 빠지면 Center가 뜰 때 `extension_revoke` 봉투로 거둔다 ([ADR-0122](../decisions/0122-consumer-folder.md)). **HTTP 어댑터 앱은 Center 관리자가 콘솔에서 만들고 고칠 수도 있다**(원본 `console` — C7 §콘솔에서 고치는 외부 확장, ADR-0141 — Center API와 일꾼 쪽은 돌고 콘솔 화면은 아직이다(`docs/09-gaps.md` §3-32)). **E4는 외부 확장으로 띄울 수 없다** — `task_types`가 `entry`(코드)를 요구하고 E1이 그것을 먼저 막기 때문이다. 그 겹침은 설치된 확장들 사이에서만 생기고 확장 호스트가 본다.
+> 상태: **외부 확장 등록이 돈다** — 그 토픽을 맡은 **일꾼이** `PUT /consumers/self/extension`(C15)으로 정의를 올리면 E1·E2·E3·E4를 검사하고 **Center가 C2 `extension` 봉투에 서명해**(ADR-0090) 정의와 봉투를 **그대로** 보관한다 — 실행하는 쪽이 다시 검증한다(E6). 맡은 일꾼이 일꾼 폴더에서 빠지면 Center가 뜰 때 `extension_revoke` 봉투로 거둔다 ([ADR-0122](../decisions/0122-consumer-folder.md)). **HTTP 어댑터 앱은 Center 관리자가 콘솔에서 만들고 고칠 수도 있다**(원본 `console` — C7 §콘솔에서 고치는 외부 확장, ADR-0141 — Center API·일꾼·콘솔 CON-18이 돈다). **E4는 외부 확장으로 띄울 수 없다** — `task_types`가 `entry`(코드)를 요구하고 E1이 그것을 먼저 막기 때문이다. 그 겹침은 설치된 확장들 사이에서만 생기고 확장 호스트가 본다.
 >
 > `contributes.resources[].catalog_url`은 Center가 읽어 쌓는다 (M5 조각 10) — 내장 확장의 정의가 Center에 없어 `catalog_url`을 찾을 길이 없던 구멍은 **C11에 카탈로그 칸을 더해** 메웠다 (C11 §모델 연결 아래 `resources`).
 >

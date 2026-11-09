@@ -6,8 +6,10 @@
 | --- | --- |
 | `BPM_ADAPTER__EXT__<확장>__BASE_URL` | 운영 주소 (없으면 정의의 `base_url`) |
 | `BPM_ADAPTER__EXT__<확장>__KEY` | 운영 키 (키를 받는 앱만 — C13 `auth`) |
-| `BPM_ADAPTER__EXT__<확장>__TEST_BASE_URL` · `…__TEST_KEY` | 시험 일감(`origin: test`)에 쓴다. 없으면 운영 쪽 |
+| `BPM_ADAPTER__EXT__<확장>__TEST_BASE_URL` · `…__TEST_KEY` | 시험 일감(`origin: test`)용 — 없으면 운영 쪽 (주소는 ¹) |
 | `BPM_ADAPTER__ALLOW_PRIVATE_NETWORK` | `1`이면 정의가 허용한 사설망으로 나간다 (기본 닫힘 — 둘 다 열어야 한다) |
+
+¹ 시험 주소는 이 설정이 없으면 정의의 `service.test_base_url`(콘솔에서 만든 정의가 적는다, C7)을 먼저 쓴다.
 
 해석기는 실행하는 쪽이 쓰던 `core.http_adapter.AdapterCaller` 그대로다 — 막는 규칙(허용 호스트·https·
 DNS 고정·리다이렉트 금지·크기 상한)이 한 벌이다.
@@ -116,8 +118,14 @@ class AdapterService:
         service = self.definition.service
         return {
             "base_url": self._setting("BASE_URL") or (service.base_url if service else None),
-            "test_base_url": self._setting("TEST_BASE_URL"),
+            "test_base_url": self._setting("TEST_BASE_URL") or self._definition_test_url(),
         }
+
+    def _definition_test_url(self) -> str | None:
+        """정의의 시험 주소 (`service.test_base_url` — 콘솔에서 만든 정의가 적는다, C7). C13 모델 밖의 칸이다."""
+        service = self.definition.service
+        found = (service.model_extra or {}).get("test_base_url") if service is not None else None
+        return found.strip() if isinstance(found, str) and found.strip() else None
 
     @property
     def publishes_manifest(self) -> bool:
@@ -171,8 +179,9 @@ class AdapterService:
         return found.strip() if found and found.strip() else None
 
     def place(self, *, test: bool) -> Place:
-        """운영 또는 시험 쪽 — 시험 칸이 비면 운영 쪽을 쓴다 (ADR-0102 §6)."""
-        url = (self._setting("TEST_BASE_URL") if test else None) or self._setting("BASE_URL")
+        """운영 또는 시험 쪽 — 시험 주소는 일꾼 설정 > 정의의 `test_base_url`, 둘 다 비면 운영 쪽 (ADR-0102 §6, C7)."""
+        test_url = (self._setting("TEST_BASE_URL") or self._definition_test_url()) if test else None
+        url = test_url or self._setting("BASE_URL")
         key = (self._setting("TEST_KEY") if test else None) or self._setting("KEY")
         return Place(url=url, secret=key)
 

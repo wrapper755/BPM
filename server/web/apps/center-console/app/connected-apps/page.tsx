@@ -17,17 +17,21 @@ import {
   type ConnectedApp,
 } from "@/lib/connected-apps";
 import { Shell } from "@/components/Shell";
+import type { ExtensionResource } from "@bpm/api-types/c7-extension-resource";
+import { SOURCE_HINT, SOURCE_LABEL, appGroupsOf, untestableReason } from "@/lib/adapter-editor";
+import { AppActions, NewAppButton, type AppContext, type WorkerChoice } from "./editor";
 
 /**
  * CON-18 연결 앱 (목록) — 앱 하나 = 토픽 하나 (ADR-0138, Camunda 커넥터 목록과 같은 결).
  *
- * 외부 정의(C13)와 일꾼 앱(C11)을 한 목록에 두고 앱 묶음(`app_group`)으로 묶는다. **보기만 한다.**
+ * 외부 정의(C13)와 일꾼 앱(C11)을 한 목록에 두고 앱 묶음(`app_group`)으로 묶는다. 원본이 콘솔인 HTTP 어댑터 앱만
+ * Center 관리자가 만들고 고친다(ADR-0141 — 「새 연결 앱...」·줄의 「...」). 나머지는 보기만 한다.
  * 맡은 일꾼·토픽 상태를 못 받아도 앱 목록은 그린다 — 그 칸만 「—」다.
  */
 
-/** 정의 고치기·내리기는 일꾼 쪽이다 (ADR-0122) — 제목 옆 툴팁에만 둔다. */
+/** 원본이 둘이다 (ADR-0122·0141) — 제목 옆 툴팁에만 둔다. */
 export const SOURCE_NOTE =
-  "연결 앱은 그것을 맡은 일꾼이 뜰 때 올립니다(외부 정의는 Center가 서명합니다). 고치거나 내리려면 일꾼 쪽 정의·설정을 바꿉니다.";
+  "원본이 「콘솔」인 앱은 여기서 만들고 고칩니다(Center가 서명합니다). 원본이 「일꾼」인 앱은 맡은 일꾼이 뜰 때 올립니다 — 고치거나 내리려면 일꾼 쪽 정의·설정을 바꿉니다.";
 
 /** 연도까지 적는다 (CON-03과 같은 규칙). */
 export function time(value: string | null | undefined): string {
@@ -64,9 +68,13 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
   const found = await session();
   if (!found) redirect("/login");
   const query = (await searchParams).q ?? "";
+  const manage = found.mode === "admin" && !found.company;
 
   let all: Row[] = [];
   let failure: string | null = null;
+  let workers: WorkerChoice[] | null = null;
+  let groups: AppContext["groups"] = [];
+  const definitionOf = new Map<string, ExtensionResource>();
   try {
     const [extensions, serviceApps, consumers, topics] = await Promise.all([
       center.extensions(),
@@ -76,6 +84,9 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
     ]);
     // 외부 정의 앱의 실제 종류는 일꾼 manifest에 있다 — 그 토픽의 집계 줄이 실어 온다 (C15).
     const external = extensions.filter((one) => one.tier === "external");
+    for (const one of external) definitionOf.set(one.id, one);
+    groups = appGroupsOf(external.map((one) => one.definition));
+    workers = consumers?.map((one) => ({ consumer_id: one.consumer_id, name: one.name, topics: one.topics ?? [] })) ?? null;
     const counted = await Promise.all(
       external.map(async (one) => [one.id, await center.topicOperations(one.id).catch(() => [])] as const),
     );
@@ -110,6 +121,12 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
       width: "10ch",
       cell: (row) => <span title={IMPL_HINT[row.app.impl]}>{IMPL_LABEL[row.app.impl]}</span>,
     },
+    {
+      key: "source",
+      header: "원본",
+      width: "7ch",
+      cell: (row) => <span title={SOURCE_HINT[row.app.source]}>{SOURCE_LABEL[row.app.source]}</span>,
+    },
     { key: "kinds", header: "종류", width: "10ch", cell: (row) => kindsLabel(row.app.kinds) },
     { key: "version", header: "버전", width: "10ch", mono: true, cell: (row) => row.app.version ?? "—" },
     {
@@ -142,6 +159,29 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
       width: "20ch",
       cell: (row) => time(row.topic?.last_fetch_at),
     },
+    // 원본이 콘솔인 줄만 — 편집·시험 호출·내리기 (Center 관리자만, ADR-0141).
+    ...(manage
+      ? [
+          {
+            key: "actions",
+            header: "",
+            width: "6ch",
+            cell: (row: Row) => {
+              const resource = definitionOf.get(row.app.id);
+              if (row.app.source !== "console" || !resource) return null;
+              const context: AppContext = {
+                id: row.app.id,
+                version: resource.version,
+                definition: resource.definition,
+                groups,
+                workers,
+                untestable: untestableReason(row.workers, row.app.status),
+              };
+              return <AppActions app={context} variant="row" />;
+            },
+          },
+        ]
+      : []),
   ];
 
   const table = (list: Row[], caption: string, className?: string) => (
@@ -150,9 +190,14 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
 
   return (
     <Shell mode={found.mode} actor={found.actor} current="/connected-apps">
-      <header className="mb-4 flex items-center gap-2">
+      <header className="mb-4 flex flex-wrap items-center gap-2">
         <h1 className="text-h1 font-bold">연결 앱</h1>
         <Hint text={SOURCE_NOTE} />
+        {manage ? (
+          <span className="ml-auto">
+            <NewAppButton groups={groups} workers={workers} />
+          </span>
+        ) : null}
       </header>
 
       <form className="filter-card flex flex-wrap items-end gap-3" method="get">
@@ -180,7 +225,14 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
         {failure ? (
           <ErrorBanner message={failure} />
         ) : all.length === 0 ? (
-          <EmptyState title="연결된 앱이 없습니다." hint="앱은 그것을 맡은 일꾼이 뜰 때 올립니다." />
+          <EmptyState
+            title="연결된 앱이 없습니다."
+            hint={
+              manage
+                ? "「새 연결 앱...」으로 HTTP 어댑터 앱을 만들거나, 앱을 맡은 일꾼이 뜰 때 올립니다."
+                : "앱은 그것을 맡은 일꾼이 뜰 때 올립니다."
+            }
+          />
         ) : rows.length === 0 ? (
           <EmptyState title={`「${query}」에 맞는 앱이 없습니다.`} />
         ) : sections === null ? (
