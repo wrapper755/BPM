@@ -243,11 +243,11 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 ### 콘솔이 원본인 정의 받기 ([ADR-0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md))
 
-> 상태: **아직 없다** — 계약만 정했다(`docs/09-gaps.md` §3-32).
+> 상태: **Center 쪽이 돈다**(`center/api/external_tasks.py`) — 일꾼(어댑터 일꾼·통합 일꾼)이 받아 쓰는 쪽은 아직이다(`docs/09-gaps.md` §3-32).
 
 `GET /api/v1/consumers/self/extensions` → C7 `ExtensionResource[]` — 그 일꾼의 **토픽 안**이고 원본이 `console`인 외부 확장마다 **철회하지 않은 판 모두**(정의·봉투 포함, 새 판부터). 일꾼은 뜰 때 받고, 봉투를 다시 검증한다(C13 E6).
 
-- 원본이 콘솔인 토픽의 일감에는 **`LockedTask.definition_version`**이 있다 — 그 일감을 부를 판이다(올릴 때의 지금 판. 시험 호출도 그렇다). 일꾼은 그 판을 들고 있지 않으면 이 길로 다시 받고, 그래도 없으면(철회됐다) 그 일감을 `fail` `definition_unavailable`로 끝낸다.
+- 원본이 콘솔인 토픽의 일감에는 **`LockedTask.definition_version`**이 있다 — 그 일감을 부를 판이다 — 부른 BPM 프로세스가 정의를 고정했으면(C1 `definition_hash`) **그 해시의 판**, 아니면(시험 실행·시험 호출 포함) 올릴 때의 지금 판이다(ADR-0060·0141). 일꾼은 그 판을 들고 있지 않으면 이 길로 다시 받고, 그래도 없으면(철회됐다) 그 일감을 `fail` `definition_unavailable`로 끝낸다.
 - 일꾼이 **파일로 들고 있는 정의**(`BPM_ADAPTER__DEFINITIONS`·`BPM_CONSUMER__DEFINITIONS`)와 id가 겹치면 **Center 것을 쓰고** 파일 것은 올리지 않으며 경고를 남긴다.
 - 주소·키는 일꾼 설정이 이긴다(§외부 확장 정의 올리기). 그래서 일꾼은 받은 정의로도 `PUT …/self/extension`의 `address`처럼 쓰는 주소를 알린다 — `PUT /api/v1/consumers/self/address` `ConsumerAddressUpload{extension_id, address}`(같은 `ConsumerAddress`).
 

@@ -375,6 +375,14 @@ MIGRATIONS: tuple[Step, ...] = (
         "일꾼의 종류 — Center 관리자가 정하고 가져가기가 거른다, 비면 정하지 않음 (C15 `kinds`, ADR-0139)",
         ("ALTER TABLE consumers ADD COLUMN kinds_json TEXT",),
     ),
+    Step(
+        27,
+        "외부 확장 정의의 원본 `console`·`consumer`(옛 `worker`는 `consumer`로)와 일감이 부를 정의의 판 (ADR-0141)",
+        (
+            "UPDATE extensions SET source = 'consumer' WHERE source = 'worker'",
+            "ALTER TABLE external_tasks ADD COLUMN definition_version TEXT",
+        ),
+    ),
 )
 
 

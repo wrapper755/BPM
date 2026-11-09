@@ -3,7 +3,7 @@
 | 경로 | 인증 |
 | --- | --- |
 | `POST /external-tasks`, `GET·ack·cancel …/{task_id}` | PC 실행기·서버 실행기·Studio의 Center API 키 |
-| `POST /consumers/fetch`, `…/tasks/{id}/complete·fail·extend`, `PUT …/self/manifest·extension` | 일꾼 토큰 |
+| `POST /consumers/fetch`, `…/tasks/{id}/complete·fail·extend`, `PUT·GET …/self/…` | 일꾼 토큰 |
 | `GET /consumers`, `GET /external-topics`, `GET /external-topics/{topic}/operations` | 콘솔 토큰 |
 
 일꾼은 Center 관리자가 콘솔에서 만들고(`bpm.center.consumers`, ADR-0137) 함께 배포되는 일꾼은 일꾼 폴더가 처음
@@ -67,6 +67,7 @@ from bpm.contracts.external_task import (
     CallToken,
     CompleteRequest,
     ConsumerAddress,
+    ConsumerAddressUpload,
     ConsumerInfo,
     ExtendRequest,
     ExternalTaskCreate,
@@ -93,8 +94,10 @@ log = logging.getLogger(__name__)
 #: 일꾼이 알린 주소의 길이 한도 — 넘으면 적지 않는다 (C15 `address`).
 MAX_ADDRESS_LEN = 2048
 
-#: 일꾼이 올린 외부 확장의 출처 (`extensions.source`, ADR-0122) — 맡은 일꾼이 없어지면 거둔다 (`consumers`, ADR-0137).
-EXTENSION_SOURCE = "worker"
+#: 외부 확장 정의의 원본 (`extensions.source`, C7 `ExtensionResource.source`, ADR-0141). 일꾼이 올린 것은 맡은
+#: 일꾼이 없어지면 거두고(`consumers`, ADR-0137) 콘솔에서 만든 것은 거두지 않는다.
+EXTENSION_SOURCE = "consumer"
+CONSOLE_SOURCE = "console"
 
 router = APIRouter(prefix="/api/v1", tags=["external-tasks"])
 
@@ -300,15 +303,38 @@ def create(
         if existing["acked_at"] is None:
             return ExternalTaskCreated(task_id=task_id, state=str(existing["state"])), False
     timeout, kind = _authorize(store, poster, task)
+    pinned = resources.definition_version_for(
+        store, task.topic, bpm_process_id=task.caller.bpm_process_id, version=task.caller.version
+    )
+    insert(
+        store, task, poster_key_id=poster.key_id, timeout=timeout, kind=kind, definition_version=pinned,
+        at=at, replace=existing is not None,
+    )
+    return ExternalTaskCreated(task_id=task_id, state=STATE_PENDING), True
+
+
+def insert(
+    store: Store,
+    task: ExternalTaskCreate,
+    *,
+    poster_key_id: str,
+    timeout: int,
+    kind: str | None,
+    definition_version: str | None,
+    at: str,
+    replace: bool = False,
+) -> str:
+    """일감 한 줄을 세운다 — 관문(`_authorize`)을 지난 뒤에만 부른다. 콘솔의 시험 호출(C7)도 이 자리로 들어온다."""
+    task_id = task_id_for(task.topic, task.operation, task.idempotency)
     with store.tx() as cur:
-        if existing is not None:
+        if replace:
             # **받아 간 뒤에 다시 올렸다** — 값은 이미 지웠으니 옛 일감을 돌려주면 빈 결과다. 다시 줄에
             # 세운다: 일꾼이 멱등 칸으로 저장해 둔 결과를 다시 준다 (C15 「최소 한 번」).
             cur.execute("DELETE FROM external_tasks WHERE task_id = ?", (task_id,))
         cur.execute(
             "INSERT INTO external_tasks (task_id, topic, operation, kind, mode, origin, idempotency_json,"
             " caller_json, business_key, body_hash, poster_key_id, want_result, input_json, state, created_at,"
-            " deadline) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " deadline, definition_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 task_id,
                 task.topic,
@@ -319,16 +345,17 @@ def create(
                 dumps(task.idempotency.to_json_dict()),
                 dumps(task.caller.to_json_dict()),
                 task.business_key,
-                digest,
-                poster.key_id,
+                body_hash(task),
+                poster_key_id,
                 1 if task.want_result else 0,
                 dumps(task.input),
                 STATE_PENDING,
                 at,
                 _later(at, timeout),
+                definition_version,
             ),
         )
-    return ExternalTaskCreated(task_id=task_id, state=STATE_PENDING), True
+    return task_id
 
 
 def _poster_row(store: Store, found: Caller, task_id: str) -> Any:
@@ -340,7 +367,7 @@ def _poster_row(store: Store, found: Caller, task_id: str) -> Any:
     return row
 
 
-def _result_of(row: Any) -> ExternalTaskResult:
+def result_of(row: Any) -> ExternalTaskResult:
     extra = loads(row["result_json"], {}) or {}
     error = extra.get("error")
     usage = extra.get("usage")
@@ -359,7 +386,7 @@ def _result_of(row: Any) -> ExternalTaskResult:
 def result(store: Store, found: Caller, task_id: str, *, now: str | None = None) -> ExternalTaskResult:
     """`GET /external-tasks/{task_id}` — 지금 모습 (기다리기는 라우트가 한다)."""
     sweep(store, now=now)
-    return _result_of(_poster_row(store, found, task_id))
+    return result_of(_poster_row(store, found, task_id))
 
 
 def ack(store: Store, found: Caller, task_id: str) -> ExternalTaskResult:
@@ -374,7 +401,7 @@ def ack(store: Store, found: Caller, task_id: str) -> ExternalTaskResult:
             (now_iso(), task_id),
         )
     found_row = store.row("SELECT * FROM external_tasks WHERE task_id = ?", (task_id,))
-    return _result_of(found_row)
+    return result_of(found_row)
 
 
 def cancel(store: Store, found: Caller, task_id: str) -> ExternalTaskResult:
@@ -387,7 +414,7 @@ def cancel(store: Store, found: Caller, task_id: str) -> ExternalTaskResult:
                 " locked_by = NULL, lock_until = NULL WHERE task_id = ? AND state IN (?, ?)",
                 (STATE_CANCELLED, now_iso(), task_id, STATE_PENDING, STATE_LOCKED),
             )
-    return _result_of(store.row("SELECT * FROM external_tasks WHERE task_id = ?", (task_id,)))
+    return result_of(store.row("SELECT * FROM external_tasks WHERE task_id = ?", (task_id,)))
 
 
 # ─────────────────────────── 시간이 미는 것 ───────────────────────────
@@ -454,6 +481,7 @@ def _locked_task(row: Any) -> LockedTask:
         lock_until=row["lock_until"],
         deadline=row["deadline"],
         delivery=int(row["deliveries"]),
+        definition_version=row["definition_version"],
     )
 
 
@@ -618,6 +646,11 @@ def put_extension(store: Store, consumer: Any, raw: dict[str, Any]) -> tuple[Any
     ext_id = definition.get("id") if isinstance(definition, dict) else None
     if isinstance(ext_id, str) and ext_id not in set(loads(consumer["topics_json"], []) or []):
         raise ApiError(403, "topic_not_granted", f"맡지 않은 토픽의 정의다: {ext_id}")
+    if isinstance(ext_id, str) and resources.source_of_id(store, ext_id) == CONSOLE_SOURCE:
+        # 정의마다 원본은 하나다 (ADR-0141) — 일꾼은 `GET /consumers/self/extensions`로 받고 주소만 알린다.
+        raise ApiError(
+            409, "source_is_console", f"{ext_id}는 콘솔이 원본인 정의다 — `GET /consumers/self/extensions`로 받으세요"
+        )
     if isinstance(ext_id, str):
         # 주소는 정의가 거절돼도 적는다 — 일꾼은 그 주소로 이미 일하고 있다 (ADR-0138, 보여 주기만 한다).
         _note_address(store, consumer, ext_id, raw.get("address"))
@@ -632,6 +665,30 @@ def put_extension(store: Store, consumer: Any, raw: dict[str, Any]) -> tuple[Any
     if created:
         log.info("일꾼 %s: 외부 확장 %s@%s를 등록했다", consumer["name"], info.id, info.version)
     return info, created
+
+
+def self_extensions(store: Store, consumer: Any) -> list[Any]:
+    """`GET /consumers/self/extensions` — 그 일꾼의 토픽 안에서 원본이 콘솔인 정의의 **철회하지 않은 판 모두**
+    (새 판부터, C15 §콘솔이 원본인 정의 받기). 일감의 `definition_version`이 고정한 옛 판일 수 있어 다 준다."""
+    topics = sorted(set(loads(consumer["topics_json"], []) or []))
+    if not topics:
+        return []
+    marks = ", ".join("?" for _ in topics)
+    rows = store.rows(
+        f"SELECT * FROM extensions WHERE source = ? AND revoked_json IS NULL AND id IN ({marks})"  # noqa: S608 — 자리표만 늘린다
+        " ORDER BY id, at DESC",
+        (CONSOLE_SOURCE, *topics),
+    )
+    return [resources.resource_of_row(store, row) for row in rows]
+
+
+def put_address(store: Store, consumer: Any, raw: dict[str, Any]) -> ConsumerInfo:
+    """`PUT /consumers/self/address` — 받은 정의로 쓰는 주소를 알린다 (`put_extension`의 `address`와 같은 자리)."""
+    body: ConsumerAddressUpload = _model(ConsumerAddressUpload, raw)
+    if body.extension_id not in set(loads(consumer["topics_json"], []) or []):
+        raise ApiError(403, "topic_not_granted", f"맡지 않은 토픽이다: {body.extension_id}")
+    _note_address(store, consumer, body.extension_id, body.address.to_json_dict())
+    return consumer_info(store, store.row("SELECT * FROM consumers WHERE consumer_id = ?", (consumer["consumer_id"],)))
 
 
 def _clean_url(value: Any) -> str | None:
@@ -1031,6 +1088,21 @@ async def put_self_extension(request: Request) -> Any:
     consumer = consumer_of(store, _caller(request))
     info, created = put_extension(store, consumer, await _body(request))
     return Utf8JSONResponse(status_code=201 if created else 200, content=info.to_json_dict())
+
+
+@router.get("/consumers/self/extensions")
+def get_self_extensions(request: Request) -> Any:
+    """원본이 콘솔인 맡은 외부 확장 정의 (C15, ADR-0141) — 일꾼이 받아 봉투를 다시 검증한다."""
+    store = _store(request)
+    consumer = consumer_of(store, _caller(request))
+    return [one.to_json_dict() for one in self_extensions(store, consumer)]
+
+
+@router.put("/consumers/self/address")
+async def put_self_address(request: Request) -> Any:
+    store = _store(request)
+    consumer = consumer_of(store, _caller(request))
+    return put_address(store, consumer, await _body(request))
 
 
 @router.put("/consumers/self/catalogs/{resource_type}")

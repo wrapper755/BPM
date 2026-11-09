@@ -19,6 +19,7 @@ from bpm.center import accounts, consumer_folder, consumers, keys, signer
 from bpm.center.api import (
     approvals,
     bot_ui,
+    console_extensions,
     delegations,
     deployments,
     enrollments,
@@ -116,6 +117,7 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
     app.include_router(server_runner.router)
     app.include_router(delegations.router)
     app.include_router(external_tasks.router)
+    app.include_router(console_extensions.router)
     app.include_router(runs.router)
     app.include_router(organization.router)
 

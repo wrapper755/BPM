@@ -126,7 +126,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 ### 3-32. HTTP 어댑터 정의를 콘솔에서 고칠 길이 없다
 
-[ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md) 수락, 코드는 아직. 계약(C7·C13·C15)과 화면안은 정했다(`server/docs/screens/center-console-connections.md` CON-18 §만들기·고치기 — 작업은 폼 + JSON 탭, 시험은 저장한 판으로만, 내리기 있음). **남은 것**(코드): ① Center — 원본 칸·판 기록(저장소 옮기기 단계), C7 만들기·고치기·내리기·`versions`·`dependents`·`test-calls`, C15 `GET /consumers/self/extensions`·`PUT /consumers/self/address`·`LockedTask.definition_version`·409 `source_is_console` ② 일꾼 — 어댑터 일꾼·통합 일꾼(`api`)이 원본 콘솔 정의를 받고 판이 바뀌면 다시 받기, 파일과 겹칠 때 ③ 콘솔 CON-18 — 만들기·편집·작업 창·저장 확인·시험 호출·내리기·「원본」 열.
+[ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md) 수락. 계약(C7·C13·C15)과 화면안은 정했다(`server/docs/screens/center-console-connections.md` CON-18 §만들기·고치기 — 작업은 폼 + JSON 탭, 시험은 저장한 판으로만, 내리기 있음). **Center는 돈다** — 저장소 27판(원본 `console`·`consumer`, 일감의 `definition_version`), `center/api/console_extensions.py`(C7 만들기·고치기·내리기·`versions`·`dependents`·`test-calls`), C15 `GET /consumers/self/extensions`·`PUT /consumers/self/address`·409 `source_is_console` (`tests/server/test_center_console_extensions.py`). **남은 것**(코드): ① 일꾼 — 어댑터 일꾼·통합 일꾼(`api`)이 원본 콘솔 정의를 받고 판이 바뀌면 다시 받기, 파일과 겹칠 때, `definition_version`의 판으로 부르기·없으면 `definition_unavailable` ② 콘솔 CON-18 — 만들기·편집·작업 창·저장 확인·시험 호출·내리기·「원본」 열.
 
 ### 3-28. UI 자동화 확장을 다시 들인다
 

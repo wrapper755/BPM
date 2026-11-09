@@ -139,7 +139,8 @@ def test_a_worker_file_lets_the_worker_in_without_approval(boot: Boot, folder: P
 def test_there_is_no_enrollment_any_more(boot: Boot) -> None:
     client = boot()
     assert client.post("/api/v1/consumers/enroll", json={}).status_code in (404, 405)
-    assert client.post("/api/v1/resources/extensions", json={}, headers=ADMIN).status_code in (404, 405)
+    # 콘솔에서 만드는 길은 HTTP 어댑터 앱 몫으로 다시 생겼다 (ADR-0141) — 정의 없이는 받지 않는다.
+    assert client.post("/api/v1/resources/extensions", json={}, headers=ADMIN).status_code == 422
 
 
 def test_a_changed_file_does_not_change_an_admitted_worker(boot: Boot, folder: Path) -> None:
