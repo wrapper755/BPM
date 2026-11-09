@@ -3,7 +3,7 @@ import { DataTable, EmptyState, ErrorBanner, type Column } from "@bpm/ui";
 import type { ConsumerInfo } from "@bpm/api-types/c15-consumer-info";
 import { CenterError, center, session } from "@/lib/center";
 import { KINDS_UNSET, cameFrom, kindMismatches, kindsLabel, type AppChoice } from "@/lib/consumers";
-import { connectedApps, kindsLabel as appKindsLabel, workersOf } from "@/lib/connected-apps";
+import { IMPL_LABEL, connectedApps, kindsLabel as appKindsLabel, workersOf } from "@/lib/connected-apps";
 import { Shell } from "@/components/Shell";
 import { fullTime } from "@/app/bot-uis/page";
 import { ConsumerMenu, NewConsumer } from "./tools";
@@ -32,6 +32,7 @@ export default async function ConsumersPage() {
       apps = connectedApps(extensions, serviceApps).map((one) => ({
         id: one.id,
         name: one.name,
+        impl: IMPL_LABEL[one.impl],
         kinds: appKindsLabel(one.kinds),
         workers: workersOf(rows, one.id),
       }));

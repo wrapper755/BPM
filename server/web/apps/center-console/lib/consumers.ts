@@ -66,6 +66,8 @@ export function kindMismatches(
 export interface AppChoice {
   id: string;
   name: string;
+  /** 「외부 정의」/「일꾼 앱」 (CON-18 「구현」) */
+  impl: string;
   /** 「AI·API」처럼 이미 읽기 좋게 만든 것 */
   kinds: string;
   /** 그 앱을 맡은 일꾼 이름들 */
@@ -81,4 +83,10 @@ export function pickTopics(checked: Array<FormDataEntryValue>, text: string): st
 export function splitTopics(topics: string[], choices: AppChoice[]): { checked: string[]; other: string[] } {
   const listed = new Set(choices.map((one) => one.id));
   return { checked: topics.filter((one) => listed.has(one)), other: topics.filter((one) => !listed.has(one)) };
+}
+
+/** 「맡을 연결 앱」 둘째 줄 — 「외부 정의 · API · 이미 맡은 일꾼 worker」. */
+export function appChoiceLine(one: AppChoice): string {
+  const held = one.workers.length ? `이미 맡은 일꾼 ${one.workers.join(", ")}` : "맡은 일꾼 없음";
+  return [one.impl, one.kinds, held].join(" · ");
 }

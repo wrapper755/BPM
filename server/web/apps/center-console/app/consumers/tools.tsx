@@ -10,7 +10,7 @@ import {
   updateConsumer,
   type TokenResult,
 } from "@/app/actions";
-import { CONSUMER_KINDS, splitTopics, type AppChoice } from "@/lib/consumers";
+import { CONSUMER_KINDS, appChoiceLine, splitTopics, type AppChoice } from "@/lib/consumers";
 import { TASK_KIND } from "@/lib/summary";
 
 /**
@@ -65,9 +65,7 @@ function AppsField({ choices, topics = [], help }: { choices: AppChoice[] | null
                   <span className="text-text-primary">
                     {one.name} <span className="font-mono text-caption text-text-muted">{one.id}</span>
                   </span>
-                  <span className="text-caption text-text-muted">
-                    {one.kinds} · 맡은 일꾼: {one.workers.length ? one.workers.join(", ") : "—"}
-                  </span>
+                  <span className="text-caption text-text-muted">{appChoiceLine(one)}</span>
                 </span>
               </label>
             </li>

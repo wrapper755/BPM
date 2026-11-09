@@ -1,6 +1,6 @@
 /** CON-17 일꾼 (`lib/consumers.ts`) — 토픽 칸 읽기·「들어온 길」·「종류」. */
 import { describe, expect, it } from "vitest";
-import { cameFrom, kindMismatches, kindsLabel, parseKinds, parseTopics, pickTopics, splitTopics } from "./consumers";
+import { appChoiceLine, cameFrom, kindMismatches, kindsLabel, parseKinds, parseTopics, pickTopics, splitTopics } from "./consumers";
 
 describe("parseTopics", () => {
   it("한 줄에 하나, 쉼표도 받고 빈 줄·겹친 것은 버린다", () => {
@@ -56,7 +56,15 @@ describe("pickTopics", () => {
 
 describe("splitTopics", () => {
   it("목록에 있는 토픽은 체크로, 없는 것은 직접 적기로", () => {
-    const choices = [{ id: "external", name: "외부 앱", kinds: "API", workers: ["worker"] }];
+    const choices = [{ id: "external", name: "외부 앱", impl: "외부 정의", kinds: "API", workers: ["worker"] }];
     expect(splitTopics(["external", "new-app"], choices)).toEqual({ checked: ["external"], other: ["new-app"] });
+  });
+});
+
+describe("appChoiceLine", () => {
+  it("구현 · 종류 · 맡은 일꾼", () => {
+    const one = { id: "external", name: "외부 앱", impl: "외부 정의", kinds: "API", workers: ["worker"] };
+    expect(appChoiceLine(one)).toBe("외부 정의 · API · 이미 맡은 일꾼 worker");
+    expect(appChoiceLine({ ...one, workers: [] })).toBe("외부 정의 · API · 맡은 일꾼 없음");
   });
 });
