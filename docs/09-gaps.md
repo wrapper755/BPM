@@ -126,7 +126,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 ### 3-32. HTTP 어댑터 정의를 콘솔에서 고칠 길이 없다
 
-[ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md) 수락, 계약·화면·코드는 아직. **먼저 정할 것**: 화면 구성(CON-18 만들기·고치기 창 — 사용자에게 먼저 보인다). **남은 것**: ① C13 관리자 등록·고치기 길과 정의의 원본 칸(`console`·`consumer`) ② C15 일꾼이 맡은 토픽의 정의를 Center에서 받는 길, 파일과 겹칠 때 ③ 고치기 전 「이 판을 고정한 배포」 보이기 ④ 어댑터 일꾼·통합 일꾼(`api`)이 판이 바뀌면 다시 받기 ⑤ 고친 변환을 시험할 길(`origin: test`).
+[ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md) 수락, 계약·화면·코드는 아직. 화면안은 정했다(`server/docs/screens/center-console.md` CON-18 §만들기·고치기 — 작업은 폼 + JSON 탭, 시험은 저장한 판으로만, 내리기 있음). **남은 것**: ① C13 관리자 등록·고치기 길과 정의의 원본 칸(`console`·`consumer`) ② C15 일꾼이 맡은 토픽의 정의를 Center에서 받는 길, 파일과 겹칠 때 ③ 고치기 전 「이 판을 고정한 배포」 보이기 ④ 어댑터 일꾼·통합 일꾼(`api`)이 판이 바뀌면 다시 받기 ⑤ 고친 변환을 시험할 길(`origin: test`).
 
 ### 3-28. UI 자동화 확장을 다시 들인다
 
