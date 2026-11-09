@@ -1,4 +1,4 @@
-# 서버 구성 한 번에 — Center·콘솔·서버 실행기. `docs/04-setup.md` §6의 포트를 그대로 쓴다.
+# 서버 구성 한 번에 — Center·콘솔·서버 실행기, 프로필 `consumer`면 통합 일꾼까지. `docs/04-setup.md` §6의 포트를 그대로 쓴다.
 #
 #   cd server/deploy
 #   cp .env.example .env     # 토큰을 채운다 (비밀은 저장소에 넣지 않는다)
@@ -84,6 +84,39 @@ services:
     stop_grace_period: 30s
     restart: unless-stopped
 
+  unified-consumer:
+    # 통합 일꾼 — Center의 외부 작업을 가져가 수행한다 (C15, ADR-0135·0140). **들어오는 포트가 없다** — Center에서 가져간다.
+    # **기본으로는 뜨지 않는다** — 일꾼 토큰이 있는 서버만 `.env`의 `COMPOSE_PROFILES=consumer`로 켠다.
+    # 이 이미지에는 업무 처리기가 없다 — 회사 처리기는 이 이미지를 `FROM`으로 받은 이미지와 덧붙임 파일로 바꿔 끼운다
+    # (`server/deploy/README.md` §통합 일꾼). 그 파일이 `image`·`build`와 처리기 설정 칸을 채운다.
+    profiles: [consumer]
+    image: bpm-unified-consumer
+    build:
+      context: ../..
+      dockerfile: server/deploy/Dockerfile.unified-consumer
+    environment:
+      BPM_CONSUMER__CENTER__URL: http://center:8800
+      # 일꾼 토큰 — 콘솔 「일꾼」(CON-17)에서 만들 때 받은 원문 (ADR-0137). 비우면 일꾼이 뜨지 않는다.
+      # (`:?`로 막지 않는다 — 프로필이 꺼진 서버에서도 compose가 이 칸을 풀어 `up` 전체가 멈춘다.)
+      BPM_CONSUMER__CENTER__TOKEN: ${BPM_CONSUMER__CENTER__TOKEN:-}
+      # 켤 업무 처리기(쉼표). 비우면 이미지에 깔린 처리기를 모두 켠다.
+      BPM_CONSUMER__HANDLERS: ${BPM_CONSUMER__HANDLERS:-}
+      # 외부 확장 정의(종류 api) — 아래 폴더의 파일을 `/definitions/<파일>`로, 여럿이면 `:`로 잇는다. 앱의 주소·키는 `BPM_ADAPTER__EXT__<확장>__*`.
+      BPM_CONSUMER__DEFINITIONS: ${BPM_CONSUMER__DEFINITIONS:-}
+      # 관리 API(일꾼 콘솔)를 띄우는 토큰 — 비우면 띄우지 않는다. 띄워도 compose 망 안에서만 닿는다.
+      BPM_CONSUMER__ADMIN_TOKEN: ${BPM_CONSUMER__ADMIN_TOKEN:-}
+    extra_hosts:
+      # 호스트에서 도는 회사 시스템은 `http://host.docker.internal:<포트>`로 부른다.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # 작업 상태·멱등 저장소·처리기의 SQLite — 다시 띄워도 남는다.
+      - unified-consumer-data:/data
+      - ${BPM_CONSUMER__DEFINITIONS_HOST_DIR:-./definitions}:/definitions:ro
+    depends_on:
+      center:
+        condition: service_healthy
+    restart: unless-stopped
+
   center-console:
     build:
       context: ../..
@@ -119,3 +152,4 @@ volumes:
     name: chaeksas_server-runner-data
   server-runner-secrets:
     name: chaeksas_server-runner-secrets
+  unified-consumer-data:

@@ -120,9 +120,9 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 **정한 것.** Company1은 BPM 패키지를 git 커밋 고정으로 받는다(`52cb5672`). BPM 프로세스 id → 업무 매핑은 BPM 설정이 아니라 업무 처리기 코드 표(`company1_worker/config.py`)로 갔다 — 회사 하나이고 장면 코드와 함께 바뀐다.
 
-### 3-31. 통합 일꾼이 서버 compose에 없다
+### 3-31. 통합 일꾼을 서버 compose에서 띄운다 — 운영 옮기기만 남았다
 
-[ADR-0140](decisions/0140-unified-consumer-runs-in-the-server-compose.md) 수락, 코드는 아직. **남은 것**: ① `server/deploy/Dockerfile.unified-consumer`와 compose `unified-consumer` 서비스(프로필 `consumer`, 볼륨 `unified-consumer-data`, 관리 API는 망 안) ② `server/docs/setup.md`·`server/deploy/README.md`에 회사 처리기 이미지(`FROM`)·덧붙임 파일 쓰는 법 ③ 운영 서버의 일꾼을 compose로 옮기기(사람 몫 — 백업부터).
+[ADR-0140](decisions/0140-unified-consumer-runs-in-the-server-compose.md). 도는 것: `Dockerfile.unified-consumer`, compose `unified-consumer`(프로필 `consumer`, 볼륨 `unified-consumer-data`, `definitions/`), 회사 처리기 이미지·덧붙임 파일 쓰는 법(`server/deploy/README.md` §통합 일꾼) — 로컬 compose에서 회사 처리기를 얹어 Center에 붙는 것까지 봤다. **남은 것**: 운영 서버의 일꾼을 compose로 옮기기(사람 몫 — 백업부터, 데이터 폴더를 볼륨으로).
 
 ### 3-32. HTTP 어댑터 정의를 콘솔에서 고칠 길이 없다
 
