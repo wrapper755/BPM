@@ -1,0 +1,17 @@
+{
+  "$id": "urn:bpm:contracts:c7-extension-create-request",
+  "additionalProperties": true,
+  "description": "`POST /resources/extensions` — 콘솔에서 HTTP 어댑터 앱을 만든다 (C13, ADR-0141).\n\n정의는 C13 그대로이고 `tier: external`·`protocol: http-adapter`여야 한다. 판을 비우면 `0.1.0`이다.",
+  "properties": {
+    "definition": {
+      "additionalProperties": true,
+      "title": "Definition",
+      "type": "object"
+    }
+  },
+  "required": [
+    "definition"
+  ],
+  "title": "ExtensionCreateRequest",
+  "type": "object"
+}

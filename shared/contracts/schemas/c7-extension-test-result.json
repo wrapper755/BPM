@@ -1,0 +1,52 @@
+{
+  "$id": "urn:bpm:contracts:c7-extension-test-result",
+  "additionalProperties": true,
+  "description": "시험 호출의 답 — C15 결과와 같은 상태·출력·오류다. 아직이면 `state: pending`이고\n`GET /resources/extensions/{id}/test-calls/{task_id}?wait_s=`로 다시 묻는다.",
+  "properties": {
+    "error": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "output": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Output"
+    },
+    "state": {
+      "title": "State",
+      "type": "string"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "version",
+    "state"
+  ],
+  "title": "ExtensionTestResult",
+  "type": "object"
+}

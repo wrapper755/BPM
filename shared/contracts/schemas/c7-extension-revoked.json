@@ -1,0 +1,23 @@
+{
+  "$id": "urn:bpm:contracts:c7-extension-revoked",
+  "additionalProperties": true,
+  "description": "`DELETE /resources/extensions/{id}` — 원본이 콘솔인 앱을 내린다: 철회하지 않은 판을 모두 철회한다.",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "revoked": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Revoked",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "title": "ExtensionRevoked",
+  "type": "object"
+}

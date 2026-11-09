@@ -190,6 +190,9 @@ class LockedTask(ContractModel):
     deadline: Timestamp
     #: 몇 번째로 나가는가 (1부터). 2 이상이면 앞의 잠금이 지났다 — 멱등 저장소를 먼저 본다.
     delivery: int = 1
+    #: 원본이 콘솔인 외부 확장 토픽만 — 이 일감을 부를 정의의 판 (ADR-0141). 일꾼은 들고 있는 판과
+    #: 다르면 `GET /consumers/self/extensions`로 다시 받고 그 판으로 부른다.
+    definition_version: str | None = None
 
 
 class FetchResponse(ContractModel):
@@ -272,6 +275,14 @@ class ConsumerAddress(ContractModel):
     base_url: str | None = None
     #: 시험 일감(`origin: test`)에 쓰는 주소 — 따로 두지 않았으면 없다.
     test_base_url: str | None = None
+
+
+class ConsumerAddressUpload(ContractModel):
+    """`PUT /consumers/self/address` — 원본이 콘솔인 정의를 받아 쓰는 일꾼이 지금 쓰는 주소를 알린다
+    (C15 §콘솔이 원본인 정의 받기, ADR-0141). 일꾼이 올리는 정의의 `address`와 같은 뜻이다."""
+
+    extension_id: str
+    address: ConsumerAddress
 
 
 #: 일꾼이 들어온 길 (`ConsumerInfo.source`, ADR-0137) — 콘솔에서 만들었나, 일꾼 폴더가 처음 들였나.

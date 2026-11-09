@@ -1,0 +1,50 @@
+{
+  "$id": "urn:bpm:contracts:c7-extension-dependent",
+  "additionalProperties": true,
+  "description": "`GET /resources/extensions/{id}/dependents`의 한 줄 — 그 확장을 `requires.extensions`에 적은\n**살아 있는 배포**의 BPM 프로세스 (CON-18 저장·내리기 확인 창).\n\n`pinned_hash`가 있으면 그 정의를 고정했다 — 새 판을 쓰려면 다시 승인·배포해야 한다(C1, ADR-0060).",
+  "properties": {
+    "deployments": {
+      "title": "Deployments",
+      "type": "integer"
+    },
+    "package_id": {
+      "title": "Package Id",
+      "type": "string"
+    },
+    "package_version": {
+      "title": "Package Version",
+      "type": "string"
+    },
+    "pinned_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pinned Hash"
+    },
+    "pinned_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pinned Version"
+    }
+  },
+  "required": [
+    "package_id",
+    "package_version",
+    "deployments"
+  ],
+  "title": "ExtensionDependent",
+  "type": "object"
+}
