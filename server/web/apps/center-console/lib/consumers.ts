@@ -61,3 +61,24 @@ export function kindMismatches(
       return [`${topic}은 ${said} 작업이 있는데 이 일꾼은 ${said}를 맡지 않습니다 — 그 일감을 가져가지 않습니다.`];
     });
 }
+
+/** 「맡을 연결 앱」의 한 줄 — 토픽은 곧 연결 앱 id다 (CON-18, ADR-0138). */
+export interface AppChoice {
+  id: string;
+  name: string;
+  /** 「AI·API」처럼 이미 읽기 좋게 만든 것 */
+  kinds: string;
+  /** 그 앱을 맡은 일꾼 이름들 */
+  workers: string[];
+}
+
+/** 맡는 토픽 = 체크한 연결 앱 + 「직접 적기」 — 겹침 없이, 체크한 것 먼저. */
+export function pickTopics(checked: Array<FormDataEntryValue>, text: string): string[] {
+  return [...new Set([...checked.map(String).filter(Boolean), ...parseTopics(text)])];
+}
+
+/** 편집 창을 채운다 — 목록에 있는 토픽은 체크로, 없는 것은 「직접 적기」로. */
+export function splitTopics(topics: string[], choices: AppChoice[]): { checked: string[]; other: string[] } {
+  const listed = new Set(choices.map((one) => one.id));
+  return { checked: topics.filter((one) => listed.has(one)), other: topics.filter((one) => !listed.has(one)) };
+}

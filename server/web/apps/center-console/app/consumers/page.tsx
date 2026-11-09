@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { DataTable, EmptyState, ErrorBanner, type Column } from "@bpm/ui";
 import type { ConsumerInfo } from "@bpm/api-types/c15-consumer-info";
 import { CenterError, center, session } from "@/lib/center";
-import { KINDS_UNSET, cameFrom, kindMismatches, kindsLabel } from "@/lib/consumers";
+import { KINDS_UNSET, cameFrom, kindMismatches, kindsLabel, type AppChoice } from "@/lib/consumers";
+import { connectedApps, kindsLabel as appKindsLabel, workersOf } from "@/lib/connected-apps";
 import { Shell } from "@/components/Shell";
 import { fullTime } from "@/app/bot-uis/page";
 import { ConsumerMenu, NewConsumer } from "./tools";
@@ -22,6 +23,21 @@ export default async function ConsumersPage() {
     rows = await center.consumers();
   } catch (cause) {
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
+  }
+  // 「맡을 연결 앱」 — 토픽은 곧 연결 앱 id다(CON-18과 같은 재료). 못 읽으면 직접 적기만 된다.
+  let apps: AppChoice[] | null = null;
+  if (manage) {
+    try {
+      const [extensions, serviceApps] = await Promise.all([center.extensions(), center.serviceApps()]);
+      apps = connectedApps(extensions, serviceApps).map((one) => ({
+        id: one.id,
+        name: one.name,
+        kinds: appKindsLabel(one.kinds),
+        workers: workersOf(rows, one.id),
+      }));
+    } catch {
+      apps = null;
+    }
   }
 
   const columns: Array<Column<ConsumerInfo>> = [
@@ -78,7 +94,13 @@ export default async function ConsumersPage() {
             header: "",
             width: "6ch",
             cell: (row: ConsumerInfo) => (
-              <ConsumerMenu consumerId={row.consumer_id} name={row.name} topics={row.topics ?? []} kinds={row.kinds ?? []} />
+              <ConsumerMenu
+                consumerId={row.consumer_id}
+                name={row.name}
+                topics={row.topics ?? []}
+                kinds={row.kinds ?? []}
+                apps={apps}
+              />
             ),
           },
         ]
@@ -89,7 +111,7 @@ export default async function ConsumersPage() {
     <Shell mode={found.mode} actor={found.actor} current="/consumers">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-h1 font-bold">일꾼</h1>
-        {manage ? <NewConsumer /> : null}
+        {manage ? <NewConsumer apps={apps} /> : null}
       </header>
       {failure ? (
         <ErrorBanner message={failure} />

@@ -1,6 +1,6 @@
 /** CON-17 일꾼 (`lib/consumers.ts`) — 토픽 칸 읽기·「들어온 길」·「종류」. */
 import { describe, expect, it } from "vitest";
-import { cameFrom, kindMismatches, kindsLabel, parseKinds, parseTopics } from "./consumers";
+import { cameFrom, kindMismatches, kindsLabel, parseKinds, parseTopics, pickTopics, splitTopics } from "./consumers";
 
 describe("parseTopics", () => {
   it("한 줄에 하나, 쉼표도 받고 빈 줄·겹친 것은 버린다", () => {
@@ -44,5 +44,19 @@ describe("kindMismatches", () => {
   it("정하지 않은 일꾼·맞는 일꾼은 어긋남이 없다", () => {
     expect(kindMismatches(null, { external: ["api"] })).toEqual([]);
     expect(kindMismatches(["api"], { external: ["api"] })).toEqual([]);
+  });
+});
+
+describe("pickTopics", () => {
+  it("체크한 연결 앱과 직접 적은 것을 겹침 없이 합친다", () => {
+    expect(pickTopics(["external", "summarize"], "new-app\nexternal\n")).toEqual(["external", "summarize", "new-app"]);
+    expect(pickTopics([], "  ")).toEqual([]);
+  });
+});
+
+describe("splitTopics", () => {
+  it("목록에 있는 토픽은 체크로, 없는 것은 직접 적기로", () => {
+    const choices = [{ id: "external", name: "외부 앱", kinds: "API", workers: ["worker"] }];
+    expect(splitTopics(["external", "new-app"], choices)).toEqual({ checked: ["external"], other: ["new-app"] });
   });
 });
