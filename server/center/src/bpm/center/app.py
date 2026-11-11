@@ -19,6 +19,7 @@ from bpm.center import accounts, consumer_folder, consumers, keys, signer
 from bpm.center.api import (
     approvals,
     bot_ui,
+    console_extensions,
     delegations,
     deployments,
     enrollments,
@@ -116,6 +117,7 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
     app.include_router(server_runner.router)
     app.include_router(delegations.router)
     app.include_router(external_tasks.router)
+    app.include_router(console_extensions.router)
     app.include_router(runs.router)
     app.include_router(organization.router)
 
@@ -216,13 +218,17 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
         """**토큰 원문은 이 응답에만** 실린다 — Center는 해시만 둔다."""
         found = require_center_admin(authenticate(request))
         wanted = _model(ConsumerCreateRequest, await _json(request))
-        return consumers.create(app.state.store, name=wanted.name, topics=list(wanted.topics), by=found.actor)
+        return consumers.create(
+            app.state.store, name=wanted.name, topics=list(wanted.topics), kinds=list(wanted.kinds), by=found.actor
+        )
 
     @app.put(f"{API}/consumers/{{consumer_id}}")
     async def update_consumer(request: Request, consumer_id: str) -> Any:
         found = require_center_admin(authenticate(request))
         wanted = _model(ConsumerUpdateRequest, await _json(request))
-        return consumers.update_topics(app.state.store, consumer_id, list(wanted.topics), by=found.actor)
+        return consumers.update(
+            app.state.store, consumer_id, list(wanted.topics), kinds=list(wanted.kinds), by=found.actor
+        )
 
     @app.post(f"{API}/consumers/{{consumer_id}}/token")
     def reissue_consumer_token(request: Request, consumer_id: str) -> Any:

@@ -66,6 +66,7 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 | `POST/DELETE /deployments` (Center가 서명) | — | ✓ | — | — | — |
 | `GET /deployments`, `GET /admin-keys` | ✓ | ✓ | — | — | — |
 | `GET /resources…` (C7·C13, 확장 정의 포함) | ✓ | ✓ | ✓ | ✓ | — |
+| `POST·PUT·DELETE /resources/extensions…`, `…/test-calls…` (C7 §콘솔에서 고치는 외부 확장, CON-18 — ADR-0141) | — | Center 관리자만 | — | — | — |
 | `GET /server-runners` | ✓ | ✓ | — | — | — |
 | `POST /server-runners/{id}/pause·resume·mark-lost` (C12) | — | ✓ | — | — | — |
 | `GET /bot-uis…` (CON-03), `POST /bot-uis/{id}/disable·enable` | GET만 ✓ | ✓ | — | — | — |
@@ -444,6 +445,7 @@ BotUiInfo 필드:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-09 | 1 | 권한표에 **콘솔에서 고치는 외부 확장**(`POST·PUT·DELETE /resources/extensions…`·`…/test-calls…`, Center 관리자만) 줄을 더했다 | [0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md) |
 | 2026-11-08 | 1 | 권한표에 **일꾼 관리**(`POST /consumers`·`PUT·DELETE /consumers/{id}`·`POST …/token`, Center 관리자만) 줄을 더했다 | [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |
 | 2026-11-08 | 1 | **`GET …/diagram`을 더했다** — CON-01이 진입 정의를 그린다. 새 엔드포인트라 옛 쪽은 영향이 없다 | [0136](../decisions/0136-run-detail-shows-the-diagram.md) |
 | 2026-11-08 | 1 | **`GET …/nodes`(NodeLabel)를 더했다** — CON-01이 노드 id 옆에 이름을 보인다. 실행 기록은 그대로 id만 싣고 이름은 Center가 패키지 정의에서 읽을 때 꺼낸다. 새 엔드포인트라 옛 쪽은 영향이 없다 | — |

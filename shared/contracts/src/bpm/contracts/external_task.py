@@ -14,14 +14,16 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
 from bpm.contracts._base import ContractModel, SchemaVersioned, Timestamp
 from bpm.contracts.enrollment import RotatedKey
 from bpm.contracts.extension import Catalog
+from bpm.contracts.resources import ExtensionResource
 from bpm.contracts.service_app import Caller, Operation, ServiceAppManifest, Usage
+from bpm.contracts.signing import AdminKey
 
 #: 롱폴링 한 번이 물고 있는 가장 긴 시간 (초). 더 길게 달라고 하면 이것으로 깎는다.
 MAX_WAIT_S = 25
@@ -68,6 +70,8 @@ CALL_TOKEN_READ_PATH = "/api/v1/resources"
 TEST_RUN_PREFIX = "test_"
 
 Topic = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9.-]{0,63}$")]
+#: 관리자가 일꾼에 정하는 종류 — 아는 값만 받는다 (C11 `KINDS`, ADR-0139).
+ConsumerKind = Literal["ai", "api", "rpa"]
 TaskId = Annotated[str, Field(pattern=r"^xt_[0-9a-f]{24}$")]
 
 
@@ -188,6 +192,9 @@ class LockedTask(ContractModel):
     deadline: Timestamp
     #: 몇 번째로 나가는가 (1부터). 2 이상이면 앞의 잠금이 지났다 — 멱등 저장소를 먼저 본다.
     delivery: int = 1
+    #: 원본이 콘솔인 외부 확장 토픽만 — 이 일감을 부를 정의의 판 (ADR-0141). 일꾼은 들고 있는 판과
+    #: 다르면 `GET /consumers/self/extensions`로 다시 받고 그 판으로 부른다.
+    definition_version: str | None = None
 
 
 class FetchResponse(ContractModel):
@@ -272,6 +279,24 @@ class ConsumerAddress(ContractModel):
     test_base_url: str | None = None
 
 
+class ConsumerAddressUpload(ContractModel):
+    """`PUT /consumers/self/address` — 원본이 콘솔인 정의를 받아 쓰는 일꾼이 지금 쓰는 주소를 알린다
+    (C15 §콘솔이 원본인 정의 받기, ADR-0141). 일꾼이 올리는 정의의 `address`와 같은 뜻이다."""
+
+    extension_id: str
+    address: ConsumerAddress
+
+
+class ConsumerExtensions(ContractModel):
+    """`GET /consumers/self/extensions` — 원본이 콘솔인 맡은 외부 확장 정의와 그 봉투를 검증할 공개키
+    (C15 §콘솔이 원본인 정의 받기, ADR-0141). 일꾼은 `keys`로 봉투를 다시 검증한다(C13 E6)."""
+
+    #: 봉투를 검증할 공개키 (C2) — 서버 실행기가 하트비트로 받는 `admin_keys`와 같은 것이다.
+    keys: list[AdminKey] = Field(default_factory=list)
+    #: 외부 확장마다 철회하지 않은 판 모두 (정의·봉투 포함, 같은 id는 새 판부터).
+    extensions: list[ExtensionResource] = Field(default_factory=list)
+
+
 #: 일꾼이 들어온 길 (`ConsumerInfo.source`, ADR-0137) — 콘솔에서 만들었나, 일꾼 폴더가 처음 들였나.
 CONSUMER_SOURCES = ("console", "folder")
 
@@ -289,10 +314,14 @@ class ConsumerInfo(ContractModel):
     #: `console` | `folder` (ADR-0137).
     source: str | None = None
     last_fetch_at: Timestamp | None = None
-    #: 이 일꾼이 올린 manifest들의 `app_id@version`.
+    #: 이 일꾼이 올린 manifest들의 `app_id@version`과 맡은 토픽에 일꾼이 올린 외부 확장의 `id@version` (ADR-0139).
     apps: list[str] = Field(default_factory=list)
     #: 토픽(외부 확장 id) → 이 일꾼이 쓴다고 알린 주소 (ADR-0138). 알리지 않은 토픽은 없다.
     addresses: dict[str, ConsumerAddress] = Field(default_factory=dict)
+    #: 이 일꾼의 종류 — Center 관리자가 정하고 가져가기가 이것으로 거른다. `None`은 정하지 않음(모두) (ADR-0139).
+    kinds: list[str] | None = None
+    #: 토픽 → 그 토픽의 작업 종류(`ai`·`api`·`rpa` 순) — 일감에 붙일 때와 같은 근거. 모르는 토픽은 없다 (ADR-0139).
+    topic_kinds: dict[str, list[str]] = Field(default_factory=dict)
 
 
 class ConsumerCreateRequest(ContractModel):
@@ -300,12 +329,16 @@ class ConsumerCreateRequest(ContractModel):
 
     name: str = Field(min_length=1, max_length=64)
     topics: list[Topic] = Field(min_length=1)
+    #: 일꾼의 종류 (ADR-0139). 비우면 정하지 않은 일꾼 — 모든 종류를 가져간다.
+    kinds: list[ConsumerKind] = Field(default_factory=list)
 
 
 class ConsumerUpdateRequest(ContractModel):
-    """`PUT /api/v1/consumers/{consumer_id}` — 토픽 바꾸기 (ADR-0137). 다음 요청부터 반영된다."""
+    """`PUT /api/v1/consumers/{consumer_id}` — 종류·토픽 바꾸기 (ADR-0137·0139). 다음 요청부터 반영된다."""
 
     topics: list[Topic] = Field(min_length=1)
+    #: 일꾼의 종류 (ADR-0139). 비우면 그대로 둔다.
+    kinds: list[ConsumerKind] = Field(default_factory=list)
 
 
 class ConsumerCreated(ConsumerInfo):
@@ -389,6 +422,7 @@ __all__ = [
     "ConsumerCreated",
     "ConsumerInfo",
     "ConsumerUpdateRequest",
+    "ConsumerExtensions",
     "ExternalTaskInfo",
     "ExtendRequest",
     "ExternalTaskCreate",

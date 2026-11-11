@@ -6,8 +6,10 @@
 | --- | --- |
 | `BPM_ADAPTER__EXT__<확장>__BASE_URL` | 운영 주소 (없으면 정의의 `base_url`) |
 | `BPM_ADAPTER__EXT__<확장>__KEY` | 운영 키 (키를 받는 앱만 — C13 `auth`) |
-| `BPM_ADAPTER__EXT__<확장>__TEST_BASE_URL` · `…__TEST_KEY` | 시험 일감(`origin: test`)에 쓴다. 없으면 운영 쪽 |
+| `BPM_ADAPTER__EXT__<확장>__TEST_BASE_URL` · `…__TEST_KEY` | 시험 일감(`origin: test`)용 — 없으면 운영 쪽 (주소는 ¹) |
 | `BPM_ADAPTER__ALLOW_PRIVATE_NETWORK` | `1`이면 정의가 허용한 사설망으로 나간다 (기본 닫힘 — 둘 다 열어야 한다) |
+
+¹ 시험 주소는 이 설정이 없으면 정의의 `service.test_base_url`(콘솔에서 만든 정의가 적는다, C7)을 먼저 쓴다.
 
 해석기는 실행하는 쪽이 쓰던 `core.http_adapter.AdapterCaller` 그대로다 — 막는 규칙(허용 호스트·https·
 DNS 고정·리다이렉트 금지·크기 상한)이 한 벌이다.
@@ -95,6 +97,10 @@ class AdapterService:
     client: Any = None  # httpx.Client (시험이 끼운다)
     resolver: Any = None  # 호스트 → IP (시험이 끼운다)
     idempotency: InMemoryIdempotencyStore = field(default_factory=InMemoryIdempotencyStore)
+    #: 원본이 콘솔인 정의만 — Center에서 받아 검증한 판들 (판 → 정의, ADR-0141). 파일 정의면 `None`이다.
+    versions: dict[str, ExtensionManifest] | None = None
+    #: 일감이 들고 있지 않은 판을 부를 때 Center에서 다시 받는다 (`ConsoleDefinitions.sync`).
+    refetch: Callable[[], None] | None = None
     _manifest: ServiceAppManifest | None = None
 
     @property
@@ -112,8 +118,35 @@ class AdapterService:
         service = self.definition.service
         return {
             "base_url": self._setting("BASE_URL") or (service.base_url if service else None),
-            "test_base_url": self._setting("TEST_BASE_URL"),
+            "test_base_url": self._setting("TEST_BASE_URL") or self._definition_test_url(),
         }
+
+    def _definition_test_url(self) -> str | None:
+        """정의의 시험 주소 (`service.test_base_url` — 콘솔에서 만든 정의가 적는다, C7). C13 모델 밖의 칸이다."""
+        service = self.definition.service
+        found = (service.model_extra or {}).get("test_base_url") if service is not None else None
+        return found.strip() if isinstance(found, str) and found.strip() else None
+
+    @property
+    def publishes_manifest(self) -> bool:
+        """원본이 콘솔이면 manifest를 올리지 않는다 — Center가 지금 판의 정의에서 작업을 읽는다 (C15, ADR-0141)."""
+        return self.versions is None
+
+    def use_versions(self, versions: dict[str, ExtensionManifest], latest: ExtensionManifest | None) -> None:
+        """Center에서 받은 판들로 갈아 끼운다. 모두 철회됐으면 `latest`가 없고 판이 비어 일감이 실패한다."""
+        self.versions = dict(versions)
+        if latest is not None and latest != self.definition:
+            self.definition = latest
+            self._manifest = None
+
+    def definition_of(self, version: str | None) -> ExtensionManifest | None:
+        """그 일감을 부를 정의. 콘솔 원본은 일감의 판(없으면 지금 판), 들고 있지 않으면 한 번 다시 받는다."""
+        if self.versions is None:
+            return self.definition
+        wanted = version or self.definition.version
+        if wanted not in self.versions and self.refetch is not None:
+            self.refetch()
+        return self.versions.get(wanted)
 
     @property
     def manifest(self) -> ServiceAppManifest:
@@ -146,22 +179,32 @@ class AdapterService:
         return found.strip() if found and found.strip() else None
 
     def place(self, *, test: bool) -> Place:
-        """운영 또는 시험 쪽 — 시험 칸이 비면 운영 쪽을 쓴다 (ADR-0102 §6)."""
-        url = (self._setting("TEST_BASE_URL") if test else None) or self._setting("BASE_URL")
+        """운영 또는 시험 쪽 — 시험 주소는 일꾼 설정 > 정의의 `test_base_url`, 둘 다 비면 운영 쪽 (ADR-0102 §6, C7)."""
+        test_url = (self._setting("TEST_BASE_URL") or self._definition_test_url()) if test else None
+        url = test_url or self._setting("BASE_URL")
         key = (self._setting("TEST_KEY") if test else None) or self._setting("KEY")
         return Place(url=url, secret=key)
 
-    def _definition_for_run(self) -> ExtensionManifest:
+    def _definition_for_run(self, definition: ExtensionManifest) -> ExtensionManifest:
         """정의가 사설망을 허용해도 **이 일꾼 설정도 열어야** 나간다 (C13 「어댑터 일꾼」)."""
         allowed = self.environ.get(f"{ENV_PREFIX}ALLOW_PRIVATE_NETWORK", "").strip() in ("1", "true", "yes")
-        service = self.definition.service
+        service = definition.service
         if allowed or service is None or service.adapter is None or not service.adapter.allow_private_network:
-            return self.definition
+            return definition
         closed = service.adapter.model_copy(update={"allow_private_network": False})
-        return self.definition.model_copy(update={"service": service.model_copy(update={"adapter": closed})})
+        return definition.model_copy(update={"service": service.model_copy(update={"adapter": closed})})
 
     def execute(self, task: LockedTask) -> Outcome:
         """일감 하나 — 같은 멱등 칸이면 저장된 결과를 다시 준다 (최소 한 번 실행, C15)."""
+        definition = self.definition_of(task.definition_version)
+        if definition is None:
+            # 그 판이 철회됐다 — 다른 판으로 몰래 부르지 않는다 (C15 §콘솔이 원본인 정의 받기).
+            return Outcome(
+                code="definition_unavailable",
+                message=(
+                    f"{self.app_id}@{task.definition_version or '?'} 정의를 Center에서 받지 못했다 (철회됐을 수 있다)"
+                ),
+            )
         key = ("adapter", task.operation, task.idempotency.run_id, task.idempotency.node_id,
                task.idempotency.node_instance, task.idempotency.attempt, task.idempotency.call_seq)
         digest = body_hash_of(task)
@@ -187,7 +230,7 @@ class AdapterService:
             version=task.caller.version or "0.0.0",
         )
         caller = AdapterCaller(
-            definitions={self.app_id: self._definition_for_run()},
+            definitions={self.app_id: self._definition_for_run(definition)},
             addresses=self.place(test=task.origin == ORIGIN_TEST),
             client=self.client,
             resolver=self.resolver,

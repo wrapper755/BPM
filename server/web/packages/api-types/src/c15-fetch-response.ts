@@ -33,6 +33,7 @@ export interface LockedTask {
   business_key?: string | null;
   caller: Caller;
   deadline: string;
+  definition_version?: string | null;
   delivery?: number;
   idempotency: Idempotency;
   input?: {

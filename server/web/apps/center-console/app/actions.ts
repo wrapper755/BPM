@@ -5,7 +5,25 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { center, CenterError, session, signIn, signOut } from "@/lib/center";
-import { parseTopics } from "@/lib/consumers";
+import { parseKinds, pickTopics } from "@/lib/consumers";
+import {
+  appProblems,
+  buildApp,
+  parseHosts,
+  parseInput,
+  parseOperation,
+  putOperation,
+  removeOperation,
+  violationsByTab,
+  type AppFields,
+  type AuthKind,
+  type OperationFields,
+  type OperationTab,
+  type Violation,
+} from "@/lib/adapter-editor";
+import type { ExtensionDependent } from "@bpm/api-types/c7-extension-dependent";
+import type { ExtensionTestResult } from "@bpm/api-types/c7-extension-test-result";
+import type { ExtensionVersionInfo } from "@bpm/api-types/c7-extension-version-info";
 import { fromCaller } from "@/lib/inputs";
 import type { OrgKind } from "@/lib/organization";
 import { COOKIE_NAME, seal } from "@/lib/session";
@@ -506,10 +524,13 @@ export interface TokenResult extends ActionResult {
 
 export async function createConsumer(_previous: TokenResult, form: FormData): Promise<TokenResult> {
   const name = String(form.get("name") ?? "").trim();
-  const topics = parseTopics(String(form.get("topics") ?? ""));
-  if (!name || topics.length === 0) return { error: "이름과 토픽을 하나 이상 넣으세요." };
+  const topics = pickTopics(form.getAll("topics"), String(form.get("topics_text") ?? ""));
+  const kinds = parseKinds(form.getAll("kinds"));
+  if (!name) return { error: "이름을 넣으세요." };
+  if (topics.length === 0) return { error: "맡을 연결 앱을 고르거나 앱 id를 하나 이상 적으세요." };
+  if (kinds.length === 0) return { error: "종류를 하나 이상 고르세요." };
   try {
-    const made = await center.createConsumer({ name, topics });
+    const made = await center.createConsumer({ name, topics, kinds });
     revalidatePath("/consumers");
     return { token: made.token, name: made.name };
   } catch (cause) {
@@ -517,11 +538,13 @@ export async function createConsumer(_previous: TokenResult, form: FormData): Pr
   }
 }
 
-export async function updateConsumerTopics(consumerId: string, text: string): Promise<ActionResult> {
-  const topics = parseTopics(text);
-  if (topics.length === 0) return { error: "토픽을 하나 이상 넣으세요." };
+export async function updateConsumer(consumerId: string, form: FormData): Promise<ActionResult> {
+  const topics = pickTopics(form.getAll("topics"), String(form.get("topics_text") ?? ""));
+  const kinds = parseKinds(form.getAll("kinds"));
+  if (kinds.length === 0) return { error: "종류를 하나 이상 고르세요." };
+  if (topics.length === 0) return { error: "맡을 연결 앱을 고르거나 앱 id를 하나 이상 적으세요." };
   try {
-    await center.updateConsumer(consumerId, topics);
+    await center.updateConsumer(consumerId, { topics, kinds });
   } catch (cause) {
     return { error: message(cause) };
   }
@@ -547,6 +570,199 @@ export async function deleteConsumer(consumerId: string): Promise<ActionResult> 
   }
   revalidatePath("/consumers");
   return {};
+}
+
+// ─────────────────── 연결 앱 — 콘솔이 원본인 HTTP 어댑터 앱 (CON-18, ADR-0141) ───────────────────
+
+const appHref = (id: string) => `/connected-apps/${encodeURIComponent(id)}` as Route;
+
+function appFieldsFrom(form: FormData): AppFields {
+  const auth = String(form.get("auth") ?? "none");
+  return {
+    id: String(form.get("id") ?? "").trim(),
+    name: String(form.get("name") ?? ""),
+    description: String(form.get("description") ?? ""),
+    appGroup: String(form.get("app_group") ?? ""),
+    baseUrl: String(form.get("base_url") ?? "").trim(),
+    testBaseUrl: String(form.get("test_base_url") ?? "").trim(),
+    extraHosts: parseHosts(String(form.get("extra_hosts") ?? "")),
+    auth: (["none", "bearer", "header"].includes(auth) ? auth : "none") as AuthKind,
+    authHeader: String(form.get("auth_header") ?? ""),
+  };
+}
+
+/** Center가 거절한 까닭 — 판이 엇갈렸으면 그 판을, 검사에 걸렸으면 사유 줄을 붙인다. */
+function appMessage(cause: unknown): string {
+  if (cause instanceof CenterError && cause.body?.code === "version_conflict") {
+    const now = (cause.body.detail as { current_version?: string } | undefined)?.current_version;
+    return `그 사이 다른 사람이 ${now ?? "새"} 판으로 고쳤습니다 — 쪽을 새로 고친 뒤 다시 고치세요.`;
+  }
+  const violations = violationsOf(cause);
+  if (violations.length > 1) return [message(cause), ...violations.slice(1).map((one) => one.message)].join("\n");
+  return message(cause);
+}
+
+function violationsOf(cause: unknown): Violation[] {
+  const found = cause instanceof CenterError ? (cause.body?.detail as { violations?: unknown } | undefined)?.violations : null;
+  return Array.isArray(found) ? (found as Violation[]) : [];
+}
+
+/**
+ * 「맡을 일꾼」 — 고른 일꾼의 토픽에 앱 id를 더하고, 고르지 않은 일꾼에서는 뺀다(CON-17과 같은 요청). 토픽이 그
+ * 하나뿐인 일꾼에서는 빼지 못한다(Center가 빈 토픽을 받지 않는다) — 그 까닭을 돌려준다.
+ */
+async function assignWorkers(appId: string, chosen: Set<string>): Promise<string[]> {
+  const failures: string[] = [];
+  for (const one of await center.consumers()) {
+    const topics = one.topics ?? [];
+    const has = topics.includes(appId);
+    if (has === chosen.has(one.consumer_id)) continue;
+    const next = has ? topics.filter((topic) => topic !== appId) : [...topics, appId];
+    if (next.length === 0) {
+      failures.push(`${one.name}: 맡은 앱이 이것뿐이라 뺄 수 없습니다 — 「일꾼」에서 지우세요`);
+      continue;
+    }
+    try {
+      await center.updateConsumer(one.consumer_id, { topics: next, kinds: one.kinds ?? [] });
+    } catch (cause) {
+      failures.push(`${one.name}: ${message(cause)}`);
+    }
+  }
+  return failures;
+}
+
+export async function createConnectedApp(_previous: ActionResult, form: FormData): Promise<ActionResult> {
+  const fields = appFieldsFrom(form);
+  const problems = appProblems(fields, { creating: true });
+  if (problems.length) return { error: problems.join("\n") };
+  const found = await session();
+  let made;
+  try {
+    made = await center.createExtension(buildApp(fields, { publisher: found?.actor ?? "Center 콘솔" }));
+  } catch (cause) {
+    return { error: appMessage(cause) };
+  }
+  const failures = await assignWorkers(made.id, new Set(form.getAll("consumers").map(String)));
+  revalidatePath("/connected-apps");
+  revalidatePath("/consumers");
+  const notice = failures.length ? `?assign_error=${encodeURIComponent(failures.join("\n"))}` : "";
+  redirect(`${appHref(made.id)}${notice}` as Route);
+}
+
+export async function updateConnectedApp(id: string, baseVersion: string, form: FormData): Promise<ActionResult> {
+  const fields = appFieldsFrom(form);
+  const problems = appProblems(fields, { creating: false });
+  if (problems.length) return { error: problems.join("\n") };
+  try {
+    const now = await center.extension(id);
+    await center.updateExtension(id, buildApp(fields, { previous: now.definition, publisher: "" }), baseVersion);
+  } catch (cause) {
+    return { error: appMessage(cause) };
+  }
+  const failures = await assignWorkers(id, new Set(form.getAll("consumers").map(String)));
+  revalidatePath("/connected-apps", "layout");
+  revalidatePath("/consumers");
+  return failures.length ? { error: `저장했습니다. 다만 일꾼을 바꾸지 못했습니다:\n${failures.join("\n")}` } : {};
+}
+
+export interface OperationResult extends ActionResult {
+  /** 탭(`input`·`output`·`request`·`response`) 또는 `form` → 사유. */
+  errors?: Partial<Record<OperationTab | "form", string>>;
+}
+
+/** 작업 하나 저장 = 새 판 (ADR-0141). `replacing`은 고치는 작업의 옛 이름, 새 작업이면 null. */
+export async function saveOperation(
+  id: string,
+  baseVersion: string,
+  replacing: string | null,
+  fields: OperationFields,
+): Promise<OperationResult> {
+  let now;
+  try {
+    now = await center.extension(id);
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+  const previous = replacing === null ? undefined : (now.definition as { service?: { adapter?: { operations?: Array<{ name?: string }> } } })
+    ?.service?.adapter?.operations?.find((one) => one.name === replacing);
+  const parsed = parseOperation(fields, previous);
+  if (!parsed.operation) return { errors: parsed.errors };
+  const put = putOperation(now.definition, parsed.operation, replacing);
+  if (put.error) return { errors: { form: put.error } };
+  try {
+    await center.updateExtension(id, put.definition, baseVersion);
+  } catch (cause) {
+    const violations = violationsOf(cause);
+    if (violations.length === 0) return { error: appMessage(cause) };
+    const operations = (put.definition as { service?: { adapter?: { operations?: Array<{ name?: string }> } } }).service?.adapter
+      ?.operations ?? [];
+    return { errors: violationsByTab(violations, operations.findIndex((one) => one.name === parsed.operation?.name)) };
+  }
+  revalidatePath("/connected-apps", "layout");
+  return {};
+}
+
+export async function deleteOperation(id: string, baseVersion: string, name: string): Promise<ActionResult> {
+  try {
+    const now = await center.extension(id);
+    await center.updateExtension(id, removeOperation(now.definition, name), baseVersion);
+  } catch (cause) {
+    return { error: appMessage(cause) };
+  }
+  revalidatePath("/connected-apps", "layout");
+  return {};
+}
+
+export async function revokeConnectedApp(id: string): Promise<ActionResult> {
+  try {
+    await center.revokeExtension(id);
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+  revalidatePath("/connected-apps", "layout");
+  redirect("/connected-apps");
+}
+
+/** 저장·내리기 확인 창이 열릴 때 읽는다 — 그 앱을 쓰는 살아 있는 배포 (C7 `dependents`). */
+export async function loadDependents(id: string): Promise<{ items?: ExtensionDependent[]; error?: string }> {
+  try {
+    return { items: await center.extensionDependents(id) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 「판 기록」 (C7 `versions`). */
+export async function loadVersions(id: string): Promise<{ items?: ExtensionVersionInfo[]; error?: string }> {
+  try {
+    return { items: await center.extensionVersions(id) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+export interface TestCallResult extends ActionResult {
+  result?: ExtensionTestResult;
+}
+
+/** 시험 호출 — 저장한 판으로 (Center가 `origin: test` 일감을 올리고 맡은 일꾼이 시험 주소로 부른다). */
+export async function startTestCall(id: string, operation: string, inputText: string): Promise<TestCallResult> {
+  const { input, error } = parseInput(inputText);
+  if (!input) return { error };
+  try {
+    return { result: await center.startTestCall(id, { operation, input, wait_s: 20 }) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 아직 `pending`이면 다시 묻는다 (답을 읽으면 Center가 값을 지운다). */
+export async function pollTestCall(id: string, taskId: string): Promise<TestCallResult> {
+  try {
+    return { result: await center.testCallResult(id, taskId, 20) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
 }
 
 // ─────────────────── 관리자 계정 (CON-14) ───────────────────

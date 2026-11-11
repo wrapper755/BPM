@@ -15,6 +15,7 @@
 | [studio/docs/screens.md](../studio/docs/screens.md) | Studio (Windows 데스크톱, BPM 프로세스 설계) | STU-01 ~ STU-16 |
 | [bot/docs/screens.md](../bot/docs/screens.md) | PC 실행기 (Windows 트레이 기반 GUI, 항상 실행) | BUI-01 ~ BUI-11 (BUI-06~10 폐기) |
 | [server/docs/screens/center-console.md](../server/docs/screens/center-console.md) | Center 콘솔 (웹) — 관리자 계정으로 승인·배포까지 ([ADR-0090](decisions/0090-center-admin-accounts.md)) | CON-00 ~ CON-18 (CON-07~11 폐기) |
+| [server/docs/screens/center-console-connections.md](../server/docs/screens/center-console-connections.md) | Center 콘솔 — 일꾼·연결 앱 (위 파일을 나눈 것) | CON-17 · CON-18 |
 | [server/docs/screens/service-app-console.md](../server/docs/screens/service-app-console.md) | 서비스 앱 관리 콘솔 (웹, 앱마다) | SVC-00 ~ SVC-03 |
 | 이 파일 §5 | 여러 앱이 같이 쓰는 창 | CMN-01 |
 

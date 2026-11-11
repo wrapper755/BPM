@@ -6,6 +6,7 @@
  * `POST /api/v1/consumers` — 콘솔에서 일꾼 만들기 (C15 §일꾼 관리, ADR-0137). Center 관리자만.
  */
 export interface ConsumerCreateRequest {
+  kinds?: ("ai" | "api" | "rpa")[];
   name: string;
   /**
    * @minItems 1

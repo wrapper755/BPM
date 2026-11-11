@@ -24,6 +24,8 @@ import {
 } from "@/lib/connected-apps";
 import { Shell } from "@/components/Shell";
 import { OperationTree } from "./tree";
+import { SOURCE_HINT, SOURCE_LABEL, appGroupsOf, untestableReason } from "@/lib/adapter-editor";
+import { AddOperationButton, AppActions, OperationMenu, type AppContext } from "../editor";
 import { Hint, SOURCE_NOTE, connectedAppHref, time } from "../page";
 
 /**
@@ -116,19 +118,21 @@ export default async function ConnectedAppPage({
   searchParams,
 }: {
   params: Promise<{ appId: string }>;
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; assign_error?: string }>;
 }) {
   const found = await session();
   if (!found) redirect("/login");
   const { appId } = await params;
   const id = decodeURIComponent(appId);
-  const query = (await searchParams).q ?? "";
+  const { q: query = "", assign_error: assignError } = await searchParams;
+  const manage = found.mode === "admin" && !found.company;
 
   let app: Awaited<ReturnType<typeof findApp>> = { external: null, worker: null };
   let failure: string | null = null;
   let workers: string[] | null = null;
   let reported: { base_url?: string | null; test_base_url?: string | null } | null = null;
   let counts: Awaited<ReturnType<typeof center.topicOperations>> | null = null;
+  let editing: AppContext | null = null;
   try {
     const [one, consumers, ops] = await Promise.all([
       findApp(id),
@@ -136,6 +140,18 @@ export default async function ConnectedAppPage({
       center.topicOperations(id).catch(() => null),
     ]);
     app = one;
+    // 원본이 콘솔인 HTTP 어댑터 앱만 여기서 고친다 (Center 관리자, ADR-0141).
+    if (manage && one.external?.source === "console") {
+      const all = await center.extensions().catch(() => []);
+      editing = {
+        id,
+        version: one.external.version,
+        definition: one.external.definition,
+        groups: appGroupsOf(all.filter((ext) => ext.tier === "external").map((ext) => ext.definition)),
+        workers: consumers?.map((c) => ({ consumer_id: c.consumer_id, name: c.name, topics: c.topics ?? [] })) ?? null,
+        untestable: untestableReason(consumers ? workersOf(consumers, id) : null, one.external.status),
+      };
+    }
     workers = consumers ? workersOf(consumers, id) : null;
     // 그 토픽을 맡은 일꾼이 알린 주소 (C15 `address`) — 여럿이면 처음 것.
     reported = consumers?.map((c) => c.addresses?.[id]).find((c) => c !== undefined) ?? null;
@@ -228,6 +244,16 @@ export default async function ConnectedAppPage({
       width: "20ch",
       cell: (row) => (row.counts?.last_finished_at ? time(row.counts.last_finished_at) : NONE),
     },
+    ...(editing
+      ? [
+          {
+            key: "actions",
+            header: "",
+            width: "6ch",
+            cell: (row: OperationRow) => <OperationMenu app={editing} name={row.name} />,
+          },
+        ]
+      : []),
   ];
 
   return shell(
@@ -241,7 +267,20 @@ export default async function ConnectedAppPage({
           <span className="text-body-sm text-text-secondary" title={IMPL_HINT[impl]}>
             {IMPL_LABEL[impl]}
           </span>
+          {external ? (
+            <span
+              className="text-body-sm text-text-secondary"
+              title={SOURCE_HINT[external.source === "console" ? "console" : "consumer"]}
+            >
+              원본 {SOURCE_LABEL[external.source === "console" ? "console" : "consumer"]}
+            </span>
+          ) : null}
           <Hint text={SOURCE_NOTE} />
+          {editing ? (
+            <span className="ml-auto">
+              <AppActions app={editing} variant="header" />
+            </span>
+          ) : null}
         </div>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-text-secondary">
           {external ? <span>만든 곳 {external.publisher ?? "—"}</span> : null}
@@ -284,12 +323,23 @@ export default async function ConnectedAppPage({
       </form>
 
       {counts === null ? <ErrorBanner message="일감 집계를 읽지 못했습니다" /> : null}
+      {assignError ? <ErrorBanner message={`앱은 만들었습니다. 다만 일꾼에 맡기지 못했습니다:\n${assignError}`} /> : null}
 
-      <h2 className="mb-2 mt-4 text-h2 font-semibold">
-        작업 {rows.length} / {head.operations.length}
-      </h2>
+      <div className="mb-2 mt-4 flex items-center gap-2">
+        <h2 className="text-h2 font-semibold">
+          작업 {rows.length} / {head.operations.length}
+        </h2>
+        {editing ? (
+          <span className="ml-auto">
+            <AddOperationButton app={editing} />
+          </span>
+        ) : null}
+      </div>
       {rows.length === 0 ? (
-        <EmptyState title={query ? `「${query}」에 맞는 작업이 없습니다.` : "작업이 없습니다."} />
+        <EmptyState
+          title={query ? `「${query}」에 맞는 작업이 없습니다.` : "작업이 없습니다."}
+          hint={!query && editing ? "「작업 더하기...」로 이 앱이 부를 작업을 더하세요." : undefined}
+        />
       ) : (
         <OperationTree
           columns={columns}

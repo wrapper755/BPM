@@ -9,7 +9,7 @@
 | 관련 ADR | [0018](../decisions/0018-extensions.md), [0010](../decisions/0010-service-apps.md), [0013](../decisions/0013-api-keys.md), [0041](../decisions/0041-extension-run-events.md), [0042](../decisions/0042-extension-contributed-panels.md), [0112](../decisions/0112-escalation-review-from-extensions.md), [0114](../decisions/0114-remove-ui-automation.md) |
 | 관련 화면 | BUI-03·11, STU-03·14·15, SVC-00 |
 
-> 상태: **외부 확장 등록이 돈다** — 그 토픽을 맡은 **일꾼이** `PUT /consumers/self/extension`(C15)으로 정의를 올리면 E1·E2·E3·E4를 검사하고 **Center가 C2 `extension` 봉투에 서명해**(ADR-0090) 정의와 봉투를 **그대로** 보관한다 — 실행하는 쪽이 다시 검증한다(E6). 맡은 일꾼이 일꾼 폴더에서 빠지면 Center가 뜰 때 `extension_revoke` 봉투로 거둔다 ([ADR-0122](../decisions/0122-consumer-folder.md)). 콘솔·API로 등록·해제하는 길은 없다. **E4는 외부 확장으로 띄울 수 없다** — `task_types`가 `entry`(코드)를 요구하고 E1이 그것을 먼저 막기 때문이다. 그 겹침은 설치된 확장들 사이에서만 생기고 확장 호스트가 본다.
+> 상태: **외부 확장 등록이 돈다** — 그 토픽을 맡은 **일꾼이** `PUT /consumers/self/extension`(C15)으로 정의를 올리면 E1·E2·E3·E4를 검사하고 **Center가 C2 `extension` 봉투에 서명해**(ADR-0090) 정의와 봉투를 **그대로** 보관한다 — 실행하는 쪽이 다시 검증한다(E6). 맡은 일꾼이 일꾼 폴더에서 빠지면 Center가 뜰 때 `extension_revoke` 봉투로 거둔다 ([ADR-0122](../decisions/0122-consumer-folder.md)). **HTTP 어댑터 앱은 Center 관리자가 콘솔에서 만들고 고칠 수도 있다**(원본 `console` — C7 §콘솔에서 고치는 외부 확장, ADR-0141 — Center API·일꾼·콘솔 CON-18이 돈다). **E4는 외부 확장으로 띄울 수 없다** — `task_types`가 `entry`(코드)를 요구하고 E1이 그것을 먼저 막기 때문이다. 그 겹침은 설치된 확장들 사이에서만 생기고 확장 호스트가 본다.
 >
 > `contributes.resources[].catalog_url`은 Center가 읽어 쌓는다 (M5 조각 10) — 내장 확장의 정의가 Center에 없어 `catalog_url`을 찾을 길이 없던 구멍은 **C11에 카탈로그 칸을 더해** 메웠다 (C11 §모델 연결 아래 `resources`).
 >
@@ -41,13 +41,17 @@
 
 정의가 외부 앱을 부르는 길(허용 호스트·인증 방식·작업)을 정하기 때문에, 배포와 같은 관문을 둔다 — 정의는 **그것을 수행하는 일꾼이 들고 있다가** 올리고, 검사를 지나면 Center가 C2 `extension` claim(`{id, version, definition_hash}`)에 서명한다 ([ADR-0090](../decisions/0090-center-admin-accounts.md), [ADR-0122](../decisions/0122-consumer-folder.md)). 일꾼은 Center 쪽 **일꾼 폴더**의 파일로만 들어오므로(C15 §일꾼 들이기) 폴더에 쓸 수 있는 사람(관리자)이 들인 일꾼만 올릴 수 있다. 실행하는 쪽은 봉투로 「Center가 등록한 그 정의인가」를 다시 본다.
 
-1. 일꾼이 뜰 때 `PUT /api/v1/consumers/self/extension` `{definition}`을 올린다 — 정의의 `id`는 그 일꾼의 **토픽 안**이어야 한다(밖이면 403 `topic_not_granted`).
+정의의 **원본은 둘 중 하나다**(ADR-0141) — 일꾼(`consumer`, 아래 1~3) 또는 콘솔(`console` — HTTP 어댑터 앱만, Center 관리자가 C7 `POST·PUT·DELETE /resources/extensions…`로 만들고 고치고 내린다. 고치면 새 판이고 맡은 일꾼은 C15 `GET /consumers/self/extensions`로 받는다). 한 id의 원본은 바뀌지 않는다.
+
+1. 일꾼이 뜰 때 `PUT /api/v1/consumers/self/extension` `{definition}`을 올린다 — 정의의 `id`는 그 일꾼의 **토픽 안**이어야 한다(밖이면 403 `topic_not_granted`). 원본이 `console`인 id면 409 `source_is_console`.
 2. Center가 크기·모양·E1·E2·E3·E4를 보고, 지나면 봉투에 서명해 정의와 함께 둔다.
-3. 맡은 일꾼이 일꾼 폴더에서 빠지면(그 id가 어느 일꾼의 토픽에도 없다) Center가 **뜰 때** 그 판들을 `extension_revoke` 봉투로 거둔다. 폴더가 붙지 않았거나 읽지 못한 일꾼 파일이 있으면 거두지 않는다.
+3. 맡은 일꾼이 일꾼 폴더에서 빠지면(그 id가 어느 일꾼의 토픽에도 없다) Center가 **뜰 때** 그 판들을 `extension_revoke` 봉투로 거둔다. 폴더가 붙지 않았거나 읽지 못한 일꾼 파일이 있으면 거두지 않는다. **원본이 `console`인 것은 맡은 일꾼이 없어져도 거두지 않는다** — 내리는 것은 콘솔이다.
 
 | 경로 | 인증 | 뜻 |
 | --- | --- | --- |
 | `PUT /api/v1/consumers/self/extension` `{definition}` | 일꾼 토큰 (그 토픽) — Center가 C2 `extension` 봉투에 서명한다 | 외부 확장 등록 (C15) |
+| `POST·PUT·DELETE /api/v1/resources/extensions…` | Center 관리자 — Center가 서명한다 | HTTP 어댑터 앱 만들기·고치기·내리기 (C7, ADR-0141) |
+| `GET /api/v1/consumers/self/extensions` | 일꾼 토큰 | 원본 `console`인 맡은 정의 받기 (C15) |
 | `GET /api/v1/resources?type=extension` | 읽기·관리자 토큰, Studio·PC 실행기·서버 실행기 키 (C5 권한표) | 목록 |
 | `GET /api/v1/resources/extensions/{id}` | 같음 | 하나 (외부면 정의와 봉투 포함) |
 
@@ -303,6 +307,7 @@ Studio 「확장」(STU-15)의 「정의 파일 열기...」는 E1·E3을 로컬
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-09 | 2 | 외부 확장 정의의 **원본이 둘** — 일꾼(`consumer`) 또는 콘솔(`console`, HTTP 어댑터 앱만 — C7 `POST·PUT·DELETE /resources/extensions…`). 원본 `console`은 맡은 일꾼이 없어져도 거두지 않는다. 정의 모양은 그대로다 | [0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md) |
 | 2026-11-08 | 2 | 연결 앱 카탈로그(CON-18) 칸 — 정의의 `app_group{id, name}`·`keywords`, `adapter.groups`와 작업의 `group`·`keywords`(모두 선택). E3가 없는 묶음 id를 거부한다. 선택 칸이라 schema는 그대로다 | [0138](../decisions/0138-console-app-catalog.md) |
 | 2026-11-08 | 2 | HTTP 어댑터 작업의 `kind`는 `api`다(기본, 다른 값은 검사 오류) — 선택 칸이라 schema는 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 2 | 외부 확장 등록은 **그 토픽의 일꾼이 정의를 올리는 것**이다(C15 `PUT …/self/extension`) — `POST/DELETE /resources/extensions`를 걷었다. 맡은 일꾼이 일꾼 폴더에서 빠지면 Center가 거둔다. 낮은 판은 409 `older_than_registered`. 정의 모양은 그대로다 | [0122](../decisions/0122-consumer-folder.md) |

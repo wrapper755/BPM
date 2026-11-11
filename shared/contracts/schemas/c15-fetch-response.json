@@ -112,6 +112,18 @@
           "title": "Deadline",
           "type": "string"
         },
+        "definition_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Definition Version"
+        },
         "delivery": {
           "default": 1,
           "title": "Delivery",

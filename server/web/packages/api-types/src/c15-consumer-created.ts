@@ -14,10 +14,14 @@ export interface ConsumerCreated {
   apps?: string[];
   consumer_id: string;
   key_prefix?: string | null;
+  kinds?: string[] | null;
   last_fetch_at?: string | null;
   name: string;
   source?: string | null;
   token: string;
+  topic_kinds?: {
+    [k: string]: string[];
+  };
   topics?: string[];
   [k: string]: unknown;
 }

@@ -3,6 +3,18 @@
   "additionalProperties": true,
   "description": "`POST /api/v1/consumers` — 콘솔에서 일꾼 만들기 (C15 §일꾼 관리, ADR-0137). Center 관리자만.",
   "properties": {
+    "kinds": {
+      "items": {
+        "enum": [
+          "ai",
+          "api",
+          "rpa"
+        ],
+        "type": "string"
+      },
+      "title": "Kinds",
+      "type": "array"
+    },
     "name": {
       "maxLength": 64,
       "minLength": 1,

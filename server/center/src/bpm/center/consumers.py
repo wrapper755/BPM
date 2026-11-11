@@ -1,6 +1,6 @@
-"""일꾼 관리 — Center 관리자가 콘솔(CON-17)에서 만들고, 토픽을 바꾸고, 토큰을 새로 발급하고, 지운다.
+"""일꾼 관리 — Center 관리자가 콘솔(CON-17)에서 만들고, 종류·토픽을 바꾸고, 토큰을 새로 발급하고, 지운다.
 
-C15 §일꾼 관리, ADR-0137.
+C15 §일꾼 관리, ADR-0137. 종류(`ai`·`api`·`rpa`)는 가져가기가 거르는 값이다 (ADR-0139).
 
 **원본은 DB다.** 일꾼의 요청은 그때마다 `consumers`·`center_keys`를 읽으므로 여기서 바꾼 것은 **다음 요청부터**
 반영된다 — Center를 다시 띄우지 않는다. 일꾼 폴더(`consumer_folder`)는 없는 일꾼을 처음 한 번 들일 뿐이다.
@@ -29,8 +29,9 @@ log = logging.getLogger(__name__)
 MACHINE_PREFIX = "console:"
 
 
-def create(store: Store, *, name: str, topics: list[str], by: str) -> ConsumerCreated:
-    """일꾼 하나를 만든다 → 정보 + **토큰 원문**(이 답에만 있다). 같은 이름이 있으면 409 `name_taken`."""
+def create(store: Store, *, name: str, topics: list[str], kinds: list[str] | None = None, by: str) -> ConsumerCreated:
+    """일꾼 하나를 만든다 → 정보 + **토큰 원문**(이 답에만 있다). 같은 이름이 있으면 409 `name_taken`.
+    `kinds`를 비우면 정하지 않은 일꾼이다 — 모든 종류를 가져간다."""
     name = name.strip()
     if not name:
         raise ApiError(422, "input_invalid", "이름이 비었다")
@@ -42,25 +43,33 @@ def create(store: Store, *, name: str, topics: list[str], by: str) -> ConsumerCr
     with store.tx() as cur:
         key_id = _insert_key(cur, name, raw, now)
         cur.execute(
-            "INSERT INTO consumers (consumer_id, key_id, machine_id, name, topics_json, manifest_json,"
-            " approved_at, approved_by) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)",
-            (consumer_id, key_id, f"{MACHINE_PREFIX}{consumer_id}", name, dumps(_topics(topics)), now, by),
+            "INSERT INTO consumers (consumer_id, key_id, machine_id, name, topics_json, kinds_json, manifest_json,"
+            " approved_at, approved_by) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)",
+            (
+                consumer_id, key_id, f"{MACHINE_PREFIX}{consumer_id}", name, dumps(_topics(topics)),
+                dumps(_kinds(kinds)) if kinds else None, now, by,
+            ),
         )
-    log.info("일꾼 %s를 만들었다 (토픽 %s, %s)", name, ", ".join(_topics(topics)), by)
+    said = _said(kinds, "정하지 않음")
+    log.info("일꾼 %s를 만들었다 (토픽 %s, 종류 %s, %s)", name, ", ".join(_topics(topics)), said, by)
     return _created(store, consumer_id, raw)
 
 
-def update_topics(store: Store, consumer_id: str, topics: list[str], *, by: str) -> ConsumerInfo:
-    """맡는 토픽을 바꾼다. 빠진 토픽의 manifest는 버리고, 맡을 일꾼이 없어진 외부 확장은 철회한다."""
+def update(
+    store: Store, consumer_id: str, topics: list[str], *, kinds: list[str] | None = None, by: str
+) -> ConsumerInfo:
+    """맡는 토픽(과 `kinds`를 주면 종류)을 바꾼다. 빠진 토픽의 manifest는 버리고, 맡을 일꾼이 없어진 외부 확장은
+    철회한다. `kinds`를 비우면 종류는 그대로다."""
     row = _row(store, consumer_id)
     wanted = _topics(topics)
     held = [one for one in external_tasks._held_manifests(row) if one.get("app_id") in wanted]
+    kinds_json = dumps(_kinds(kinds)) if kinds else row["kinds_json"]
     with store.tx() as cur:
         cur.execute(
-            "UPDATE consumers SET topics_json = ?, manifest_json = ? WHERE consumer_id = ?",
-            (dumps(wanted), dumps(held) if held else None, consumer_id),
+            "UPDATE consumers SET topics_json = ?, manifest_json = ?, kinds_json = ? WHERE consumer_id = ?",
+            (dumps(wanted), dumps(held) if held else None, kinds_json, consumer_id),
         )
-    log.info("일꾼 %s의 토픽을 바꿨다: %s (%s)", row["name"], ", ".join(wanted), by)
+    log.info("일꾼 %s를 바꿨다: 토픽 %s, 종류 %s (%s)", row["name"], ", ".join(wanted), _said(kinds), by)
     revoke_orphans(store, by=by)
     return external_tasks.consumer_info(store, _row(store, consumer_id))
 
@@ -139,4 +148,12 @@ def _topics(topics: list[str]) -> list[str]:
     return sorted(set(topics))
 
 
-__all__ = ["create", "delete", "reissue", "revoke_orphans", "update_topics"]
+def _kinds(kinds: list[str]) -> list[str]:
+    return resources.ordered_kinds(kinds)
+
+
+def _said(kinds: list[str] | None, empty: str = "그대로") -> str:
+    return ", ".join(_kinds(kinds)) if kinds else empty
+
+
+__all__ = ["create", "delete", "reissue", "revoke_orphans", "update"]

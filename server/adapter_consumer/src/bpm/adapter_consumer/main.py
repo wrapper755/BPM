@@ -9,8 +9,12 @@
 1. **들이기는 없다** — Center의 일꾼 폴더에 이 일꾼의 `<이름>.consumer.json`(토큰 해시·토픽 = 맡을 확장 id)이 있어야
    한다(`bpm-center consumer-file`이 짓고 토큰 원문을 한 번 찍는다). 원문은 `BPM_ADAPTER__CENTER__TOKEN` 또는
    `BPM_ADAPTER__DATA_DIR`(기본 `.adapter-consumer`)의 `consumer-token.json`.
-2. 맡을 외부 확장의 **정의는 이 일꾼이 들고 있다** — `BPM_ADAPTER__DEFINITIONS`(파일 경로, `os.pathsep`으로 여럿)를
-   읽어 뜰 때 Center에 올리고 Center가 검사·서명한다 (`PUT /consumers/self/extension`). 읽지 못한 정의는 맡지 않는다.
+2. 맡을 외부 확장의 정의는 두 곳에서 온다.
+   - **콘솔이 원본인 것**(CON-18에서 만들고 고친 것, ADR-0141)은 Center에서 받는다 — 뜰 때와 주기마다
+     (`ConsoleDefinitions`). 일감은 실린 판으로 부른다.
+   - **파일로 들고 있는 것** — `BPM_ADAPTER__DEFINITIONS`(파일 경로, `os.pathsep`으로 여럿, 선택)를 읽어 뜰 때 Center에
+     올리고 Center가 검사·서명한다 (`PUT /consumers/self/extension`). 읽지 못한 정의는 맡지 않는다. 콘솔 원본과 id가
+     겹치면 콘솔 것을 쓴다.
 3. 가져가기 루프 (`service_kit.Consumer`) — 일감마다 그 정의의 어댑터를 돌린다.
 
 외부 앱이 있는 망 안에 띄워도 된다 — 나가는 연결(Center로, 외부 앱으로)만 있으면 된다.
@@ -29,6 +33,7 @@ from pathlib import Path
 from typing import Any
 
 from bpm.adapter_consumer.adapter import ENV_PREFIX, AdapterService
+from bpm.adapter_consumer.console import ConsoleDefinitions
 from bpm.contracts.extension import ExtensionManifest
 from bpm.service_kit import Consumer, TokenFile
 
@@ -70,10 +75,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--data-dir", type=Path, default=Path(_env("DATA_DIR") or ".adapter-consumer"))
     found = parser.parse_args(argv)
     paths = [Path(one) for one in str(found.definitions).split(os.pathsep) if one.strip()]
-    if not found.center_url or not paths:
-        print(
-            "Center 주소(BPM_ADAPTER__CENTER__URL)와 정의 파일(BPM_ADAPTER__DEFINITIONS)이 필요하다", file=sys.stderr
-        )
+    if not found.center_url:
+        print("Center 주소(BPM_ADAPTER__CENTER__URL)가 필요하다", file=sys.stderr)
         return 2
     tokens = TokenFile.at(found.data_dir, env_prefix=ENV_PREFIX)
     if not tokens.token():
@@ -83,13 +86,16 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-    services = load_files(paths)
-    if not services:
-        print("맡을 수 있는 외부 확장이 없다 — 정의 파일을 확인하세요", file=sys.stderr)
-        return 1
-    consumer = Consumer(services, center_url=found.center_url, tokens=tokens)
+    console = ConsoleDefinitions()
+    consumer = Consumer(load_files(paths), center_url=found.center_url, tokens=tokens, sources=[console])
     consumer.publish(force=True)
-    print(f"일꾼으로 붙었다 — {', '.join(one.app_id for one in services)}", flush=True)
+    if not consumer.services:
+        print(
+            "맡을 수 있는 외부 확장이 없다 — 콘솔(CON-18)에서 만든 것이 이 일꾼의 토픽에 없고 정의 파일도 없다",
+            file=sys.stderr,
+        )
+        return 1
+    print(f"일꾼으로 붙었다 — {', '.join(consumer.topics)}", flush=True)
     stop = threading.Event()
     try:
         consumer.run(stop)

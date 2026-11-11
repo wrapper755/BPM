@@ -1,0 +1,22 @@
+{
+  "$id": "urn:bpm:contracts:c7-extension-update-request",
+  "additionalProperties": true,
+  "description": "`PUT /resources/extensions/{id}` — 원본이 콘솔인 정의를 고친다 = 새 판 (ADR-0141).\n\n`base_version`은 고치기 시작한 판이다 — 그 사이 다른 사람이 판을 올렸으면 409 `version_conflict`\n(덮어쓰지 않는다). 정의의 `version`은 Center가 정한다(`base_version`의 끝자리 + 1) — 보내도 무시한다.",
+  "properties": {
+    "base_version": {
+      "title": "Base Version",
+      "type": "string"
+    },
+    "definition": {
+      "additionalProperties": true,
+      "title": "Definition",
+      "type": "object"
+    }
+  },
+  "required": [
+    "definition",
+    "base_version"
+  ],
+  "title": "ExtensionUpdateRequest",
+  "type": "object"
+}

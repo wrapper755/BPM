@@ -1,0 +1,62 @@
+{
+  "$id": "urn:bpm:contracts:c7-extension-version-info",
+  "additionalProperties": true,
+  "description": "`GET /resources/extensions/{id}/versions`의 한 줄 — CON-18 「판 기록」.",
+  "properties": {
+    "definition_hash": {
+      "title": "Definition Hash",
+      "type": "string"
+    },
+    "registered_at": {
+      "title": "Registered At",
+      "type": "string"
+    },
+    "registered_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Registered By"
+    },
+    "revoked_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revoked At"
+    },
+    "revoked_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revoked By"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "definition_hash",
+    "registered_at"
+  ],
+  "title": "ExtensionVersionInfo",
+  "type": "object"
+}

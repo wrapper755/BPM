@@ -10,13 +10,15 @@
    같아야 한다 (`bpm-center consumer-file`, ADR-0122). 토큰 원문은 `BPM_CONSUMER__CENTER__TOKEN` 또는 데이터 폴더의
    `consumer-token.json`.
 2. 업무 처리기는 엔트리 포인트 `bpm.consumer_handlers`로 찾는다. `BPM_CONSUMER__HANDLERS`(쉼표)를 주면 그것만 켠다.
-3. 외부 확장 정의(종류 `api`)는 `BPM_CONSUMER__DEFINITIONS`(`os.pathsep`으로 여럿) — 어댑터 일꾼과 같은 규칙이고,
-   그 앱의 주소·키도 같은 이름(`BPM_ADAPTER__EXT__<확장>__*`)으로 받는다.
+3. 외부 확장 정의(종류 `api`)는 어댑터 일꾼과 같은 규칙이다 — 콘솔이 원본인 것은 Center에서 받고(ADR-0141),
+   파일로 들고 있는 것은 `BPM_CONSUMER__DEFINITIONS`(`os.pathsep`으로 여럿). 그 앱의 주소·키도 같은
+   이름(`BPM_ADAPTER__EXT__<확장>__*`)으로 받는다. 콘솔 원본의 토픽은 Center에 붙은 뒤에 생기므로 `--describe`에는
+   없다.
 
 4. **관리 API**(일꾼 콘솔 = 서비스 앱 콘솔, C11) — `BPM_CONSUMER__ADMIN_TOKEN`이 있을 때만 `BPM_CONSUMER__HOST`·`PORT`에
    띄운다. 콘솔은 `BPM_SVC_CONSOLE__APP_URL`을 이 주소로 둔다.
 
-업무 처리기도 정의도 없으면 맡을 것이 없어 뜨지 않는다. 업무 처리기 없이 정의만 주면 어댑터 일꾼과 같다.
+업무 처리기도 정의도(콘솔 원본도) 없으면 맡을 것이 없어 뜨지 않는다. 업무 처리기 없이 정의만 주면 어댑터 일꾼과 같다.
 """
 
 from __future__ import annotations
@@ -32,10 +34,11 @@ from pathlib import Path
 from fastapi import FastAPI
 from platformdirs import user_data_path
 
+from bpm.adapter_consumer.console import ConsoleDefinitions
 from bpm.adapter_consumer.main import load_files
 from bpm.service_kit import Consumer, InMemoryUsageLog, TokenFile
 from bpm.unified_consumer import handlers
-from bpm.unified_consumer.admin import create_admin_app, recorded
+from bpm.unified_consumer.admin import RecordingTopic, create_admin_app, recorded
 from bpm.unified_consumer.host import TopicClash, UnifiedConsumer
 
 ENV_PREFIX = "BPM_CONSUMER__"
@@ -84,9 +87,6 @@ def main(argv: list[str] | None = None) -> int:
     if found.describe:
         print(json.dumps(host.describe(), ensure_ascii=False, indent=2))
         return 0
-    if not host.topics:
-        print("맡을 토픽이 없다 — 업무 처리기를 깔거나 정의 파일(BPM_CONSUMER__DEFINITIONS)을 주세요", file=sys.stderr)
-        return 1
     if not found.center_url:
         print("Center 주소(BPM_CONSUMER__CENTER__URL)가 필요하다", file=sys.stderr)
         return 2
@@ -99,17 +99,28 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
     usage = InMemoryUsageLog()
-    services = recorded(host.services, usage)
-    consumer = Consumer(services, center_url=found.center_url, tokens=tokens)
+    console = ConsoleDefinitions(wrap=lambda one: RecordingTopic(inner=one, log=usage))
+    consumer = Consumer(recorded(host.services, usage), center_url=found.center_url, tokens=tokens, sources=[console])
     consumer.publish(force=True)
+    if not consumer.services:
+        print(
+            "맡을 토픽이 없다 — 업무 처리기를 깔거나, 콘솔(CON-18)에서 외부 앱을 만들어 이 일꾼에 맡기거나,"
+            " 정의 파일(BPM_CONSUMER__DEFINITIONS)을 주세요",
+            file=sys.stderr,
+        )
+        return 1
     admin_token = _env("ADMIN_TOKEN")
     if admin_token:
-        _serve_admin(create_admin_app(services, admin_token=admin_token, log=usage, center=consumer.registration))
+        # 콘솔 원본 토픽은 나중에 더해지므로 일꾼의 지금 목록을 읽게 한다.
+        live = lambda: consumer.services  # noqa: E731
+        _serve_admin(create_admin_app(live, admin_token=admin_token, log=usage, center=consumer.registration))
     else:
         log.info("관리자 토큰(BPM_CONSUMER__ADMIN_TOKEN)이 없어 관리 API를 띄우지 않는다")
     for kind, names in host.describe()["by_kind"].items():
         log.info("종류 %s: %s", kind, ", ".join(names))
-    print(f"일꾼으로 붙었다 — {', '.join(one.service.app_id for one in host.topics)}", flush=True)
+    if console.services:
+        log.info("콘솔이 원본인 외부 확장: %s", ", ".join(sorted(console.services)))
+    print(f"일꾼으로 붙었다 — {', '.join(consumer.topics)}", flush=True)
     stop = threading.Event()
     try:
         consumer.run(stop)

@@ -39,6 +39,10 @@ KNOWN_FOLDER_OUTCOMES = frozenset({"registered", "unchanged", "refused", "revoke
 KNOWN_FOLDER_KINDS = frozenset({"consumer", "key", "extension"})
 # 수행 모드 값은 C11이 소유한다 (`service_app.MODES`).
 
+#: 외부 확장 정의의 원본 (`ExtensionResource.source`, ADR-0141) — 콘솔에서 만들고 고친 것인가, 맡은 일꾼이 올린 것인가.
+#: 정의마다 하나다. 내장·사내 확장은 없다(설치 파일이 원본이다).
+EXTENSION_SOURCES = ("console", "consumer")
+
 #: 누락 검사 결과의 `type`·`reason` (C7 「누락 검사」 표).
 KNOWN_MISSING_TYPES = frozenset({"extension", "service_app", "operation", "resource"})
 KNOWN_MISSING_REASONS = frozenset(
@@ -86,6 +90,87 @@ class ExtensionResource(ContractModel):
     # 외부 확장만 — 실행하는 쪽이 받아 검증한다 (C2 `extension` 봉투).
     definition: dict[str, Any] | None = None
     envelope: dict[str, Any] | None = None
+    #: 외부 확장만 — 정의의 원본 (`EXTENSION_SOURCES`, ADR-0141). 원본이 `console`이면 콘솔(CON-18)에서
+    #: 고치고 일꾼은 Center에서 받는다. 이 칸 전에 등록된 것은 `consumer`다.
+    source: str | None = None
+
+
+class ExtensionCreateRequest(ContractModel):
+    """`POST /resources/extensions` — 콘솔에서 HTTP 어댑터 앱을 만든다 (C13, ADR-0141).
+
+    정의는 C13 그대로이고 `tier: external`·`protocol: http-adapter`여야 한다. 판을 비우면 `0.1.0`이다.
+    """
+
+    definition: dict[str, Any]
+
+
+class ExtensionUpdateRequest(ContractModel):
+    """`PUT /resources/extensions/{id}` — 원본이 콘솔인 정의를 고친다 = 새 판 (ADR-0141).
+
+    `base_version`은 고치기 시작한 판이다 — 그 사이 다른 사람이 판을 올렸으면 409 `version_conflict`
+    (덮어쓰지 않는다). 정의의 `version`은 Center가 정한다(`base_version`의 끝자리 + 1) — 보내도 무시한다.
+    """
+
+    definition: dict[str, Any]
+    base_version: str
+
+
+class ExtensionVersionInfo(ContractModel):
+    """`GET /resources/extensions/{id}/versions`의 한 줄 — CON-18 「판 기록」."""
+
+    version: str
+    definition_hash: str
+    registered_at: Timestamp
+    #: 콘솔에서 고쳤으면 계정 이름, 일꾼이 올렸으면 그 일꾼 이름.
+    registered_by: str | None = None
+    revoked_at: Timestamp | None = None
+    revoked_by: str | None = None
+
+
+class ExtensionDependent(ContractModel):
+    """`GET /resources/extensions/{id}/dependents`의 한 줄 — 그 확장을 `requires.extensions`에 적은
+    **살아 있는 배포**의 BPM 프로세스 (CON-18 저장·내리기 확인 창).
+
+    `pinned_hash`가 있으면 그 정의를 고정했다 — 새 판을 쓰려면 다시 승인·배포해야 한다(C1, ADR-0060).
+    """
+
+    package_id: str
+    package_version: str
+    #: 그 패키지의 살아 있는 배포 수.
+    deployments: int
+    #: 고정한 정의의 해시. 고정하지 않았으면 없다.
+    pinned_hash: str | None = None
+    #: 고정한 해시가 어느 판의 것인가 — Center에 그 해시의 판이 없으면 없다.
+    pinned_version: str | None = None
+
+
+class ExtensionRevoked(ContractModel):
+    """`DELETE /resources/extensions/{id}` — 원본이 콘솔인 앱을 내린다: 철회하지 않은 판을 모두 철회한다."""
+
+    id: str
+    revoked: list[str] = Field(default_factory=list)
+
+
+class ExtensionTestCall(ContractModel):
+    """`POST /resources/extensions/{id}/test-calls` — 저장한 판의 작업 하나를 시험 일감(`origin: test`)으로
+    부른다 (CON-18 「시험 호출」, ADR-0141). 맡은 일꾼이 시험 주소로 부른다.
+    """
+
+    operation: str
+    input: dict[str, Any] = Field(default_factory=dict)
+    #: 답을 기다리는 시간 (C15 결과 기다리기와 같은 상한 25초).
+    wait_s: int = Field(default=20, ge=0, le=25)
+
+
+class ExtensionTestResult(ContractModel):
+    """시험 호출의 답 — C15 결과와 같은 상태·출력·오류다. 아직이면 `state: pending`이고
+    `GET /resources/extensions/{id}/test-calls/{task_id}?wait_s=`로 다시 묻는다."""
+
+    task_id: str
+    version: str
+    state: str  # C15 `external_task.KNOWN_STATES`
+    output: dict[str, Any] | None = None
+    error: dict[str, Any] | None = None
 
 
 class ConsumerFolderItem(ContractModel):

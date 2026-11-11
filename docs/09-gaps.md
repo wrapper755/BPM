@@ -44,7 +44,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 ## 3. 계약 쪽 기능 공백
 
-계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다.
+계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18).
 
 ### 3-29. 조직·업무 자리 — Center·Studio·콘솔은 돈다, PC 작업의 자리와 연동 키의 회사가 아직
 
@@ -119,6 +119,10 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 - **NowView 대시보드에서 자리를 못 찾은 것**(새로 만들지 않았다 — 필요하면 Company1 사이트 몫): 회차 하나의 업무 전체를 한 화면에 모은 현황(장면별 핵심 지표·「지나온 결재 n / 그림의 결재 m」·열린 결재 — 사이트 「경영 현황 › 종합 현황」은 「준비 중」), 시나리오 2 납기 상황판(UI-D01 — 사이트 장면 1 화면에 「상황판으로」 돌아가는 길만 남았다), 회차별 일꾼 일감 기록 보기(기간계 `worker-log`는 처리기가 계속 적지만 보이는 화면이 없다 — 서비스 앱 콘솔의 사용 기록은 회차를 모른다), 일꾼의 기간계 연결 상태(관리 API `dependencies`가 비어 있다).
 
 **정한 것.** Company1은 BPM 패키지를 git 커밋 고정으로 받는다(`52cb5672`). BPM 프로세스 id → 업무 매핑은 BPM 설정이 아니라 업무 처리기 코드 표(`company1_worker/config.py`)로 갔다 — 회사 하나이고 장면 코드와 함께 바뀐다.
+
+### 3-31. 통합 일꾼을 서버 compose에서 띄운다 — 운영 옮기기만 남았다
+
+[ADR-0140](decisions/0140-unified-consumer-runs-in-the-server-compose.md). 도는 것: `Dockerfile.unified-consumer`, compose `unified-consumer`(프로필 `consumer`, 볼륨 `unified-consumer-data`, `definitions/`), 회사 처리기 이미지·덧붙임 파일 쓰는 법(`server/deploy/README.md` §통합 일꾼) — 로컬 compose에서 회사 처리기를 얹어 Center에 붙는 것까지 봤다. **남은 것**: 운영 서버의 일꾼을 compose로 옮기기(사람 몫 — 백업부터, 데이터 폴더를 볼륨으로).
 
 ### 3-28. UI 자동화 확장을 다시 들인다
 

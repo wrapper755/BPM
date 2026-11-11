@@ -13,7 +13,9 @@
 **Center는 바깥 기능을 읽으러 가지 않는다** (ADR-0102) — 주소도 키도 들지 않고, 상태는 그 토픽을
 가져가는 일꾼이 말한다(마지막으로 가져간 때).
 
-외부 확장은 **서명 봉투로만** 등록·해제된다 (C2 `extension`·`extension_revoke`, C13 E6).
+외부 확장은 **서명 봉투로만** 등록·해제된다 (C2 `extension`·`extension_revoke`, C13 E6). 정의의 원본은 그 토픽의
+일꾼(`consumer`)이거나 콘솔(`console` — HTTP 어댑터 앱만, `console_extensions`, ADR-0141)이고 어느 쪽이든
+Center가 서명한다.
 내장·사내 확장은 설치 파일에 든 것만 쓰고 여기 들어오지 않는다 (E2).
 
 **기여 자원의 `data`는 해석하지 않는다** (C13 §5) — 그래서 플랫폼 코드에 「UI 화면」이라는 말이
@@ -23,6 +25,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -39,7 +42,7 @@ from bpm.contracts.resources import (
     RuntimeResource,
     ServiceAppResource,
 )
-from bpm.contracts.service_app import ServiceAppManifest
+from bpm.contracts.service_app import KIND_AI, KIND_API, KIND_RPA, ServiceAppManifest
 
 #: 서비스 앱 상태 (C7). 열린 문자열이지만 Center가 짓는 것은 이 넷이다.
 OK = "ok"
@@ -86,6 +89,10 @@ def topic_state(store: Store, topic: str, *, now: str | None = None) -> tuple[st
     return OK, count, last
 
 
+#: 화면에 보이는 종류의 차례 (ADR-0139).
+KIND_ORDER = (KIND_AI, KIND_API, KIND_RPA)
+
+
 def app_manifests(store: Store) -> dict[str, tuple[ServiceAppManifest, str]]:
     """app_id → (manifest, 올린 때). 같은 토픽을 둘이 맡으면 **나중에 승인된 쪽**이 이긴다."""
     out: dict[str, tuple[ServiceAppManifest, str]] = {}
@@ -95,6 +102,47 @@ def app_manifests(store: Store) -> dict[str, tuple[ServiceAppManifest, str]]:
             if one.app_id in granted:
                 out[one.app_id] = (one, str(row["approved_at"]))
     return out
+
+
+def live_extension(store: Store, extension_id: str) -> Any:
+    """그 id로 등록돼 있고 철회되지 않은 외부 확장 정의 — 같은 id는 **나중에 등록된 판**(`_external_rows`와 같다)."""
+    from bpm.contracts.extension import ExtensionManifest  # noqa: PLC0415
+
+    row = store.row(
+        "SELECT definition_json FROM extensions WHERE id = ? AND revoked_json IS NULL ORDER BY at DESC LIMIT 1",
+        (extension_id,),
+    )
+    if row is None:
+        return None
+    try:
+        return ExtensionManifest.model_validate(json.loads(row["definition_json"]))
+    except ValueError:  # pragma: no cover — 등록할 때 검증했다
+        return None
+
+
+def topic_kinds(store: Store, topics: list[str]) -> dict[str, list[str]]:
+    """토픽 → 일꾼 종류 (ADR-0139). 근거는 일감에 종류를 붙일 때와 같다 — 일꾼이 올린 manifest, 없으면
+    등록된 외부 확장 정의의 작업. 근거가 없는 토픽은 싣지 않는다(모른다)."""
+    manifests = app_manifests(store)
+    out: dict[str, list[str]] = {}
+    for topic in topics:
+        if topic in manifests:
+            found = {op.kind for op in manifests[topic][0].operations}
+        elif (ext := live_extension(store, topic)) is not None and ext.adapter is not None:
+            found = {op.kind for op in ext.adapter.operations}
+        else:
+            continue
+        if found:
+            out[topic] = ordered_kinds(found)
+    return out
+
+
+def ordered_kinds(kinds: Iterable[str]) -> list[str]:
+    """종류를 겹침 없이 `ai`·`api`·`rpa` 차례로 — 모르는 값(열린 문자열)은 뒤에 이름 순 (ADR-0139)."""
+    def rank(kind: str) -> tuple[int, str]:
+        return (KIND_ORDER.index(kind) if kind in KIND_ORDER else len(KIND_ORDER), kind)
+
+    return sorted(set(kinds), key=rank)
 
 
 # ─────────────────────────── 서비스 앱 ───────────────────────────
@@ -254,9 +302,82 @@ def extensions(store: Store, *, probe: bool = True) -> list[ExtensionResource]:
                 checked_at=checked,
                 definition=definition,
                 envelope=json.loads(registered["envelope_json"]) if registered is not None else None,
+                source=source_of(registered) if registered is not None else None,
             )
         )
     return out
+
+
+#: 정의의 원본 (C7 `ExtensionResource.source`, ADR-0141). 원본 칸이 생기기 전에 등록된 줄(NULL)은 `consumer`다.
+CONSOLE = "console"
+CONSUMER = "consumer"
+
+
+def source_of(row: Any) -> str:
+    return CONSOLE if row["source"] == CONSOLE else CONSUMER
+
+
+def source_of_id(store: Store, extension_id: str) -> str | None:
+    """그 id의 원본 — 한 id의 원본은 바뀌지 않으므로 아무 판이나 본다. 등록된 적이 없으면 `None`."""
+    row = store.row("SELECT source FROM extensions WHERE id = ? LIMIT 1", (extension_id,))
+    return source_of(row) if row is not None else None
+
+
+def definition_version_for(store: Store, topic: str, *, bpm_process_id: str | None, version: str | None) -> str | None:
+    """원본이 콘솔인 토픽의 일감이 부를 정의의 판 (C15 `LockedTask.definition_version`, ADR-0141).
+
+    부른 BPM 프로세스가 정의를 고정했으면(C1 `definition_hash`) **그 해시의 판**이다 — 콘솔에서 고쳐도 고정한
+    BPM 프로세스는 옛 판으로 돈다(ADR-0060). 고정하지 않았거나 시험 실행이면 올릴 때의 지금 판이다. 원본이
+    일꾼이면 `None` — 일꾼이 제 파일로 부른다.
+    """
+    if source_of_id(store, topic) != CONSOLE:
+        return None
+    if bpm_process_id and version:
+        row = store.row("SELECT manifest_json FROM packages WHERE id = ? AND version = ?", (bpm_process_id, version))
+        wanted = ((loads(row["manifest_json"], {}) or {}).get("requires") or {}).get("extensions") if row else None
+        pinned = next(
+            (
+                str(one["definition_hash"])
+                for one in wanted or []
+                if isinstance(one, dict) and one.get("id") == topic and one.get("definition_hash")
+            ),
+            None,
+        )
+        if pinned is not None:
+            found = store.row(
+                "SELECT version FROM extensions WHERE id = ? AND definition_hash = ? ORDER BY at DESC LIMIT 1",
+                (topic, pinned),
+            )
+            return str(found["version"]) if found is not None else None
+    live = _external_rows(store).get(topic)
+    return str(live["version"]) if live is not None else None
+
+
+def resource_of_row(store: Store, row: Any) -> ExtensionResource:
+    """저장된 외부 확장 줄 하나(판 하나)를 그대로 — 철회 응답과 일꾼이 받는 정의 목록(C15)이 쓴다."""
+    definition = json.loads(row["definition_json"])
+    extension_id = str(row["id"])
+    if row["revoked_json"]:
+        status, reasons, checked = "n/a", [], None
+    else:
+        status, count, checked = topic_state(store, extension_id)
+        reasons = [] if status == OK else (["no_consumer"] if count == 0 else ["consumer_quiet"])
+    return ExtensionResource(
+        id=extension_id,
+        version=str(row["version"]),
+        name=definition.get("name"),
+        publisher=definition.get("publisher"),
+        tier=str(definition["tier"]),
+        definition_hash=str(row["definition_hash"]),
+        protocol=_protocol_of(definition, None),
+        contributes_summary=_contributes_of(definition),
+        status=status,
+        status_reasons=reasons,
+        checked_at=checked,
+        definition=definition,
+        envelope=json.loads(row["envelope_json"]),
+        source=source_of(row),
+    )
 
 
 
@@ -548,7 +669,8 @@ def _newer_registered(store: Store, ext_id: str, version: str) -> str | None:
 def revoke_extension(store: Store, extension_id: str, version: str, *, reason: str, by: str) -> ExtensionResource:
     """등록 해제 — Center가 `extension_revoke` 봉투를 지어 서명한다 (C13·C2, ADR-0090).
 
-    확장만 거두는 콘솔·API 길은 없다 — 콘솔에서 일꾼을 지우거나 토픽을 바꿔 맡을 일꾼이 없어지면 부른다 (ADR-0137).
+    일꾼이 원본인 것은 콘솔에서 일꾼을 지우거나 토픽을 바꿔 맡을 일꾼이 없어지면 부르고(ADR-0137), 콘솔이 원본인
+    것은 CON-18 「내리기」가 부른다(`console_extensions.revoke`, ADR-0141).
 
     **쓰는 BPM 프로세스가 있어도 막지 않는다** (C13) — 확장 해제는 **정의에 문제가 있어 거두는 보안 동작**이라,
     쓰는 쪽이 있을 때 더 거둬야 한다. 몇 개가 실행 불가가 되는지는 화면이 미리 말한다 (CON-07).
@@ -583,20 +705,7 @@ def _revoked_info(store: Store, extension_id: str, version: str) -> ExtensionRes
     row = store.row("SELECT * FROM extensions WHERE id = ? AND version = ?", (extension_id, version))
     if row is None:  # pragma: no cover — 방금 본 줄이다
         raise ApiError(404, "not_found", f"등록된 확장이 없다: {extension_id}@{version}")
-    definition = json.loads(row["definition_json"])
-    return ExtensionResource(
-        id=extension_id,
-        version=version,
-        name=definition.get("name"),
-        publisher=definition.get("publisher"),
-        tier=str(definition["tier"]),
-        definition_hash=str(row["definition_hash"]),
-        protocol=_protocol_of(definition, None),
-        contributes_summary=_contributes_of(definition),
-        status="n/a",
-        definition=definition,
-        envelope=json.loads(row["envelope_json"]),
-    )
+    return resource_of_row(store, row)
 
 
 def _registered_manifests(store: Store) -> list[Any]:
@@ -696,6 +805,7 @@ __all__ = [
     "catalog_kinds",
     "contributed",
     "contributed_resource",
+    "definition_version_for",
     "extension",
     "extensions",
     "index",
@@ -703,9 +813,12 @@ __all__ = [
     "app_manifests",
     "put_catalog",
     "register_extension",
+    "resource_of_row",
     "revoke_extension",
     "runtimes",
     "service_app",
     "service_apps",
+    "source_of",
+    "source_of_id",
     "topic_state",
 ]

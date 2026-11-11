@@ -55,12 +55,19 @@
 | --- | --- | --- |
 | `GET /resources?type=extension\|service_app\|contributed\|runtime[&resource_type=<종류>]` | 읽기 | 목록 |
 | `GET /resources/extensions/{id}` | 읽기 | 확장 하나 (C13) |
+| `POST /resources/extensions` `ExtensionCreateRequest` | Center 관리자 | HTTP 어댑터 앱 만들기 — 원본 `console` (§콘솔에서 고치는 외부 확장) |
+| `PUT /resources/extensions/{id}` `ExtensionUpdateRequest` | Center 관리자 | 고치기 = 새 판 |
+| `DELETE /resources/extensions/{id}` | Center 관리자 | 내리기 — 철회하지 않은 판을 모두 철회 (`ExtensionRevoked`) |
+| `GET /resources/extensions/{id}/versions` | 읽기 | 판 기록 (`ExtensionVersionInfo[]`, 새 판부터) |
+| `GET /resources/extensions/{id}/dependents` | 읽기 | 그 확장을 요구하는 살아 있는 배포의 BPM 프로세스 (`ExtensionDependent[]`) |
+| `POST /resources/extensions/{id}/test-calls` `ExtensionTestCall` | Center 관리자 | 시험 호출 (`ExtensionTestResult`) |
+| `GET /resources/extensions/{id}/test-calls/{task_id}?wait_s=` | Center 관리자 | 시험 호출 결과 다시 묻기 |
 | `GET /resources/consumer-folder` | 읽기 | Center가 **마지막으로 뜰 때** 일꾼 폴더를 읽은 결과 (`ConsumerFolderScan`, ADR-0122·0137) |
 | `GET /resources/service-apps/{app_id}` | 읽기 | 서비스 앱 하나 (manifest 전체) |
 | `GET /resources/contributed/{resource_type}/{id}` | 읽기 | 확장 기여 자원 하나 |
 | `GET /signing-keys` | **없음** (공개키다) | 믿는 키 목록 (C2 `AdminKey[]` — 하트비트의 `admin_keys`와 같은 것). 어댑터 일꾼이 외부 확장 봉투를 다시 검증하려고 받는다 |
 
-외부 확장은 **그 토픽의 일꾼이 정의를 올린다**(C15 `PUT …/consumers/self/extension` — Center가 봉투에 서명한다, ADR-0122). 콘솔·API로 등록·해제하는 길은 없다. 서비스 앱을 **등록하는 길도 없다** — 일꾼(C15 §일꾼 관리)이 그 자리다.
+외부 확장의 정의는 **원본이 둘 중 하나다** — 그 토픽의 일꾼이 올리거나(C15 `PUT …/consumers/self/extension`, ADR-0122) Center 관리자가 콘솔에서 만들고 고친다(HTTP 어댑터 앱만, ADR-0141). 어느 쪽이든 Center가 봉투에 서명한다. 서비스 앱을 **등록하는 길도 없다** — 일꾼(C15 §일꾼 관리)이 그 자리다.
 
 ## 모델
 
@@ -76,6 +83,20 @@
 | `status` | 서버 부분 상태. 값은 `ServiceAppResource.status`와 같고 **서버 부분이 아예 없으면 `n/a`**다. 그 토픽을 가져가는 일꾼으로 본다 (§리소스 모으는 방식) |
 | `status_reasons`, `checked_at`? | 상태의 사유와 마지막으로 본 때. 서버 부분이 없으면 비어 있다 |
 | `definition`, `envelope` | 외부 확장만. 실행하는 쪽이 받아 검증한다 |
+| `source`? | 외부 확장만 — 정의의 원본 `console` / `consumer` (ADR-0141). 이 칸 전에 등록된 것은 `consumer` |
+
+### 콘솔에서 고치는 외부 확장 ([ADR-0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md))
+
+> 상태: **돈다** — Center API(`center/api/console_extensions.py`), 일꾼(C15 §콘솔이 원본인 정의 받기), 콘솔 CON-18(`app/connected-apps/editor.tsx`).
+
+**HTTP 어댑터 앱의 정의는 Center가 원본일 수 있다** — 관리자가 CON-18에서 만들면 원본이 `console`이고, 그 뒤로 그 id는 일꾼이 올리지 못한다(C15 409 `source_is_console`). 반대로 일꾼이 올린 id(원본 `consumer`)는 콘솔에서 만들거나 고치지 못한다(409 `source_is_consumer`). **정의마다 원본은 하나다.**
+
+- **만들기** — `ExtensionCreateRequest{definition}`. C13 등록과 같은 관문(크기·모양·E1~E4)이고 `tier: external`·`protocol: http-adapter`만 받는다(아니면 422 `input_invalid`). `version`을 비우면 `0.1.0`. 이미 있는 id(어느 원본이든·철회된 것도)는 409 `id_conflict`. 201 + `ExtensionResource`.
+- **고치기** — `ExtensionUpdateRequest{definition, base_version}`. 새 판은 **`base_version`의 끝자리 + 1**이고 정의의 `version`은 무시한다. `base_version`이 지금 판이 아니면 409 `version_conflict`(그 사이 다른 사람이 올렸다 — 덮어쓰지 않는다). 내용이 같으면 판을 올리지 않고 200. 옛 판은 철회하지 않는다 — 고정한 BPM 프로세스가 그 판으로 돈다(C1, ADR-0060). `id`는 바꿀 수 없다(토픽이다).
+- **내리기** — 철회하지 않은 판을 모두 `extension_revoke` 봉투로 거둔다. 쓰는 배포가 있어도 막지 않는다(철회는 보안 동작이다 — C13). 되살리지 않는다. 같은 id로 다시 만들 수 없다(409 `id_conflict` — 철회된 판이 남아 있다).
+- **판 기록**·**쓰는 곳**은 원본과 상관없이 읽힌다. `dependents`는 살아 있는 배포의 매니페스트 `requires.extensions`에 그 id가 있는 BPM 프로세스(판마다 한 줄)이고, 고정한 해시가 있으면 `pinned_hash`·`pinned_version`을 준다 — CON-18이 저장·내리기 확인 창에 보인다.
+- **시험 호출** — Center가 C15 일감을 `origin: test`로 **스스로 올린다**(부르는 쪽 = 그 관리자, `caller.type: console`). 지금 판으로만 부르고(`definition_version` = 지금 판 — 원본이 일꾼이면 싣지 않는다) 맡은 일꾼이 시험 주소(`…__TEST_BASE_URL`, 없으면 운영 주소)로 부른다. 맡은 일꾼이 없거나 그 작업이 정의에 없으면 422 `no_consumer`·`operation_not_found`. 답은 C15 결과와 같은 모양이고 `wait_s` 안에 끝나지 않으면 `pending` — 결과 묻기로 다시 받는다. 값은 받은 뒤 지운다(C15와 같다).
+- 주소·키 — 주소는 정의의 `base_url`·`test_base_url`이 기본이고 **일꾼 설정이 이긴다**(C15 §외부 확장 정의 올리기의 `address`가 실제로 쓰는 주소를 알린다). **키는 Center에 두지 않는다** — 정의의 `auth`는 방식만 적고 값은 일꾼 설정이다.
 
 ### ConsumerFolderScan (일꾼 폴더)
 
@@ -227,6 +248,7 @@ CenterKeyInfo 필드:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-09 | 1 | §콘솔에서 고치는 외부 확장 — `POST·PUT·DELETE /resources/extensions…`, `…/versions`·`…/dependents`·`…/test-calls`(`ExtensionCreateRequest`·`ExtensionUpdateRequest`·`ExtensionVersionInfo`·`ExtensionDependent`·`ExtensionRevoked`·`ExtensionTestCall`·`ExtensionTestResult`), `ExtensionResource.source`. 새 엔드포인트와 선택 칸이라 schema는 그대로다 | [0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md) |
 | 2026-11-08 | 1 | 일꾼 폴더는 일꾼을 **처음 들이기만** 한다 — 이미 있는 일꾼은 `unchanged`, 파일이 빠져도 일꾼을 지우지 않는다. 모양은 그대로다 | [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |
 | 2026-11-08 | 1 | `ServiceAppResource`에 `app_group`·`keywords`·`groups`(C11 manifest 그대로 — CON-18). 선택 칸이라 schema는 그대로다 | [0138](../decisions/0138-console-app-catalog.md) |
 | 2026-11-01 | 1 | §폴더 키 — 일꾼 폴더의 `<이름>.key.json`(`FolderKey`)으로 연동용·대리 답용 키를 들인다. `ConsumerFolderItem.kind`에 `key`. 선택 칸이라 schema는 그대로다 | [0123](../decisions/0123-folder-keys.md) |

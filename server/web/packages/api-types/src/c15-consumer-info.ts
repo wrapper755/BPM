@@ -14,9 +14,13 @@ export interface ConsumerInfo {
   apps?: string[];
   consumer_id: string;
   key_prefix?: string | null;
+  kinds?: string[] | null;
   last_fetch_at?: string | null;
   name: string;
   source?: string | null;
+  topic_kinds?: {
+    [k: string]: string[];
+  };
   topics?: string[];
   [k: string]: unknown;
 }

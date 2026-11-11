@@ -631,3 +631,45 @@ def test_a_task_posted_before_any_manifest_has_no_kind(center: TestClient, field
     token = consumer(center, manifest=None)
     post(center, field)
     assert [one.get("kind") for one in fetch(center, token)["tasks"]] == [None]
+
+
+def test_a_worker_with_kinds_takes_only_those_and_the_unknown(center: TestClient, store: Store, field: str) -> None:
+    """일꾼에 종류가 정해져 있으면 그 종류와 **종류를 모르는** 일감만 가져간다 (ADR-0139)."""
+    first: dict[str, Any] = MANIFEST["operations"][0]  # type: ignore[index]
+    token = consumer(center, manifest={**MANIFEST, "operations": [{**first, "kind": "rpa"}]})
+    rpa = post(center, field).json()["task_id"]
+    with store.tx() as cur:  # 종류를 모르는 일감 하나 (manifest가 오기 전에 올라온 것)
+        cur.execute("UPDATE external_tasks SET kind = NULL WHERE task_id = ?", (rpa,))
+    unknown = rpa
+    rpa = post(center, field, idempotency={**task_body()["idempotency"], "node_instance": 2}).json()["task_id"]
+
+    row = consumer_row(store, token)
+    with store.tx() as cur:
+        cur.execute("UPDATE consumers SET kinds_json = ? WHERE consumer_id = ?", ('["ai"]', row["consumer_id"]))
+    got = fetch(center, token, max_tasks=5)["tasks"]
+    assert [one["task_id"] for one in got] == [unknown]  # rpa 일감은 남는다
+
+    with store.tx() as cur:
+        cur.execute("UPDATE consumers SET kinds_json = ? WHERE consumer_id = ?", ('["ai", "rpa"]', row["consumer_id"]))
+    assert [one["task_id"] for one in fetch(center, token, max_tasks=5)["tasks"]] == [rpa]
+
+
+def test_an_external_extension_task_takes_its_kind_from_the_definition(center: TestClient) -> None:
+    """외부 확장 토픽에는 manifest가 없다 — 등록된 정의의 작업에서 종류를 읽는다 (ADR-0139, HTTP 어댑터는 `api`뿐)."""
+    from test_m5_extensions import definition  # noqa: PLC0415
+
+    token = consumer(center, topics=["ext-ocr"], manifest=None)
+    got = center.put("/api/v1/consumers/self/extension", json={"definition": definition()}, headers=bearer(token))
+    assert got.status_code in (200, 201), got.text
+    studio = new_key(center, name="설계자", kind="studio")
+    test_run = {"run_id": "test_0a1b2c", "node_id": "Task_ocr", "node_instance": 1, "attempt": 1}
+    for operation in ("read_invoice", "not_in_the_definition"):
+        made = post(center, studio, topic="ext-ocr", operation=operation, idempotency=test_run, origin="test")
+        assert made.status_code == 201, made.text
+        test_run = {**test_run, "node_instance": 2}
+
+    got = fetch(center, token, topics=["ext-ocr"], max_tasks=5)["tasks"]
+    assert sorted((one["operation"], one.get("kind")) for one in got) == [
+        ("not_in_the_definition", None),  # 거절하지 않고 종류만 모른다
+        ("read_invoice", "api"),
+    ]

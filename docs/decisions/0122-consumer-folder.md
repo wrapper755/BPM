@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 · **일부 대체됨([ADR-0137](0137-consumers-are-managed-in-the-console.md))** — 일꾼은 콘솔 CON-17에서 등록·편집·삭제하고 일꾼 폴더는 처음 들이기만 한다(§결정 1·2·3·7·10). 일꾼이 올리는 확장 정의(B)는 그대로다 · **CON-07 「일꾼 폴더」 칸과 그 줄의 「...」는 [ADR-0128](0128-console-drops-the-resources-screen.md)이 걷었다** — 폴더가 원본인 것은 그대로다 |
+| 상태 | 수락 · **일부 대체됨([ADR-0137](0137-consumers-are-managed-in-the-console.md))** — 일꾼은 콘솔 CON-17에서 등록·편집·삭제하고 일꾼 폴더는 처음 들이기만 한다(§결정 1·2·3·7·10). 일꾼이 올리는 확장 정의(B)는 **HTTP 어댑터 앱 몫만 대체됨([ADR-0141](0141-adapter-definitions-are-edited-in-the-console.md))** — 그 정의는 Center가 원본이고 일꾼이 Center에서 받는다. 업무 처리기 앱의 정의는 그대로 일꾼이 올린다 · **CON-07 「일꾼 폴더」 칸과 그 줄의 「...」는 [ADR-0128](0128-console-drops-the-resources-screen.md)이 걷었다** — 폴더가 원본인 것은 그대로다 |
 | 날짜 | 2026-10-31 |
 | 관련 | 계약 C15(§일꾼 들이기·`FolderConsumer`·`PUT …/consumers/self/extension`), C13(§외부 확장 등록·E1~E6), C7(`GET /resources/consumer-folder`), C5(§등록 승인 — `consumer` 갈래를 걷는다), 화면 CON-07, [ADR-0090](0090-center-admin-accounts.md), [ADR-0092](0092-keys-are-issued-and-delivered-by-center.md), [ADR-0102](0102-calling-outside-is-pull.md), [ADR-0117](0117-bundled-server-runner-joins-by-shared-secret.md), `deploy/compose.yaml` |
 

@@ -100,7 +100,7 @@
 | `schema` | 1 | |
 | `mode` | 수행 모드. **받는 쪽은 바꾸지 않는다** (원칙 7 — 폴백은 위 `fallback`뿐) | `mode` |
 | `run_id`·`node_id`·`node_instance`·`attempt`·`call_seq` | 멱등 칸 | `idempotency` |
-| `caller` | `{type, host, bpm_process_id, version}`. `bpm_process_id`는 **패키지 id**다 (C3, [ADR-0086](../decisions/0086-run-identity-is-the-package-id.md)). `type`은 열린 문자열 — `bot_ui` `server_runner` `studio` | `caller` |
+| `caller` | `{type, host, bpm_process_id, version}`. `bpm_process_id`는 **패키지 id**다 (C3, [ADR-0086](../decisions/0086-run-identity-is-the-package-id.md)). `type`은 열린 문자열 — `bot_ui` `server_runner` `studio` `console`(Center가 콘솔의 시험 호출을 올릴 때 — C7, ADR-0141) | `caller` |
 | `business_key` | 여러 호출을 한 업무로 잇는 키 (선택, 부르는 쪽이 정한다) | `business_key` |
 | `input` | `input_schema`를 따름 | `input` |
 | `origin` | `run` \| `test` — 시험 일감이면 앱이 시험 쪽으로 보낼지 정한다 (ADR-0102 §6) | `origin` |
@@ -198,6 +198,7 @@ AdminStatus:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-09 | 1 | `caller.type`의 아는 값에 `console`(콘솔의 시험 호출). 열린 문자열이라 schema는 그대로다 | [0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md) |
 | 2026-11-08 | 1 | 연결 앱 카탈로그(CON-18) 칸 — manifest의 `app_group{id, name}`·`keywords`·`groups`, 작업의 `group`·`keywords`(모두 선택). 없는·겹치는 묶음 id는 모델 검사가 거부한다. 선택 칸이라 판은 그대로다 | [0138](../decisions/0138-console-app-catalog.md) |
 | 2026-11-08 | 1 | 작업에 **일꾼 종류** `kind`(`ai`·`api`·`rpa`, 기본 `ai` — 구현됨, 관리 API `operations[].kind`·`topic?`와 `UsageRecord.topic`도)와 「AI 작업」 규칙(provenance·검증·폴백 없음 — 구현됨, 오류 `ai_rejected`·`ai_failed`)을 더했다. 선택 칸이라 판은 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 1 | 칸은 그대로다. `caller.type`의 아는 값에서 `worker`·`tool_ui`를 뺐고, `required_scopes`를 켜 줄 길(PC의 「셀렉터 등록」)이 없어졌다고 적었다 | [0114](../decisions/0114-remove-ui-automation.md) |
