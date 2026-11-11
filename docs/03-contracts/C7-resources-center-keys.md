@@ -116,6 +116,7 @@
 | `status_reasons`, `checked_at`, `manifest_at` | `checked_at`은 마지막으로 가져간 때, `manifest_at`은 manifest를 올린 때 |
 | `consumers` | 이 토픽을 가져가는 일꾼 수 |
 | `used_by` | 이 앱을 쓰는 BPM 프로세스 (`id@version`, 승인·배포된 것) |
+| `app_group`, `keywords`, `groups` | C11 manifest 그대로 — 연결 앱 목록(CON-18)이 묶고 찾는다 ([ADR-0138](../decisions/0138-console-app-catalog.md)) |
 
 ### ContributedResource (확장 기여 자원)
 
@@ -227,6 +228,7 @@ CenterKeyInfo 필드:
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
 | 2026-11-08 | 1 | 일꾼 폴더는 일꾼을 **처음 들이기만** 한다 — 이미 있는 일꾼은 `unchanged`, 파일이 빠져도 일꾼을 지우지 않는다. 모양은 그대로다 | [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |
+| 2026-11-08 | 1 | `ServiceAppResource`에 `app_group`·`keywords`·`groups`(C11 manifest 그대로 — CON-18). 선택 칸이라 schema는 그대로다 | [0138](../decisions/0138-console-app-catalog.md) |
 | 2026-11-01 | 1 | §폴더 키 — 일꾼 폴더의 `<이름>.key.json`(`FolderKey`)으로 연동용·대리 답용 키를 들인다. `ConsumerFolderItem.kind`에 `key`. 선택 칸이라 schema는 그대로다 | [0123](../decisions/0123-folder-keys.md) |
 | 2026-10-31 | 1 | 일꾼 폴더 — `GET /resources/consumer-folder`(`ConsumerFolderScan`). 외부 확장의 출처가 **일꾼이 올린 정의**가 되었다(C15 `PUT …/self/extension`) — 등록·해제 경로는 C13에서 걷었다. 선택 칸이라 schema는 그대로다 | [0122](../decisions/0122-consumer-folder.md) |
 | 2026-10-31 | 1 | 칸은 그대로다. 확장 기여 자원의 예(UI 화면)를 걷고 `RuntimeResource.versions`에서 `worker`를 뺐다 — UI 자동화 확장이 없다 | [0114](../decisions/0114-remove-ui-automation.md) |

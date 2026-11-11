@@ -3,7 +3,7 @@
    그다음 `pnpm --filter @bpm/api-types generate`. */
 
 /**
- * `GET /api/v1/external-topics`의 한 줄 (C15 「정한 것」의 제안 — CON-07 토픽 상태).
+ * `GET /api/v1/external-topics`의 한 줄 (C15 「정한 것」의 제안 — CON-18 토픽 상태).
  */
 export interface TopicStatus {
   consumers?: number;

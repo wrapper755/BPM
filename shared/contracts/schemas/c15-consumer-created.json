@@ -1,8 +1,49 @@
 {
+  "$defs": {
+    "ConsumerAddress": {
+      "additionalProperties": true,
+      "description": "일꾼이 외부 앱을 부르는 주소 — 정의를 올릴 때 함께 알린다 (C15 `address`, ADR-0138).\n\nCenter는 보여 주기만 한다 (CON-18 「쓰는 주소」). 주소는 일꾼 설정이 정하고 없으면 정의의 `base_url`이다.",
+      "properties": {
+        "base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Url"
+        },
+        "test_base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Test Base Url"
+        }
+      },
+      "title": "ConsumerAddress",
+      "type": "object"
+    }
+  },
   "$id": "urn:bpm:contracts:c15-consumer-created",
   "additionalProperties": true,
   "description": "만들기·토큰 새로 발급의 답 — **토큰 원문은 여기에만** 실린다 (Center는 해시만 둔다).",
   "properties": {
+    "addresses": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ConsumerAddress"
+      },
+      "title": "Addresses",
+      "type": "object"
+    },
     "approved_at": {
       "anyOf": [
         {

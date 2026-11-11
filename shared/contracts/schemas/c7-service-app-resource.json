@@ -1,5 +1,25 @@
 {
   "$defs": {
+    "AppGroup": {
+      "additionalProperties": true,
+      "description": "연결 앱 목록(CON-18)에서 앱을 묶는 자리 — Camunda 요소 템플릿의 `category{id, name}` (ADR-0138).\n\nC11 `category`(업무용·시스템용)와는 다른 칸이다. C13 정의·C11 manifest가 같은 모양을 쓴다.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "AppGroup",
+      "type": "object"
+    },
     "Operation": {
       "additionalProperties": true,
       "description": "작업 하나. Studio가 이것만 보고 서비스 앱 태스크 편집기(STU-14)를 만든다.",
@@ -21,6 +41,18 @@
           "title": "Fallback",
           "type": "string"
         },
+        "group": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group"
+        },
         "input_schema": {
           "anyOf": [
             {
@@ -33,6 +65,13 @@
           ],
           "default": null,
           "title": "Input Schema"
+        },
+        "keywords": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Keywords",
+          "type": "array"
         },
         "kind": {
           "default": "ai",
@@ -87,12 +126,55 @@
       ],
       "title": "Operation",
       "type": "object"
+    },
+    "OperationGroup": {
+      "additionalProperties": true,
+      "description": "앱 안 작업 묶음 하나 (C13 `adapter.groups`·C11 `groups`, OpenAPI 최상위 `tags`와 같은 결 — ADR-0138).\n\n적힌 순서가 보이는 순서다. 실행에는 쓰이지 않는다.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "OperationGroup",
+      "type": "object"
     }
   },
   "$id": "urn:bpm:contracts:c7-service-app-resource",
   "additionalProperties": true,
   "description": "서비스 앱 하나 (확장의 서버 부분).",
   "properties": {
+    "app_group": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AppGroup"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "app_id": {
       "title": "App Id",
       "type": "string"
@@ -161,6 +243,20 @@
       ],
       "default": null,
       "title": "Extension Id"
+    },
+    "groups": {
+      "items": {
+        "$ref": "#/$defs/OperationGroup"
+      },
+      "title": "Groups",
+      "type": "array"
+    },
+    "keywords": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Keywords",
+      "type": "array"
     },
     "manifest_at": {
       "anyOf": [

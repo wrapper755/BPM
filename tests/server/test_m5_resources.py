@@ -244,6 +244,27 @@ def test_a_manifest_outside_the_granted_topics_is_refused(client: TestClient, tm
     assert [one["app_id"] for one in service_apps(client)] == [APP]
 
 
+def test_the_catalog_fields_ride_the_manifest(client: TestClient, tmp_path: Path) -> None:
+    """연결 앱 카탈로그 (CON-18, ADR-0138) — 앱 묶음·키워드·작업 묶음이 리소스 목록에 그대로 실린다."""
+    worker = consumer(client, tmp_path)
+    ops = [{"name": "lookup", "modes": ["deterministic"], "group": "people", "keywords": ["사번"]}]
+    catalog = {
+        "app_group": {"id": "hr", "name": "인사"},
+        "keywords": ["사원"],
+        "groups": [{"id": "people", "name": "사람 찾기"}],
+        "operations": ops,
+    }
+    answer = client.put("/api/v1/consumers/self/manifest", json=manifest(**catalog), headers=worker)
+    assert answer.status_code == 200, answer.text
+    [found] = service_apps(client)
+    assert found["app_group"] == {"id": "hr", "name": "인사"} and found["keywords"] == ["사원"]
+    assert found["groups"][0]["name"] == "사람 찾기" and found["operations"][0]["group"] == "people"
+    # 없는 묶음을 가리키면 C11과 맞지 않는다.
+    wrong = manifest(groups=[], operations=ops)
+    bad = client.put("/api/v1/consumers/self/manifest", json=wrong, headers=worker)
+    assert bad.status_code == 422 and bad.json()["code"] == "input_invalid"
+
+
 def test_only_a_consumer_token_uploads_a_manifest(client: TestClient) -> None:
     assert client.put("/api/v1/consumers/self/manifest", json=manifest(), headers=ADMIN).status_code == 403
 

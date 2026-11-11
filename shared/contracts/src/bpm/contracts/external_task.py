@@ -261,12 +261,23 @@ class ExternalTaskInfo(ContractModel):
     outcome_unknown: bool = False
 
 
+class ConsumerAddress(ContractModel):
+    """일꾼이 외부 앱을 부르는 주소 — 정의를 올릴 때 함께 알린다 (C15 `address`, ADR-0138).
+
+    Center는 보여 주기만 한다 (CON-18 「쓰는 주소」). 주소는 일꾼 설정이 정하고 없으면 정의의 `base_url`이다.
+    """
+
+    base_url: str | None = None
+    #: 시험 일감(`origin: test`)에 쓰는 주소 — 따로 두지 않았으면 없다.
+    test_base_url: str | None = None
+
+
 #: 일꾼이 들어온 길 (`ConsumerInfo.source`, ADR-0137) — 콘솔에서 만들었나, 일꾼 폴더가 처음 들였나.
 CONSUMER_SOURCES = ("console", "folder")
 
 
 class ConsumerInfo(ContractModel):
-    """`GET /api/v1/consumers`의 한 줄 (CON-17 「일꾼」)."""
+    """`GET /api/v1/consumers`의 한 줄 (CON-17 「일꾼」·CON-18 「맡은 일꾼」)."""
 
     consumer_id: str
     name: str
@@ -280,6 +291,8 @@ class ConsumerInfo(ContractModel):
     last_fetch_at: Timestamp | None = None
     #: 이 일꾼이 올린 manifest들의 `app_id@version`.
     apps: list[str] = Field(default_factory=list)
+    #: 토픽(외부 확장 id) → 이 일꾼이 쓴다고 알린 주소 (ADR-0138). 알리지 않은 토픽은 없다.
+    addresses: dict[str, ConsumerAddress] = Field(default_factory=dict)
 
 
 class ConsumerCreateRequest(ContractModel):
@@ -309,13 +322,36 @@ class CatalogUpload(ContractModel):
 
 
 class TopicStatus(ContractModel):
-    """`GET /api/v1/external-topics`의 한 줄 (C15 「정한 것」의 제안 — CON-07 토픽 상태)."""
+    """`GET /api/v1/external-topics`의 한 줄 (C15 「정한 것」의 제안 — CON-18 토픽 상태)."""
 
     topic: str
     consumers: int = 0
     last_fetch_at: Timestamp | None = None
     waiting: int = 0
     oldest_waiting_since: Timestamp | None = None
+
+
+#: `OperationStatus`의 「최근」 창 (일).
+RECENT_DAYS = 7
+
+
+class TopicOperationStatus(ContractModel):
+    """`GET /api/v1/external-topics/{topic}/operations`의 한 줄 — 작업 하나의 일감 집계 (CON-18, ADR-0138).
+
+    업무 값·오류 글은 싣지 않는다 (원칙 6). 줄은 일꾼이 올린 manifest의 작업 전부와, 그 밖에 일감이 남은 작업이다.
+    """
+
+    operation: str
+    #: 일꾼 종류 — 일꾼이 올린 manifest의 작업에서 (C11 `kind`, 일감에 붙이는 것과 같다). manifest에 없으면 없다.
+    kind: str | None = None
+    waiting: int = 0
+    working: int = 0
+    completed_recent: int = 0
+    #: `failed`·`expired` (거둔 것은 세지 않는다).
+    failed_recent: int = 0
+    recent_days: int = RECENT_DAYS
+    last_finished_at: Timestamp | None = None
+    last_error_code: str | None = None
 
 
 __all__ = [
@@ -348,6 +384,7 @@ __all__ = [
     "CatalogUpload",
     "CompleteRequest",
     "CONSUMER_SOURCES",
+    "ConsumerAddress",
     "ConsumerCreateRequest",
     "ConsumerCreated",
     "ConsumerInfo",
@@ -363,6 +400,8 @@ __all__ = [
     "Idempotency",
     "LockedTask",
     "TaskError",
+    "RECENT_DAYS",
+    "TopicOperationStatus",
     "TopicStatus",
     "body_hash",
     "missing_outputs",

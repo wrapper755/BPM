@@ -4,7 +4,7 @@
 | --- | --- |
 | `POST /external-tasks`, `GET·ack·cancel …/{task_id}` | PC 실행기·서버 실행기·Studio의 Center API 키 |
 | `POST /consumers/fetch`, `…/tasks/{id}/complete·fail·extend`, `PUT …/self/manifest·extension` | 일꾼 토큰 |
-| `GET /consumers`, `GET /external-topics` | 콘솔 토큰 |
+| `GET /consumers`, `GET /external-topics`, `GET /external-topics/{topic}/operations` | 콘솔 토큰 |
 
 일꾼은 Center 관리자가 콘솔에서 만들고(`bpm.center.consumers`, ADR-0137) 함께 배포되는 일꾼은 일꾼 폴더가 처음
 한 번 들인다(`consumer_folder`) — 요청 코드·승인이 없다.
@@ -31,6 +31,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -54,6 +55,7 @@ from bpm.contracts.external_task import (
     MAX_VALUE_BYTES,
     MAX_WAIT_S,
     PURGE_AFTER_DAYS,
+    RECENT_DAYS,
     RETRYABLE_CODES,
     STATE_CANCELLED,
     STATE_COMPLETED,
@@ -64,6 +66,7 @@ from bpm.contracts.external_task import (
     TEST_RUN_PREFIX,
     CallToken,
     CompleteRequest,
+    ConsumerAddress,
     ConsumerInfo,
     ExtendRequest,
     ExternalTaskCreate,
@@ -75,6 +78,7 @@ from bpm.contracts.external_task import (
     FetchResponse,
     LockedTask,
     TaskError,
+    TopicOperationStatus,
     TopicStatus,
     body_hash,
     missing_outputs,
@@ -85,6 +89,9 @@ from bpm.contracts.service_app import DEFAULT_TIMEOUT_S, ServiceAppManifest, Usa
 
 #: 일꾼의 일감 흐름 (ADR-0122 — 승인 없는 일꾼은 콘솔 대신 로그로 본다). **값은 찍지 않는다** (원칙 6).
 log = logging.getLogger(__name__)
+
+#: 일꾼이 알린 주소의 길이 한도 — 넘으면 적지 않는다 (C15 `address`).
+MAX_ADDRESS_LEN = 2048
 
 #: 일꾼이 올린 외부 확장의 출처 (`extensions.source`, ADR-0122) — 맡은 일꾼이 없어지면 거둔다 (`consumers`, ADR-0137).
 EXTENSION_SOURCE = "worker"
@@ -604,6 +611,9 @@ def put_extension(store: Store, consumer: Any, raw: dict[str, Any]) -> tuple[Any
     ext_id = definition.get("id") if isinstance(definition, dict) else None
     if isinstance(ext_id, str) and ext_id not in set(loads(consumer["topics_json"], []) or []):
         raise ApiError(403, "topic_not_granted", f"맡지 않은 토픽의 정의다: {ext_id}")
+    if isinstance(ext_id, str):
+        # 주소는 정의가 거절돼도 적는다 — 일꾼은 그 주소로 이미 일하고 있다 (ADR-0138, 보여 주기만 한다).
+        _note_address(store, consumer, ext_id, raw.get("address"))
     actor = f"일꾼 {consumer['name']}"
     try:
         info, created = resources.register_extension(
@@ -615,6 +625,43 @@ def put_extension(store: Store, consumer: Any, raw: dict[str, Any]) -> tuple[Any
     if created:
         log.info("일꾼 %s: 외부 확장 %s@%s를 등록했다", consumer["name"], info.id, info.version)
     return info, created
+
+
+def _clean_url(value: Any) -> str | None:
+    """보여 줄 주소 — http(s)만, 사용자 정보·쿼리·조각은 뗀다 (키가 주소에 섞여 들어오지 않게)."""
+    if not isinstance(value, str) or not value.strip() or len(value) > MAX_ADDRESS_LEN:
+        return None
+    try:
+        parts = urlsplit(value.strip())
+        port = parts.port
+    except ValueError:
+        return None
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        return None
+    host = f"[{parts.hostname}]" if ":" in parts.hostname else parts.hostname
+    netloc = f"{host}:{port}" if port else host
+    return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+
+
+def _note_address(store: Store, consumer: Any, topic: str, raw: Any) -> None:
+    """일꾼이 알린 주소를 그 일꾼 줄에 적는다 (C15 `address`).
+
+    알리지 않으면 들고 있던 것을 지운다 — 옛 값이 거짓이 된다.
+    """
+    held = loads(consumer["addresses_json"], {}) or {}
+    found = raw if isinstance(raw, dict) else {}
+    address = ConsumerAddress(
+        base_url=_clean_url(found.get("base_url")), test_base_url=_clean_url(found.get("test_base_url"))
+    )
+    if address.base_url or address.test_base_url:
+        held[topic] = address.to_json_dict()
+    else:
+        held.pop(topic, None)
+    with store.tx() as cur:
+        cur.execute(
+            "UPDATE consumers SET addresses_json = ? WHERE consumer_id = ?",
+            (dumps(held) if held else None, consumer["consumer_id"]),
+        )
 
 
 def put_manifest(store: Store, consumer: Any, raw: dict[str, Any]) -> ConsumerInfo:
@@ -658,6 +705,11 @@ def consumer_info(store: Store, row: Any) -> ConsumerInfo:
         source="folder" if str(row["machine_id"]).startswith(FOLDER_MACHINE_PREFIX) else "console",
         last_fetch_at=row["last_fetch_at"],
         apps=[f"{one.get('app_id')}@{one.get('version')}" for one in _held_manifests(row)],
+        addresses={
+            topic: ConsumerAddress.model_validate(one)
+            for topic, one in (loads(row["addresses_json"], {}) or {}).items()
+            if isinstance(one, dict)
+        },
     )
 
 
@@ -683,6 +735,50 @@ def topics(store: Store, *, now: str | None = None) -> list[TopicStatus]:
         one = found.setdefault(str(row["topic"]), TopicStatus(topic=str(row["topic"])))
         one.waiting = int(row["n"])
         one.oldest_waiting_since = row["oldest"]
+    return [found[name] for name in sorted(found)]
+
+
+def operations_of(store: Store, topic: str, *, now: str | None = None) -> list[TopicOperationStatus]:
+    """그 토픽의 작업별 일감 집계 (C15 `GET /external-topics/{topic}/operations`, CON-18).
+
+    줄은 **일꾼이 올린 manifest의 작업 전부**(일감이 없으면 0)와 manifest에 없지만 일감이 남은 작업이다.
+    `kind`는 manifest가 말한다 — 일감에 붙이는 것과 같은 출처다. 업무 값·오류 글은 싣지 않는다.
+    """
+    at = now or now_iso()
+    sweep(store, now=at)
+    since = _at(at) - timedelta(days=RECENT_DAYS)
+    manifest = _topic_manifest(store, topic)
+    declared = manifest.operations if manifest else []
+    found: dict[str, TopicOperationStatus] = {
+        op.name: TopicOperationStatus(operation=op.name, kind=op.kind) for op in declared
+    }
+    last_failed: dict[str, str] = {}
+    for row in store.rows(
+        "SELECT operation, state, finished_at, result_json FROM external_tasks WHERE topic = ?", (topic,)
+    ):
+        name = str(row["operation"])
+        one = found.setdefault(name, TopicOperationStatus(operation=name))
+        state = str(row["state"])
+        if state == STATE_PENDING:
+            one.waiting += 1
+        elif state == STATE_LOCKED:
+            one.working += 1
+        finished = row["finished_at"]
+        if not finished or state == STATE_CANCELLED:
+            continue
+        if one.last_finished_at is None or _at(finished) > _at(one.last_finished_at):
+            one.last_finished_at = finished
+        failed = state in (STATE_FAILED, STATE_EXPIRED)
+        if failed and (name not in last_failed or _at(finished) > _at(last_failed[name])):
+            last_failed[name] = finished
+            error = (loads(row["result_json"], {}) or {}).get("error")
+            one.last_error_code = str(error["code"]) if isinstance(error, dict) and error.get("code") else None
+        if _at(finished) < since:
+            continue
+        if state == STATE_COMPLETED:
+            one.completed_recent += 1
+        elif failed:
+            one.failed_recent += 1
     return [found[name] for name in sorted(found)]
 
 
@@ -939,6 +1035,12 @@ def get_topics(request: Request) -> Any:
     return topics(_store(request))
 
 
+@router.get("/external-topics/{topic}/operations")
+def get_topic_operations(request: Request, topic: str) -> Any:
+    require_console(_caller(request))
+    return operations_of(_store(request), topic)
+
+
 __all__ = [
     "POSTER_KEY_TYPES",
     "Poster",
@@ -952,6 +1054,7 @@ __all__ = [
     "create",
     "extend",
     "fail",
+    "operations_of",
     "poster_of",
     "put_manifest",
     "result",

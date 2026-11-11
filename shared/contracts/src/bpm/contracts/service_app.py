@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from bpm.contracts._base import ContractModel, SchemaVersioned, Timestamp, Violation
 
@@ -54,6 +54,41 @@ class HealthResponse(ContractModel):
     reasons: list[str] = Field(default_factory=list)  # degraded면 이유 (예: neo4j_unreachable)
 
 
+class AppGroup(ContractModel):
+    """연결 앱 목록(CON-18)에서 앱을 묶는 자리 — Camunda 요소 템플릿의 `category{id, name}` (ADR-0138).
+
+    C11 `category`(업무용·시스템용)와는 다른 칸이다. C13 정의·C11 manifest가 같은 모양을 쓴다.
+    """
+
+    id: str
+    name: str
+
+
+class OperationGroup(ContractModel):
+    """앱 안 작업 묶음 하나 (C13 `adapter.groups`·C11 `groups`, OpenAPI 최상위 `tags`와 같은 결 — ADR-0138).
+
+    적힌 순서가 보이는 순서다. 실행에는 쓰이지 않는다.
+    """
+
+    id: str
+    name: str
+    description: str | None = None
+
+
+def group_problems(groups: list[OperationGroup], operations: list[Any]) -> list[str]:
+    """묶음 id가 겹치거나 작업이 없는 묶음을 가리키면 그 사유들 (C13 E3·C11 모델 검사가 함께 쓴다)."""
+    out: list[str] = []
+    known: set[str] = set()
+    for one in groups:
+        if one.id in known:
+            out.append(f"묶음 id가 겹친다: {one.id}")
+        known.add(one.id)
+    for op in operations:
+        if op.group is not None and op.group not in known:
+            out.append(f"groups에 없는 묶음이다: {op.name} → {op.group}")
+    return out
+
+
 class Operation(ContractModel):
     """작업 하나. Studio가 이것만 보고 서비스 앱 태스크 편집기(STU-14)를 만든다."""
 
@@ -71,6 +106,10 @@ class Operation(ContractModel):
     required_scopes: list[str] = Field(default_factory=list)
     #: 일꾼 종류 (`KINDS`, ADR-0135). Center가 일감에 옮겨 적는다 (C15 `LockedTask.kind`).
     kind: str = KIND_AI  # 열린 문자열 — 아는 값은 `KINDS` (원칙 10)
+    #: 묶음 (manifest `groups[].id`) — 연결 앱 화면(CON-18)이 묶는다 (ADR-0138).
+    group: str | None = None
+    #: 찾기용 낱말 (CON-18).
+    keywords: list[str] = Field(default_factory=list)
 
     def supports(self, mode: str) -> bool:
         return mode in self.modes
@@ -108,6 +147,18 @@ class ServiceAppManifest(SchemaVersioned):
     extension: ExtensionRef | None = None
     #: 이 앱이 주는 기여 자원 카탈로그 (C7 — Center가 읽어 리소스 목록에 싣는다).
     resources: list[ResourceCatalog] = Field(default_factory=list)
+    #: 연결 앱 목록(CON-18)에서 이 앱을 묶는 자리 (ADR-0138). `category`와 다른 칸이다.
+    app_group: AppGroup | None = None
+    keywords: list[str] = Field(default_factory=list)
+    #: 작업 묶음 — 작업의 `group`이 가리킨다. 없는·겹치는 id는 모델 검사가 거부한다.
+    groups: list[OperationGroup] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _groups_match(self) -> ServiceAppManifest:
+        problems = group_problems(self.groups, self.operations)
+        if problems:
+            raise ValueError("; ".join(problems))
+        return self
 
     def operation(self, name: str) -> Operation | None:
         return next((o for o in self.operations if o.name == name), None)

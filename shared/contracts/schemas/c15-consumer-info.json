@@ -1,8 +1,49 @@
 {
+  "$defs": {
+    "ConsumerAddress": {
+      "additionalProperties": true,
+      "description": "일꾼이 외부 앱을 부르는 주소 — 정의를 올릴 때 함께 알린다 (C15 `address`, ADR-0138).\n\nCenter는 보여 주기만 한다 (CON-18 「쓰는 주소」). 주소는 일꾼 설정이 정하고 없으면 정의의 `base_url`이다.",
+      "properties": {
+        "base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Url"
+        },
+        "test_base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Test Base Url"
+        }
+      },
+      "title": "ConsumerAddress",
+      "type": "object"
+    }
+  },
   "$id": "urn:bpm:contracts:c15-consumer-info",
   "additionalProperties": true,
-  "description": "`GET /api/v1/consumers`의 한 줄 (CON-17 「일꾼」).",
+  "description": "`GET /api/v1/consumers`의 한 줄 (CON-17 「일꾼」·CON-18 「맡은 일꾼」).",
   "properties": {
+    "addresses": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ConsumerAddress"
+      },
+      "title": "Addresses",
+      "type": "object"
+    },
     "approved_at": {
       "anyOf": [
         {

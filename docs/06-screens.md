@@ -14,7 +14,7 @@
 | --- | --- | --- |
 | [studio/docs/screens.md](../studio/docs/screens.md) | Studio (Windows 데스크톱, BPM 프로세스 설계) | STU-01 ~ STU-16 |
 | [bot/docs/screens.md](../bot/docs/screens.md) | PC 실행기 (Windows 트레이 기반 GUI, 항상 실행) | BUI-01 ~ BUI-11 (BUI-06~10 폐기) |
-| [server/docs/screens/center-console.md](../server/docs/screens/center-console.md) | Center 콘솔 (웹) — 관리자 계정으로 승인·배포까지 ([ADR-0090](decisions/0090-center-admin-accounts.md)) | CON-00 ~ CON-17 (CON-07~11 폐기) |
+| [server/docs/screens/center-console.md](../server/docs/screens/center-console.md) | Center 콘솔 (웹) — 관리자 계정으로 승인·배포까지 ([ADR-0090](decisions/0090-center-admin-accounts.md)) | CON-00 ~ CON-18 (CON-07~11 폐기) |
 | [server/docs/screens/service-app-console.md](../server/docs/screens/service-app-console.md) | 서비스 앱 관리 콘솔 (웹, 앱마다) | SVC-00 ~ SVC-03 |
 | 이 파일 §5 | 여러 앱이 같이 쓰는 창 | CMN-01 |
 
@@ -165,6 +165,7 @@ Studio 시험 실행과 PC 실행기의 BPM 프로세스 실행에서 같은 창
 | CON-15 | 배포 | Center 콘솔 | 관리자 | — | 신규 (ADM-03을 옮겼다, ADR-0090) |
 | CON-16 | 앱 로그 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0121](decisions/0121-center-console-says-process.md)) |
 | CON-17 | 일꾼 | Center 콘솔 | Center 관리자 | — | 신규 ([ADR-0137](decisions/0137-consumers-are-managed-in-the-console.md)) |
+| CON-18 | 연결 앱 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0138](decisions/0138-console-app-catalog.md) — 보기만) |
 | SVC-00 | 공통 틀 | 서비스 앱 관리 콘솔 | 서비스 앱 관리자 | M2 | 신규 (`service_kit`) |
 | SVC-01 | 상태 | 서비스 앱 관리 콘솔 | 서비스 앱 관리자 | M2 | 신규 |
 | SVC-02 | API 키 — **없어졌다** (ADR-0102, 서비스 앱 키가 없다) | 서비스 앱 관리 콘솔 | — | M2 | 폐기 |

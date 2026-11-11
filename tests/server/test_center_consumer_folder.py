@@ -270,6 +270,28 @@ def test_the_worker_uploads_only_its_own_topics(boot: Boot, folder: Path) -> Non
     assert got.status_code == 403
 
 
+def test_the_worker_tells_the_address_it_uses(boot: Boot, folder: Path) -> None:
+    """CON-18 「쓰는 주소」 (ADR-0138) — 보여 주기만 한다. 사용자 정보·쿼리는 떼고, 알리지 않으면 지운다."""
+    put(folder, "worker.consumer.json", worker(TOKEN_A))
+    client = boot()
+    address = {"base_url": "https://user:secret@ocr.example.com:8443/v1?key=abc#x", "test_base_url": "ftp://nope"}
+    body = {"definition": definition(), "address": address}
+    got = client.put("/api/v1/consumers/self/extension", json=body, headers=bearer(TOKEN_A))
+    assert got.status_code == 201, got.text
+    listed = client.get("/api/v1/consumers", headers=ADMIN).json()
+    assert listed[0]["addresses"] == {"ext-ocr": {"base_url": "https://ocr.example.com:8443/v1", "test_base_url": None}}
+    # 거절된 정의(낮은 판)여도 주소는 적는다 — 일꾼은 그 주소로 일한다.
+    upload(client, TOKEN_A, definition(version="1.1.0"))
+    old = {"definition": definition(version="1.0.0"), "address": {"base_url": "https://ocr.example.com"}}
+    assert client.put("/api/v1/consumers/self/extension", json=old, headers=bearer(TOKEN_A)).status_code == 409
+    assert client.get("/api/v1/consumers", headers=ADMIN).json()[0]["addresses"]["ext-ocr"]["base_url"] == (
+        "https://ocr.example.com"
+    )
+    # 알리지 않으면(옛 일꾼) 들고 있던 것은 거짓이 되므로 지운다.
+    upload(client, TOKEN_A, definition(version="1.1.0"))
+    assert client.get("/api/v1/consumers", headers=ADMIN).json()[0]["addresses"] == {}
+
+
 def test_versions_go_up_not_down(boot: Boot, folder: Path) -> None:
     put(folder, "worker.consumer.json", worker(TOKEN_A))
     client = boot()

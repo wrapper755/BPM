@@ -6,6 +6,9 @@
  * 만들기·토큰 새로 발급의 답 — **토큰 원문은 여기에만** 실린다 (Center는 해시만 둔다).
  */
 export interface ConsumerCreated {
+  addresses?: {
+    [k: string]: ConsumerAddress;
+  };
   approved_at?: string | null;
   approved_by?: string | null;
   apps?: string[];
@@ -16,5 +19,15 @@ export interface ConsumerCreated {
   source?: string | null;
   token: string;
   topics?: string[];
+  [k: string]: unknown;
+}
+/**
+ * 일꾼이 외부 앱을 부르는 주소 — 정의를 올릴 때 함께 알린다 (C15 `address`, ADR-0138).
+ *
+ * Center는 보여 주기만 한다 (CON-18 「쓰는 주소」). 주소는 일꾼 설정이 정하고 없으면 정의의 `base_url`이다.
+ */
+export interface ConsumerAddress {
+  base_url?: string | null;
+  test_base_url?: string | null;
   [k: string]: unknown;
 }
