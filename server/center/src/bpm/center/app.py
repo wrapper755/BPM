@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -69,11 +70,19 @@ from bpm.contracts.center_keys import CenterKeyCreated, CenterKeyCreateRequest
 from bpm.contracts.center_keys import validate_create as validate_key_create
 from bpm.contracts.external_task import ConsumerCreateRequest, ConsumerUpdateRequest
 
+log = logging.getLogger(__name__)
+
 API = "/api/v1"
 
 
 def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
     """Center 앱 하나. `store`를 주면 그것을 쓴다 (시험은 메모리 DB를 준다)."""
+    if settings.open_mode:
+        # 켜 둔 것을 잊지 않게 **뜰 때 한 줄** 찍는다 (ADR-0142 §5). 콘솔에는 배지가 선다.
+        log.warning(
+            "열린 모드다 — 등록 요청이 저절로 승인되고, 일꾼이 스스로 들어오고, 키 없는 호출이 관리자다"
+            " (BPM_CENTER__OPEN_MODE). 콘솔 로그인은 그대로다"
+        )
     # 모든 JSON 응답에 charset=utf-8 (PowerShell 5.1이 한글을 깨뜨리지 않게, 이슈 #3)
     app = FastAPI(title="BPM Center", version="0.1.0", default_response_class=Utf8JSONResponse)
     app.state.settings = settings
@@ -107,6 +116,7 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
             app.state.store,
             admin_token=settings.admin_token,
             read_token=settings.read_token,
+            open_mode=settings.open_mode,
         )
 
     app.state.authenticate = authenticate
@@ -135,9 +145,12 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
             raise ApiError(404, "not_found", f"PC 실행기 {bot_ui_id}가 없다")
 
     @app.get("/healthz")
-    def healthz() -> dict[str, str]:
-        """인증 없음 — 비밀이 없다. 컨테이너 상태 확인이 쓴다."""
-        return {"status": "ok", "server_time": now_iso()}
+    def healthz() -> dict[str, Any]:
+        """인증 없음 — 비밀이 없다. 컨테이너 상태 확인과 콘솔 배지(CON-00)가 쓴다.
+
+        `open_mode`는 비밀이 아니다 (ADR-0142) — 열려 있는지는 한 번 불러 보면 드러난다.
+        """
+        return {"status": "ok", "server_time": now_iso(), "open_mode": settings.open_mode}
 
     # ─────────────────── 로그인·관리자 계정 (C5, ADR-0090) ───────────────────
 

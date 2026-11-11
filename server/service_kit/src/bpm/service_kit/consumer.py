@@ -4,9 +4,10 @@
     consumer.publish()            # 외부 확장 정의·manifest·카탈로그 올리기 (뜰 때)
     consumer.run(stop_event)      # 가져가기 롱폴링 → 수행 → 끝내기
 
-**들이기는 없다** (ADR-0122) — 일꾼은 Center의 **일꾼 폴더**에 놓인 `<이름>.consumer.json`(토큰 해시)으로만
-들어온다. 토큰 원문은 그 파일을 지은 사람이 준다(`bpm-center consumer-file`) — `<접두>CENTER__TOKEN` 환경변수나
-토큰 파일 `consumer-token.json`의 `token`.
+**들이기는 둘뿐이다.** 평소에는 Center의 **일꾼 폴더**에 놓인 `<이름>.consumer.json`(토큰 해시)으로 들어온다
+(ADR-0122) — 토큰 원문은 그 파일을 지은 사람이 준다(`bpm-center consumer-file`): `<접두>CENTER__TOKEN` 환경변수나
+토큰 파일 `consumer-token.json`의 `token`. **Center가 열린 모드면** 토큰이 없을 때 `join()`이 스스로 하나 지어
+들이기를 청한다 (ADR-0142 §2).
 
 지키는 것:
 
@@ -29,6 +30,7 @@ import contextlib
 import json
 import logging
 import os
+import secrets
 import threading
 import time
 from collections.abc import Callable, Sequence
@@ -38,6 +40,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
+from bpm.contracts.center_keys import KEY_PREFIX, KEY_RANDOM_LEN
 from bpm.contracts.enrollment import open_sealed
 from bpm.contracts.external_task import MAX_WAIT_S, FetchResponse, LockedTask
 from bpm.contracts.service_app import CenterRegistration
@@ -128,6 +131,8 @@ class Consumer:
     tokens: TokenFile
     #: 토픽을 Center에서 받아 오는 쪽 — `sync(consumer)`가 `services`를 고친다 (올리기 전마다, ADR-0141).
     sources: Sequence[TopicSource] = ()
+    #: 열린 모드에서 스스로 들어올 때 Center에 보일 이름 (ADR-0142 §2). 비우면 첫 토픽이다.
+    name: str | None = None
     workers: int = 4
     wait_s: int = MAX_WAIT_S
     client: Any | None = None
@@ -164,7 +169,10 @@ class Consumer:
     def _headers(self) -> dict[str, str]:
         token = self.tokens.token()
         if not token:
-            raise RuntimeError("일꾼 토큰이 없다 — Center 일꾼 폴더의 파일을 지을 때 받은 토큰을 주세요 (ADR-0122)")
+            raise RuntimeError(
+                "일꾼 토큰이 없다 — Center 일꾼 폴더의 파일을 지을 때 받은 토큰을 주거나"
+                " (ADR-0122), Center를 열린 모드로 띄우세요 (ADR-0142)"
+            )
         return {"Authorization": f"Bearer {token}"}
 
     def get(self, path: str) -> Any:
@@ -177,6 +185,31 @@ class Consumer:
         answer = self._http().put(path, json=body, headers=self._headers())
         answer.raise_for_status()
         return answer.json()
+    def join(self) -> bool:
+        """토큰이 없으면 **스스로 하나 지어** 들이기를 청한다 (열린 모드 — ADR-0142 §2).
+
+        토큰이 있으면 아무것도 하지 않는다. 일감을 가져가지 않는 한 번(`max_tasks: 0`)으로 묻고,
+        Center가 받아들였을 때만 토큰을 파일에 적는다 — 열린 모드가 아니면 401·403이고, 그러면
+        들고 있던 것이 없으니 `_headers()`가 무엇을 해야 하는지 말한다.
+        """
+        if self.tokens.token():
+            return True
+        if not self.topics:
+            # 맡을 토픽이 없으면 들어올 이름도 없다 — 부르는 쪽이 「맡을 토픽이 없다」고 말한다.
+            return False
+        made = f"{KEY_PREFIX}{secrets.token_urlsafe(32)[:KEY_RANDOM_LEN]}"
+        answer = self._http().post(
+            "/api/v1/consumers/fetch",
+            json={"topics": self.topics, "max_tasks": 0, "wait_s": 0, "name": self.name or self.topics[0]},
+            headers={"Authorization": f"Bearer {made}"},
+        )
+        if answer.status_code in (401, 403):
+            log.warning("Center가 스스로 들어오는 것을 받지 않았다 (%s) — 일꾼 토큰이 필요하다", answer.status_code)
+            return False
+        answer.raise_for_status()
+        self.tokens.save(token=made)
+        log.info("열린 모드로 Center에 들어왔다 — 토큰을 지어 두었다")
+        return True
 
     def registration(self) -> CenterRegistration:
         """SVC-01 「Center 연결」 — 들었는가, 마지막으로 가져간 때."""
@@ -188,6 +221,7 @@ class Consumer:
 
     def publish(self, *, force: bool = False) -> None:
         """외부 확장 정의·manifest(뜰 때 한 번)와 카탈로그(판이 바뀌었을 때)를 올린다 (C15)."""
+        self.join()  # 토큰이 없으면 먼저 들어온다 (열린 모드) — 올리기는 들어온 뒤에만 된다
         http = self._http()
         for topic_source in self.sources:
             topic_source.sync(self)
@@ -287,6 +321,8 @@ class Consumer:
 
     def run(self, stop: threading.Event) -> None:
         """멈추라고 할 때까지 — 빈 일꾼 자리만큼 가져가 스레드에서 수행한다."""
+        with contextlib.suppress(Exception):  # Center가 아직 없어도 루프는 돈다 (다음 바퀴가 다시 청한다)
+            self.join()
         busy: set[Future[None]] = set()
         last_catalog = 0.0
         with ThreadPoolExecutor(max_workers=self.workers, thread_name_prefix="consumer") as pool:

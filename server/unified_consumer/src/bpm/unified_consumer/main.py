@@ -91,16 +91,24 @@ def main(argv: list[str] | None = None) -> int:
         print("Center 주소(BPM_CONSUMER__CENTER__URL)가 필요하다", file=sys.stderr)
         return 2
     tokens = TokenFile.at(data_dir, env_prefix=ENV_PREFIX)
-    if not tokens.token():
+    usage = InMemoryUsageLog()
+    console = ConsoleDefinitions(wrap=lambda one: RecordingTopic(inner=one, log=usage))
+    consumer = Consumer(
+        recorded(host.services, usage),
+        center_url=found.center_url,
+        tokens=tokens,
+        sources=[console],
+        name=_env("NAME") or "통합 일꾼",
+    )
+    # **Center가 열린 모드면 토큰 없이 들어온다** (ADR-0142 §2) — 아니면 일꾼 폴더의 파일이 필요하다.
+    if not tokens.token() and not consumer.join():
         print(
-            "일꾼 토큰이 없다 — Center 일꾼 폴더에 이 일꾼의 파일을 두고(bpm-center consumer-file) 받은 토큰을"
+            "일꾼 토큰이 없고 스스로 들어오지도 못했다 — Center가 열린 모드가 아니거나 맡을 토픽이 없다."
+            " 열린 모드가 아니면 Center 일꾼 폴더에 이 일꾼의 파일을 두고(bpm-center consumer-file) 받은 토큰을"
             " BPM_CONSUMER__CENTER__TOKEN에 넣으세요",
             file=sys.stderr,
         )
         return 2
-    usage = InMemoryUsageLog()
-    console = ConsoleDefinitions(wrap=lambda one: RecordingTopic(inner=one, log=usage))
-    consumer = Consumer(recorded(host.services, usage), center_url=found.center_url, tokens=tokens, sources=[console])
     consumer.publish(force=True)
     if not consumer.services:
         print(

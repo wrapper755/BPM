@@ -8,6 +8,7 @@
 export interface FetchRequest {
   lock_s?: number | null;
   max_tasks?: number;
+  name?: string | null;
   /**
    * @minItems 1
    */

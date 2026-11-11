@@ -439,7 +439,9 @@ class Agent:
             self.last_problem = problem
             raise problem
         self.last_problem = None
-        self.store.state.enrollment = found
+        # **봉함은 담지 않는다** — 열린 모드면 이 답에 이미 실려 온다 (ADR-0142 §1). 다음 걸음이
+        # 물어서 받아 비밀 저장소에 넣는다 (`enroll_step` — 평소 승인과 같은 길이다).
+        self.store.state.enrollment = found.model_copy(update={"sealed_key": None})
         self.store.save()
         log.info("등록 요청을 보냈다 — 요청 코드 %s (%s까지)", found.code, found.expires_at)
         return found

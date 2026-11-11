@@ -93,6 +93,7 @@ ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 
 | 받은 키를 두는 곳 | OS 비밀 저장소 | OS 비밀 저장소(`bpm-server-runner`, 이름 `center_api_key`). **운영자가 비밀 폴더 `BPM_SERVER_RUNNER__SECRETS_DIR`를 적으면 그 폴더의 `secrets.json`**(컨테이너 — [ADR-0100](../decisions/0100-server-runner-secrets-dir.md)) |
 
 - **함께 배포된 실행기는 들이기 비밀로 바로 승인된다** ([ADR-0117](../decisions/0117-bundled-server-runner-joins-by-shared-secret.md)). 운영자가 같은 값을 Center(`BPM_CENTER__SERVER_RUNNER_JOIN_TOKEN`)와 실행기(`BPM_SERVER_RUNNER__JOIN_TOKEN`)에 주면 실행기가 등록 요청에 헤더 `X-BPM-Join-Token`을 싣고, Center는 값이 맞으면 그 요청을 **받는 자리에서 승인**해 응답에 봉한 키(`state: approved`, `sealed_key`)를 바로 싣는다. 승인한 사람은 `decided_by: "join_token"`이다. 비밀은 요청 본문·저장된 요청에 들어가지 않는다(헤더다). **헤더가 있는데 Center에 값이 없거나 다르면 403 `join_token_invalid`**이고 대기 줄을 만들지 않는다 — 틀린 설정이 조용히 「승인 대기」로 떨어지면 운영자가 왜 안 들어오는지 모른다. 비밀은 길고 무작위여야 한다(틀린 시도는 줄을 남기지 않아 막기 수에 들지 않는다). 헤더가 없으면 지금처럼 승인을 기다린다(다른 호스트에 따로 띄운 실행기). `server/deploy/compose.yaml`의 실행기는 이 길이다.
+- **열린 모드에서는 비밀이 없어도 그 자리에서 승인된다** ([ADR-0142](../decisions/0142-open-mode.md) — 승인한 사람은 `open_mode`다). 비밀을 실었는데 맞지 않으면 **열린 모드에서도 403**이다.
 - **환경변수로 키가 오면** 등록 요청을 보내지 않는다 (CI·자동화의 길이다).
 - **비밀 폴더를 적으면 그것이 비밀 저장소다** (ADR-0100) — 폴더 0700·파일 0600, 깨진 파일은 덮지 않는다. 적었으면 OS 비밀 저장소가 있어도 그 폴더가 이긴다. `server/deploy/compose.yaml`의 실행기는 이 길이다(볼륨 `server-runner-secrets`).
 - **비밀 폴더도 OS 비밀 저장소도 없으면 등록 요청을 보내지 않는다.** 받은 키를 둘 곳이 없어서다 — 사람이 자리를 정해 주지 않은 평문 파일로 흘리지 않는다 (CLAUDE.md §5). 로그에 그 둘(`BPM_SERVER_RUNNER__SECRETS_DIR`·`BPM_SERVER_RUNNER__CENTER_API_KEY`)을 적은 한 줄을 찍고 끝 코드 2다.
@@ -374,6 +375,7 @@ C4와 같다 (401, 403 `key_revoked`·`wrong_key_type`, 409 `machine_mismatch`·
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-11 | 1 | **열린 모드**에서는 들이기 비밀이 없어도 받는 자리에서 승인된다(틀린 비밀은 여전히 403) | [0142](../decisions/0142-open-mode.md) |
 | 2026-11-01 | 1 | **가상 직원을 없앴다** — 하트비트 `jobs[].virtual_worker`·`MessageRequest.virtual_worker`를 걷고 `jobs[].place?`를 더했다(C16) | [0125](../decisions/0125-organization-and-work-placement.md) |
 | 2026-10-31 | 1 | **함께 배포된 실행기는 들이기 비밀로 바로 승인**(헤더 `X-BPM-Join-Token`, 403 `join_token_invalid`)과 **재시작**(`POST …/server-runners/{id}/restart`, `HeartbeatResponse.restart`, `ServerRunnerInfo.restart_requested_at?`). 선택 칸이라 옛 실행기는 그대로 돈다(재시작 지시를 모를 뿐이다) | [0117](../decisions/0117-bundled-server-runner-joins-by-shared-secret.md) |
 | 2026-10-31 | 1 | 설치를 목록과 맞춘다 — 덮는 봉투가 없는 설치는 `not_ready`, 기다리는 실행은 그대로. 칸은 그대로다 | [0113](../decisions/0113-field-follows-withdrawn-deployments.md) |

@@ -337,6 +337,25 @@ def test_stu16_later_keeps_the_request_for_next_time(qt: Any, settings: Settings
     assert again.code.text() == code, "다음에 뜨면 같은 코드다"
 
 
+def test_stu16_connects_in_one_press_when_the_center_is_open(qt: Any, settings: Settings, tmp_path: Path) -> None:
+    """열린 모드 (ADR-0142 §1) — 「보내기」 한 번에 키까지 받는다. 승인할 사람이 없다."""
+    from bpm.center.app import create_app  # noqa: PLC0415
+    from bpm.center.settings import Settings as CenterSettings  # noqa: PLC0415
+
+    open_center = CenterSettings(
+        db_path=tmp_path / "open.sqlite3",
+        package_dir=tmp_path / "open-packages",
+        admin_token="t-admin",
+        open_mode=True,
+    )
+    with TestClient(create_app(open_center)) as center:
+        vault = Vault()
+        found = connect_window(replace(settings, center_url="http://center.test"), vault, center)
+        found.send_request()
+        assert found.status.text().startswith("연결됨"), found.status.text()
+        assert ("bpm-studio", CENTER_KEY_NAME) in vault.values
+
+
 def test_stu16_refused_key_offers_asking_again(qt: Any, settings: Settings, center: Any) -> None:
     vault = Vault()
     vault.set_password("bpm-studio", CENTER_KEY_NAME, "bpm_ctr_" + "x" * 40)

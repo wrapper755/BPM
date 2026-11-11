@@ -167,8 +167,12 @@ class FetchRequest(ContractModel):
     """`POST /api/v1/consumers/fetch` — 가져가기 (롱폴링)."""
 
     topics: list[Topic] = Field(min_length=1)
-    max_tasks: int = Field(default=1, ge=1)
+    #: 0이면 **일감을 가져가지 않는다** — 열린 모드의 들이기만 하는 한 번이다 (ADR-0142 §2).
+    max_tasks: int = Field(default=1, ge=0)
     wait_s: int = Field(default=MAX_WAIT_S, ge=0)
+    #: **열린 모드에서 처음 들어올 때만** 쓰는 이름 (ADR-0142 §2) — 이미 들어온 일꾼의 이름을
+    #: 바꾸지 않는다. 비우면 첫 토픽이 이름이 된다.
+    name: str | None = Field(default=None, max_length=64)
     #: 잠금 시간. 없으면 작업의 `timeout_s`. 어느 쪽이든 `deadline`을 넘지 않는다.
     lock_s: int | None = Field(default=None, ge=1)
 
@@ -297,8 +301,9 @@ class ConsumerExtensions(ContractModel):
     extensions: list[ExtensionResource] = Field(default_factory=list)
 
 
-#: 일꾼이 들어온 길 (`ConsumerInfo.source`, ADR-0137) — 콘솔에서 만들었나, 일꾼 폴더가 처음 들였나.
-CONSUMER_SOURCES = ("console", "folder")
+#: 일꾼이 들어온 길 (`ConsumerInfo.source`, ADR-0137) — 콘솔에서 만들었나, 일꾼 폴더가 처음 들였나,
+#: **열린 모드**에서 스스로 들어왔나 (ADR-0142 §2).
+CONSUMER_SOURCES = ("console", "folder", "open")
 
 
 class ConsumerInfo(ContractModel):
@@ -309,9 +314,9 @@ class ConsumerInfo(ContractModel):
     topics: list[str] = Field(default_factory=list)
     key_prefix: str | None = None
     approved_at: Timestamp | None = None
-    #: 들인 쪽 — 콘솔에서 만든 관리자, 또는 「일꾼 폴더」.
+    #: 들인 쪽 — 콘솔에서 만든 관리자, 또는 「일꾼 폴더」·「열린 모드」.
     approved_by: str | None = None
-    #: `console` | `folder` (ADR-0137).
+    #: `console` | `folder` | `open` (ADR-0137·0142).
     source: str | None = None
     last_fetch_at: Timestamp | None = None
     #: 이 일꾼이 올린 manifest들의 `app_id@version`과 맡은 토픽에 일꾼이 올린 외부 확장의 `id@version` (ADR-0139).

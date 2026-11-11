@@ -16,6 +16,8 @@ export function parseTopics(text: string): string[] {
 /** 「들어온 길」 — 「콘솔 · <만든 계정>」 / 「일꾼 폴더」 (C15 `ConsumerInfo.source`·`approved_by`). */
 export function cameFrom(source: string | null | undefined, by: string | null | undefined): string {
   if (source === "folder") return "일꾼 폴더";
+  // 열린 모드에서 스스로 들어온 일꾼 — 「누가」가 사람이 아니다 (ADR-0142 §2).
+  if (source === "open") return "열린 모드";
   return by ? `콘솔 · ${by}` : "콘솔";
 }
 
