@@ -33,6 +33,11 @@ def _env(name: str, default: str | None = None) -> str | None:
     return os.environ.get(f"{ENV_PREFIX}{name}", default)
 
 
+def _flag(name: str) -> bool:
+    """켜짐으로 읽는 값 — `1`·`true`·`yes`·`on` (대소문자를 가리지 않는다)."""
+    return (_env(name) or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def data_dir() -> Path:
     """사용자·서버 데이터 위치. Windows `%LOCALAPPDATA%`, Linux `~/.local/share` (CLAUDE.md §5)."""
     override = _env("DATA_DIR")
@@ -80,6 +85,10 @@ class Settings:
     consumers_dir: Path | None = None
     #: `consumers_dir`를 사람이 적었나 — 적었는데 폴더가 없으면 사유를 남기고, 기본 자리가 없으면 조용히 지나간다.
     consumers_dir_explicit: bool = True
+    #: **열린 모드** (ADR-0142) — 켜면 등록 요청이 받는 자리에서
+    #: 승인되고(회사가 하나뿐일 때), 일꾼이 모르는 토큰으로 스스로 들어오고, **키 없는 호출이 관리자**다.
+    #: 콘솔 로그인은 그대로다. 기본값은 꺼짐이다.
+    open_mode: bool = False
 
     def zone(self) -> tzinfo:
         """일정의 시간대. **풀 수 없으면 실패한다** — 틀린 시간대로 조용히 도는 일정은 없다."""
@@ -116,4 +125,5 @@ class Settings:
             timezone=_env("TIMEZONE") or DEFAULT_TIMEZONE,
             consumers_dir=Path(consumers_dir) if consumers_dir else data_dir() / "consumers",
             consumers_dir_explicit=bool(consumers_dir),
+            open_mode=_flag("OPEN_MODE"),
         )

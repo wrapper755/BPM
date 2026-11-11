@@ -18,9 +18,22 @@
     },
     "max_tasks": {
       "default": 1,
-      "minimum": 1,
+      "minimum": 0,
       "title": "Max Tasks",
       "type": "integer"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Name"
     },
     "topics": {
       "items": {

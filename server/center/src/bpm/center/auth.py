@@ -40,6 +40,9 @@ from bpm.contracts.external_task import CALL_TOKEN, CALL_TOKEN_PATH, CALL_TOKEN_
 #: 콘솔(BFF)이 로그인한 사용자 이름을 싣는 헤더. **값은 UTF-8 퍼센트 인코딩** (C5).
 ACTOR_HEADER = "X-BPM-Actor"
 
+#: 열린 모드에서 키 없이 부른 사람의 이름 — `X-BPM-Actor`가 없을 때 (ADR-0142).
+OPEN_MODE_ACTOR = "열린 모드"
+
 #: 패키지를 올리고 목록·정보를 볼 수 있는 Center API 키 종류 (C5 권한표).
 #:
 #: **Studio만이다.** 실행하는 쪽(PC 실행기·서버 실행기)은 배포를 하트비트로 받으므로 목록을 볼
@@ -117,10 +120,24 @@ def _on_behalf(request: Request) -> str | None:
     return name
 
 
-def caller(request: Request, store: Store, *, admin_token: str | None, read_token: str | None) -> Caller:
-    """토큰·키를 보고 부르는 쪽을 정한다. 아무것도 맞지 않으면 401."""
+def caller(
+    request: Request,
+    store: Store,
+    *,
+    admin_token: str | None,
+    read_token: str | None,
+    open_mode: bool = False,
+) -> Caller:
+    """토큰·키를 보고 부르는 쪽을 정한다. 아무것도 맞지 않으면 401.
+
+    **열린 모드**에서는 토큰이 **없는** 호출을 관리자로 본다 (ADR-0142) — 연동 시스템이 키 없이
+    작업·메시지·대리 결재를 부른다. **모르는 토큰은 그대로 401이다**: 열린 모드가 오타를 관리자로
+    만들지 않는다 (일꾼 들이기 한 자리만 예외이고 그것은 그 경로가 직접 한다, C15 §일꾼 들이기).
+    """
     token = bearer(request)
     if token is None:
+        if open_mode:
+            return Caller(kind="admin", actor=_console_actor(request, fallback=OPEN_MODE_ACTOR))
         raise ApiError(401, "token_missing", "인증 토큰이 없다")
 
     if token.startswith(SESSION_PREFIX):

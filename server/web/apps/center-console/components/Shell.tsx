@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { BpmMark, Button } from "@bpm/ui";
 import { logout } from "@/app/actions";
-import { session } from "@/lib/center";
+import { openMode, session } from "@/lib/center";
 import type { Mode } from "@/lib/session";
 import { Refresh } from "./Refresh";
 
@@ -95,6 +95,8 @@ export async function Shell({
   const company = (await session())?.company ?? null;
   const centerAdmin = mode === "admin" && !company;
   const roleLabel = mode === "admin" ? (company ? "회사 관리자" : "관리자") : "보기 전용";
+  // 열린 모드는 **켜 둔 것을 잊는 것**이 위험이라 늘 보이는 자리에 둔다 (ADR-0142 §5).
+  const open = await openMode();
   return (
     <div className="min-h-screen">
       {/* 남색 위 막대 — 화면 폭 전체 (NowView와 같은 틀, 스타일 가이드 §4-1). 이름 대신 마크다 (ADR-0118). */}
@@ -105,6 +107,24 @@ export async function Shell({
         <Link href="/" title="첫 화면" className="mr-auto flex items-center rounded-md">
           <BpmMark label="첫 화면" className="h-6 w-auto" />
         </Link>
+        {open ? (
+          <span
+            title="키·승인 없이 들어옵니다 — 등록 요청이 저절로 승인되고, 일꾼이 스스로 들어오고, 키 없는 호출이 관리자입니다 (BPM_CENTER__OPEN_MODE)"
+            className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-caption whitespace-nowrap"
+            style={{
+              color: "var(--status-warning-fg)",
+              backgroundColor: "var(--status-warning-bg)",
+              borderRadius: "var(--radius-full)",
+            }}
+          >
+            <span
+              aria-hidden
+              className="inline-block size-2 shrink-0"
+              style={{ backgroundColor: "var(--status-warning-solid)", borderRadius: "var(--radius-full)" }}
+            />
+            열린 모드
+          </span>
+        ) : null}
         <span className="text-body-sm whitespace-nowrap">
           {actor}
           <span className="text-text-muted">

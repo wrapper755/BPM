@@ -101,6 +101,21 @@ async function send<T>(path: string, init: RequestInit | undefined, token: strin
 }
 
 /** 로그인 (C5 `POST /auth/login`). 세션 토큰은 이 응답에만 실린다 — 받은 쪽이 쿠키에 담는다. */
+/**
+ * Center가 **열린 모드**인가 (ADR-0142) — 위 막대 배지(CON-00)가 쓴다.
+ *
+ * 인증 없이 `/healthz`를 읽는다(비밀이 아니다). 닿지 못하면 배지를 띄우지 않는다 — 「Center에 닿지
+ * 못했습니다」는 각 화면이 제 자리에서 말한다.
+ */
+export async function openMode(): Promise<boolean> {
+  try {
+    const found = await send<{ open_mode?: boolean }>("/healthz", undefined, null);
+    return found.open_mode === true;
+  } catch {
+    return false;
+  }
+}
+
 export function signIn(username: string, password: string): Promise<SessionInfo> {
   return send<SessionInfo>("/api/v1/auth/login", {
     method: "POST",

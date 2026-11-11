@@ -400,6 +400,29 @@ def test_a_pc_without_a_key_asks_and_is_let_in_by_approval(center: TestClient, t
     assert agent.tray_status() == "대기"
 
 
+def test_an_open_center_lets_the_pc_in_without_a_button(tmp_path: Path) -> None:
+    """열린 모드 (ADR-0142 §1) — 요청을 보내는 그 자리에서 승인되고, 다음 걸음에 키를 받는다."""
+    settings = CenterSettings(
+        db_path=tmp_path / "center.sqlite3",
+        package_dir=tmp_path / "packages",
+        admin_token=ADMIN,
+        open_mode=True,
+    )
+    with TestClient(create_app(settings)) as center:
+        agent = make_agent(center, tmp_path, key=None)
+        assert agent.beat() is None  # 요청을 보냈다 — 그 답에 이미 승인이 실려 있다
+        pending = agent.enrollment
+        assert pending is not None and pending.state == "approved"
+        # 승인 대기 표는 비어 있다 — 사람이 누를 것이 없다.
+        admin = {"Authorization": f"Bearer {ADMIN}"}
+        assert center.get("/api/v1/enrollments", headers=admin).json() == []
+        assert agent.beat() is not None  # 키를 받아 등록하고 하트비트까지
+        assert agent.registered and agent.credentials.center_api_key()
+        # 상태 파일에는 봉함도 키도 없다 (평소 승인과 같다).
+        saved = (tmp_path / "state.json").read_text(encoding="utf-8")
+        assert "bpm_ctr_" not in saved and "ciphertext" not in saved
+
+
 def test_a_rejected_request_waits_for_the_person(center: TestClient, tmp_path: Path) -> None:
     agent = make_agent(center, tmp_path, key=None)
     agent.beat()

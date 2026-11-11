@@ -178,6 +178,10 @@ class StudioEnrollment:
             return Outcome("Center가 준 요청 코드가 이 PC가 계산한 것과 다릅니다 — Center 주소가 맞는지 확인하세요")
         self._save(found)
         log.info("Center에 등록 요청을 보냈다 — 요청 코드 %s", found.code)
+        if found.state == "approved":
+            # Center가 **받는 자리에서 승인했다** (열린 모드 — ADR-0142 §1). 봉함은 담지 않으니
+            # 한 걸음 더 가 키를 받는다 — 「승인되었습니다 — 키를 받는 중입니다」로 10초 서 있지 않게.
+            return self.step()
         return Outcome(waiting_text(found))
 
     def step(self) -> Outcome:

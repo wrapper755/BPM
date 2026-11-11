@@ -41,6 +41,7 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 | 읽기 토큰 | 자동화 (선택 — 비우면 닫힌다) | 보기 전용 계정과 같다 |
 | 관리자 토큰 | 자동화 (선택 — 비우면 닫힌다) | 관리자 계정과 같다. 자기 비밀번호 바꾸기만 없다 (계정이 없다) |
 | 인증 없음 | 키가 아직 없는 PC 실행기·서버 실행기 | **등록 요청을 보내고 그 답을 묻는 것뿐** (C4·C12 §등록 요청과 승인 — 내려 주는 키는 요청의 공개키로 봉해 있다) |
+| 인증 없음 — **열린 모드** | 개발·시험, 그리고 망에서 막는 운영 ([ADR-0142](../decisions/0142-open-mode.md)) | `BPM_CENTER__OPEN_MODE`가 켜져 있으면 **관리자 토큰과 같다**. 행위자는 `X-BPM-Actor`(없으면 「열린 모드」). **모르는 토큰은 그대로 401이다** — 일꾼 들이기(C15) 한 자리만 예외다 |
 | Center API 키 — Studio용 | Studio (등록 요청을 관리자가 승인해 받은 키, 자동화용은 관리자 토큰으로 발급) | 패키지 업로드, 패키지·리소스 읽기 |
 | Center API 키 — PC 실행기용 / 서버 실행기용 | 실행하는 쪽 | **자기에게 배포된** BPM 프로세스 패키지만 내려받기 (공유 BPM 프로세스는 그 안 `libs/`에 들어 있다) |
 | Center API 키 — 연동용 (신규, CON-11) | 외부 시스템 | 작업 만들기(`POST /jobs`)와 자기가 만든 작업 읽기·취소, 메시지 넣기(`POST /messages` — C12 §메시지) |
@@ -342,6 +343,8 @@ JobInfo는 위 필드에 다음을 더한다.
 
 PC(PC 실행기)·서버 실행기·**Studio**가 보낸 **등록 요청**(C4·C12 §등록 요청과 승인, 아래 §Studio 등록 요청과 승인)을 관리자가 보고 들인다. 사람은 키를 보지 않는다 — 승인하면 Center가 키를 만들어 그 요청의 공개키로 봉해 둔다.
 
+> **열린 모드에서는 받는 자리에서 승인된다** ([ADR-0142](../decisions/0142-open-mode.md)) — `POST …/enroll`이 그 자리에서 `approve()`를 불러 봉한 키를 바로 싣는다. 「누가 승인했나」는 `open_mode`다. **PC 실행기·Studio는 회사가 하나뿐일 때만** 자동이고(그 회사로), 둘 이상이면 **승인 대기로 남는다** — 누구의 장비인지 짐작하지 않는다(C16). 서버 실행기는 Center 공용이라 늘 자동이다. 들이기 비밀(C12, ADR-0117)은 그대로 살고 **틀린 비밀은 여전히 403**이다.
+
 | 메서드·경로 | 뜻 |
 | --- | --- |
 | `GET /enrollments?type=bot_ui\|server_runner\|studio&state=pending` | 요청 목록 (`state`는 쉼표로 여럿, 기본 `pending`) |
@@ -445,6 +448,7 @@ BotUiInfo 필드:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-11 | 1 | **열린 모드** — §인증에 「인증 없음 — 열린 모드」(관리자와 같다, 모르는 토큰은 그대로 401), §등록 승인에 받는 자리 승인(회사가 하나뿐일 때). 권한표·모델은 그대로다 | [0142](../decisions/0142-open-mode.md) |
 | 2026-11-09 | 1 | 권한표에 **콘솔에서 고치는 외부 확장**(`POST·PUT·DELETE /resources/extensions…`·`…/test-calls…`, Center 관리자만) 줄을 더했다 | [0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md) |
 | 2026-11-08 | 1 | 권한표에 **일꾼 관리**(`POST /consumers`·`PUT·DELETE /consumers/{id}`·`POST …/token`, Center 관리자만) 줄을 더했다 | [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |
 | 2026-11-08 | 1 | **`GET …/diagram`을 더했다** — CON-01이 진입 정의를 그린다. 새 엔드포인트라 옛 쪽은 영향이 없다 | [0136](../decisions/0136-run-detail-shows-the-diagram.md) |

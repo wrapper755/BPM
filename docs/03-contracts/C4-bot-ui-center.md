@@ -46,6 +46,7 @@ PC 실행기가 **등록 요청**을 보내 관리자의 승인으로 Center API
 | 6 | PC 실행기 | 다음에 물을 때 봉한 키를 받아 열고 OS 비밀 저장소에 둔 뒤 `register`를 부른다 (그다음은 지금과 같다) |
 | 7 | Center | 그 키로 `register`가 성공하면 **봉해 둔 것을 지운다** — 그것이 받았다는 표시다 |
 
+- **열린 모드에서는 4·5가 받는 자리에서 일어난다** ([ADR-0142](../decisions/0142-open-mode.md)) — `POST …/enroll`의 응답에 봉한 키가 바로 실려 오고(`state: approved`), 「승인 대기」를 지나지 않는다. 회사가 둘 이상이면 자동 승인하지 않고 지금처럼 기다린다(C5 §등록 승인). 요청 코드는 그대로 계산해 띄운다 — 사람이 맞춰 볼 상대가 없을 뿐이다.
 - **환경변수로 키가 오면**(`BPM_BOT_UI__CENTER_API_KEY` — 개발·CI) 등록 요청을 보내지 않는다.
 - **요청 코드**: `SHA-256(public_key ‖ enrollment_id)`를 base32(RFC 4648, 대문자, 덧붙임 없음)로 적은 앞 8자를 `XXXX-XXXX`로 보인다. 공개키와 Center가 준 id 둘로 정해지므로 **사람이 지어 맞출 수 없고**, 가운데서 응답을 바꿔치면 PC 실행기가 계산한 값과 어긋나 띄우지 않는다. 같은 PC가 다시 요청하면 코드도 바뀐다.
 - **승인 대기는 24시간**이다. 지나면 `expired`이고 PC 실행기는 새 요청을 보낸다(코드가 바뀐다). 같은 `machine_id`가 대기 중에 다시 요청하면 **옛 요청을 닫고** 새것만 남긴다 — CON-03에 같은 PC가 두 줄 서지 않는다.
@@ -299,6 +300,7 @@ pending ──(하트비트 응답에 실림)──▶ dispatched ──ack queu
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-11 | 1 | **열린 모드** — `POST …/enroll`이 받는 자리에서 승인되고 봉한 키를 바로 싣는다(§등록 요청과 승인). 새 칸은 없다 | [0142](../decisions/0142-open-mode.md) |
 | 2026-11-01 | 1 | `JobDispatch.virtual_worker`를 걷고 `place?`를 더했다(모델이 C12와 같다 — PC 실행기는 읽지 않는다) | [0125](../decisions/0125-organization-and-work-placement.md) |
 | 2026-10-31 | 1 | 하트비트의 **`worker`(WorkerState)**·`versions.worker`·상태 값 `selector_registration`을 걷었다 — Worker 프로세스를 띄우는 확장이 없다. 옛 PC 실행기가 보내도 받는 쪽은 모르는 칸·모르는 값으로 받아 두므로(원칙 3·10) **판을 올리지 않는다**. 호출 토큰은 PC 실행기 메모리에만 있다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-31 | 1 | `deployments`의 「맞춘다」를 풀어 적었다 — 덮는 봉투가 없는 설치는 「실행 불가」, `readiness.blocked`에 `deployment_withdrawn`·`deployment_expired`. 활성에 `deprecated`가 든다(전에도 계약은 그랬고 Center가 어겼다, 09-gaps §3-22). 칸은 그대로다 | [0113](../decisions/0113-field-follows-withdrawn-deployments.md) |

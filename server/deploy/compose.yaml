@@ -19,6 +19,8 @@ services:
       # 만들어 로그와 볼륨의 `first-admin-password.txt`에 둔다.
       BPM_CENTER__FIRST_ADMIN__USERNAME: ${BPM_CENTER__FIRST_ADMIN__USERNAME:-}
       BPM_CENTER__FIRST_ADMIN__PASSWORD: ${BPM_CENTER__FIRST_ADMIN__PASSWORD:-}
+      # 열린 모드 (ADR-0142) — 켜면 콘솔 로그인 외에 키 등록이 없다. 무엇을 포기하는지는 `.env.example`에 적었다.
+      BPM_CENTER__OPEN_MODE: ${BPM_CENTER__OPEN_MODE:-}
       # 자동화(스크립트)용 토큰 — 비우면 그 길이 닫힌다. 콘솔은 계정으로 들어온다.
       BPM_CENTER__ADMIN_TOKEN: ${BPM_CENTER__ADMIN_TOKEN:-}
       BPM_CENTER__READ_TOKEN: ${BPM_CENTER__READ_TOKEN:-}

@@ -38,7 +38,7 @@ from fastapi.responses import JSONResponse
 
 from bpm.center import enrollments, keys
 from bpm.center.api import bot_ui, deployments, resources, server_runner
-from bpm.center.auth import Caller, require_console
+from bpm.center.auth import Caller, bearer, require_console
 from bpm.center.errors import ApiError
 from bpm.center.responses import Utf8JSONResponse
 from bpm.center.storage import Store, dumps, loads, now_iso
@@ -756,6 +756,15 @@ def _held_manifests(row: Any) -> list[dict[str, Any]]:
 
 #: 일꾼 폴더가 들인 일꾼의 `machine_id` 머리 (`consumer_folder.MACHINE_PREFIX`와 같다 — 그쪽이 이 모듈을 부른다).
 FOLDER_MACHINE_PREFIX = "folder:"
+#: **열린 모드**에서 스스로 들어온 일꾼의 `machine_id` 머리 (ADR-0142 §2, `consumers.OPEN_PREFIX`와 같다).
+OPEN_MACHINE_PREFIX = "open:"
+
+
+def source_of(machine_id: str) -> str:
+    """`ConsumerInfo.source` — 머리가 들어온 길을 말한다 (C15 §일꾼 관리)."""
+    if machine_id.startswith(FOLDER_MACHINE_PREFIX):
+        return "folder"
+    return "open" if machine_id.startswith(OPEN_MACHINE_PREFIX) else "console"
 
 
 def consumer_info(store: Store, row: Any) -> ConsumerInfo:
@@ -768,7 +777,7 @@ def consumer_info(store: Store, row: Any) -> ConsumerInfo:
         key_prefix=(record.prefix or None) if record else None,
         approved_at=row["approved_at"],
         approved_by=row["approved_by"],
-        source="folder" if str(row["machine_id"]).startswith(FOLDER_MACHINE_PREFIX) else "console",
+        source=source_of(str(row["machine_id"])),
         last_fetch_at=row["last_fetch_at"],
         apps=[f"{one.get('app_id')}@{one.get('version')}" for one in _held_manifests(row)]
         + _held_extensions(store, topics),
@@ -1041,9 +1050,15 @@ async def post_cancel(request: Request, task_id: str) -> Any:
 @router.post("/consumers/fetch")
 async def post_fetch(request: Request) -> Any:
     store = _store(request)
+    wanted: FetchRequest = _model(FetchRequest, await _body(request))
+    if request.app.state.settings.open_mode:
+        from bpm.center import consumers  # noqa: PLC0415 — 순환 import를 피한다 (그쪽이 이 모듈을 쓴다)
+
+        # **열린 모드** — 모르는 토큰이면 그 자리에서 일꾼을 들인다 (ADR-0142 §2). 아는 토큰이면
+        # 아무것도 하지 않는다. 이 한 자리 밖에서는 모르는 토큰이 그대로 401이다 (C5 §인증).
+        consumers.admit_self(store, token=bearer(request), name=wanted.name, topics=list(wanted.topics))
     found = _caller(request)
     consumer = consumer_of(store, found)
-    wanted: FetchRequest = _model(FetchRequest, await _body(request))
     tasks = await _until(request, wanted.wait_s, lambda: take(store, consumer, wanted))
     return FetchResponse(
         tasks=tasks or [], consumer_id=str(consumer["consumer_id"]), rotated_token=rotation(store, found, consumer)

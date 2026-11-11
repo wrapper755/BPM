@@ -8,6 +8,8 @@ C15 §일꾼 관리, ADR-0137. 종류(`ai`·`api`·`rpa`)는 가져가기가 거
 - **토큰 원문은 만들기·새로 발급의 답에만 실린다.** Center는 해시만 둔다. 모양은 C7 키이고 만료·회전이 없다.
 - 지우거나 토픽을 바꿔 **어느 일꾼의 토픽에도 없게 된 외부 확장**(일꾼이 올린 것)은 그 자리에서 철회한다.
 - 쥔 일감은 손대지 않는다 — 잠금이 풀리면 다시 줄에 선다(`external_tasks.sweep`).
+- **Center가 열린 모드면 일꾼이 스스로 들어온다** (`admit_self`, ADR-0142 §2) — 모르는 토큰으로 온 가져가기가
+  그 자리에서 일꾼이 된다(`source` `open`). 들어온 뒤로는 콘솔에서 만든 일꾼과 **같은 행**이다.
 """
 
 from __future__ import annotations
@@ -27,6 +29,10 @@ log = logging.getLogger(__name__)
 
 #: 콘솔에서 만든 일꾼의 `machine_id` 머리 — 그 뒤는 `consumer_id`다 (폴더 일꾼은 `folder:<파일 이름>`).
 MACHINE_PREFIX = "console:"
+#: **열린 모드**에서 스스로 들어온 일꾼의 머리 (ADR-0142 §2) — 그 뒤도 `consumer_id`다.
+OPEN_PREFIX = external_tasks.OPEN_MACHINE_PREFIX
+#: 스스로 들어온 일꾼의 「들인 쪽」(`consumers.approved_by`).
+OPEN_ACTOR = "열린 모드"
 
 
 def create(store: Store, *, name: str, topics: list[str], kinds: list[str] | None = None, by: str) -> ConsumerCreated:
@@ -53,6 +59,31 @@ def create(store: Store, *, name: str, topics: list[str], kinds: list[str] | Non
     said = _said(kinds, "정하지 않음")
     log.info("일꾼 %s를 만들었다 (토픽 %s, 종류 %s, %s)", name, ", ".join(_topics(topics)), said, by)
     return _created(store, consumer_id, raw)
+
+
+def admit_self(store: Store, *, token: str | None, name: str | None, topics: list[str]) -> bool:
+    """**열린 모드**에서 모르는 토큰으로 온 가져가기 — 그 자리에서 일꾼을 들인다 (ADR-0142 §2, C15 §일꾼 들이기).
+
+    `True`면 들였다. **아는 토큰이면 아무것도 하지 않는다**(폐기된 토큰까지 — 되살아나지 않는다). 들인 뒤로는
+    콘솔에서 만든 일꾼과 **같은 행**이라 스위치를 끈 뒤에도 그대로 돌고, 종류는 정하지 않은 일꾼이다(ADR-0139).
+    """
+    if not token or not topics:
+        return False
+    if store.row("SELECT 1 FROM center_keys WHERE key_hash = ?", (keys.key_hash(token),)) is not None:
+        return False
+    wanted = _topics(topics)
+    chosen = _free_name(store, (name or "").strip() or wanted[0])
+    consumer_id = f"csm_{secrets.token_hex(4)}"
+    now = now_iso()
+    with store.tx() as cur:
+        key_id = _insert_key(cur, chosen, token, now)
+        cur.execute(
+            "INSERT INTO consumers (consumer_id, key_id, machine_id, name, topics_json, kinds_json, manifest_json,"
+            " approved_at, approved_by) VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?)",
+            (consumer_id, key_id, f"{OPEN_PREFIX}{consumer_id}", chosen, dumps(wanted), now, OPEN_ACTOR),
+        )
+    log.info("열린 모드 — 일꾼 %s가 스스로 들어왔다 (토픽 %s)", chosen, ", ".join(wanted))
+    return True
 
 
 def update(
@@ -144,6 +175,14 @@ def _row(store: Store, consumer_id: str) -> Any:
     return row
 
 
+def _free_name(store: Store, wanted: str) -> str:
+    """겹치지 않는 이름 — 콘솔에서 만든 일꾼과 부딪히면 뒤에 번호를 붙인다(스스로 들어오는 길에 409가 없다)."""
+    for suffix in ("", *(f"-{one}" for one in range(2, 100))):
+        if store.row("SELECT 1 FROM consumers WHERE name = ?", (wanted + suffix,)) is None:
+            return wanted + suffix
+    return f"{wanted}-{secrets.token_hex(3)}"
+
+
 def _topics(topics: list[str]) -> list[str]:
     return sorted(set(topics))
 
@@ -156,4 +195,4 @@ def _said(kinds: list[str] | None, empty: str = "그대로") -> str:
     return ", ".join(_kinds(kinds)) if kinds else empty
 
 
-__all__ = ["create", "delete", "reissue", "revoke_orphans", "update"]
+__all__ = ["admit_self", "create", "delete", "reissue", "revoke_orphans", "update"]

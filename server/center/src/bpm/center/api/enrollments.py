@@ -37,9 +37,21 @@ def _remote(request: Request) -> str | None:
     return request.client.host if request.client is not None else None
 
 
+def _open_mode(request: Request) -> bool:
+    """열린 모드면 요청을 받는 자리에서 승인한다 (ADR-0142)."""
+    open_mode: bool = request.app.state.settings.open_mode
+    return open_mode
+
+
 @router.post("/bot-ui/enroll", status_code=201)
 async def post_bot_ui_enroll(request: Request) -> Any:
-    return enrollments.request(_store(request), kind="bot_ui", body=await _json(request), remote_addr=_remote(request))
+    return enrollments.request(
+        _store(request),
+        kind="bot_ui",
+        body=await _json(request),
+        remote_addr=_remote(request),
+        open_mode=_open_mode(request),
+    )
 
 
 @router.get("/bot-ui/enroll/{enrollment_id}")
@@ -56,6 +68,7 @@ async def post_runner_enroll(request: Request) -> Any:
         remote_addr=_remote(request),
         join_token=request.headers.get(JOIN_TOKEN_HEADER),
         expected_join_token=request.app.state.settings.server_runner_join_token,
+        open_mode=_open_mode(request),
     )
 
 
@@ -67,7 +80,13 @@ def get_runner_enroll(request: Request, enrollment_id: str) -> Any:
 @router.post("/studio/enroll", status_code=201)
 async def post_studio_enroll(request: Request) -> Any:
     """Studio의 등록 요청 (C5 §Studio 등록 요청과 승인, ADR-0093) — PC 실행기와 같은 길이다."""
-    return enrollments.request(_store(request), kind="studio", body=await _json(request), remote_addr=_remote(request))
+    return enrollments.request(
+        _store(request),
+        kind="studio",
+        body=await _json(request),
+        remote_addr=_remote(request),
+        open_mode=_open_mode(request),
+    )
 
 
 @router.get("/studio/enroll/{enrollment_id}")

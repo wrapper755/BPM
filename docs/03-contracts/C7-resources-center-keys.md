@@ -226,6 +226,7 @@ CenterKeyInfo 필드:
 - **권한은 종류가 정한다** — `POST /center-keys`로 발급한 같은 종류의 키와 같다(C5 권한표). 앞자리(`prefix`)는 빈 글이고(CON-11 「—」) 만료·회전이 없다.
 - 키의 자리는 **파일 이름**(확장자 앞)이다. 해시가 바뀌면 옛 키를 폐기하고 새 키를 만든다. **폐기된 토큰은 되살아나지 않고**(`token_revoked`), 다른 키(일꾼 키 포함)가 쓰는 해시는 `token_in_use`다. **파일이 빠지면 폐기한다**(행은 남는다). 읽지 못한 파일은 자리를 지킨다.
 - 결과는 `ConsumerFolderScan.items[]`의 `kind: key` 줄이다. `bpm-center key-file <이름> --type integration|relay [--dir 폴더]`가 파일을 짓고 원문을 한 번 찍는다.
+- **열린 모드에서는 이 키가 없어도 된다** ([ADR-0142](../decisions/0142-open-mode.md)) — 키 없는 호출이 관리자이므로 연동 시스템이 작업·메시지·대리 결재를 그냥 부른다(C5 §인증). 폴더 키는 그대로 살고, 스위치를 끄면 다시 그 키가 관문이다.
 
 - 기본 만료는 1년. 만료 14일 전부터 CON-11에 보인다. **등록 승인이 만든 키는 Center가 그때부터 회전한다** (C4 §키 회전) — PC 실행기 알림(BUI-05)은 회전이 7일 전까지 닿지 않았을 때만, 회전하지 않는 키는 14일 전부터다.
 
@@ -248,6 +249,7 @@ CenterKeyInfo 필드:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-11 | 1 | **열린 모드**에서는 폴더 키(연동용·대리 답용)가 없어도 된다 — 키 없는 호출이 관리자다(C5 §인증). 폴더 키 규칙은 그대로다 | [0142](../decisions/0142-open-mode.md) |
 | 2026-11-09 | 1 | §콘솔에서 고치는 외부 확장 — `POST·PUT·DELETE /resources/extensions…`, `…/versions`·`…/dependents`·`…/test-calls`(`ExtensionCreateRequest`·`ExtensionUpdateRequest`·`ExtensionVersionInfo`·`ExtensionDependent`·`ExtensionRevoked`·`ExtensionTestCall`·`ExtensionTestResult`), `ExtensionResource.source`. 새 엔드포인트와 선택 칸이라 schema는 그대로다 | [0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md) |
 | 2026-11-08 | 1 | 일꾼 폴더는 일꾼을 **처음 들이기만** 한다 — 이미 있는 일꾼은 `unchanged`, 파일이 빠져도 일꾼을 지우지 않는다. 모양은 그대로다 | [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |
 | 2026-11-08 | 1 | `ServiceAppResource`에 `app_group`·`keywords`·`groups`(C11 manifest 그대로 — CON-18). 선택 칸이라 schema는 그대로다 | [0138](../decisions/0138-console-app-catalog.md) |

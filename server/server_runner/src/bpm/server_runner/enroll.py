@@ -95,7 +95,8 @@ def _ask(agent: Agent, secret: str) -> EnrollStatus:
         raise CenterProblem("Center가 준 요청 코드가 이 서버가 계산한 것과 다릅니다 — Center 주소를 확인하세요")
     _save(agent, found)
     if found.state == "approved":
-        log.info("들이기 비밀로 바로 승인되었다")
+        # 들이기 비밀(ADR-0117)이거나 Center가 열린 모드(ADR-0142)일 때 — 요청을 받는 자리에서 승인된다.
+        log.info("%s 바로 승인되었다", "들이기 비밀로" if join else "Center가 열린 모드라")
         return found
     log.info(
         "Center에 등록 요청을 보냈습니다. 요청 코드 %s — Center 콘솔 「서버 실행」에서 승인하세요 (%s까지)",

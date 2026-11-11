@@ -51,6 +51,8 @@ TABLES = {"bot_ui": host_keys.BOT_UI, "server_runner": host_keys.SERVER_RUNNER}
 STUDIO = "studio"
 #: 들이기 비밀로 승인한 요청의 「누가」 (ADR-0117) — 사람 계정 이름과 겹치지 않는다(계정은 `_`를 쓰지 않는다).
 JOIN_TOKEN_ACTOR = "join_token"
+#: 열린 모드가 승인한 요청의 「누가」 (ADR-0142) — 들이기 비밀과 같은 결이다.
+OPEN_MODE_ACTOR = "open_mode"
 #: 요청 본문 모델 — 각자의 `RegisterRequest` + `public_key` (Studio는 제 모양).
 MODELS: dict[str, Any] = {
     "bot_ui": EnrollRequest,
@@ -112,11 +114,16 @@ def request(
     remote_addr: str | None,
     join_token: str | None = None,
     expected_join_token: str | None = None,
+    open_mode: bool = False,
 ) -> EnrollStatus:
     """`POST …/enroll` (C4·C12). 인증이 없다 — 내려 줄 키는 요청의 공개키로 봉한다.
 
     **들이기 비밀이 실려 오면** (C12, ADR-0117) 그 자리에서 승인해 봉한 키를 바로 싣는다 —
     승인은 버튼과 **같은 `approve()`**다. 실려 왔는데 맞지 않으면 403이고 대기 줄을 만들지 않는다.
+
+    **열린 모드도 같은 자리에서 승인한다** (ADR-0142). PC 실행기·Studio는 **회사가 하나뿐일 때만**
+    — 둘 이상이면 누구의 장비인지 짐작하지 않고 승인 대기로 남긴다 (C16). 서버 실행기는 Center
+    공용이라 회사를 받지 않으니 늘 승인된다.
     """
     try:
         wanted = MODELS[kind].model_validate(body)
@@ -186,7 +193,19 @@ def request(
     if joined:
         approve(store, enrollment_id, name=None, actor=JOIN_TOKEN_ACTOR)
         return status(store, enrollment_id, kind=kind)
+    if open_mode:
+        company = None if kind == "server_runner" else _the_only_company(store)
+        if kind == "server_runner" or company is not None:
+            approve(store, enrollment_id, name=None, actor=OPEN_MODE_ACTOR, company=company)
+            return status(store, enrollment_id, kind=kind)
     return EnrollStatus(enrollment_id=enrollment_id, state="pending", code=code, expires_at=expires_at)
+
+
+def _the_only_company(store: Store) -> str | None:
+    """회사가 **하나뿐이면** 그 id — 열린 모드의 자동 승인이 그때만 회사를 정한다 (ADR-0142 §1)."""
+    from bpm.center import organization  # noqa: PLC0415 — 순환 import를 피한다 (`approve`와 같은 결)
+
+    return organization.only_company(store)
 
 
 def status(store: Store, enrollment_id: str, *, kind: str) -> EnrollStatus:
