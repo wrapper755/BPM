@@ -27,7 +27,6 @@ COPY shared/qt/pyproject.toml shared/qt/
 COPY server/service_kit/pyproject.toml server/service_kit/
 COPY server/center/pyproject.toml server/center/
 COPY studio/app/pyproject.toml studio/app/
-COPY bot/app/pyproject.toml bot/app/
 COPY server/server_runner/pyproject.toml server/server_runner/
 
 # Center가 쓰는 것만 설치한다 (Qt·PySide6는 서버에 필요 없다).

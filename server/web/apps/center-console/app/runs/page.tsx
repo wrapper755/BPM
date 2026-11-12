@@ -262,7 +262,7 @@ export default async function RunsPage({
             caption="실행 목록"
             empty={{
               title: "조건에 맞는 실행이 없습니다.",
-              hint: "Studio 시험 실행이나 Bot이 보낸 기록이 여기 쌓입니다.",
+              hint: "Studio 시험 실행이나 서버 실행기가 보낸 기록이 여기 쌓입니다.",
             }}
           />
           {rows.length > 0 ? <p className="text-body-sm text-text-muted">{total}건</p> : null}

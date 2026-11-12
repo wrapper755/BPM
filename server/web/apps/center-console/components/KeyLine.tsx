@@ -4,7 +4,7 @@ import { STATE_LABEL } from "@/lib/center-keys";
 import { KeyMenu } from "./KeyMenu";
 
 /**
- * 상세 요약의 「API 키」 한 칸 (CON-03 Bot 상세·CON-12 상세) — 앞자리·만료, 그 키의 상태와 관리자면 「...」.
+ * 상세 요약의 「API 키」 한 칸 (CON-03 Studio 상세·CON-12 상세) — 앞자리·만료, 그 키의 상태와 관리자면 「...」.
  * 키 동작은 그 키가 가리키는 것을 보는 화면에 있다 (ADR-0124). 키를 찾지 못하면 보고에 실린 앞자리만 보인다.
  */
 export function KeyLine({

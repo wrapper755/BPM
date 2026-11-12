@@ -563,7 +563,6 @@ def _row(store: Store, row: Any) -> DeploymentInfo:
 
 
 __all__ = [
-    # `run_location` → 대상 종류 표는 **계약에 하나**다 (`TARGET_TYPE_FOR_RUN_LOCATION`, ADR-0047).
     "WILDCARD_TARGETS",
     "server_versions",
     "create",

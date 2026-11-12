@@ -128,7 +128,7 @@ C14 호출의 `delegate` 칸, C1 `requires.delegations`, C4 `JobAck.outputs`, C3
   [0023](0023-bot-ui-process-supervision.md)·[0031](0031-runner-control-file.md)·[0062](0062-pc-delegation.md)·
   [0071](0071-splitting-a-task-into-a-pc-bot.md)·[0104](0104-windows-ci-runs-the-client-side.md)·
   [0108](0108-windows-ci-weekly.md) 전부, 그리고 [0042](0042-extension-contributed-panels.md)·
-  [0043](0043-turned-off-extensions.md)·[0092](0092-keys-are-issued-and-delivered-by-center.md)·
+  [0043](0043-turned-off-extensions.md)·[0063](0063-stopping-a-running-server-run.md)·[0092](0092-keys-are-issued-and-delivered-by-center.md)·
   [0106](0106-pc-escalation-asks-a-person.md)·[0107](0107-outcome-unknown-asks-a-person.md)·
   [0113](0113-field-follows-withdrawn-deployments.md)의 PC 쪽, 그리고
   [0038](0038-approval-request-channel.md)의 **현장 갈래**(요청 파일·제어 파일·`answered_in_field`) —

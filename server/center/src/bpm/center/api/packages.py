@@ -139,16 +139,15 @@ def upload(
         shutil.move(str(staged), final)
         with store.tx() as cur:
             cur.execute(
-                "INSERT INTO packages (id, version, kind, name, status, run_location, content_hash,"
+                "INSERT INTO packages (id, version, kind, name, status, content_hash,"
                 " manifest_json, file_name, size_bytes, uploaded_at, uploaded_by, company)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     manifest.id,
                     manifest.version,
                     manifest.kind,
                     manifest.name,
                     STATUS_CANDIDATE,
-                    None,
                     computed,
                     dumps(manifest.to_json_dict()),
                     final.name,

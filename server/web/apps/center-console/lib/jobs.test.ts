@@ -16,11 +16,11 @@ const ALL = [
   deployment("정산", "1.0.0", { type: "server_runner", id: "*" }, 3),
   deployment("정산", "1.1.0", { type: "server_runner", id: "srv_a" }),
   deployment("정산", "1.1.0", { type: "server_runner", id: "srv_b" }, 2),
-  deployment("발주", "1.0.0", { type: "bot_ui", id: "pc_1" }),
+  deployment("발주", "1.0.0", { type: "모르는_종류", id: "x_1" }),
 ];
 
 describe("runsOnServer", () => {
-  it("서버 실행기에 배포된 프로세스만 서버다", () => {
+  it("서버 실행기에 배포된 프로세스만 서버다 (모르는 대상 종류는 빼고)", () => {
     expect(runsOnServer(ALL, "정산")).toBe(true);
     expect(runsOnServer(ALL, "발주")).toBe(false);
     expect(runsOnServer(ALL, "없음")).toBe(false);
@@ -44,21 +44,17 @@ describe("serverLimit", () => {
 });
 
 describe("cancelControl", () => {
-  const server = { type: "server_runner", id: "*" };
-  const pc = { type: "bot_ui", id: "pc_1" };
-  it("시작 전이면 대상과 상관없이 「취소」", () => {
+  it("시작 전이면 「취소」", () => {
     for (const state of ["pending", "dispatched", "queued"]) {
-      expect(cancelControl({ state, target: server, cancel_requested: false })).toBe("cancel");
-      expect(cancelControl({ state, target: pc, cancel_requested: false })).toBe("cancel");
+      expect(cancelControl({ state, cancel_requested: false })).toBe("cancel");
     }
   });
-  it("도는 서버 실행은 「중지」, 도는 PC 실행은 끈 단추", () => {
-    expect(cancelControl({ state: "accepted", target: server, cancel_requested: false })).toBe("stop");
-    expect(cancelControl({ state: "accepted", target: pc, cancel_requested: false })).toBe("pc_running");
+  it("도는 실행은 「중지」 — 자리가 하나다 (ADR-0144)", () => {
+    expect(cancelControl({ state: "accepted", cancel_requested: false })).toBe("stop");
   });
   it("이미 요청했거나 끝났으면 단추가 없다", () => {
-    expect(cancelControl({ state: "accepted", target: server, cancel_requested: true })).toBeNull();
-    expect(cancelControl({ state: "cancelled", target: server, cancel_requested: true })).toBeNull();
-    expect(cancelControl({ state: "rejected", target: pc, cancel_requested: false })).toBeNull();
+    expect(cancelControl({ state: "accepted", cancel_requested: true })).toBeNull();
+    expect(cancelControl({ state: "cancelled", cancel_requested: true })).toBeNull();
+    expect(cancelControl({ state: "rejected", cancel_requested: false })).toBeNull();
   });
 });

@@ -11,23 +11,18 @@ import { createJob } from "@/app/actions";
 /**
  * CON-05 「새 작업」 — 관리자 모드만.
  *
- * **두 걸음이고 둘 다 JS 없이 돈다.** 먼저 GET 폼으로 BPM 프로세스 → PC 실행기 → 버전을 고르면(주소에
- * 남는다), 그 버전의 매니페스트(C1 `inputs`)로 입력 칸을 그린 POST 폼이 나온다.
+ * **두 걸음이고 둘 다 JS 없이 돈다.** 먼저 GET 폼으로 BPM 프로세스 → 버전을 고르면(주소에 남는다),
+ * 그 버전의 매니페스트(C1 `inputs`)로 입력 칸을 그린 POST 폼이 나온다.
  *
- * - **서버 BPM 프로세스면 PC 실행기 칸이 없다** — 「서버 실행기에서 실행 — 동시 실행 상한 <n>」이고
- *   실행기는 Center가 빈자리로 고른다(`target.id = "*"`, C5 `JobTarget`). 판이 둘 이상 배포돼
- *   있으면 PC와 같이 버전을 고르게 한다.
- *
- * - PC 실행기는 **그 BPM 프로세스가 배포된 곳만** 고를 수 있다. 고를 곳이 없으면 「이 PC 실행기에 유효한
- *   배포가 없습니다」 — 만들어 봐야 422 `no_deployment`다. **PC 배포는 전체(`*`) 대상이 없다**
- *   (ADR-0046) — 봉투 하나가 PC 하나를 가리키므로 여기서 풀 것이 없다.
- * - 같은 PC 실행기에 그 BPM 프로세스의 배포가 둘 이상이면 **버전을 고르게 한다** (`version_ambiguous`).
+ * - **고를 실행기 칸이 없다** (자리가 하나다 — ADR-0144) — 「서버 실행기에서 실행 — 동시 실행 상한
+ *   <n>」이고 실행기는 Center가 빈자리로 고른다(`target.id = "*"`, C5 `JobTarget`).
+ * - 그 BPM 프로세스의 배포가 둘 이상이면 **버전을 고르게 한다** (`version_ambiguous`).
  *   하나면 비워 보낸다 — Center가 배포된 버전으로 채운다 (C5).
+ * - 배포가 없으면 「이 프로세스에 유효한 배포가 없습니다」 — 만들어 봐야 422 `no_deployment`다.
  */
 
 const FIELD = "h-9 border border-border-strong bg-bg-surface px-2 text-body";
 
-/** 그 BPM 프로세스가 배포된 PC 실행기들. **PC 배포는 대상이 하나씩**이라 풀 것이 없다 (ADR-0046). */
 /** 입력 칸 하나 — 매니페스트의 타입대로 (C14 `VALUE_TYPES`). 모르는 타입은 글 칸이다. */
 function InputField({ input }: { input: ManifestInput }) {
   const name = `input:${input.name}`;

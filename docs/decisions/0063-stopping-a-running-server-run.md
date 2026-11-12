@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 (2026-10-15) |
+| 상태 | 수락 · **PC 갈래는 걷었다** — `cancel_outcome`은 상태만 보고 `accepted`는 늘 202다 ([ADR-0144](0144-remove-the-pc-runner.md)) |
 | 날짜 | 2026-10-15 |
 | 관련 | [ADR-0014](0014-one-bot-per-pc.md), [ADR-0015](0015-run-location.md), [ADR-0054](0054-server-run-state-and-concurrency.md), [ADR-0062](0062-pc-delegation.md) §5, 계약 C4·C5·C12, 화면 CON-05·CON-12 |
 

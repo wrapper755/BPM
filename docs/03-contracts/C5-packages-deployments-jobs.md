@@ -294,7 +294,7 @@ JobInfo는 위 필드에 다음을 더한다.
 | 그 밖 | 409 `not_cancellable` | |
 
 - 실행의 성공·실패는 작업 상태가 아니다. C3 `run_finished`로 정해지고 `run_status`에 보인다.
-- 판정은 계약이 쥔다 (`cancel_outcome(state, target_type)`). 엔진 취소가 곧 `cancelled` 기록이다.
+- 판정은 계약이 쥔다 (`cancel_outcome(state)`). 엔진 취소가 곧 `cancelled` 기록이다.
 - **Center가 혼자 `cancelled`로 적지 않는다** (`dispatched`와 같은 결) — 정말 멈췄는지는 실행기만 안다. 실행기가 오프라인이면 취소 요청은 남고 **돌아오면 반영된다**; 돌아오지 않으면 CON-12 「유실 처리」가 닫는다 (C12).
 - 실행이 취소되면 **그 실행이 맡긴 것도 거둬진다** (C12 §맡기기).
 
@@ -395,10 +395,10 @@ Studio도 실행기와 **같은 길**로 들어온다 (C4 §등록 요청과 승
 | 409 | `account_exists` / `last_admin` | 같은 아이디 / 마지막 관리자를 멈추거나 내리려 함 |
 | 401 / 403 | `key_invalid` / `forbidden` | 인증 실패, 권한 밖 (예: 실행기가 자기에게 배포되지 않은 패키지를 요청) |
 | 404 | `not_found` | |
-| 404 | `target_not_found` | 배포·작업 지시의 대상 PC가 **등록되어 있지 않다** (ADR-0049). `not_found`(패키지가 없다)와 **가른다** — 한 요청에서 없을 수 있는 것이 둘이라 뭉치면 어느 쪽을 고칠지 모른다 |
+| 404 | `target_not_found` | 배포·작업 지시의 대상 실행기가 **등록되어 있지 않다** (ADR-0049). `not_found`(패키지가 없다)와 **가른다** — 한 요청에서 없을 수 있는 것이 둘이라 뭉치면 어느 쪽을 고칠지 모른다 |
 | 409 | `version_conflict` | 같은 버전인데 내용이 다름 |
 | 409 | `in_use` | 참조 중인 패키지 삭제 |
-| 409 | `already_started` / `not_cancellable` | 취소할 수 없는 작업 |
+| 409 | `not_cancellable` | 취소할 수 없는 작업 |
 | 409 | `not_approved` / `deprecated` / `hash_mismatch` / `wrong_target` | 배포가 가리키는 **패키지의 상태**가 요청과 어긋난다. 「본문이 잘못됐다」가 아니라 **상태 충돌**이라 409다 (`deployment_conflict`과 같은 결). 지원 종료는 `not_approved`로 뭉개지 않는다 — 승인은 되어 있고 새 배포만 막힌 것이다. `wrong_target`은 **대상 종류가 틀린 것**이다 (ADR-0047) |
 | 409 | `package_revoked` | 철회된 패키지를 승인하거나 지원 종료로 바꾸려 함 (끝난 일이다) |
 | 409 | `idempotency_conflict` | 같은 `idempotency_key`에 다른 본문 |
@@ -419,7 +419,7 @@ Studio도 실행기와 **같은 길**로 들어온다 (C4 §등록 요청과 승
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
-| 2026-11-12 | 1 | **PC 실행기를 걷었다** — `PackageInfo.run_location`, 배포 대상 `{type: "bot_ui"}`와 그 검사 둘(`run_location` 대조·PC의 `"*"` 금지), §PC 실행기 현황(`GET /bot-uis` 셋·`BotUiInfo`), `POST /call-tokens`의 실행기 쪽, 작업 사유 `bot_ui_shutdown`·`server_location`·`cancelled_on_pc`, `accepted` + PC 대상의 409 `already_started`, 422 `server_runner_not_available`을 걷었다. 등록 요청의 `type`은 `server_runner`·`studio` 둘이다 | [0144](../decisions/0144-remove-the-pc-runner.md) |
+| 2026-11-12 | 1 | **PC 실행기를 걷었다** — `PackageInfo.run_location`, 배포 대상 `{type: "bot_ui"}`와 그 검사 둘(`run_location` 대조·PC의 `"*"` 금지), §PC 실행기 현황(`GET /bot-uis` 셋·`BotUiInfo`), `POST /call-tokens`의 실행기 쪽, 작업 사유 `bot_ui_shutdown`·`server_location`·`cancelled_on_pc`, `accepted` + PC 대상의 409 `already_started`(`cancel_outcome`은 상태만 본다), 422 `server_runner_not_available`을 걷었다. 등록 요청의 `type`은 `server_runner`·`studio` 둘이다 | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-11-11 | 1 | **열린 모드** — §인증에 「인증 없음 — 열린 모드」(관리자와 같다, 모르는 토큰은 그대로 401), §등록 승인에 받는 자리 승인(회사가 하나뿐일 때). 권한표·모델은 그대로다 | [0142](../decisions/0142-open-mode.md) |
 | 2026-11-09 | 1 | 권한표에 **콘솔에서 고치는 외부 확장**(`POST·PUT·DELETE /resources/extensions…`·`…/test-calls…`, Center 관리자만) 줄을 더했다 | [0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md) |
 | 2026-11-08 | 1 | 권한표에 **일꾼 관리**(`POST /consumers`·`PUT·DELETE /consumers/{id}`·`POST …/token`, Center 관리자만) 줄을 더했다 | [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |

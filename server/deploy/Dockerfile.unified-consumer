@@ -25,7 +25,6 @@ COPY shared/qt/pyproject.toml shared/qt/
 COPY server/service_kit/pyproject.toml server/service_kit/
 COPY server/center/pyproject.toml server/center/
 COPY studio/app/pyproject.toml studio/app/
-COPY bot/app/pyproject.toml bot/app/
 COPY server/server_runner/pyproject.toml server/server_runner/
 COPY server/adapter_consumer/pyproject.toml server/adapter_consumer/
 COPY server/unified_consumer/pyproject.toml server/unified_consumer/

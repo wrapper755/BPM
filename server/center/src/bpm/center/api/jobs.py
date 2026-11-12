@@ -329,9 +329,9 @@ def cancel(
     found_job = (
         info_of(store, _must(store, job_id)) if by_center else get(store, found, job_id, write=True)
     )
-    # **대상 종류가 `accepted`의 답을 가른다** (ADR-0063) — 서버 실행은 멈출 수 있고 PC는
-    # 그대로 거절이다. 판정은 계약이 쥔다 (문서의 표와 갈라지지 않게).
-    status, code = cancel_outcome(found_job.state, found_job.target.type)
+    # 도는 실행도 멈출 수 있다 (ADR-0063, 자리가 하나다 — ADR-0144). 판정은 계약이 쥔다
+    # (문서의 표와 갈라지지 않게).
+    status, code = cancel_outcome(found_job.state)
     if code is not None:
         raise ApiError(409, code, f"지금 상태({found_job.state})에서는 취소할 수 없다")
 
@@ -631,11 +631,11 @@ def _expire_due(store: Store, *, host_id: str, now: str) -> None:
 
 #: 맞추기 규칙이 적는 사유 — **호스트마다 다르다**. PC는 C4의 값, 서버 실행기는 C12의 값이다.
 #: 뭉개면 CON-12가 서버 실행기에 「runner_lost」라고 적어 운영자가 PC를 찾아 헤맨다.
-LOST_BOT_UI = "runner_lost"
+LOST_RUNNER = "runner_lost"
 LOST_RUNNER = "runner_lost"
 
 
-def _reconcile(store: Store, *, host_id: str, seen: set[str], lost_reason: str = LOST_BOT_UI) -> None:
+def _reconcile(store: Store, *, host_id: str, seen: set[str], lost_reason: str = LOST_RUNNER) -> None:
     """맞추기 규칙 (C4·C12) — 넘겨준 작업이 **소리 없이 사라지지 않게** 한다.
 
     실행하는 쪽이 비정상 종료로 쥔 것을 잃으면 작업은 영원히 `queued`로 남는다. 두 번 연속
@@ -669,7 +669,7 @@ def _reconcile(store: Store, *, host_id: str, seen: set[str], lost_reason: str =
 
             # `event`는 **계약의 열쇠**라 그대로 둔다 (`AUTO_WITHDRAW_REASONS`) — 저장되는
             # 사유는 호스트를 가리지 않는 `host_lost`다 (C6).
-            approvals.withdraw_for_run(store, str(row["run_id"]), event=LOST_BOT_UI)
+            approvals.withdraw_for_run(store, str(row["run_id"]), event=LOST_RUNNER)
 
 
 def _to_dispatch(store: Store, *, host_id: str, disabled: bool) -> list[JobDispatch]:

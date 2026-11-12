@@ -115,7 +115,7 @@ describe("summarize", () => {
     const one = summarize([
       run({ confirmations: 2 }),
       run({ confirmations: 0 }),
-      run(), // 옛 PC 실행기 — 그 칸이 없다
+      run(), // 옛 실행기 — 그 칸이 없다
     ]).get(`${BOT}@1.0.0`)!;
     expect([one.sample, one.confirmations, one.confirm_sample]).toEqual([3, 2, 2]);
     expect(percent(one.confirmations, one.confirm_sample)).toBe("100%");
@@ -240,22 +240,22 @@ describe("runnerStatus", () => {
 
 describe("serverDeployments", () => {
   it("id를 주지 않으면 **서버 배포 전부**다 (대기열은 어느 실행기에도 묶이지 않았다)", () => {
-    // PC 봉투가 섞이면 같은 BPM 프로세스의 PC 상한을 서버 대기열의 「BPM 프로세스별 상한 n」으로 보인다.
+    // 모르는 종류의 봉투가 섞이면 그 상한을 서버 대기열의 「BPM 프로세스별 상한 n」으로 보인다.
     const found = serverDeployments([
       serverDeployment(),
       serverDeployment({ deployment_id: "dep_other", target: { type: "server_runner", id: "srv_99999999" } }),
-      serverDeployment({ deployment_id: "dep_pc", max_concurrency: 1, target: { type: "bot_ui", id: "bui_1" } }),
+      serverDeployment({ deployment_id: "dep_x", max_concurrency: 1, target: { type: "모르는_종류", id: "x_1" } }),
     ]).map((one) => one.deployment_id);
     expect(found).toEqual(["dep_1", "dep_other"]);
   });
 
-  it("이 실행기 것과 전체(`*`) 것을 함께, PC 배포는 빼고", () => {
+  it("이 실행기 것과 전체(`*`) 것을 함께, 모르는 종류는 빼고", () => {
     const found = serverDeployments(
       [
         serverDeployment(),
         serverDeployment({ deployment_id: "dep_any", target: { type: "server_runner", id: "*" } }),
         serverDeployment({ deployment_id: "dep_other", target: { type: "server_runner", id: "srv_99999999" } }),
-        serverDeployment({ deployment_id: "dep_pc", target: { type: "bot_ui", id: RUNNER } }),
+        serverDeployment({ deployment_id: "dep_x", target: { type: "모르는_종류", id: RUNNER } }),
       ],
       RUNNER,
     ).map((one) => one.deployment_id);

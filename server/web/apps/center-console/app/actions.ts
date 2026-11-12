@@ -335,7 +335,6 @@ export async function deletePackage(packageId: string, version: string): Promise
 
 /** 키 동작은 그 키가 가리키는 화면에 있다 (ADR-0124) — 그 화면들을 다시 그린다. */
 function revalidateKeys() {
-  revalidatePath("/bot-uis", "layout");
   revalidatePath("/server-runners", "layout");
 }
 
@@ -365,7 +364,6 @@ export async function decideEnrollment(
   } catch (cause) {
     return { error: message(cause) };
   }
-  revalidatePath("/bot-uis", "layout");
   revalidatePath("/server-runners", "layout");
   revalidatePath("/bots");
   return {};

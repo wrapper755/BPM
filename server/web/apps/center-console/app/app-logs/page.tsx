@@ -8,7 +8,7 @@ import { fullTime } from "@/lib/time";
 import { APP_KINDS, APP_LABEL, buildAppLog, type AppKind, type AppLogRow } from "@/lib/app-logs";
 
 /**
- * CON-16 앱 로그 — 앱(Studio·Bot·서버 실행기)이 Center와 주고받은 이력 (ADR-0121).
+ * CON-16 앱 로그 — 앱(Studio·서버 실행기)이 Center와 주고받은 이력 (ADR-0121).
  *
  * **새로 쌓는 것은 없다** — 등록 요청(C5)·키(C7)·배치 결정(C4·C12)을 읽어 `buildAppLog`가 합친다.
  * 하트비트가 끊긴 때는 Center가 남기지 않아 여기 없다 (지금 상태는 CON-03이 말한다).

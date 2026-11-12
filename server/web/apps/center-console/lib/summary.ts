@@ -50,7 +50,7 @@ export interface BotRow {
   /** `confirmations`를 보낸 끝난 실행 수 — 「확인률」의 분모다 (0이면 재지 않는다). */
   confirm_sample: number;
   last_success: string | null;
-  /** 이 판을 「실행 불가」로 보고한 PC 실행기 수 (C4 `readiness.ready === false`). */
+  /** 이 판을 「실행 불가」로 보고한 실행기 수 (C4 `readiness.ready === false`). */
   blocked: number;
   /** 승인 창에 보일 「회사: … · 업무 자리: …」 (C16, ADR-0127 — 보여 주기만 한다). */
   place_line?: string;
@@ -74,7 +74,7 @@ export function percent(part: number, whole: number): string | null {
  * **세는 쪽은 제가 세지 않은 칸을 들고 다니지 않는다.** 전에는 반환 타입이 「패키지에서 오는
  * 칸만 뺀 나머지」였던 탓에 `summarize`가 `blocked`·`deployments`까지 **0으로 들고** 돌아왔고,
  * 줄을 짓는 자리에서 그것을 **나중에 펼쳐** 실제 값을 덮었다 — 끝난 실행이 있는 판은
- * 「실행 불가」·「배포된 PC 실행기」가 늘 0이고 경고 띠도 뜨지 않았다.
+ * 「실행 불가」·「배포된 실행기」가 늘 0이고 경고 띠도 뜨지 않았다.
  */
 export type RunFields = Pick<
   BotRow,
@@ -128,11 +128,11 @@ export function summarize(runs: RunInfo[]): Map<string, RunFields> {
   return out;
 }
 /**
- * 「배포된 PC 실행기」 — 그 판이 **살아 있는 PC 배포로 걸린 PC 수**와 그 건수 (C5).
+ * 「배포된 실행기」 — 그 판이 **살아 있는 배포로 걸린 실행기 수**와 그 건수 (C5).
  *
- * **PC 배포는 대상이 `bot_ui_id` 하나씩이다** (ADR-0046) — 그래서 `target.id`를 겹치지 않게
- * 세면 끝이고, Center가 대상을 풀어 줄 필요가 없다. 겹침을 지우는 까닭은 같은 판을 같은 PC에
- * 두 번 배포할 수 있어서다(옛 배포가 살아 있는 채) — 그때 **건수는 PC 수보다 크다**.
+ * `target.id`를 겹치지 않게 세면 끝이다. 겹침을 지우는 까닭은 같은 판을 같은 실행기에 두 번
+ * 배포할 수 있어서다(옛 배포가 살아 있는 채) — 그때 **건수는 실행기 수보다 크다**.
+ * 전체(`"*"`) 대상은 한 자리로 센다.
  *
  * **등록된 실행기와 맞춰 보지 않는다.** 세는 것은 「배포가 가리키는 실행기」이고, 가리킨 것이
  * 아직 등록하지 않았으면 그것은 **보여야 하는 어긋남**이다 (잘못 서명한 배포가 0대로 숨으면
@@ -177,13 +177,10 @@ export function runnerStatus(row: ServerRunnerInfo): string {
 /**
  * **서버 배포**만 (C5). `runnerId`를 주면 그 실행기 것과 전체(`"*"`) 것으로 좁힌다.
  *
- * **`"*"`는 서버 실행기만 쓴다** (ADR-0046) — PC 배포에는 전체 대상이 없다. Center의
- * `GET /deployments?bot_ui=`는 PC 대상만 풀어 주므로(그쪽은 `"*"`가 없다) 서버 쪽은
  * **활성 배포를 한 번 읽어 여기서** 좁힌다 (CON-06이 패키지 종류를 콘솔에서 가리는 것과 같은 결).
- *
- * **종류를 먼저 거르는 것이 요점이다** — 같은 BPM 프로세스가 PC와 서버에 함께 배포돼 있으면 PC 봉투의
- * 상한을 서버 대기열의 「BPM 프로세스별 상한 n」으로 보일 수 있다. 대기열은 아직 어느 실행기에도 묶이지
- * 않아(C12) `runnerId` 없이 부른다.
+ * 대상 종류는 **열린 문자열이라**(C5 `JobTarget`) 모르는 종류가 올 수 있어 먼저 거른다 —
+ * 섞이면 남의 봉투의 상한을 서버 대기열의 「BPM 프로세스별 상한 n」으로 보일 수 있다. 대기열은
+ * 아직 어느 실행기에도 묶이지 않아(C12) `runnerId` 없이 부른다.
  */
 export function serverDeployments(all: DeploymentInfo[], runnerId?: string): DeploymentInfo[] {
   return all.filter(

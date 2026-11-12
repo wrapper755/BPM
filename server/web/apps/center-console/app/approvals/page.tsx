@@ -23,10 +23,9 @@ export const STATE_LABEL: Record<string, string> = {
 
 /** 회수 사유 → 글 (C6). */
 export const WITHDRAW_LABEL: Record<string, string> = {
-  answered_in_field: "현장에서 먼저 답함",
   run_ended: "실행이 끝남",
   admin_withdraw: "관리자 회수",
-  host_lost: "Bot 기록 유실",
+  host_lost: "실행기 기록 유실",
 };
 
 export function time(value: string | null | undefined): string {
@@ -36,9 +35,8 @@ export function time(value: string | null | undefined): string {
   return `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
 }
 
-/** 실행하는 곳 — PC 실행기 이름, 서버면 「서버」 (CON-04). */
+/** 실행하는 곳 — 그 결재를 올린 **실행기 이름** (CON-04). 자리가 하나다 (ADR-0144). */
 export function where(row: ApprovalInfo): string {
-  if (row.host.type === "server_runner") return "서버";
   return row.host.name ?? row.host.id;
 }
 

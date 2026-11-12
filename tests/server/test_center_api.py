@@ -342,7 +342,7 @@ def test_deployment_check_is_skipped_without_center_state() -> None:
         ("pending", (200, None)),
         ("dispatched", (202, None)),
         ("queued", (202, None)),
-        ("accepted", (409, "already_started")),
+        ("accepted", (202, None)),
         ("cancelled", (409, "not_cancellable")),
         ("expired", (409, "not_cancellable")),
         ("무언가_새로운_상태", (409, "not_cancellable")),

@@ -124,7 +124,7 @@ export default async function ApprovalPage({
           {/* 거절은 되돌림이다 — 요청은 다시 「대기」이고, 왜 거절됐는지가 위에 선다 (C6). */}
           {info.delivery_accepted === false && info.delivery_reason ? (
             <ErrorBanner
-              message={`Bot이 이전 답을 거절했습니다: ${info.delivery_reason} — 고쳐서 다시 답하세요`}
+              message={`실행기가 이전 답을 거절했습니다: ${info.delivery_reason} — 고쳐서 다시 답하세요`}
             />
           ) : null}
 

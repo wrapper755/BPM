@@ -46,7 +46,7 @@ import type { OrgKind } from "./organization";
 
 export const CENTER_URL = process.env.BPM_CONSOLE__CENTER_URL ?? "http://localhost:8800";
 
-/** 위 막대에 보일 주소 — 사람이 PC 실행기·Studio에 적는 바깥 주소다. 콘솔이 부르는 주소는 컨테이너 이름일 수 있다. */
+/** 위 막대에 보일 주소 — 사람이 Studio·서버 실행기에 적는 바깥 주소다. 콘솔이 부르는 주소는 컨테이너 이름일 수 있다. */
 export const CENTER_PUBLIC_URL = process.env.BPM_CONSOLE__CENTER_PUBLIC_URL || CENTER_URL;
 
 export class CenterError extends Error {
