@@ -30,7 +30,7 @@
 | 구성요소 | 종류 | 위치 | 책임 | 책임지지 않는 것 |
 | --- | --- | --- | --- | --- |
 | 공통 계약 (`contracts`) | 패키지 | 모든 곳 | 주고받는 데이터 모델, 스키마 버전, 해시·서명 규칙 | 로직, I/O |
-| 런타임 코어 (`core`) | 패키지 | Studio, 서버 실행기 | BPMN 실행, **확장 호스트**(확장을 찾아 기여 등록), HTTP 어댑터 해석기, AI 태스크(에이전트 루프), 도구, 재생 기억, 설정 로더 | 화면(Qt), 서버 통신 |
+| 런타임 코어 (`core`) | 패키지 | Studio, 서버 실행기 | BPMN 실행, **확장 호스트**(확장을 찾아 기여 등록), HTTP 어댑터 해석기, AI 태스크(에이전트 루프), 도구, 재생 기억, 설정 로더, **시험 실행**(`core.testrun` — 작업 폴더·케이스·패키지 짓기·실행 전 검사) | 화면(Qt), 서버 통신 |
 | 확장 API (`extension_api`) | 패키지 | 모든 클라이언트·실행하는 쪽 | 확장이 구현하는 안정 인터페이스: 태스크 종류·수행기, Studio 편집기, 사전 점검, HTTP 어댑터 해석 규격 ([ADR-0018](decisions/0018-extensions.md)) | 특정 확장의 로직 |
 | 확장 (내장·사내는 파이썬 패키지, 외부는 정의 파일) | 확장 | 곳곳 (기여 지점) | BPM 프로세스에 공통 기능을 더함. 서버 부분(서비스 앱) + 클라이언트 기여. 확장 정의 C13. **지금 깔린 내장 확장은 없다** ([ADR-0114](decisions/0114-remove-ui-automation.md)) | 플랫폼 흐름 |
 | 모델 클라이언트 (`llm`) | 패키지 | 모델을 부르는 모든 곳 (`core`, 서비스 앱) | OpenAI 호환 `/v1/chat/completions` 어댑터와 그 모양(`Reply`·`ToolSpec`·`LlmError`). **맨 아래** — 우리 멤버를 하나도 모른다 ([ADR-0034](decisions/0034-service-app-model-connection.md)) | 도구 루프·결과 검증·궤적(`core.agent`), 주소·키 보관 |
@@ -82,6 +82,7 @@ llm ◀── core, service_kit   (맨 아래 — bpm의 아무것도 import하�
 - **Studio는 Center를 읽는다** (`studio/services.py` — C7 리소스 목록·믿는 서명 키). 쓰지 않는다. 실행기는 Center를 부르지 않는다 ([ADR-0031](decisions/0031-runner-control-file.md)) — Studio는 실행기가 아니라 제 안에서 엔진을 돌리는 쪽이라 다르다.
 - 서비스 앱끼리 서로 import하지 않는다. 필요하면 HTTP로 부른다.
 - `core`는 Qt를 import하지 않는다. 화면은 `studio`의 몫.
+- **시험 실행은 `core.testrun`에 있다** ([ADR-0143](decisions/0143-design-happens-in-the-console.md)) — 작업 폴더·케이스·패키지 짓기·실행 전 검사·엔진 몰이가 화면을 모른다. 미는 일(`pump()`)과 알리는 일(`Listener`)만 부르는 쪽이 정하므로 설계 화면과 서버가 **같은 코드**로 돌린다.
 - 제품 코드는 `spikes/`를 import하지 않는다.
 - **아무 멤버도 `samples/`를 의존하지 않는다.** `samples/mock_apps`는 업무 예제가 부르는 모의 앱이고(`samples/README.md`), 쓰는 쪽은 `tests/`와 사람이 띄우는 `bpm-mock-apps`뿐이다. 그 안의 C11 앱도 서비스 앱이라 `core`를 import하지 않는다.
 - 위 규칙은 `tests/integration/test_import_direction.py`가 강제한다 (**있음**). 두 가지를 본다: 선언한 의존(`pyproject.toml`, 전이 포함)과 실제 import(AST). 규칙을 더하려면 그 파일의 `FORBIDDEN_DEPS`·`FORBIDDEN_IMPORTS` 표에 줄을 더한다.

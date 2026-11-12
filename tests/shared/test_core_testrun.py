@@ -1,20 +1,21 @@
-"""Studio 시험 실행 (M3 조각 3e-3) — STU-08·STU-09.
+"""시험 실행 한 바퀴 (`bpm.core.testrun`) — 예제를 가져와 케이스로 돌리고 판정한다.
 
-여기가 **처음으로 한 바퀴가 돈다** — 예제를 가져와, 케이스 입력으로, 엔진을 돌려, C14 비교
-규칙으로 판정하고, 배운 재생 명세를 패키지에 적는다.
+여기가 **한 바퀴가 도는 자리**다 — 예제를 작업 폴더로 가져와, 케이스 입력으로, 엔진을 돌려,
+C14 비교 규칙으로 판정하고, 배운 재생 명세를 패키지에 적는다.
 
 거듭 보는 것 넷.
 
-1. **엔진은 스레드를 만들지 않는다** — `QTimer`가 민다. 시험도 이벤트 루프를 돌려 기다린다.
+1. **엔진은 스레드를 만들지 않는다** — `pump()`를 부르는 쪽이 민다. 여기서는 `run_to_end()`다.
 2. **케이스가 시키는 대로만** 답한다 — 적지 않은 결재는 기다린다 (기한 초과 시험).
-3. **Studio는 바깥으로 웹훅을 쏘지 않는다** — 시험 수신기로만 간다 (개발 PC 보호).
-4. **배운 것은 패키지에 적힌다** (ADR-0028) — 엔진은 파일을 쓰지 않으므로 Studio가 한다.
+3. **시험 실행은 바깥으로 웹훅을 쏘지 않는다** — 시험 수신기로만 간다.
+4. **배운 것은 패키지에 적힌다** (ADR-0028) — 엔진은 파일을 쓰지 않으므로 돌리는 쪽이 한다.
+
+창(STU-08)의 일은 `tests/studio/test_studio_run_dialog.py`에 있다.
 """
 
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,67 +23,41 @@ from typing import Any
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-from bpm.contracts.bpmn_ext import CASE_ANSWERER, Case  # noqa: E402
-from bpm.core.senders import EmailMessage, SendError, WebhookRequest  # noqa: E402
-from bpm.studio.receiver import Receiver  # noqa: E402
-from bpm.studio.run_dialog import AUTONOMOUS, describe, unlearned  # noqa: E402
-from bpm.studio.runner import (  # noqa: E402
+from bpm.contracts.bpmn_ext import CASE_ANSWERER, Case
+from bpm.core.senders import EmailMessage, SendError, WebhookRequest
+from bpm.core.testrun.receiver import Receiver
+from bpm.core.testrun.runner import (
     ERROR,
     FAIL,
     NO_EXPECT,
     PASS,
     CaseRun,
+    CaseSender,
     Outcome,
     Plan,
-    StudioSender,
     read_cases,
     resolve_inputs,
     summarize,
 )
-from bpm.studio.settings import Settings  # noqa: E402
-from bpm.studio.workspace import Workspace  # noqa: E402
+from bpm.core.testrun.settings import RunSettings
+from bpm.core.testrun.workspace import Workspace
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
 
-
-@pytest.fixture(scope="session")
-def app() -> Any:
-    from PySide6.QtWidgets import QApplication
-
-    try:
-        return QApplication.instance() or QApplication([])
-    except Exception as e:  # noqa: BLE001
-        pytest.skip(f"Qt를 띄울 수 없다: {type(e).__name__}: {e}")
+AUTONOMOUS = "autonomous"
 
 
-def studio(tmp_path: Path, example: str) -> tuple[Any, Settings]:
-    """예제 하나를 작업 폴더로 가져오고, 그 Studio 설정을 만든다."""
-    data = tmp_path / "studio"
-    settings = replace(Settings(), data_dir=data, llm_base_url="")  # 모델은 쓰지 않는다
-    made = Workspace(settings.workspace_dir).ensure().import_example(EXAMPLES, example)
+def studio(tmp_path: Path, example: str) -> tuple[Any, RunSettings]:
+    """예제 하나를 작업 폴더로 가져오고, 그 시험 실행 설정을 만든다."""
+    data = tmp_path / "testrun"
+    settings = RunSettings(data_dir=data, outputs_dir=data / "outputs")  # 모델은 쓰지 않는다
+    made = Workspace(data / "workspace").ensure().import_example(EXAMPLES, example)
     return made, settings
 
 
 def drive(run: CaseRun, *, timeout_ms: int = 20_000) -> Outcome:
-    """`QTimer`가 미는 실행이 끝날 때까지 이벤트 루프를 돈다."""
-    from PySide6.QtCore import QEventLoop, QTimer
-
-    loop = QEventLoop()
-    box: list[Outcome] = []
-
-    def done(outcome: Outcome) -> None:
-        box.append(outcome)
-        loop.quit()
-
-    run.ended.connect(done)
-    QTimer.singleShot(timeout_ms, loop.quit)
-    run.start()
-    loop.exec()
-    if not box:
-        pytest.fail(f"시험 실행이 {timeout_ms}ms 안에 끝나지 않았다")
-    return box[0]
+    """끝까지 민다. **스레드도 이벤트 루프도 없다** — `pump()`가 돌아올 때까지다."""
+    return run.run_to_end()
 
 
 # ─────────────────────────── 케이스 입력 연산자 (C14) ───────────────────────────
@@ -124,7 +99,7 @@ def test_test_receiver_gives_a_loopback_url() -> None:
 
 
 def test_studio_never_sends_a_real_email() -> None:
-    sender = StudioSender()
+    sender = CaseSender()
     found = sender.send_email(EmailMessage(to=("a@example.com",), subject="x", body="y"))
     assert found.ok and len(sender.emails) == 1
 
@@ -132,13 +107,13 @@ def test_studio_never_sends_a_real_email() -> None:
 def test_a_webhook_outside_the_test_receiver_is_refused() -> None:
     """개발 PC에서 실수로 바깥에 쏘지 않는다 — C14는 `$test_receiver`만 예외로 둔다."""
     with pytest.raises(SendError, match="시험 수신기로만"):
-        StudioSender().send_webhook(WebhookRequest(url="https://real.example.com/hook"))
+        CaseSender().send_webhook(WebhookRequest(url="https://real.example.com/hook"))
 
 
 def test_a_webhook_to_the_test_receiver_actually_arrives() -> None:
     receiver = Receiver(port=0).start()
     try:
-        sender = StudioSender(receiver)
+        sender = CaseSender(receiver)
         found = sender.send_webhook(
             WebhookRequest(url=receiver.url_for("reply"), body={"건수": 3, "상태": "ok"})
         )
@@ -153,7 +128,7 @@ def test_a_webhook_to_the_test_receiver_actually_arrives() -> None:
 # ─────────────────────────── 한 바퀴 (진짜 엔진) ───────────────────────────
 
 
-def test_a_rule_example_passes_its_cases(app: Any, tmp_path: Path) -> None:
+def test_a_rule_example_passes_its_cases(tmp_path: Path) -> None:
     """FX-02 — 규칙(DMN) 하나. 케이스가 적어 둔 기대값까지 **그대로** 간다."""
     made, settings = studio(tmp_path, "fx02_business_rule")
     definition = made.entry_definition
@@ -170,7 +145,7 @@ def test_a_rule_example_passes_its_cases(app: Any, tmp_path: Path) -> None:
     assert outcomes[0].run is not None and outcomes[0].run.variables["최종가"] == 1200000
 
 
-def test_a_wrong_expectation_is_reported_as_a_failure(app: Any, tmp_path: Path) -> None:
+def test_a_wrong_expectation_is_reported_as_a_failure(tmp_path: Path) -> None:
     made, settings = studio(tmp_path, "fx02_business_rule")
     definition = made.entry_definition
     assert definition is not None
@@ -179,7 +154,7 @@ def test_a_wrong_expectation_is_reported_as_a_failure(app: Any, tmp_path: Path) 
     assert found.verdict == FAIL and "할인율" in found.detail
 
 
-def test_running_without_a_case_does_not_compare(app: Any, tmp_path: Path) -> None:
+def test_running_without_a_case_does_not_compare(tmp_path: Path) -> None:
     made, settings = studio(tmp_path, "fx12_daily_report")
     definition = made.entry_definition
     assert definition is not None
@@ -187,7 +162,7 @@ def test_running_without_a_case_does_not_compare(app: Any, tmp_path: Path) -> No
     assert found.verdict == NO_EXPECT
 
 
-def test_a_case_answers_the_approval_and_the_run_finishes(app: Any, tmp_path: Path) -> None:
+def test_a_case_answers_the_approval_and_the_run_finishes(tmp_path: Path) -> None:
     """케이스의 `approvals`가 결재에 자동으로 답한다 (C14)."""
     made, settings = studio(tmp_path, "fx19_manual_task_pc")
     definition = made.entry_definition
@@ -199,7 +174,7 @@ def test_a_case_answers_the_approval_and_the_run_finishes(app: Any, tmp_path: Pa
     assert found.run is not None and found.run.state.value == "done"
 
 
-def _naming_the_answerer(tmp_path: Path) -> tuple[Any, Any, Settings]:
+def _naming_the_answerer(tmp_path: Path) -> tuple[Any, Any, RunSettings]:
     """FX-19의 확인에 `answered_by_as`를 단다 — 그림만 바꾸고 다시 읽는다."""
     made, settings = studio(tmp_path, "fx19_manual_task_pc")
     entry = made.entry_definition
@@ -208,13 +183,13 @@ def _naming_the_answerer(tmp_path: Path) -> tuple[Any, Any, Settings]:
     entry.path.write_text(
         xml.replace('"fields": []', '"fields": [], "answered_by_as": "확인자"', 1), encoding="utf-8"
     )
-    opened = Workspace(settings.workspace_dir).read(made.folder, made.group)
+    opened = Workspace(settings.data_dir / "workspace").read(made.folder, made.group)
     definition = opened.entry_definition
     assert definition is not None
     return opened, definition, settings
 
 
-def test_the_case_names_who_answered(app: Any, tmp_path: Path) -> None:
+def test_the_case_names_who_answered(tmp_path: Path) -> None:
     """**답한 사람도 케이스가 적는다** (C14 `answered_by`, ADR-0096) — 그림이 그 변수로 받는다."""
     made, definition, settings = _naming_the_answerer(tmp_path)
     case = Case(
@@ -227,7 +202,7 @@ def test_the_case_names_who_answered(app: Any, tmp_path: Path) -> None:
     assert found.verdict == PASS, found.detail
 
 
-def test_an_unnamed_answerer_is_the_test_case(app: Any, tmp_path: Path) -> None:
+def test_an_unnamed_answerer_is_the_test_case(tmp_path: Path) -> None:
     """적지 않으면 「시험 케이스」다 — Studio에 「Studio 사용자」가 없어 지어내지 않는다."""
     made, definition, settings = _naming_the_answerer(tmp_path)
     case = Case(name="확인", approvals={"Manual_Paper": {"decision": "approve"}}, expected={"확인자": CASE_ANSWERER})
@@ -235,7 +210,7 @@ def test_an_unnamed_answerer_is_the_test_case(app: Any, tmp_path: Path) -> None:
     assert found.verdict == PASS, found.detail
 
 
-def test_an_answer_the_form_refuses_ends_the_run_instead_of_looping(app: Any, tmp_path: Path) -> None:
+def test_an_answer_the_form_refuses_ends_the_run_instead_of_looping(tmp_path: Path) -> None:
     """케이스가 틀린 답을 주면 **그 자리에서 끝낸다** — 다음 틱에 또 같은 일이 생긴다.
 
     FX-19에서 실제로 겪었다 (폼 없는 확인에 빈 답 `{}`). 예제는 조각 3f에서 고쳤고, 여기서는
@@ -249,7 +224,7 @@ def test_an_answer_the_form_refuses_ends_the_run_instead_of_looping(app: Any, tm
     assert found.verdict == ERROR and "빠진 칸" in found.detail
 
 
-def test_the_fixed_example_case_now_passes(app: Any, tmp_path: Path) -> None:
+def test_the_fixed_example_case_now_passes(tmp_path: Path) -> None:
     """**칸이 없어도 답은 비어 있지 않다** — 폼 없는 결재의 답은 `decision`이다 (C6, 조각 3f)."""
     made, settings = studio(tmp_path, "fx19_manual_task_pc")
     definition = made.entry_definition
@@ -260,7 +235,7 @@ def test_the_fixed_example_case_now_passes(app: Any, tmp_path: Path) -> None:
     assert found.verdict == PASS, found.detail
 
 
-def test_an_unanswered_approval_keeps_waiting(app: Any, tmp_path: Path) -> None:
+def test_an_unanswered_approval_keeps_waiting(tmp_path: Path) -> None:
     """**적지 않은 결재는 답하지 않고 기다린다** — 기한 초과를 시험하는 길이다 (C14)."""
     made, settings = studio(tmp_path, "fx19_manual_task_pc")
     definition = made.entry_definition
@@ -271,7 +246,7 @@ def test_an_unanswered_approval_keeps_waiting(app: Any, tmp_path: Path) -> None:
     assert found.verdict == NO_EXPECT, "기대 결과가 없으니 비교하지 않는다"
 
 
-def test_a_webhook_example_reaches_the_test_receiver(app: Any, tmp_path: Path) -> None:
+def test_a_webhook_example_reaches_the_test_receiver(tmp_path: Path) -> None:
     """FX-17 — 케이스가 `$test_receiver`로 주소를 받는다."""
     made, settings = studio(tmp_path, "fx17_webhook")
     definition = made.entry_definition
@@ -289,7 +264,7 @@ def test_a_webhook_example_reaches_the_test_receiver(app: Any, tmp_path: Path) -
         receiver.stop()
 
 
-def test_a_file_writing_example_writes_into_the_output_folder(app: Any, tmp_path: Path) -> None:
+def test_a_file_writing_example_writes_into_the_output_folder(tmp_path: Path) -> None:
     """ADR-0026 — 쓰기는 출력 폴더 안만. Studio가 실행마다 그 자리를 준다."""
     made, settings = studio(tmp_path, "fx12_daily_report")
     definition = made.entry_definition
@@ -301,7 +276,7 @@ def test_a_file_writing_example_writes_into_the_output_folder(app: Any, tmp_path
     assert written[0].read_text(encoding="utf-8").strip().startswith("#")
 
 
-def test_the_run_log_is_written_as_jsonl(app: Any, tmp_path: Path) -> None:
+def test_the_run_log_is_written_as_jsonl(tmp_path: Path) -> None:
     made, settings = studio(tmp_path, "fx02_business_rule")
     definition = made.entry_definition
     assert definition is not None
@@ -316,7 +291,7 @@ def test_the_run_log_is_written_as_jsonl(app: Any, tmp_path: Path) -> None:
     assert lines[0]["data"]["bpm_process_id"] == made.id
 
 
-def test_a_missing_required_input_is_said_plainly(app: Any, tmp_path: Path) -> None:
+def test_a_missing_required_input_is_said_plainly(tmp_path: Path) -> None:
     """케이스 없이 돌리면 필수 입력이 빈다 — 조용히 `None`으로 흘리지 않는다 (C14 §6)."""
     made, settings = studio(tmp_path, "fx06_document_read")
     definition = made.entry_definition
@@ -325,35 +300,7 @@ def test_a_missing_required_input_is_said_plainly(app: Any, tmp_path: Path) -> N
     assert found.verdict == ERROR and "필요하다" in found.detail
 
 
-def test_the_run_dialog_stops_a_caseless_run_that_lacks_required_inputs(app: Any, tmp_path: Path) -> None:
-    """STU-08 — 엔진이 거부할 실행을 보내지 않고 창에서 까닭을 말한다 (U3)."""
-    from bpm.studio.run_dialog import NO_CASE, RunDialog, required_inputs  # noqa: PLC0415
-
-    made, settings = studio(tmp_path, "fx06_document_read")
-    definition = made.entry_definition
-    assert definition is not None
-    names = required_inputs(definition)
-    assert names, "이 예제는 필수 입력이 있다"
-    dialog = RunDialog(None, made, definition, settings)
-    dialog.case_box.setCurrentIndex(dialog.case_box.findText(NO_CASE))
-    assert not dialog.run_button.isEnabled()
-    assert not dialog.needs_case.isHidden() and names[0] in dialog.needs_case.text()
-    dialog.case_box.setCurrentIndex(1)  # 케이스를 고르면 다시 켜진다
-    assert dialog.run_button.isEnabled() and dialog.needs_case.isHidden()
-
-
-def test_a_caseless_run_without_required_inputs_is_allowed(app: Any, tmp_path: Path) -> None:
-    from bpm.studio.run_dialog import NO_CASE, RunDialog  # noqa: PLC0415
-
-    made, settings = studio(tmp_path, "fx12_daily_report")
-    definition = made.entry_definition
-    assert definition is not None
-    dialog = RunDialog(None, made, definition, settings)
-    dialog.case_box.setCurrentIndex(dialog.case_box.findText(NO_CASE))
-    assert dialog.run_button.isEnabled() and dialog.needs_case.isHidden()
-
-
-def test_an_example_that_needs_a_model_says_so_instead_of_pretending(app: Any, tmp_path: Path) -> None:
+def test_an_example_that_needs_a_model_says_so_instead_of_pretending(tmp_path: Path) -> None:
     """모델이 설정되지 않았으면 **조용히 넘어가지 않는다** (ADR-0027)."""
     made, settings = studio(tmp_path, "fx06_document_read")
     definition = made.entry_definition
@@ -405,19 +352,19 @@ DELEGATING = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
-def delegating(tmp_path: Path) -> tuple[Any, Any, Settings]:
+def delegating(tmp_path: Path) -> tuple[Any, Any, RunSettings]:
     """위임 그림을 작업 폴더에 넣고 다시 읽는다 — `(BPM 프로세스, 진입 정의, 설정)`."""
     made, settings = studio(tmp_path, "fx03b_amount_branch")
     entry = made.entry_definition
     assert entry is not None
     entry.path.write_text(DELEGATING, encoding="utf-8")
-    opened = Workspace(settings.workspace_dir).read(made.folder, made.group)
+    opened = Workspace(settings.data_dir / "workspace").read(made.folder, made.group)
     definition = opened.entry_definition
     assert definition is not None
     return opened, definition, settings
 
 
-def test_a_case_gives_the_delegation_result_and_the_run_finishes(app: Any, tmp_path: Path) -> None:
+def test_a_case_gives_the_delegation_result_and_the_run_finishes(tmp_path: Path) -> None:
     """**케이스가 적어 둔 결과로 위임이 끝난다** (ADR-0062 §2 — 증명할 다섯의 마지막).
 
     Studio에는 부를 PC BPM 프로세스의 그림이 없고(다른 패키지다) 있다 해도 UI 태스크라 설계자 PC에서
@@ -435,7 +382,7 @@ def test_a_case_gives_the_delegation_result_and_the_run_finishes(app: Any, tmp_p
     assert found.verdict == PASS, found.detail
 
 
-def test_only_what_the_graph_reads_becomes_a_variable(app: Any, tmp_path: Path) -> None:
+def test_only_what_the_graph_reads_becomes_a_variable(tmp_path: Path) -> None:
     """**적은 것만 오간다** (C14 `bpm:call.output`) — 돌려준 나머지는 버린다."""
     made, definition, settings = delegating(tmp_path)
     case = Case(
@@ -449,7 +396,7 @@ def test_only_what_the_graph_reads_becomes_a_variable(app: Any, tmp_path: Path) 
     assert "덤" not in found.run.variables and "결과코드" not in found.run.variables
 
 
-def test_the_values_are_handed_over_as_values(app: Any, tmp_path: Path) -> None:
+def test_the_values_are_handed_over_as_values(tmp_path: Path) -> None:
     """입력은 **맡길 때 값으로** 푼다 (맡은 쪽은 맡긴 그림을 모른다) — 식 이름이 가지 않는다."""
     made, definition, settings = delegating(tmp_path)
     case = Case(
@@ -466,7 +413,7 @@ def test_the_values_are_handed_over_as_values(app: Any, tmp_path: Path) -> None:
 
 
 def test_a_delegation_the_case_did_not_write_goes_to_the_error_boundary(
-    app: Any, tmp_path: Path
+    tmp_path: Path
 ) -> None:
     """**적어 두지 않은 위임은 그 자리에서 실패**다 (C14) — 기다리게 두면 끝나지 않는다.
 
@@ -486,7 +433,7 @@ def test_a_delegation_the_case_did_not_write_goes_to_the_error_boundary(
     assert found.run is not None and found.run.state.value == "done", "경계가 받아 끝까지 갔다"
 
 
-def test_a_delegation_without_an_error_boundary_fails_the_run(app: Any, tmp_path: Path) -> None:
+def test_a_delegation_without_an_error_boundary_fails_the_run(tmp_path: Path) -> None:
     """경계가 없으면 **실행이 실패한다** — 조용히 기다리지 않는다."""
     made, settings = studio(tmp_path, "fx03b_amount_branch")
     entry = made.entry_definition
@@ -497,7 +444,7 @@ def test_a_delegation_without_an_error_boundary_fails_the_run(app: Any, tmp_path
         "",
     ).replace('<bpmn:sequenceFlow id="F4" sourceRef="Bnd_Dlg" targetRef="Task_Fallback" />', "")
     entry.path.write_text(bare, encoding="utf-8")
-    opened = Workspace(settings.workspace_dir).read(made.folder, made.group)
+    opened = Workspace(settings.data_dir / "workspace").read(made.folder, made.group)
     definition = opened.entry_definition
     assert definition is not None
 
@@ -508,7 +455,7 @@ def test_a_delegation_without_an_error_boundary_fails_the_run(app: Any, tmp_path
 
 
 def test_a_value_the_graph_reads_but_the_case_does_not_return_fails(
-    app: Any, tmp_path: Path
+    tmp_path: Path
 ) -> None:
     """**적은 값이 오지 않으면 업무 실패**다 — 빈 값으로 이어 가지 않는다 (ADR-0062 §2).
 
@@ -549,7 +496,7 @@ def test_without_a_case_a_delegation_says_what_to_write() -> None:
 # ─────────────────────────── 배운 것 적기 (ADR-0028) ───────────────────────────
 
 
-def test_what_the_autonomous_run_learned_is_written_into_the_package(app: Any, tmp_path: Path) -> None:
+def test_what_the_autonomous_run_learned_is_written_into_the_package(tmp_path: Path) -> None:
     """엔진은 파일을 쓰지 않는다 — **Studio가** 패키지 안 `memory/specs.json`에 적는다."""
     from bpm.core.llm import RecordingLlm, Reply
     from bpm.core.replay import read_memory
@@ -567,48 +514,3 @@ def test_what_the_autonomous_run_learned_is_written_into_the_package(app: Any, t
     drive(run)
     # 도구가 없어 실패했더라도, 성공한 실행만 적는다 — 그 규칙을 확인한다.
     assert read_memory(made.folder).specs == []
-
-
-def test_the_run_dialog_turns_off_replay_when_nothing_was_learned(tmp_path: Path) -> None:
-    """U3 — 고를 수 없는 것은 끄고 **이유**를 보인다."""
-    made, _ = studio(tmp_path, "fx06_document_read")
-    definition = made.entry_definition
-    assert definition is not None
-    assert unlearned(made, definition), "AI 태스크가 있고 명세가 없다"
-
-    rules, _ = studio(tmp_path / "other", "fx02_business_rule")
-    other = rules.entry_definition
-    assert other is not None
-    assert unlearned(rules, other) == [], "AI 태스크가 없으면 끌 이유도 없다"
-
-
-def test_the_replay_menu_preselects_the_mode_only_when_it_can_be_chosen(
-    tmp_path: Path, app: Any
-) -> None:
-    """실행 → 「결정 수행 (재생)...」(Ctrl+F5)은 STU-08을 그 모드로 열어 준다.
-
-    **끈 라디오는 고르지 않는다** — 고르면 「실행」을 눌러도 어느 모드도 아니게 된다. 메뉴를
-    끄지 않는 까닭이 여기 있다: 못 하는 사정은 창이 말한다 (U3).
-    """
-    from bpm.studio.run_dialog import DETERMINISTIC, RunDialog
-
-    rules, settings = studio(tmp_path, "fx02_business_rule")  # AI 태스크가 없다 — 끌 이유가 없다
-    definition = rules.entry_definition
-    assert definition is not None
-    chosen = RunDialog(None, rules, definition, settings, prefer=DETERMINISTIC)
-    assert chosen.deterministic.isChecked() and not chosen.autonomous.isChecked()
-    assert chosen.picked().mode == DETERMINISTIC
-
-    unlearnt, settings = studio(tmp_path / "other", "fx06_document_read")  # 학습 안 된 AI 태스크
-    other = unlearnt.entry_definition
-    assert other is not None
-    refused = RunDialog(None, unlearnt, other, settings, prefer=DETERMINISTIC)
-    assert not refused.deterministic.isEnabled()
-    assert refused.autonomous.isChecked(), "고를 수 없으면 자율 수행이 그대로 남는다"
-    assert refused.picked().mode == AUTONOMOUS
-
-
-def test_the_dialog_describes_the_case_in_one_line() -> None:
-    assert describe(None) == "기대 결과를 비교하지 않습니다"
-    assert describe(Case(name="x", inputs={"a": 1}, expected={})) == "입력 1개 · 기대 결과 없음 — 비교하지 않습니다"
-    assert describe(Case(name="x", inputs={}, expected={"b": 1})) == "입력 0개 · 기대 결과 1개"

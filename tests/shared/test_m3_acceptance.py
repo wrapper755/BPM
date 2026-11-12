@@ -1,7 +1,9 @@
-"""M3 인수 시험 — 업무 예제의 M3 묶음을 **Studio 시험 실행**으로 돌린다 (조각 3f).
+"""M3 인수 시험 — 업무 예제의 M3 묶음을 **시험 실행**(`bpm.core.testrun`)으로 돌린다.
 
-로드맵의 M3 마지막 기준이다: 「[업무 예제](08-business-examples/README.md)의 M3 묶음이 Studio
-시험 실행에서 케이스 모두 통과 (AI 태스크는 자율 수행 → 결정 수행 재생 둘 다)」.
+로드맵의 M3 마지막 기준이다: 「[업무 예제](08-business-examples/README.md)의 M3 묶음이 시험
+실행에서 케이스 모두 통과 (AI 태스크는 자율 수행 → 결정 수행 재생 둘 다)」.
+
+**화면이 없다** — 돌리는 코드가 `core.testrun`으로 옮겨 와(ADR-0143) Qt를 띄우지 않는다.
 
 **바깥에 나가지 않는다.** 모델은 127.0.0.1에 띄운 작은 OpenAI 호환 스텁이고(S7이 쓰던 수법),
 표본 파일은 시험이 그 자리에서 만든다 (PDF·엑셀·CSV). 저장소에 이진 파일을 두지 않는다.
@@ -11,7 +13,6 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
@@ -22,12 +23,9 @@ from canned_answers import canned
 from sample_files import make_samples
 from stub_model import StubModel
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-from bpm.contracts.bpmn_ext import Case, read_process  # noqa: E402
-from bpm.studio.receiver import Receiver  # noqa: E402
-from bpm.studio.run_dialog import AUTONOMOUS, DETERMINISTIC  # noqa: E402
-from bpm.studio.runner import (  # noqa: E402
+from bpm.contracts.bpmn_ext import Case, read_process
+from bpm.core.testrun.receiver import Receiver
+from bpm.core.testrun.runner import (
     NO_EXPECT,
     PASS,
     CaseRun,
@@ -35,8 +33,12 @@ from bpm.studio.runner import (  # noqa: E402
     Plan,
     read_cases,
 )
-from bpm.studio.settings import Settings  # noqa: E402
-from bpm.studio.workspace import BpmProcess, Workspace  # noqa: E402
+from bpm.core.testrun.settings import RunSettings
+from bpm.core.testrun.workspace import BpmProcess, Workspace
+
+#: 수행 모드 (C3 `mode`).
+AUTONOMOUS = "autonomous"
+DETERMINISTIC = "deterministic"
 
 DOCS = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples"
 EXAMPLES = DOCS / "bpmn"
@@ -74,28 +76,21 @@ def model() -> Iterator[StubModel]:
         yield made
 
 
-@pytest.fixture(scope="session")
-def app() -> Any:
-    from PySide6.QtWidgets import QApplication
-
-    try:
-        return QApplication.instance() or QApplication([])
-    except Exception as e:  # noqa: BLE001
-        pytest.skip(f"Qt를 띄울 수 없다: {type(e).__name__}: {e}")
-
-
 # ─────────────────────────── 표본 파일 ───────────────────────────
 
 
 # ─────────────────────────── 돌리기 ───────────────────────────
 
 
-def studio(tmp_path: Path, example: str, model: StubModel) -> tuple[BpmProcess, Settings]:
-    data = tmp_path / "studio"
-    settings = replace(
-        Settings(), data_dir=data, llm_base_url=model.base_url, llm_model="stub", readable_dirs=()
+def studio(tmp_path: Path, example: str, model: StubModel) -> tuple[BpmProcess, RunSettings]:
+    data = tmp_path / "testrun"
+    settings = RunSettings(
+        data_dir=data,
+        outputs_dir=data / "outputs",
+        llm_base_url=model.base_url,
+        llm_model="stub",
     )
-    made = Workspace(settings.workspace_dir).ensure().import_example(EXAMPLES, example)
+    made = Workspace(data / "workspace").ensure().import_example(EXAMPLES, example)
     # 상대 경로의 기준은 **출력 폴더**다 (ADR-0026) — 표본을 거기에 만든다.
     outputs = settings.outputs_dir / made.id
     outputs.mkdir(parents=True, exist_ok=True)
@@ -103,22 +98,9 @@ def studio(tmp_path: Path, example: str, model: StubModel) -> tuple[BpmProcess, 
     return made, settings
 
 
-def drive(run: CaseRun, *, timeout_ms: int = 30_000) -> Outcome:
-    from PySide6.QtCore import QEventLoop, QTimer
-
-    loop = QEventLoop()
-    box: list[Outcome] = []
-    def done(outcome: Outcome) -> None:
-        box.append(outcome)
-        loop.quit()
-
-    run.ended.connect(done)
-    QTimer.singleShot(timeout_ms, loop.quit)
-    run.start()
-    loop.exec()
-    if not box:
-        pytest.fail(f"시험 실행이 {timeout_ms}ms 안에 끝나지 않았다")
-    return box[0]
+def drive(run: CaseRun) -> Outcome:
+    """끝까지 민다 — **이벤트 루프가 없다** (`pump()`가 돌아올 때까지다)."""
+    return run.run_to_end()
 
 
 def ai_tasks(example: str) -> list[str]:
@@ -167,7 +149,7 @@ def test_the_bundle_is_read_from_the_examples() -> None:
 
 @pytest.mark.parametrize("example", GREEN)
 def test_an_m3_example_passes_all_its_cases(
-    app: Any, tmp_path: Path, model: StubModel, example: str
+    tmp_path: Path, model: StubModel, example: str
 ) -> None:
     """케이스가 **모두 통과**한다 (기대 결과가 없는 케이스는 비교하지 않는다)."""
     results = run_all(tmp_path, example, model)
@@ -178,7 +160,7 @@ def test_an_m3_example_passes_all_its_cases(
 
 @pytest.mark.parametrize("example", sorted(REMAINING))
 def test_a_remaining_example_still_fails_for_the_written_reason(
-    app: Any, tmp_path: Path, model: StubModel, example: str
+    tmp_path: Path, model: StubModel, example: str
 ) -> None:
     """아직 안 되는 것은 **안 된다고 적어 둔다** — 조용히 초록이 되면 목록이 썩는다."""
     results = run_all(tmp_path, example, model)
@@ -204,7 +186,7 @@ def test_some_of_the_bundle_has_ai_tasks() -> None:
 
 @pytest.mark.parametrize("example", WITH_AI)
 def test_the_same_cases_pass_again_as_a_replay(
-    app: Any, tmp_path: Path, model: StubModel, example: str
+    tmp_path: Path, model: StubModel, example: str
 ) -> None:
     """**자율 수행 → 결정 수행**. 로드맵 M3 인수 기준의 남은 반쪽이다.
 
@@ -239,7 +221,7 @@ def test_the_same_cases_pass_again_as_a_replay(
 
 
 def test_the_three_replay_modes_differ_in_how_often_the_model_is_asked(
-    app: Any, tmp_path: Path, model: StubModel
+    tmp_path: Path, model: StubModel
 ) -> None:
     """**재생 모드 셋이 정말 다르다** (FX-23, C14 §재생 · ADR-0028).
 
@@ -285,7 +267,7 @@ def test_the_three_replay_modes_differ_in_how_often_the_model_is_asked(
     assert 1 <= _replayed(again) < 3, f"되밟은 수가 {_replayed(again)}이다"
 
 
-def _plan(made: BpmProcess, definition: Any, case: Case, settings: Settings, mode: str) -> Plan:
+def _plan(made: BpmProcess, definition: Any, case: Case, settings: RunSettings, mode: str) -> Plan:
     return Plan(process=made, definition=definition, case=case, mode=mode, settings=replace(settings))
 
 

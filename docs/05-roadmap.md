@@ -21,7 +21,7 @@
 | M8 | 건넬 수 있게, 고칠 수 있게 | **멈춤** (PC 실행기를 걷어 남은 둘이 사라졌다 — ADR-0144) | Windows 설치 파일(빌드·CI 산출물·판 올리기), Center 저장소 옮기기 수단 | M7 |
 | M9 | 바깥 기능은 Pull로 | **끝** (조각 1~6과 C14·C1의 옛 키 칸 — ADR-0102·0103) | C15 외부 작업, 일꾼이 된 서비스 앱, 어댑터 일꾼, 주소·키 칸 없는 CON-07 | M7 |
 | M10 | 세 기둥 — AI 작업·외부 작업·통합 일꾼 | **진행 중** (조각 1~6 끝, 7은 Company1 저장소 — ADR-0135) | 일꾼 종류 칸, 통합 일꾼과 AI 작업 뼈대, 보상, 일꾼 콘솔. 업무 처리기는 Company1로 | M9 |
-| M11 | 하나의 웹 — Studio를 콘솔로, PC 실행기 걷기 | **진행 중** (조각 0~2 끝 — ADR-0143·0144·0145) | PC 실행기 걷기, 콘솔 안의 웹 편집기, Dataiku 결의 콘솔 | M10 |
+| M11 | 하나의 웹 — Studio를 콘솔로, PC 실행기 걷기 | **진행 중** (조각 0~3a 끝 — ADR-0143·0144·0145) | PC 실행기 걷기, 콘솔 안의 웹 편집기, Dataiku 결의 콘솔 | M10 |
 
 ## M0. 문서 기준선
 
@@ -209,7 +209,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 
 ## M11. 하나의 웹 — Studio를 콘솔로, PC 실행기 걷기
 
-> 상태: **진행 중** — 조각 0~2가 끝났다. 결정은 [ADR-0143](decisions/0143-design-happens-in-the-console.md)(설계가
+> 상태: **진행 중** — 조각 0~3a가 끝났다. 결정은 [ADR-0143](decisions/0143-design-happens-in-the-console.md)(설계가
 > 콘솔 안에서)·[ADR-0144](decisions/0144-remove-the-pc-runner.md)(PC 실행기 걷기)·[ADR-0145](decisions/0145-console-is-workspace-shaped.md)(콘솔의 틀)다.
 > **데스크톱에서 그려 올리는 것도, 현장 PC에서 돌리는 것도 존재 이유를 잃었다** — 업무는 서버에서
 > 돌고(ADR-0016) PC가 필요한 일은 RPA뿐이며 그것은 **데스크톱 일꾼**이 C15 Pull로 가져가는 쪽이다.
@@ -217,7 +217,8 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 조각 0 — **결정 셋** (ADR-0143·0144·0145). 옛 결정 서른둘의 상태를 `대체됨`으로 옮겼다
 - [x] 조각 1 — **계약**: C4가 「실행기 ↔ Center 공통」이 되고(경로는 C12 하나), C1 `run_location`·R10·R2의 실행 위치 갈래, C14 `bpm:process.run_location`·`bpm:approval.location`·`bpm:call.delegate.bot_ui`, C2 배포 대상 `bot_ui`, C3 `run_location`, C5 §PC 실행기 현황, C13 `run_locations`를 걷었다. **확인은 Center 결재함으로** 온다 (C6 `layer` 둘, 모르는 층은 `unknown_layer`)
 - [x] 조각 2 — **PC 실행기 걷기**: `bot/` 전부, 제어 파일(ADR-0031), `core.processes`·`core.outputs`, `shared/qt`의 결재 창(CMN-01), Center `api/bot_ui.py`·`bot_uis` 표(옮기기 28판), Windows CI 잡(ADR-0104·0108). **맡기기는 남는다** — 대상이 서버 실행기 하나다 (ADR-0082). 예제는 **FX-19가 서버 + 결재함 확인**, BX-16의 맡기기는 걷었다
-- [ ] 조각 3 — **서버 시험 실행**: Studio의 Qt 없는 부분(`runner`·`cases`·`packaging`·`preflight`·`receiver`)을 `core.testrun`으로 옮기고 서버 실행기에 「시험 모드」를 둔다. **오라클을 먼저 옮긴다** — `test_m3_acceptance.py`의 예제 49개가 거기서 초록이 된 뒤에 Qt를 지운다
+- [x] 조각 3a — **오라클 이사**: Studio의 Qt 없는 부분(`workspace`·`cases`·`packaging`·`receiver`·`runner`·실행 전 검사)을 **`core.testrun`**으로 옮겼다. `CaseRun`은 **`pump()`를 부르는 쪽이 민다**(QTimer가 아니다) — Studio는 그 위의 Qt 어댑터다. 오라클 둘이 **Qt 없이** 돈다: `tests/shared/test_m3_acceptance.py`(묶음 29개 + 재생)와 이미 있던 `tests/server/test_m7_server_rerun.py`(예제 49개)
+- [ ] 조각 3b — **서버 시험 실행**: 서버 실행기에 「시험 모드」를 두고 Center에 시험 실행 API를 연다 (C17 초안 · C12)
 - [ ] 조각 4 — **웹 편집기** (CON-20): 캔버스(`bpmn-canvas`)·작업공간·속성 편집기·표 편집·시험 실행·「배포 후보로 만들기」
 - [ ] 조각 5 — **Qt 걷기**: `studio/`·`shared/qt`·`packaging/`·`desktop.yml`·`core.selftest`
 - [ ] 조각 6 — **Dataiku 모양**: 좌측 아이콘 레일 + 작업공간 탭, 토큰·구성요소, 화면 열여덟

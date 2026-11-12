@@ -47,16 +47,17 @@ from bpm.center.storage import Store  # noqa: E402
 from bpm.contracts.bpmn_ext import Case  # noqa: E402
 from bpm.core.app_directory import AppDirectory  # noqa: E402
 from bpm.core.services import CenterServiceCaller  # noqa: E402
+from bpm.core.testrun.receiver import Receiver  # noqa: E402
+from bpm.core.testrun.runner import NO_EXPECT, PASS, CaseRun, Outcome, Plan, read_cases  # noqa: E402
+from bpm.core.testrun.settings import RunSettings  # noqa: E402
+from bpm.core.testrun.workspace import BpmProcess, Workspace  # noqa: E402
 from bpm.mock_apps import catalog  # noqa: E402
 from bpm.mock_apps.c11 import build as build_mock
 from bpm.mock_apps.external import apps as external_apps  # noqa: E402
 from bpm.mock_apps.external import definitions as external_defs  # noqa: E402
-from bpm.studio.receiver import Receiver  # noqa: E402
 from bpm.studio.run_dialog import AUTONOMOUS  # noqa: E402
-from bpm.studio.runner import NO_EXPECT, PASS, CaseRun, Outcome, Plan, read_cases  # noqa: E402
 from bpm.studio.services import CenterReader, Services  # noqa: E402
 from bpm.studio.settings import Settings  # noqa: E402
-from bpm.studio.workspace import BpmProcess, Workspace  # noqa: E402
 
 DOCS = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples"
 EXAMPLES = DOCS / "bpmn"
@@ -276,23 +277,19 @@ def studio(tmp_path: Path, example: str, model: StubModel, center_url: str) -> t
     return made, settings
 
 
-def drive(run: CaseRun, *, timeout_ms: int = 60_000) -> Outcome:
-    from PySide6.QtCore import QEventLoop, QTimer  # noqa: PLC0415
+def run_settings(settings: Settings) -> RunSettings:
+    """Studio 설정 → 시험 실행이 바깥에 닿는 값 (`studio.runner.run_settings`와 같은 옮김)."""
+    return RunSettings(
+        data_dir=settings.data_dir,
+        outputs_dir=settings.outputs_dir,
+        llm_base_url=settings.llm_base_url,
+        llm_model=settings.llm_model,
+    )
 
-    loop = QEventLoop()
-    box: list[Outcome] = []
 
-    def done(outcome: Outcome) -> None:
-        box.append(outcome)
-        loop.quit()
-
-    run.ended.connect(done)
-    QTimer.singleShot(timeout_ms, loop.quit)
-    run.start()
-    loop.exec()
-    if not box:
-        pytest.fail(f"시험 실행이 {timeout_ms}ms 안에 끝나지 않았다")
-    return box[0]
+def drive(run: CaseRun) -> Outcome:
+    """끝까지 민다 — **이벤트 루프가 없다** (`pump()`가 돌아올 때까지다, ADR-0143)."""
+    return run.run_to_end()
 
 
 def run_all(
@@ -321,7 +318,7 @@ def run_all(
                 definition=definition,
                 case=case,
                 mode=mode,
-                settings=replace(settings),
+                settings=run_settings(settings),
                 services=caller,
             )
             out.append((case, drive(CaseRun(plan, receiver))))

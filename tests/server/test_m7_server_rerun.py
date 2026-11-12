@@ -53,6 +53,10 @@ from bpm.center.settings import Settings as CenterSettings  # noqa: E402
 from bpm.center.storage import Store  # noqa: E402
 from bpm.contracts.bpmn_ext import read_process  # noqa: E402
 from bpm.core.senders import WebhookConfig  # noqa: E402
+from bpm.core.testrun.packaging import default_name, export  # noqa: E402
+from bpm.core.testrun.receiver import Receiver  # noqa: E402
+from bpm.core.testrun.runner import resolve_inputs  # noqa: E402
+from bpm.core.testrun.workspace import Workspace  # noqa: E402
 from bpm.mock_apps import catalog  # noqa: E402
 from bpm.mock_apps.c11 import build as build_mock  # noqa: E402
 from bpm.mock_apps.external import apps as external_apps  # noqa: E402
@@ -60,10 +64,6 @@ from bpm.mock_apps.external import definitions as external_definitions  # noqa: 
 from bpm.server_runner import agent as agent_mod  # noqa: E402
 from bpm.server_runner.center_client import CenterClient  # noqa: E402
 from bpm.server_runner.settings import Settings as RunnerSettings  # noqa: E402
-from bpm.studio.packaging import default_name, export  # noqa: E402
-from bpm.studio.receiver import Receiver  # noqa: E402
-from bpm.studio.runner import resolve_inputs  # noqa: E402
-from bpm.studio.workspace import Workspace  # noqa: E402
 
 DOCS = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples"
 EXAMPLES = DOCS / "bpmn"
@@ -103,7 +103,7 @@ def _first_case(example: str) -> dict[str, Any]:
 def case_inputs(example: str, receiver: Receiver | None = None) -> dict[str, Any]:
     """작업 지시로 줄 입력 (C5 `inputs`) — **케이스 입력 연산자를 푼다**.
 
-    푸는 것은 **Studio와 같은 함수**다 (`studio.runner.resolve_inputs`) — 연산자는 C14가
+    푸는 것은 **설계 쪽과 같은 함수**다 (`core.testrun.runner.resolve_inputs`) — 연산자는 C14가
     시험 케이스 형식으로 정한 것이고(`$test_receiver`·`$now_plus`) 작업 지시(C5)에는 그런
     것이 없다. 베끼면 같은 케이스가 묶음에 따라 다른 값을 받는다.
 
@@ -268,7 +268,7 @@ class BundleSettings(RunnerSettings):
 def receiver() -> Iterator[Receiver]:
     """웹훅을 받는 **시험 수신기** — 케이스의 `$test_receiver`가 가리키는 곳 (C14).
 
-    **Studio의 것과 같은 코드**다 (`studio.receiver`) — 받는 모양이 묶음마다 다를 이유가 없다.
+    **설계 쪽과 같은 코드**다 (`core.testrun.receiver`) — 받는 모양이 묶음마다 다를 이유가 없다.
     127.0.0.1에 뜨므로 **배포된 BPM 프로세스의 규칙으로는 보낼 수 없는 주소**다: 그래서 아래 `runner`가
     사설망을 열어 준다 (ADR-0059 §2 — 제품 설정에는 그 스위치가 없다).
     """
@@ -354,7 +354,7 @@ def make_samples_for(runner: agent_mod.Agent, bot: str) -> None:
 
 
 def packaged(tmp_path: Path, example: str) -> Path:
-    """Studio가 하듯 내보낸다 — 매니페스트는 **그림에서 모은다** (`studio.packaging`)."""
+    """설계 쪽이 하듯 내보낸다 — 매니페스트는 **그림에서 모은다** (`core.testrun.packaging`)."""
     space = Workspace(tmp_path / "studio" / example).ensure()
     made = space.import_example(EXAMPLES, example)
     return export(made, tmp_path / default_name(made))
@@ -373,7 +373,7 @@ def approve_delegation_targets(
     # **작업 폴더를 따로 쓴다** — `packaged()`가 쓰는 자리에 또 들이면 같은 id가 둘이 된다.
     space = Workspace(tmp_path / "delegation-targets" / example).ensure()
     made = space.import_example(EXAMPLES, example)
-    from bpm.studio.packaging import build_manifest  # noqa: PLC0415
+    from bpm.core.testrun.packaging import build_manifest  # noqa: PLC0415
 
     for pkg in build_manifest(made).requires.delegations:
         target = pkg.replace("-", "_")
