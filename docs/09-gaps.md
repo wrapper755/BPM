@@ -33,7 +33,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 | C13 | **구현됨** | `contracts.extension`·`core.extensions` | — (닫았다 — 기여 지점마다 읽는 쪽이 있다: 호스트·Studio·PC 실행기·콘솔·Center) |
 | C14 | **구현됨** | `contracts.bpmn_ext` B1~B17 + `contracts.dmn` | — (닫았다 — 엔진이 수행하고 Studio가 편집·검사하고 예제 49개가 이 형식이다. schema 1에서 **쓰지 않기로 적은 것**은 범위 결정이다) |
 | C15 | **구현됨** | `contracts.external_task`, Center `api/external_tasks.py` (15판) + **양쪽** — 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`server/adapter_consumer` | — (조각 2~4가 닫았고 긴 작업은 [ADR-0103](decisions/0103-long-external-tasks.md)이 닫았다, §3-17) |
-| C17 | **초안** | 알맹이(`core.testrun`)만 돈다 — 전송은 없다 | 작업공간 저장·파일 API·시험 실행 내려보내기·실행 전 검사·배포 후보로 만들기. **미정 셋**이 문서에 적혀 있다 (시험 작업을 `jobs[]`에 섞을지, 그림 검사를 Center가 직접 할지, 지은 zip을 누가 올릴지) — §3-34 |
+| C17 | **초안** | 알맹이(`core.testrun`)만 돈다 — 전송은 없다 | 작업공간 저장·파일 API·시험 실행 내려보내기·실행 전 검사·배포 후보로 만들기. **먼저 정할 것은 없다** — 미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다. §3-34 |
 
 **열둘이 「구현됨」이고 C17(작업공간)은 「초안」이다** (C12가 M7 다섯째 조각에서, C15가 ADR-0102 조각 4에서 올라왔다. C17은 M11이 구현한다 — §3-34). C8·C9·C10은 UI 자동화 확장과 함께 지웠다 ([ADR-0114](decisions/0114-remove-ui-automation.md) — §3-28). 상태 셋의 뜻은 [03-contracts/README](03-contracts/README.md) §상태에 적었다 — 적혀 있지 않아 올릴 때마다 사람이 다시 물었다.
 
@@ -56,14 +56,15 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 **없는 것**: Center에 작업공간이 저장되지 않고 파일 API·시험 실행·짓기가 하나도 없다. 그래서 지금
 설계는 **데스크톱 Studio에서만** 된다.
 
-**먼저 정할 것 셋** (C17에 `> 미정:`으로 적혀 있다).
+**먼저 정할 것은 없다** — 미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다
+(C17·C12에 적혀 있다).
 
-1. **시험 작업을 C12 `jobs[]`에 섞을까** — 섞으면 「빈자리만큼만」 규칙에 걸려 운영 작업이 밀린다.
-   따로 두면 상한을 따로 정해야 한다.
-2. **그림 검사(B1~B17)를 Center가 직접 할까** — `contracts`만 있으면 되므로 Center도 할 수 있다.
-   사전 점검(확장·설정)만 실행기의 일이다. 매번 실행기를 거치면 느리다.
-3. **지은 zip을 누가 C5에 올릴까** — 실행기 키에 올리기 권한을 더할지, Center가 zip만 받아 제 이름으로
-   등록할지. **후자가 권한을 좁게 둔다.**
+1. 시험 작업은 **C12 `jobs[]`로** 가고 **자리만 따로** 센다 (`capacity.test_max`, 기본 2 — 서로 빌려주지
+   않고 BPM 프로세스별 상한은 보지 않는다). 대기열·멱등·ack·취소는 한 자리에 남는다.
+2. 그림 검사는 **가르지 않는다** — B15가 `core.expr_check`에 있어 Center가 못 한다. 검사와 짓기는
+   **작업이 아니라** 하트비트의 `checks[]`·`builds[]`이고, 느린 것은 **revision 캐시**로 받친다.
+3. 지은 zip은 **Center가 받아 제 이름으로** 등록한다 (`POST …/builds/{build_id}/artifact`) — 실행기 키에
+   패키지 올리기 권한을 주지 않는다. **C5 권한표는 그대로다.**
 
 **이 공백이 §3-33(보안 조이기)을 더 급하게 만든다** — 콘솔 로그인 하나가 그림까지 고치게 된다.
 

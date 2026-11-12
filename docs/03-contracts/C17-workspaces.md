@@ -2,11 +2,11 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **초안** (2026-11-13) — 아직 아무것도 돌지 않는다. [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
+| 상태 | **초안** (2026-11-13) — 아직 아무것도 돌지 않는다. **`> 미정:` 셋은 [ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)으로 닫았다** (시험 자리·검사와 짓기의 자리·누가 올리나). [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 콘솔(BFF) → Center, Center → 서버 실행기 (시험 실행·짓기는 C12 작업으로 내려간다) |
 | 코드 위치 | (예정) Center `api/workspaces.py`, 서버 실행기 `testmode.py`. 알맹이는 `bpm.core.testrun` |
-| 관련 ADR | [0143](../decisions/0143-design-happens-in-the-console.md), [0145](../decisions/0145-console-is-workspace-shaped.md), [0022](../decisions/0022-studio-canvas.md)(캔버스를 거쳐 고친다 — 웹에서도 그대로), [0109](../decisions/0109-studio-writes-decision-tables.md)(결정표는 캔버스 밖), [0028](../decisions/0028-replay-memory.md)(배운 것), [0082](../decisions/0082-batch-start.md)(맡기기), [0142](../decisions/0142-open-mode.md)(이 계약이 보안을 더 급하게 만든다) |
+| 관련 ADR | [0143](../decisions/0143-design-happens-in-the-console.md), **[0146](../decisions/0146-design-work-has-its-own-lane.md)(시험 자리·검사와 짓기·누가 올리나)**, [0145](../decisions/0145-console-is-workspace-shaped.md), [0022](../decisions/0022-studio-canvas.md)(캔버스를 거쳐 고친다 — 웹에서도 그대로), [0109](../decisions/0109-studio-writes-decision-tables.md)(결정표는 캔버스 밖), [0028](../decisions/0028-replay-memory.md)(배운 것), [0082](../decisions/0082-batch-start.md)(맡기기), [0142](../decisions/0142-open-mode.md)(이 계약이 보안을 더 급하게 만든다) |
 | 관련 화면 | CON-20 작업공간 (STU-01·02·04·05·06·07·08·09·12를 대신한다) |
 
 ## 목적
@@ -112,12 +112,23 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
   (짓는 것은 그림을 읽는 일이라 Center가 못 한다). **케이스도 담는다** — 배포 패키지와 다른 점이다 (C1).
 - 실행기는 C12 하트비트로 받는다. **배포와 같은 길이라 볼륨을 나눠 갖지 않는다** — 승인 봉투(C2)·서명이
   없고 `source: test`다. 실행 id는 `test_`로 시작한다 (C3 — 운영 실행과 한눈에 갈린다).
+- **묶음을 받는 길은 하나다** — 지시에 적힌 묶음을 실행기가 `GET /workspaces/{id}/bundle?revision=<묶음 해시>`로
+  가져간다 (**서버 실행기 키**, 제 지시에 적힌 묶음만. 아니면 404). 시험 실행·검사·짓기 셋이 같은 길을 쓴다.
 - 실행기의 **시험 모드 규칙**은 데스크톱 Studio가 지키던 것과 같다: 케이스가 답하고, **바깥으로 웹훅을
   쏘지 않고**(시험 수신기로만, C14 `$test_receiver`), 메일은 담아 두고, **맡기기는 케이스가 적어 둔
   결과로 끝낸다** (ADR-0082 — 맡길 패키지의 그림이 여기 없다).
 
-> 미정: 시험 실행을 C12 `jobs[]`에 섞을지, 칸을 따로 둘지 (`test_jobs[]`). 섞으면 「빈자리만큼만」 규칙이
-> 그대로 걸려 **운영 작업이 밀린다**. 따로 두면 상한을 따로 정해야 한다. 조각 3b에서 정한다.
+### 자리는 따로 센다
+
+시험 작업은 **C12 `jobs[]`로 내려간다** ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)) —
+대기열·멱등·ack·취소·유실 처리가 운영과 **한 자리**에 남는다. 작업에 `source` 한 칸이 있고
+(`production`\|`test`) 실행기는 그것을 보고 위의 시험 모드 규칙을 켠다.
+
+**자리만 둘이다** — `capacity`가 `{max, running, test_max, test_running}`이고 운영 작업은 운영 빈자리에서,
+시험 작업은 시험 빈자리에서만 고른다. **서로 빌려주지 않는다** (빌려주면 「운영을 밀지 않는다」가 그 자리에서
+깨진다). `test_max`는 기본 **2**이고(`BPM_SERVER_RUNNER__MAX_TEST_CONCURRENCY`) 그 기계가 한꺼번에 도는 최대는
+`max + test_max`다 — 셈을 숨기지 않는다. 시험 작업은 **BPM 프로세스별 상한을 보지 않는다**(배포가 없다).
+자세히는 C12 §Center가 작업을 나누는 규칙.
 
 ### 결재와 확인은 C6으로 간다
 
@@ -156,8 +167,17 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 **검사도 실행기가 한다** — 그림을 읽고(`contracts.bpmn_ext`) 확장이 깔렸나를 보는 일이라 Center가 못 한다.
 결과 모양은 `core.testrun.readiness`가 내던 것 그대로이고 **오류만 돌리기를 막는다**(경고는 보인다).
 
-> 미정: 매번 실행기를 거치면 느리다. 그림 검사(B1~B17)는 **contracts만** 있으면 되므로 Center가 직접 할
-> 수 있고 사전 점검(확장·설정)만 실행기의 일이다. 가를지 말지는 조각 4f에서 정한다.
+**그림 검사만 Center로 떼어 내지 않는다** ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)) —
+B15(도우미 호출 모양)가 `core.expr_check`에 있고 도우미의 실제 인자 모양을 알아야 해서다. 가르면 B1~B14는
+즉시, B15와 사전 점검은 한 박자 뒤에 와 **「오류 없음」이 두 번 뒤집힌다**.
+
+**검사는 작업이 아니다** — 실행 id도 C3 사건도 없다. 지시는 하트비트의 `checks[]`로 내려가고 결과가
+`check_results[]`로 올라온다 (`deployments[]`와 같은 결, C12).
+
+**느린 것은 되묻지 않는 것으로 받친다** — 응답은 `{violations[], checked_revision, checked_at, cached}`이고,
+Center가 마지막 결과를 **그때 본 파일 revision 묶음**과 함께 담아 두어 바뀐 것이 없으면 실행기에 다시 묻지
+않는다(`cached: true`). 저장할 때마다 부르지 않는다 — 「검사」 탭을 열 때·돌리기 전·짓기 전이다. 실행기가
+없으면 담아 둔 것을 주고, 담아 둔 것도 없으면 503 `no_runner`다.
 
 ## 배포 후보로 만들기
 
@@ -172,9 +192,21 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 - 올린 것은 **후보**다. 승인·배포는 바뀌지 않는다 (C2·C5·CON-06·CON-15) — 콘솔에서 설계한 것이 저절로
   현장에 가지 않는다.
 
-> 미정: 실행기가 C5에 올리려면 **올리기 권한**이 있어야 한다 (지금 권한표는 Studio 키만 받는다, C5).
-> 실행기 키에 그 권한을 더할지, Center가 실행기에서 zip만 받아 **제 이름으로** 등록할지 — 후자가 권한을
-> 좁게 둔다. 조각 4f에서 정한다.
+### Center가 받아 제 이름으로 등록한다
+
+지시는 하트비트의 `builds[]`로 내려가고(검사와 같은 결 — **작업이 아니다**) 실행기는 다 지은 zip을 **이 길
+하나**로 올린다 ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)).
+
+| 길 | 권한 | 하는 일 |
+| --- | --- | --- |
+| `POST /workspaces/{id}/builds/{build_id}/artifact` | 서버 실행기 키 | multipart `file`. **그 짓기 지시를 받은 실행기만** (아니면 404). 같은 zip을 다시 올리면 200(재시도), 다른 zip이면 409 `build_done` |
+
+- Center는 거기서 **C5 `POST /packages`와 같은 함수**로 zip 안전 검사·C1 검사(R1~R6·R9)·해시 재계산을 하고
+  후보로 등록한다. 받는 쪽 코드가 둘로 갈라지지 않는다.
+- `uploaded_by`는 **단추를 누른 콘솔 계정**이다 — 실행기가 아니다. 누가 설계했나를 잃지 않는다.
+- **C5 권한표는 바뀌지 않는다** — 「서버 실행기 키 × `POST /packages`」는 그대로 「—」다. 현장 장비의 키가
+  패키지를 지어 올릴 수 있는 키가 되지 않는다.
+- 짓다 실패하면 zip이 없다 — 사유(`PackageError`)는 `build_results[]`로 올라오고 콘솔이 보인다.
 
 ## 공유 BPM 프로세스 설치
 
@@ -193,13 +225,14 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | --- | --- | --- |
 | 400 | `bad_request` | |
 | 403 | `forbidden` | 보기 전용 계정이 고치려 함 |
-| 404 | `not_found` | 없는 작업공간·파일, **남의 회사 것** |
+| 404 | `not_found` | 없는 작업공간·파일, **남의 회사 것**, 그 지시를 받지 않은 실행기가 묶음·build를 집으려 함 |
 | 409 | `exists` | 같은 id의 작업공간 |
 | 409 | `stale` | `If-Match`가 지금 `revision`과 다르다 — 아무것도 쓰지 않았다 |
 | 409 | `entry_in_use` | 진입 정의를 지우려 함 |
+| 409 | `build_done` | 이미 받은 build에 **다른** zip을 올리려 함 (같은 것은 200) |
 | 422 | `bad_path` | §경로 규칙을 어겼다 |
 | 422 | `no_entry` | 진입 정의 없이 돌리거나 지으려 함 |
-| 503 | `no_runner` | 시험 실행·검사·짓기를 맡을 서버 실행기가 없다 |
+| 503 | `no_runner` | 시험 실행·검사·짓기를 맡을 서버 실행기가 없다. **검사는 담아 둔 결과가 있으면 그것을 준다** |
 
 ## 호환 규칙
 
@@ -210,3 +243,4 @@ C5와 같다 — 모르는 칸은 **무시하고 버리지 않는다**(파일은
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
 | 2026-11-13 | 1 | 초안 — 작업공간·파일·시험 실행·실행 전 검사·배포 후보로 만들기·공유 BPM 프로세스 설치 | [0143](../decisions/0143-design-happens-in-the-console.md) |
+| 2026-11-13 | 1 | **`> 미정:` 셋을 닫았다** — 시험 작업은 `jobs[]`로 가고 **자리만 따로**(`capacity.test_max`), 검사와 짓기는 **작업이 아니라** 하트비트의 `checks[]`·`builds[]`이고 **검사는 가르지 않는다**(revision 캐시로 받친다), 지은 zip은 `POST …/builds/{build_id}/artifact`로 받아 **Center가 제 이름으로** 등록한다(C5 권한표 그대로). 묶음을 받는 길 `GET …/bundle` | [0146](../decisions/0146-design-work-has-its-own-lane.md) |
