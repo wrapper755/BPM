@@ -33,8 +33,9 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 | C13 | **구현됨** | `contracts.extension`·`core.extensions` | — (닫았다 — 기여 지점마다 읽는 쪽이 있다: 호스트·Studio·PC 실행기·콘솔·Center) |
 | C14 | **구현됨** | `contracts.bpmn_ext` B1~B17 + `contracts.dmn` | — (닫았다 — 엔진이 수행하고 Studio가 편집·검사하고 예제 49개가 이 형식이다. schema 1에서 **쓰지 않기로 적은 것**은 범위 결정이다) |
 | C15 | **구현됨** | `contracts.external_task`, Center `api/external_tasks.py` (15판) + **양쪽** — 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`server/adapter_consumer` | — (조각 2~4가 닫았고 긴 작업은 [ADR-0103](decisions/0103-long-external-tasks.md)이 닫았다, §3-17) |
+| C17 | **초안** | 알맹이(`core.testrun`)만 돈다 — 전송은 없다 | 작업공간 저장·파일 API·시험 실행 내려보내기·실행 전 검사·배포 후보로 만들기. **미정 셋**이 문서에 적혀 있다 (시험 작업을 `jobs[]`에 섞을지, 그림 검사를 Center가 직접 할지, 지은 zip을 누가 올릴지) — §3-34 |
 
-**열둘이 모두 「구현됨」이다** (C12가 M7 다섯째 조각에서, C15가 ADR-0102 조각 4에서 올라왔다). C8·C9·C10은 UI 자동화 확장과 함께 지웠다 ([ADR-0114](decisions/0114-remove-ui-automation.md) — §3-28). 상태 셋의 뜻은 [03-contracts/README](03-contracts/README.md) §상태에 적었다 — 적혀 있지 않아 올릴 때마다 사람이 다시 물었다.
+**열둘이 「구현됨」이고 C17(작업공간)은 「초안」이다** (C12가 M7 다섯째 조각에서, C15가 ADR-0102 조각 4에서 올라왔다. C17은 M11이 구현한다 — §3-34). C8·C9·C10은 UI 자동화 확장과 함께 지웠다 ([ADR-0114](decisions/0114-remove-ui-automation.md) — §3-28). 상태 셋의 뜻은 [03-contracts/README](03-contracts/README.md) §상태에 적었다 — 적혀 있지 않아 올릴 때마다 사람이 다시 물었다.
 
 ## 2. 문서가 코드와 어긋난 자리 (코드를 고치는 일이 아니다)
 
@@ -45,6 +46,26 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 ## 3. 계약 쪽 기능 공백
 
 계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18). **보안을 어디까지 조일지는 §3-33으로 미뤘다** — 관문은 다 있고 스위치 하나로 지나간다([ADR-0142](decisions/0142-open-mode.md)).
+
+### 3-34. 작업공간(C17) — 알맹이는 돌고 전송이 없다
+
+[ADR-0143](decisions/0143-design-happens-in-the-console.md), 계약 [C17](03-contracts/C17-workspaces.md) 「초안」.
+**도는 것**: 시험 실행의 알맹이 전부 (`bpm.core.testrun` — 작업 폴더·케이스·패키지 짓기·실행 전 검사·엔진
+몰이가 화면을 모른다, M11 조각 3a). 오라클 둘이 Qt 없이 돈다.
+
+**없는 것**: Center에 작업공간이 저장되지 않고 파일 API·시험 실행·짓기가 하나도 없다. 그래서 지금
+설계는 **데스크톱 Studio에서만** 된다.
+
+**먼저 정할 것 셋** (C17에 `> 미정:`으로 적혀 있다).
+
+1. **시험 작업을 C12 `jobs[]`에 섞을까** — 섞으면 「빈자리만큼만」 규칙에 걸려 운영 작업이 밀린다.
+   따로 두면 상한을 따로 정해야 한다.
+2. **그림 검사(B1~B17)를 Center가 직접 할까** — `contracts`만 있으면 되므로 Center도 할 수 있다.
+   사전 점검(확장·설정)만 실행기의 일이다. 매번 실행기를 거치면 느리다.
+3. **지은 zip을 누가 C5에 올릴까** — 실행기 키에 올리기 권한을 더할지, Center가 zip만 받아 제 이름으로
+   등록할지. **후자가 권한을 좁게 둔다.**
+
+**이 공백이 §3-33(보안 조이기)을 더 급하게 만든다** — 콘솔 로그인 하나가 그림까지 고치게 된다.
 
 ### 3-29. 조직·업무 자리 — Center·Studio·콘솔은 돈다, 연동 키의 회사가 아직
 
