@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 대체됨([ADR-0144](0144-remove-the-pc-runner.md)) — 원래 수락. 볼 클라이언트가 없다 |
 | 날짜 | 2026-10-30 |
 | 관련 | [ADR-0104](0104-windows-ci-runs-the-client-side.md)(Windows CI는 클라이언트 쪽만), `.github/workflows/ci.yml`, `.github/workflows/desktop.yml`, `tests/ci_scope.py`·`tests/test_ci_scope.py` |
 

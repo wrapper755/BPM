@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · **현장 갈래는 걷었다** — 결재·확인은 Center 결재함에서만 답한다 ([ADR-0144](0144-remove-the-pc-runner.md)) |
 | 날짜 | 2026-10-07 |
 | 관련 | [ADR-0031](0031-runner-control-file.md)(파일 한 벌 — 이 ADR이 「올라오는 길은 하나」에 예외를 둔다), [ADR-0007](0007-client-initiated-communication.md)(연결은 늘 현장 → Center), [ADR-0013](0013-api-keys.md)(키는 Bot UI가 쥔다), [ADR-0014](0014-one-bot-per-pc.md), [C3](../03-contracts/C3-run-events.md), [C6](../03-contracts/C6-approvals.md), [C14](../03-contracts/C14-bpmn-extensions.md) `chk:approval`, 화면 CON-04·CMN-01·BUI-03 |
 

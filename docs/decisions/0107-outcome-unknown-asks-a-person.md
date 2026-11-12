@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · **PC 갈래는 걷었다** — 서버 갈래(`TASK_FAILED` 경계)만 남는다 ([ADR-0144](0144-remove-the-pc-runner.md)) |
 | 날짜 | 2026-10-29 |
 | 관련 | 계약 C15(`error`·`fail`), C13 §4-1(`idempotent`), C14(`chk:serviceCall`·오류 경계·시험 케이스 `approvals`), C6(확인), [ADR-0102](0102-calling-outside-is-pull.md), [ADR-0103](0103-long-external-tasks.md), [ADR-0106](0106-pc-escalation-asks-a-person.md), 09-gaps §3-19 |
 

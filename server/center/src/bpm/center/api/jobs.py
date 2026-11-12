@@ -25,7 +25,6 @@ from bpm.center.api import deployments
 from bpm.center.auth import Caller
 from bpm.center.errors import ApiError
 from bpm.center.storage import Store, dumps, loads, now_iso
-from bpm.contracts.bot_ui import HeartbeatRequest, JobAck, JobDispatch
 from bpm.contracts.bpmn_ext import INPUT_SOURCE_CALLER
 from bpm.contracts.center_api import (
     IDEMPOTENCY_WINDOW_DAYS,
@@ -38,6 +37,7 @@ from bpm.contracts.center_api import (
     cancel_outcome,
     validate_job_create,
 )
+from bpm.contracts.runner import JobAck, JobDispatch
 from bpm.contracts.server_runner import (
     ServerRunnerHeartbeatRequest,
     free_slots,
@@ -88,7 +88,7 @@ def _scope(found: Caller, *, write: bool) -> str | None:
     - 관리자 토큰: 전부 (쓰기 포함)
     - 읽기 토큰: 전부, **GET만**
     - 연동용 키: 만들기와 **자기 것만** 읽기·취소
-    - 그 밖의 Center API 키(Studio·PC 실행기·서버 실행기): 작업은 다루지 못한다
+    - 그 밖의 Center API 키(Studio·서버 실행기): 작업은 다루지 못한다
     """
     if found.is_admin:
         return None
@@ -127,10 +127,9 @@ def create(
 ) -> tuple[JobInfo, bool]:
     """`POST /jobs`. 두 번째 값이 `False`면 멱등으로 돌려준 기존 작업이다 (200).
 
-    **`by_center`는 Center 안에서 부를 때만 참이다** — 지금은 **PC 위임**뿐이다 (C12 §PC 위임,
-    ADR-0062). 권한표의 「작업은 관리자 토큰이나 연동용 키로 다룬다」는 **HTTP `POST /jobs`의
-    규칙**이고, 위임은 그 길이 아니라 `POST …/server-runner/delegations`로 들어와 **제 관문**을
-    이미 지났다(실행기용 키·등록된 실행기·그 실행의 소유). 여기서 또 막으면 위임이 설 수 없다.
+    **`by_center`는 Center 안에서 부를 때만 참이다** — 지금은 **타이머 시작**뿐이다
+    (ADR-0110). 권한표의 「작업은 관리자 토큰이나 연동용 키로 다룬다」는 **HTTP `POST /jobs`의
+    규칙**이고, Center가 스스로 만드는 작업은 그 길이 아니다.
     """
     if not by_center:
         _scope(found, write=True)
@@ -197,7 +196,7 @@ def create(
                 now,
                 PENDING,
                 # 연동용 키가 실은 사람 — **주장**이라 적기만 한다 (ADR-0081). `requested_by`는
-                # 그대로 키 이름이다: PC 실행기가 그 칸의 `server_bot:`로 위임을 가른다.
+                # 그대로 키 이름이다: 실행기가 그 칸의 `server_bot:`로 위임을 가른다.
                 None if by_center else found.on_behalf,
                 owner_place.company,
                 owner_place.department,
@@ -236,13 +235,13 @@ def _resolved_version(store: Store, request: JobCreateRequest) -> str:
         # **배포와 같은 스위치를 본다** (ADR-0047). 두 자리에 적어 두면 한쪽만 켜져
         # 「작업은 만들어지는데 배포가 없다」가 된다.
         raise ApiError(422, "server_runner_not_available", "서버 실행은 아직 열려 있지 않다 (ADR-0016)")
-    if target.type not in ("bot_ui", "server_runner"):
+    if target.type != "server_runner":
         raise ApiError(422, "target_mismatch", f"모르는 대상 종류다: {target.type}")
 
-    from bpm.center.api import bot_ui, server_runner  # noqa: PLC0415 — 순환 import를 피한다
+    from bpm.center.api import server_runner  # noqa: PLC0415 — 순환 import를 피한다
 
     target_id = str(target.id or "")
-    if target.type == "server_runner":
+    if True:
         # **실행기는 Center가 고를 수 있다** (C5 `JobTarget`) — `id`를 비우거나 `"*"`면
         # 빈자리가 있는 쪽에 간다. 그때는 「어느 서버에 배포됐나」가 아니라 **어디든 배포돼
         # 있나**를 묻는다 (`"*"` 배포도 센다 — ADR-0046).
@@ -257,14 +256,6 @@ def _resolved_version(store: Store, request: JobCreateRequest) -> str:
                 target_id=target_id,
                 bpm_process_id=request.bpm_process_id,
             )
-    else:
-        if not bot_ui.exists(store, target_id):
-            # **배포와 같은 코드다** (`target_not_found`, ADR-0049) — 같은 조건에 두 이름을 두는
-            # 것이 ADR-0047이 고친 흠이다. `not_found`는 이 길에서 「그 작업이 없다」로 쓴다.
-            raise ApiError(404, "target_not_found", f"등록되지 않은 PC다: {target_id}")
-        deployed = deployments.versions_for(
-            store, target_type="bot_ui", target_id=target_id, bpm_process_id=request.bpm_process_id
-        )
     problems = validate_job_create(request, deployed_versions=deployed)
     if problems:
         first = problems[0]
@@ -356,28 +347,6 @@ def cancel(
     return info_of(store, _must(store, job_id)), status
 
 
-# ─────────────────────────── 하트비트 (C4) ───────────────────────────
-
-
-def heartbeat(
-    store: Store, *, bot_ui_id: str, request: HeartbeatRequest, disabled: bool
-) -> tuple[list[JobDispatch], list[str]]:
-    """하트비트 한 번 — 받은 ack를 반영하고, 내려줄 작업과 취소 지시를 고른다.
-
-    **순서가 중요하다.** ack를 먼저 반영해야 맞추기가 방금 온 소식을 못 봤다고 오해하지 않고,
-    만료를 그다음에 봐야 이미 끝난 것을 다시 만료시키지 않는다.
-    """
-    acked = _apply_acks(store, host_id=bot_ui_id, acks=request.job_acks)
-    _expire_due(store, host_id=bot_ui_id, now=now_iso())
-
-    seen = {item.job_id for item in request.queue.items if item.job_id}
-    if request.current_run is not None and request.current_run.job_id:
-        seen.add(request.current_run.job_id)
-    _reconcile(store, host_id=bot_ui_id, seen=seen | acked)
-
-    return _to_dispatch(store, host_id=bot_ui_id, disabled=disabled), _to_cancel(store, host_id=bot_ui_id)
-
-
 # ─────────────────────────── 하트비트 (C12 서버 실행기) ───────────────────────────
 
 #: 서버 작업의 **아직 아무 실행기에도 가지 않은** 대상 (C5 — `id`를 비우거나 `"*"`).
@@ -390,7 +359,7 @@ def server_heartbeat(
     """하트비트 한 번 (C12). **대기열은 Center가 가지므로** 빈자리만큼만 골라 보낸다.
 
     C4와 순서는 같다 (ack → 만료 → 맞추기 → 고르기). 다른 것은 **무엇을 「보았다」고 할
-    것인가**다 — PC 실행기는 대기열을 올려 주지만 실행기는 `running[]`·`waiting[]`을 올린다.
+    것인가**다 — 실행기는 대기열을 올려 주지만 실행기는 `running[]`·`waiting[]`을 올린다.
     """
     acked = _apply_acks(store, host_id=runner_id, acks=request.job_acks)
     _expire_due(store, host_id=runner_id, now=now_iso())
@@ -581,12 +550,12 @@ def _apply_acks(store: Store, *, host_id: str, acks: list[JobAck]) -> set[str]:
 
 
 def _note_delegation(store: Store, *, row: Any, ack: JobAck) -> None:
-    """끝난 작업이 **PC 위임**이면 결과를 담아 둔다 (C12 §PC 위임, ADR-0062).
+    """끝난 작업이 **맡긴 것**이면 결과를 담아 둔다 (C12 §맡기기, ADR-0082).
 
     담는 것은 **끝난 ack**뿐이다 — `started`·`queued`는 아직 결과가 아니고, 그때 담으면
     기다리는 서버 실행이 **빈 값으로 이어 간다**.
 
-    `outputs`는 **위임일 때만** 쓴다 — 평범한 PC 작업이 값을 실어 보내도 `finish()`가 거짓을
+    `outputs`는 **맡긴 것일 때만** 쓴다 — 평범한 작업이 값을 실어 보내도 `finish()`가 거짓을
     돌려주고 그 값은 **어디에도 남지 않는다** (원칙 6의 예외는 좁게 쓴다).
     """
     if ack.result in STATE_ACKS:
@@ -599,7 +568,7 @@ def _note_delegation(store: Store, *, row: Any, ack: JobAck) -> None:
         state=ack.result,
         outputs=dict(ack.outputs),
         reason=ack.reason,
-        pc_run_id=ack.run_id or (row["run_id"] if "run_id" in row.keys() else None),
+        child_run_id=ack.run_id or (row["run_id"] if "run_id" in row.keys() else None),
     )
 
 
@@ -661,8 +630,8 @@ def _expire_due(store: Store, *, host_id: str, now: str) -> None:
 
 
 #: 맞추기 규칙이 적는 사유 — **호스트마다 다르다**. PC는 C4의 값, 서버 실행기는 C12의 값이다.
-#: 뭉개면 CON-12가 서버 실행기에 「bot_ui_lost」라고 적어 운영자가 PC를 찾아 헤맨다.
-LOST_BOT_UI = "bot_ui_lost"
+#: 뭉개면 CON-12가 서버 실행기에 「runner_lost」라고 적어 운영자가 PC를 찾아 헤맨다.
+LOST_BOT_UI = "runner_lost"
 LOST_RUNNER = "runner_lost"
 
 
@@ -672,7 +641,7 @@ def _reconcile(store: Store, *, host_id: str, seen: set[str], lost_reason: str =
     실행하는 쪽이 비정상 종료로 쥔 것을 잃으면 작업은 영원히 `queued`로 남는다. 두 번 연속
     하트비트에서 보이지 않고 ack도 없으면 `rejected` + `lost_reason`이다.
 
-    **무엇을 「보았다」고 할지는 부르는 쪽이 정한다** (`seen`) — PC 실행기는 대기열·실행 자리로,
+    **무엇을 「보았다」고 할지는 부르는 쪽이 정한다** (`seen`) — 실행기는 대기열·실행 자리로,
     서버 실행기는 `running[]`·`waiting[]`으로 말한다 (C12).
     """
     for row in store.rows(
@@ -706,7 +675,7 @@ def _reconcile(store: Store, *, host_id: str, seen: set[str], lost_reason: str =
 def _to_dispatch(store: Store, *, host_id: str, disabled: bool) -> list[JobDispatch]:
     """내려줄 작업 (C4 `jobs`) — **ack가 올 때까지 매번 실린다**.
 
-    비활성화된 PC 실행기에는 **새 작업을 보내지 않는다** (C5 CON-03). 작업은 `pending`으로 남아
+    비활성화된 실행기에는 **새 작업을 보내지 않는다** (C5 CON-03). 작업은 `pending`으로 남아
     기다린다 — 되살리려고 다시 만들 필요가 없다.
     """
     if disabled:
@@ -807,7 +776,6 @@ __all__ = [
     "cancel",
     "create",
     "get",
-    "heartbeat",
     "info_of",
     "listing",
     "new_job_id",

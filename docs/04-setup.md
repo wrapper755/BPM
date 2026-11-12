@@ -7,7 +7,7 @@
 
 | PC 역할 | OS | 필요한 것 |
 | --- | --- | --- |
-| 클라이언트 개발 (Studio·PC 실행기) | **Windows 10/11 (주)**, Linux | Git, uv, Python |
+| 클라이언트 개발 (Studio) | **Windows 10/11 (주)**, Linux | Git, uv, Python |
 | 서버 개발 (Center·서버 실행기·서비스 앱) | **Linux (주)**, Windows | Git, uv, Python, Docker, Ollama |
 | 한 대로 전부 | Windows 또는 Linux | 위 둘 다 |
 
@@ -64,7 +64,7 @@ pnpm --filter @bpm/center-console dev   # 하나만 — http://localhost:8501
 | 명령 (저장소 맨 위에서) | 하는 일 |
 | --- | --- |
 | `pnpm dev` | 콘솔 둘을 함께 띄운다 (Center 8501, 서비스 앱 8001) |
-| 환경변수 | Center 콘솔: `BPM_CONSOLE__CENTER_URL`(기본 `http://localhost:8800` — 콘솔 서버가 부르는 주소), `BPM_CONSOLE__CENTER_PUBLIC_URL`(위 막대에 보일 주소 — PC 실행기·Studio가 적는 바깥 주소, 비우면 앞의 것), `BPM_CONSOLE__SESSION_SECRET`(**필수**, 16자 이상 — 로그인 쿠키를 암호화한다) |
+| 환경변수 | Center 콘솔: `BPM_CONSOLE__CENTER_URL`(기본 `http://localhost:8800` — 콘솔 서버가 부르는 주소), `BPM_CONSOLE__CENTER_PUBLIC_URL`(위 막대에 보일 주소 — Studio가 적는 바깥 주소, 비우면 앞의 것), `BPM_CONSOLE__SESSION_SECRET`(**필수**, 16자 이상 — 로그인 쿠키를 암호화한다) |
 | 환경변수 | 서비스 앱 콘솔: `BPM_SVC_CONSOLE__APP_URL`(**어느 서비스 앱의 콘솔인지는 이 값이 정한다**), `BPM_SVC_CONSOLE__SESSION_SECRET`(**필수**, 16자 이상), `BPM_SVC_CONSOLE__CENTER_CONSOLE_URL`(선택 — **브라우저가 여는** Center 콘솔 주소. 있으면 SVC-03의 「실행 id」가 CON-01로 이어진다, [ADR-0075](decisions/0075-service-console-links-to-center-console.md)) |
 | `pnpm build` | 둘 다 제품 빌드 (`output: standalone`) |
 | `pnpm typecheck` | 모든 패키지·앱의 TypeScript 검사 |
@@ -85,12 +85,10 @@ pnpm --filter @bpm/center-console dev   # 하나만 — http://localhost:8501
 | 기본 인코딩 cp949 | 한글 파일 읽기에서 `UnicodeDecodeError` | 코드에서 `encoding="utf-8"` 명시 (CLAUDE.md §5). 개발 PC에는 `PYTHONUTF8=1` 환경변수 설정 |
 | 줄바꿈 CRLF | BPMN·YAML diff가 전부 바뀜 | 저장소의 `.gitattributes`가 LF로 고정. `git config --global core.autocrlf false` 권장 |
 | 긴 경로 | Qt 설치 중 경로 오류 | 짧은 경로(`C:\dev\`)에 clone. 필요하면 `git config --global core.longpaths true` |
-| 루프백 방화벽 알림 | PC 실행기가 메시지 수신 포트(8790)를 열 때 방화벽 창 | 127.0.0.1에만 바인드하면 보통 뜨지 않음. 뜨면 "개인 네트워크"만 허용 |
 | 백신 실시간 검사 | `uv sync`가 매우 느림 | 개발 폴더를 검사 예외에 추가 (조직 정책 확인) |
 | 실행 정책 | `.ps1` 스크립트 실행 거부 | 스크립트 대신 `uv run <명령>`을 쓴다 |
 | `corepack enable`이 `EPERM` | `EPERM: operation not permitted, open 'C:\Program Files\nodejs\yarnpkg'` | winget·MSI로 깐 Node는 `Program Files`에 있어 **일반 사용자는 거기에 쓸 수 없다**. `corepack enable pnpm --install-directory "$env:USERPROFILE\.local\bin"` — uv 설치가 이미 PATH에 넣은 폴더다. `corepack pnpm install`만으로는 모자란다: 루트 스크립트(`pnpm typecheck` 등)가 안에서 `pnpm -r …`을 다시 부르는데 PATH에 `pnpm`이 없으면 `'pnpm'은(는) … 프로그램이 아닙니다`로 끝난다 |
 | 서버를 띄운 채 `uv run` | `error: failed to remove file …\.venv\Scripts\bpm-mock-apps.exe … (os error 32)` | `git pull` 뒤 `uv run`이 환경을 맞추려다 **떠 있는 프로세스가 쥔 실행 파일**을 바꾸지 못한다(Windows는 실행 중인 파일을 지울 수 없다). 그 서버를 끄고 `uv sync`를 하거나, 우리 코드만 바뀌었으면 `uv run --no-sync …`로 띄운다 (멤버는 편집 가능 설치라 코드는 이미 반영돼 있다) |
-| 트레이의 PC 실행기가 둘 | 메시지 수신 포트(8790)를 옛 쪽이 쥐고 새 PC 실행기가 열지 못한다 | 창을 닫는 것은 끄는 것이 아니다(트레이에 남는다). 다시 띄우기 전에 트레이에서 「종료」했는지 본다 |
 | Git Bash에서 `pnpm test`가 127 | 아무 말 없이 `ELIFECYCLE Test failed`, 끝 코드 127 | 웹 명령은 **PowerShell**에서 돌린다 (이 문서의 명령이 모두 PowerShell 기준이다). 같은 명령이 PowerShell에서는 통과한다 |
 | 포트가 이미 쓰임 | `pnpm dev`가 `EADDRINUSE: :::8501`로 죽음 | 다른 프로그램(프로토타입 Streamlit도 8501을 쓴다)이 잡고 있다. `pnpm --filter <앱> exec next dev --port <빈 포트>`로 옮겨 띄운다 |
 
@@ -114,7 +112,7 @@ sudo apt-get install -y --no-install-recommends \
 ```
 
 - **Qt 테스트는 화면이 없어도 돈다** — `QT_QPA_PLATFORM=offscreen`을 테스트가 스스로 켠다. 위 라이브러리가 없으면 그 테스트만 건너뛴다 (CI는 깔고 돌린다).
-- PySide6는 `uv sync`가 받는다. `shared/qt`는 **Essentials만** 쓰고, QtWebEngine이 든 Addons는 Studio가 따로 받는다 ([ADR-0022](decisions/0022-studio-canvas.md)·[ADR-0024](decisions/0024-desktop-packaging-extensions.md) — PC 실행기 설치 파일을 작게 두려는 것이다).
+- PySide6는 `uv sync`가 받는다. `shared/qt`는 **Essentials만** 쓰고, QtWebEngine이 든 Addons는 Studio가 따로 받는다 ([ADR-0022](decisions/0022-studio-canvas.md)·[ADR-0024](decisions/0024-desktop-packaging-extensions.md) — 서버 컨테이너를 작게 두려는 것이다).
 
 서버 쪽 구성(Center·Center 콘솔·서버 실행기) 띄우기, Center 판 올리기·저장소 옮기기는 [server/docs/setup.md](../server/docs/setup.md)에 있다 ([ADR-0129](decisions/0129-product-folders.md)).
 
@@ -124,10 +122,10 @@ sudo apt-get install -y --no-install-recommends \
 - 비밀(토큰·DB 비밀번호·API 키): `.env` (git 제외) 또는 OS 비밀 저장소. 설정 파일·코드에 넣지 않는다.
 - 환경변수 접두사: **`BPM_`** 하나. 중첩은 `__` (예: `BPM_CENTER__PORT`, `BPM_CENTER__API_KEY`). [ADR-0011](decisions/0011-config-ports-env.md)
 - 우선순위: 환경변수 > `.env` > 설정 파일 > 기본값.
-- 서비스 앱 API 키: **없다** ([ADR-0102](decisions/0102-calling-outside-is-pull.md)) — BPM 프로세스는 바깥 기능을 Center의 외부 작업으로 부른다(C15). 서버 실행기·Studio는 제 Center API 키로, 실행 프로세스는 PC 실행기가 청한 **호출 토큰**으로 올린다. 외부 앱의 주소·키는 **어댑터 일꾼**의 설정에만 있다(아래).
-- **열린 모드** (`BPM_CENTER__OPEN_MODE=1`, [ADR-0142](decisions/0142-open-mode.md)): 켜면 아래 등록 승인이 **받는 자리에서 저절로** 일어나고(회사가 하나뿐일 때 — 둘 이상이면 PC 실행기·Studio는 그대로 기다린다), 일꾼이 일꾼 폴더 파일 없이 스스로 들어오고, **키 없는 호출이 관리자**다. 콘솔 로그인은 그대로다. 켜 두면 콘솔 위 막대에 「열린 모드」 배지가 선다. 보안을 어디까지 조일지 정하기 전까지의 자리이고, 지키는 것은 망(방화벽·역방향 프록시)뿐이다.
-- Center API 키: **PC 실행기·서버 실행기는 사람이 넣지 않는다** ([ADR-0092](decisions/0092-keys-are-issued-and-delivered-by-center.md)) — Center 주소만 주고 띄우면 등록 요청을 보내고, 관리자가 콘솔 CON-03(서버는 CON-12) 「승인 대기」에서 요청 코드(현장 화면·서버 로그)와 같은 줄을 승인하면 키를 받아 OS 비밀 저장소에 둔다. 만료 14일 전부터 Center가 갈아 준다. **Studio도 같다** — STU-10 「서버」에 주소를 넣고 「연결 테스트」를 누르면 요청 코드가 뜨고, 관리자가 CON-03 「Studio」 탭 「승인 대기」에서 승인하면 Studio 키(1년, 회전하지 않는다 — 만료되면 「다시 요청」)를 받는다. 개발·CI에서만 `BPM_CENTER__API_KEY`. Studio가 승인으로 받은 키는 OS 비밀 저장소(`bpm-studio`, 이름 `center`)로 가고, 비밀 저장소가 없는 환경(헤드리스 CI)에서는 관리자 토큰으로 발급한 Studio용 키를 `BPM_STUDIO__CENTER_API_KEY`로 준다(이것이 이기고, 그때 STU-10은 요청을 보내지 않는다).
-- **앱마다의 설정·비밀**은 그 제품 문서에 있다 — 서버(Center·서버 실행기·일꾼·서비스 앱·모의 앱)는 [server/docs/setup.md](../server/docs/setup.md), [Studio](../studio/docs/setup.md), [PC 실행기](../bot/docs/setup.md) ([ADR-0129](decisions/0129-product-folders.md)).
+- 서비스 앱 API 키: **없다** ([ADR-0102](decisions/0102-calling-outside-is-pull.md)) — BPM 프로세스는 바깥 기능을 Center의 외부 작업으로 부른다(C15). 서버 실행기·Studio는 제 Center API 키로, 실행 프로세스는 실행기가 제 Center 키로 올린다. 외부 앱의 주소·키는 **어댑터 일꾼**의 설정에만 있다(아래).
+- **열린 모드** (`BPM_CENTER__OPEN_MODE=1`, [ADR-0142](decisions/0142-open-mode.md)): 켜면 아래 등록 승인이 **받는 자리에서 저절로** 일어나고(회사가 하나뿐일 때 — 둘 이상이면 Studio는 그대로 기다린다), 일꾼이 일꾼 폴더 파일 없이 스스로 들어오고, **키 없는 호출이 관리자**다. 콘솔 로그인은 그대로다. 켜 두면 콘솔 위 막대에 「열린 모드」 배지가 선다. 보안을 어디까지 조일지 정하기 전까지의 자리이고, 지키는 것은 망(방화벽·역방향 프록시)뿐이다.
+- Center API 키: **서버 실행기는 사람이 넣지 않는다** ([ADR-0092](decisions/0092-keys-are-issued-and-delivered-by-center.md)) — Center 주소만 주고 띄우면 등록 요청을 보내고, 관리자가 콘솔 CON-03(서버는 CON-12) 「승인 대기」에서 요청 코드(현장 화면·서버 로그)와 같은 줄을 승인하면 키를 받아 OS 비밀 저장소에 둔다. 만료 14일 전부터 Center가 갈아 준다. **Studio도 같다** — STU-10 「서버」에 주소를 넣고 「연결 테스트」를 누르면 요청 코드가 뜨고, 관리자가 CON-03 「Studio」 탭 「승인 대기」에서 승인하면 Studio 키(1년, 회전하지 않는다 — 만료되면 「다시 요청」)를 받는다. 개발·CI에서만 `BPM_CENTER__API_KEY`. Studio가 승인으로 받은 키는 OS 비밀 저장소(`bpm-studio`, 이름 `center`)로 가고, 비밀 저장소가 없는 환경(헤드리스 CI)에서는 관리자 토큰으로 발급한 Studio용 키를 `BPM_STUDIO__CENTER_API_KEY`로 준다(이것이 이기고, 그때 STU-10은 요청을 보내지 않는다).
+- **앱마다의 설정·비밀**은 그 제품 문서에 있다 — 서버(Center·서버 실행기·일꾼·서비스 앱·모의 앱)는 [server/docs/setup.md](../server/docs/setup.md), [Studio](../studio/docs/setup.md) ([ADR-0129](decisions/0129-product-folders.md)).
 
 ## 6. 포트
 
@@ -141,7 +139,6 @@ sudo apt-get install -y --no-install-recommends \
 | 모의 앱 16개 (`samples/`, 개발·시험용) | 8010부터 10씩 — 순서는 `uv run bpm-mock-apps list` | **127.0.0.1** | `BPM_SVC_<앱 id>__PORT` |
 | 통합 일꾼 (관리 API — 일꾼 콘솔이 부른다) | 8770 | 127.0.0.1 기본 (`BPM_CONSUMER__HOST`) | `BPM_CONSUMER__PORT` — 관리자 토큰(`BPM_CONSUMER__ADMIN_TOKEN`)이 없으면 띄우지 않는다 |
 | 서비스 앱 관리 콘솔 (웹, `pnpm dev`) | 8001 | 개발 PC | — (`server/web/apps/svc-console/package.json`) |
-| PC 실행기 메시지 수신 (ReceiveTask·메시지 시작 이벤트) | 8790 | 127.0.0.1 기본 | `BPM_BOT_UI__WEBHOOK__PORT` |
 | Ollama | 11434 | 로컬 또는 서버 | `BPM_LLM__BASE_URL` |
 
 > 주의: 프로토타입과 같은 기본 포트다. 한 PC에서 프로토타입과 새 구성요소를 동시에 띄우면 충돌하므로, 그때는 환경변수로 한쪽을 옮긴다.
@@ -153,8 +150,7 @@ sudo apt-get install -y --no-install-recommends \
 ## 6-2. 데스크톱 앱 묶기 (설치 파일의 앞 단계)
 
 ```bash
-uv run --group build python packaging/build.py              # Studio·PC 실행기 둘 다
-uv run --group build python packaging/build.py bot-ui       # 하나만
+uv run --group build python packaging/build.py                # Studio
 uv run --group build python packaging/build.py --version 0.2.0
 uv run --group build python packaging/build.py --installer    # Windows에서만 — 설치 파일까지
 ```
@@ -169,10 +165,10 @@ PyInstaller는 `--group build`에만 있어 평소 `uv sync`로는 들어오지 
 - **묶은 뒤 스스로 검사한다** — `<실행 파일> --selftest <파일>`로 확장 호스트가 정의를 읽는지 보고
   읽지 못한 정의·켜지지 않은 확장이 있으면 **빌드를 실패시킨다**. 지금 묶을 확장은 없어서 **확장 0개가
   정상**이다 ([ADR-0114](decisions/0114-remove-ui-automation.md)). 확장을 못 박고 싶으면 `--want <확장 id>`로
-  적는다. 그 깃발은 PC 실행기·Studio가 **같은 검사**(`core.selftest`)를 쓴다.
+  적는다. 검사는 `core.selftest` 하나다.
 - **판을 찍는다** ([ADR-0067](decisions/0067-build-stamp.md)) — `--version`이 이기고, 없으면 지금 커밋의
   `v*` 태그, 그것도 없으면 `<core 판>+g<커밋>`(고치다 만 파일이 있으면 `.dirty`)이다. 실행 파일 옆
-  `bpm-build.json`에 적히고(열어 볼 수 있다) PC 실행기가 C4 `versions`로 올려 **CON-03에 보인다**.
+  `bpm-build.json`에 적힌다(열어 볼 수 있다).
   **판을 올리려면 태그를 민다** — 산출물 워크플로가 태그 이름을 그대로 넘긴다. 묶은 앱이 되읽은 판이
   찍은 판과 다르면 빌드가 멈춘다.
 - **설치 파일은 Inno Setup이다** ([ADR-0068](decisions/0068-installer-inno-setup-per-user.md)) — `--installer`가
@@ -180,7 +176,7 @@ PyInstaller는 `--group build`에만 있어 평소 `uv sync`로는 들어오지 
   `choco install innosetup`). **사용자별**이라 관리자 권한을 묻지 않고 `%LOCALAPPDATA%\Programs\BPM\<앱>`에
   깔린다. 덮어쓰면 옛 판의 `_internal`을 지우고 깐다. 제거해도 **사용자 데이터는 남는다**(실행 기록·설치한 BPM 프로세스).
   `--check-install`(설치 → 설치된 앱 검사 → 제거)은 **같은 앱의 설치를 덮으므로 CI에서만** 쓴다.
-  설치 파일 크기는 CI가 말해 준 값으로 **PC 실행기 63MB·Studio 205MB**다 (2026-10-17, 런 39004329132).
+  설치 파일 크기는 CI가 말해 준 값으로 **Studio 205MB**다 (2026-10-17, 런 39004329132).
 - **설치 파일에 서명이 없다** — 처음 실행하면 SmartScreen이 「Windows의 PC 보호」를 띄운다.
   「추가 정보」 → 「실행」을 누른다. 백신이 실행 파일을 막으면 그 자리의 예외로 넣는다(서명이 생기면 줄어든다).
 - **매니페스트는 Windows에서만** 들어간다 (`packaging/app.manifest` — DPI Per-Monitor v2,
@@ -190,19 +186,17 @@ PyInstaller는 `--group build`에만 있어 평소 `uv sync`로는 들어오지 
   Actions에서 실행하거나 `v*` 태그를 민다. 푸시마다 묶지 않는다 (몇 분이 걸려 모든 PR에 붙이면 값이 크다).
 - 크기·시간은 **OS·아키텍처마다 다르다.** CI가 말해 준 값이다 (2026-10-16, 런 38873092925):
 
-  | | PC 실행기 | Studio |
-  | --- | --- | --- |
-  | **Windows** (CI, x86_64) | **160MB · 86초** | **598MB · 109초** |
-  | Linux (CI, x86_64) | 353MB · 33초 | 1009MB · 37초 |
-  | Linux (개발 PC, aarch64) | 356MB · 50~62초 | 1008MB · 81초 |
+  | | Studio |
+  | --- | --- |
+  | **Windows** (CI, x86_64) | **598MB · 109초** |
+  | Linux (CI, x86_64) | 1009MB · 37초 |
+  | Linux (개발 PC, aarch64) | 1008MB · 81초 |
 
-  PC 실행기는 모든 현장 PC에 깔리므로 **QtWebEngine을 넣지 않는다** — 그 차이가 크기의 대부분이다.
-  스파이크 S5가 Windows에서 본 것은 PC 실행기 113MB·Studio 551MB였고, 그 뒤 확장·의존이 늘어
-  조금 커졌다.
+  크기의 대부분은 QtWebEngine이다 (캔버스가 bpmn-js다 — ADR-0022).
 
-## 6-3. 판 올리기 (Studio·PC 실행기)
+## 6-3. 판 올리기 (Studio)
 
-옮겼다 — [bot/docs/setup.md](../bot/docs/setup.md) 「판 올리기」 ([ADR-0129](decisions/0129-product-folders.md)). Studio도 같은 순서다(대기열을 비우는 걸음만 없다).
+옮겼다 — [studio/docs/setup.md](../studio/docs/setup.md) 「판 올리기」 ([ADR-0129](decisions/0129-product-folders.md)).
 
 ## 6-4. Center 백업
 
@@ -217,17 +211,15 @@ PyInstaller는 `--group build`에만 있어 평소 `uv sync`로는 들어오지 
 | 갈래 | 무엇 | 어디서 도나 |
 | --- | --- | --- |
 | **OS 전용** | 네이티브 메뉴 글꼴 (Windows에서만). 거꾸로 파일 권한 비트(`0600`)와 설치 스크립트를 진짜로 만들지 않는 시험은 Windows가 아닐 때만 | 그 OS에서만 |
-| **CI에 없는 조건** | `BPM_TEST_AUTOSTART=1` 작업 스케줄러, **트레이가 있는 데스크톱 세션** | 개발 PC에서 조건을 갖추면 |
-
-트레이가 필요한 「도구」 → 「확장...」(BUI-01·BUI-11)은 그래서 **양쪽 모두** 건너뛴다. 거꾸로 트레이가 **없어야** 도는 U15 알림 자리 시험은 양쪽에서 돈다.
+| **CI에 없는 조건** | `BPM_TEST_AUTOSTART=1` 작업 스케줄러 | 개발 PC에서 조건을 갖추면 |
 
 그래서 같은 시험 묶음이라도 **OS마다 건너뛰는 것이 다르다** — 셈은 CI가 말해 준 값으로만 적는다.
 
-**그런데 CI의 Windows 잡은 같은 묶음이 아니다 — 서버 시험을 뺀다** ([ADR-0104](decisions/0104-windows-ci-runs-the-client-side.md)). 서버(Center·서버 실행기·일꾼·서비스 앱·모의 앱·M7 묶음)는 Linux에서만 돌므로 그 시험들을 **`tests/server/`에 두고**([ADR-0129](decisions/0129-product-folders.md)), `conftest.py`가 그 폴더의 시험에 `server` 표시를 붙이며 Windows 잡은 `uv run pytest -m "not server"`로 돈다. 표시로 빠진 시험은 **건너뜀이 아니라 「선택 해제」**라 셈에 따로 나온다(`… deselected`). 그래서 Linux는 「통과 + 건너뜀 = 모은 시험 수」이고 Windows는 「통과 + 건너뜀 + 선택 해제 = 모은 시험 수」다 — 셈을 적을 때 그것으로 맞춰 본다.
+**CI는 Linux x86_64 하나다** ([ADR-0144](decisions/0144-remove-the-pc-runner.md)가 Windows 잡을 걷었다 — 볼 클라이언트가 없다). Windows 쪽 타입은 `mypy --platform win32`가, 인코딩 실수는 `tests/integration/test_generators_on_windows_encoding.py`가 **Linux에서** 본다.
 
-- **시험은 다섯 폴더 중 하나에 둔다** — `shared/`(계약·엔진·Qt 공용)·`server/`(Linux만)·`studio/`·`bot/`·`integration/`(제품을 가로지르는 것, 저장소 전체 검사). `server/` 밖은 Windows에서도 돈다. 시험 도우미(`stub_model.py`·`waiting.py` 등)는 `tests/` 바로 밑에 있고, `tests/` 바로 밑에 시험 파일을 두면 `test_ci_scope.py`가 막는다.
-- **엔진(`core`)과 PC 쪽 코드가 걸린 시험은 `server/`에 두지 않는다** — PC BPM 프로세스는 Windows에서 엔진을 돌린다. `tests/integration/test_ci_scope.py`가 서버 파일이 PC 실행기·Studio·Qt 코드를 import하지 않는지 본다.
-- Windows 개발 PC에서 CI와 같은 것을 보려면 `uv run pytest -m "not server"`, 전부는 그냥 `uv run pytest`다.
+- **시험은 네 폴더 중 하나에 둔다** — `shared/`(계약·엔진·Qt 공용)·`server/`(Linux만)·`studio/`·`integration/`(제품을 가로지르는 것, 저장소 전체 검사). 시험 도우미(`stub_model.py`·`waiting.py` 등)는 `tests/` 바로 밑에 있고, `tests/` 바로 밑에 시험 파일을 두면 `test_ci_scope.py`가 막는다.
+- **서버 시험은 Qt를 끌고 오지 않는다** — 서버 컨테이너에 PySide6가 없다. `tests/integration/test_ci_scope.py`가 서버 파일이 Studio·Qt 코드를 import하지 않는지 본다.
+- `server` 표시는 남아 있어 `uv run pytest -m "not server"`로 서버 시험을 뺄 수 있다 (`tests/ci_scope.py`).
 
 ### Qt 창 시험에 `TestClient`를 붙이지 않는다
 
@@ -277,7 +269,7 @@ exit 139). 죽는 자리는 **돌던 시험과 무관한 곳**이라 — 우리 
 - [x] Windows에서 clone → `uv sync` → 테스트 통과 (CI `windows-latest` = Windows Server, 그리고 **Windows 11 데스크톱**에서 이 문서만 따라 해 봤다 — 아래 실행 기록)
 - [x] Linux에서 clone → `uv sync` → 테스트 통과 (CI `ubuntu-latest` x86_64 + 개발 PC aarch64)
 - [ ] Windows에서 Studio 창이 뜬다
-- [ ] Linux 서버의 Center에 Windows PC 실행기가 Center API 키로 등록·하트비트한다
+- [ ] Linux 서버의 Center에 서버 실행기가 Center API 키로 등록·하트비트한다
 
 ### 실행 기록 — Windows 11 데스크톱에서 이 문서만 보고 (2026-10-13)
 

@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from bpm.contracts.bot_ui import JobAck
+from bpm.contracts.runner import JobAck
 from bpm.core.seen import CAP, GRACE_CYCLES, Seen
 
 

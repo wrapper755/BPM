@@ -10,7 +10,6 @@
   <bpmn:process id="Proc_bx21_leave_request" name="휴가 신청" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "hris",

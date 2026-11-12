@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx18_parallel_loop" name="병렬 반복" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "web-reader",

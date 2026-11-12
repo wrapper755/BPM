@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 대체됨([ADR-0143](0143-design-happens-in-the-console.md)) — 원래 수락. 공유 BPM 프로세스 설치는 서버의 작업 폴더에 한다 |
 | 날짜 | 2026-10-12 |
 | 관련 | C1 §패키지 구성·`requires.libs`, C5, C14 B14, [ADR-0019](0019-package-names.md), [ADR-0022](0022-studio-canvas.md), [ADR-0030](0030-ai-task-tools.md), STU-03·STU-11·STU-12, `docs/09-gaps.md` §4-5 |
 

@@ -29,10 +29,9 @@ import {
   sortGroups,
   statusFilterOf,
   type BotRow,
-  deployedPcs,
+  deployedRunners,
   elapsed,
   percent,
-  placeOf,
   queueReason,
   readinessLabel,
   resumes,
@@ -139,34 +138,33 @@ describe("summarize", () => {
   });
 });
 
-describe("deployedPcs", () => {
+describe("deployedRunners", () => {
   function deployment(over: Partial<DeploymentInfo> = {}): DeploymentInfo {
     return {
       deployment_id: `dep_${Math.random()}`,
       bpm_process_id: BOT,
       version: "1.0.0",
-      target: { type: "bot_ui", id: "bui_1111" },
+      target: { type: "server_runner", id: "srv_1111" },
       ...over,
     } as DeploymentInfo;
   }
 
-  it("같은 PC에 두 번 걸려 있으면 **PC 수보다 건수가 크다**", () => {
-    const found = deployedPcs([deployment(), deployment()], BOT, "1.0.0");
-    expect(found).toEqual({ pcs: 1, deployments: 2 });
+  it("같은 실행기에 두 번 걸려 있으면 **실행기 수보다 건수가 크다**", () => {
+    const found = deployedRunners([deployment(), deployment()], BOT, "1.0.0");
+    expect(found).toEqual({ runners: 1, deployments: 2 });
   });
 
-  it("다른 판·다른 프로세스·서버 대상은 세지 않는다 (열 이름이 「배포된 PC 실행기」다)", () => {
-    const found = deployedPcs(
+  it("다른 판·다른 프로세스는 세지 않는다", () => {
+    const found = deployedRunners(
       [
-        deployment({ target: { type: "bot_ui", id: "bui_2222" } }),
+        deployment(),
         deployment({ version: "2.0.0" }),
         deployment({ bpm_process_id: "other" }),
-        deployment({ target: { type: "server_runner", id: "*" } }),
       ],
       BOT,
       "1.0.0",
     );
-    expect(found).toEqual({ pcs: 1, deployments: 1 });
+    expect(found).toEqual({ runners: 1, deployments: 1 });
   });
 });
 
@@ -456,15 +454,6 @@ describe("resumes", () => {
   });
 });
 
-describe("placeOf", () => {
-  it("PC라고 적은 것만 PC — 생략은 서버다 (C1 서버 우선)", () => {
-    expect(placeOf("pc")).toBe("pc");
-    expect(placeOf("server")).toBe("server");
-    expect(placeOf(null)).toBe("server");
-    expect(placeOf(undefined)).toBe("server");
-  });
-});
-
 // ─────────────────────────── CON-02 「일정」·CON-01 「외부 작업」 ───────────────────────────
 
 describe("CON-02 일정 (C5 §일정)", () => {
@@ -476,11 +465,10 @@ describe("CON-02 일정 (C5 §일정)", () => {
     timezone: "Asia/Seoul",
     last_missed: 0,
   } as ScheduleInfo;
-  const pc = { ...server, bpm_process_id: "fin.tax", target_type: "bot_ui", target_id: "pc_1" } as ScheduleInfo;
+  const other = { ...server, bpm_process_id: "fin.tax", target_type: "something" } as ScheduleInfo;
 
-  it("탭은 대상 종류로 가른다", () => {
-    expect(schedulesOf([server, pc], "server")).toEqual([server]);
-    expect(schedulesOf([server, pc], "pc")).toEqual([pc]);
+  it("대상이 실행기인 것만 본다", () => {
+    expect(schedulesOf([server, other])).toEqual([server]);
   });
 
   it("결과는 작업 상태, 거부는 코드, 읽지 못한 식은 다시 올리라고 한다", () => {
@@ -523,7 +511,7 @@ function version(id: string, ver: string, over: Partial<BotRow> = {}): BotRow {
     run_location: null,
     blocked: 0,
     blocked_codes: [],
-    pcs: 0,
+    runners: 0,
     deployments: 0,
     missing: [],
     ...NO_RUNS,

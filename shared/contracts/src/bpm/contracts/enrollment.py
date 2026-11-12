@@ -1,6 +1,6 @@
 """등록 요청과 승인 — 키는 Center가 만들어 봉해 내려 준다 (C4·C12 §등록 요청과 승인, C5 §등록 승인).
 
-단일 원본: `docs/03-contracts/C4-bot-ui-center.md` 「등록 요청과 승인」,
+단일 원본: `docs/03-contracts/C4-runner-center.md` 「등록 요청과 승인」,
 [ADR-0092](../../../../../docs/decisions/0092-keys-are-issued-and-delivered-by-center.md).
 
 설치하는 사람은 Center 주소만 넣는다. 현장이 키 쌍을 만들어 요청하고, 관리자가 **요청 코드**를
@@ -14,8 +14,7 @@
   키 회전이 같은 것을 쓴다.
 - 오가는 모양 (요청 상태·콘솔이 보는 한 줄·결정).
 
-PC 실행기·서버 실행기의 요청 본문은 각자의 `RegisterRequest`에 `public_key`를 더한 것이라 그쪽
-모듈(`bot_ui`·`server_runner`)에 있다.
+실행기의 요청 본문은 그 `RegisterRequest`에 `public_key`를 더한 것이라 `server_runner`에 있다.
 """
 
 from __future__ import annotations
@@ -47,15 +46,14 @@ POLL_AFTER_S = 10
 RATE_WINDOW_S = 600
 RATE_MAX = 10
 QUEUE_MAX = 200
-#: 키 회전 (C4 §키 회전) — 만료 14일 전부터 새 키를 싣는다. 회전을 받는 PC는 7일 전까지 새 키가
-#: 오지 않았을 때만 BUI-05로 알린다.
+#: 키 회전 (C4 §키 회전) — 만료 14일 전부터 새 키를 싣는다.
 ROTATE_BEFORE_DAYS = 14
 ROTATE_NOTICE_DAYS = 7
 #: 거절 사유 길이 (C5).
 REASON_MAX = 200
 
 #: 요청할 수 있는 종류 — 만드는 키 종류와 같다 (C7). Studio도 같은 길이다 (ADR-0093).
-ENROLLMENT_TYPES = frozenset({"bot_ui", "server_runner", "studio"})  # 일꾼은 일꾼 폴더로만 (ADR-0122)
+ENROLLMENT_TYPES = frozenset({"server_runner", "studio"})  # 일꾼은 일꾼 폴더로만 (ADR-0122)
 #: 알려진 상태 (열린 문자열).
 KNOWN_ENROLLMENT_STATES = frozenset({"pending", "approved", "rejected", "expired"})
 
@@ -173,7 +171,7 @@ class StudioVersions(ContractModel):
 class StudioEnrollRequest(SchemaVersioned):
     """`POST /api/v1/studio/enroll` — Studio의 등록 요청 (C5 §Studio 등록 요청과 승인, ADR-0093).
 
-    PC 실행기의 `EnrollRequest`와 같은 결이다 — 등록(`register`)이 없는 Studio라 그 칸만 따로 둔다.
+    실행기의 `EnrollRequest`와 같은 결이다 — 등록(`register`)이 없는 Studio라 그 칸만 따로 둔다.
     """
 
     machine_id: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
@@ -242,7 +240,7 @@ class EnrollmentApproveRequest(ContractModel):
     """`POST /enrollments/{id}/approve` — `name`을 비우면 요청의 이름을 쓴다."""
 
     name: str | None = None
-    #: 그 장비가 속할 회사 (C16, ADR-0125 §2). PC 실행기·Studio는 **필수**가 되고(구현 조각 2),
+    #: 그 장비가 속할 회사 (C16, ADR-0125 §2). Studio는 **필수**가 되고(구현 조각 2),
     #: 서버 실행기는 Center 공용이라 적지 않는다.
     company: str | None = None
 

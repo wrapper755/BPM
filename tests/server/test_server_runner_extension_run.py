@@ -53,7 +53,7 @@ PROCESS = """<?xml version="1.0" encoding="UTF-8"?>
                   targetNamespace="urn:chaeksas:test">
   <bpmn:process id="Proc_doc_summary" name="문서 요약" isExecutable="true">
     <bpmn:extensionElements>
-      <bpm:process>{"run_location": "server", "service_keys": {},
+      <bpm:process>{"service_keys": {},
         "extensions": [], "outputs": [], "inputs": []}</bpm:process>
     </bpmn:extensionElements>
     <bpmn:startEvent id="Start" />
@@ -69,7 +69,7 @@ PROCESS = """<?xml version="1.0" encoding="UTF-8"?>
 </bpmn:definitions>
 """
 
-#: **서버에서 돈다고 선언한** 태스크 종류 하나 (ADR-0064 — 그 약속이 `run_locations`다).
+#: 태스크 종류 하나 — 확장이 기여한다 (C13).
 #: 런타임도 함께 선언한다 — 서버는 그것을 **띄우지 않으므로** 예약 키가 비어 있어야 한다.
 DEFINITION: dict[str, Any] = {
     "schema": 2,
@@ -85,7 +85,6 @@ DEFINITION: dict[str, Any] = {
                 "id": "sum_task",
                 "label": "요약",
                 "executor": {"entry": "fake_server_extension:ServerTaskExecutor"},
-                "run_locations": ["server"],
             }
         ],
         "bot_ui.local_runtimes": [
@@ -136,7 +135,7 @@ def key(center: TestClient) -> str:
 @pytest.fixture
 def host() -> ExtensionHost:
     """가짜 확장을 실은 호스트 — **실행 위치를 쥔다** (`ext.load()`가 짓는 것과 같은 꼴)."""
-    found = ExtensionHost(run_location="server")
+    found = ExtensionHost()
     loaded = found.add_installed(
         json.dumps(DEFINITION).encode("utf-8"), origin="test", root="fake_server_extension"
     )
@@ -164,13 +163,12 @@ def package_zip() -> bytes:
         "id": BOT,
         "version": VERSION,
         "name": "문서 요약",
-        "run_location": "server",
         "entry": "process/main.bpmn",
         "process_id": PROCESS_ID,
         "requires": {
             "extensions": [{"id": EXTENSION, "version": ">=1,<2"}],
             # **실행 위치를 적는다** (C1 R2 — 서버 그림이 쓰는 종류는 서버에서 돌아야 한다).
-            "task_types": [{"id": "sum_task", "extension": EXTENSION, "run_locations": ["server"]}],
+            "task_types": [{"id": "sum_task", "extension": EXTENSION}],
         },
         "human": {},
         "built": {"by": "studio", "at": AT, "core": "0.1.0", "spec_version": 1},
@@ -270,7 +268,7 @@ def test_an_extension_task_runs_to_the_end_on_the_server(
     assert made.status_code in (200, 201), made.text
     drain(runner)
 
-    assert fake_server_extension.CALLS == [("Task_Sum", "server", None)]
+    assert fake_server_extension.CALLS == [("Task_Sum", None)]
 
     job = center.get(f"/api/v1/jobs/{made.json()['job_id']}", headers=ADMIN)
     assert job.json()["run_status"] == "success"

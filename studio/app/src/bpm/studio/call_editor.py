@@ -1,13 +1,13 @@
-"""STU-04 호출 편집기 — `callActivity`의 `calledElement`와 `bpm:call` (C14, ADR-0062).
+"""STU-04 호출 편집기 — `callActivity`의 `calledElement`와 `bpm:call` (C14, ADR-0082).
 
 속성 패널이 Call Activity를 만나면 탭으로 끼운다. **규약은 결재·STU-14와 같다**
 (`load`/`dump`/`problems`/`changed`) — 다른 것은 하나다: 고치는 것이 **표준 속성 하나와 `bpm:` 요소
 하나**라 `dump()`가 `{"calledElement": 글, "call": 본문}`을 준다.
 
 - 갈래가 둘이다 — **이 패키지에서 부르기**(이 패키지의 정의·`libs/`에 받아 둔 공유 정의, 엔진이
-  `RunEnv.processes`로 찾는 것과 같다)와 **다른 BPM 프로세스에 맡기기**(`delegate` — 실행 위치가 서버일 때만,
-  B14). 갈래를 바꾸면 다른 쪽 설정은 지운다(위임이 남으면 엔진은 `calledElement`를 보지 않는다).
-- **기한·「실패하면」 칸을 두지 않는다** (ADR-0062 §3) — 기한은 타이머 경계, 실패는 오류 경계다.
+  `RunEnv.processes`로 찾는 것과 같다)와 **다른 BPM 프로세스에 맡기기**(`delegate`, ADR-0082).
+  갈래를 바꾸면 다른 쪽 설정은 지운다(맡기기가 남으면 엔진은 `calledElement`를 보지 않는다).
+- **기한·「실패하면」 칸을 두지 않는다** — 기한은 타이머 경계, 실패는 오류 경계다.
 - 「채우기」는 **대상이 선언한 것**에서 오고 **빈 자리만** 더한다(있는 줄을 덮지 않는다).
 - **적어 둔 것을 조용히 바꾸지 않는다.** 편집기가 다루지 않는 칸은 읽은 그대로 돌려준다.
 - 「적용」을 막는 것은 **엔진·검사·Center가 거부할 것**뿐이다. 대상을 모르면(Center를 못 읽었다)
@@ -61,8 +61,6 @@ VISIBLE_ROWS = 3
 
 HERE = "이 패키지"
 NOT_IN_PACKAGE = "(패키지에 없음)"
-PC_NO_DELEGATE = "PC BPM 프로세스에서는 위임할 수 없습니다 (실행 전 검사 B14)."
-SERVER_BOT_NO_PC = "대상이 서버 BPM 프로세스라 PC를 고르지 않습니다 — 적으면 Center가 거절합니다 (bot_ui_for_server)."
 BOUNDARY_NOTE = (
     "기한은 타이머(중단) 경계, 실패는 오류 경계로 받습니다 (위임 실패는 DELEGATION_FAILED) — 경계를 다세요."
 )
@@ -87,7 +85,7 @@ def local_targets(process: BpmProcess | None) -> dict[str, CallTarget] | None:
 
 
 class CallEditor(QWidget):
-    """Call Activity 하나. `run_location`이 `server`가 아니면 위임을 끈다 (B14 — 적지 않은 것도)."""
+    """Call Activity 하나."""
 
     changed = Signal()
 
@@ -95,12 +93,10 @@ class CallEditor(QWidget):
         self,
         parent: QWidget | None = None,
         *,
-        run_location: str | None = None,
         targets: Mapping[str, CallTarget] | None = None,
         bots: Mapping[str, CallTarget] | None = None,
     ) -> None:
         super().__init__(parent)
-        self.run_location = run_location
         #: 이 패키지에서 부를 수 있는 것. `None`이면 모른다 (대조를 건너뛴다).
         self.targets = None if targets is None else dict(targets)
         #: 위임으로 부를 수 있는 BPM 프로세스 (Center). 비어 있으면 모른다.
@@ -131,11 +127,6 @@ class CallEditor(QWidget):
             self.bot_box.addItem(target.label, target.id)
         self.version_box = QLineEdit(self)
         self.version_box.setPlaceholderText("비우면 배포된 판")
-        self.bot_ui_box = QLineEdit(self)
-        self.bot_ui_box.setPlaceholderText("식 — 비우면 Center가 고릅니다")
-        self.bot_ui_note = QLabel("", self)
-        self.bot_ui_note.setWordWrap(True)
-        set_role(self.bot_ui_note, "muted")
 
         self.target_note = QLabel("", self)
         self.target_note.setWordWrap(True)
@@ -199,8 +190,6 @@ class CallEditor(QWidget):
         _tight(form)
         form.addRow("BPM 프로세스", self.bot_box)
         form.addRow("판", self.version_box)
-        form.addRow("대상 PC", self.bot_ui_box)
-        form.addRow("", self.bot_ui_note)
         layout.addWidget(self.delegate_box)
 
         layout.addWidget(self.target_note)
@@ -219,8 +208,7 @@ class CallEditor(QWidget):
         self.mode_group.buttonToggled.connect(self._touched)
         self.target_box.currentIndexChanged.connect(self._touched)
         self.bot_box.currentTextChanged.connect(self._touched)
-        for line in (self.version_box, self.bot_ui_box):
-            line.textChanged.connect(self._touched)
+        self.version_box.textChanged.connect(self._touched)
         for table in (self.inputs, self.outputs):
             table.itemChanged.connect(self._touched)
         self.add_input.clicked.connect(lambda: self._add_row(self.inputs))
@@ -257,7 +245,6 @@ class CallEditor(QWidget):
         else:
             self.bot_box.setEditText(bot)
         self.version_box.setText(str((delegate or {}).get("version") or ""))
-        self.bot_ui_box.setText(str((delegate or {}).get("bot_ui") or ""))
         self.mode_picks[MODE_DELEGATE if delegate is not None else MODE_LOCAL].setChecked(True)
 
         _fill(self.inputs, _pairs(self._loaded.get("input")))
@@ -294,7 +281,6 @@ class CallEditor(QWidget):
             changed = bot != str(delegate.get("bpm_process_id") or "")
             delegate["bpm_process_id"] = bot
             _put(delegate, "version", self.version_box.text().strip() or None)
-            _put(delegate, "bot_ui", self.bot_ui_box.text().strip() or None)
             call["delegate"] = delegate
             found = self.bots.get(bot)
             # **읽는 사람에게 뜻이 있다** (C14) — BPM 프로세스를 바꿀 때만 그 BPM 프로세스의 진입 process id를 적는다.
@@ -314,12 +300,8 @@ class CallEditor(QWidget):
         warnings: list[str] = []
         target = self.target()
         if self.mode() == MODE_DELEGATE:
-            if self.run_location != "server":
-                errors.append(PC_NO_DELEGATE)
             if not self.bot_id():
                 errors.append("맡길 BPM 프로세스를 고르세요 (bpm_process_id).")
-            if target is not None and target.run_location == "server" and self.bot_ui_box.text().strip():
-                errors.append(SERVER_BOT_NO_PC)
         else:
             called = str(self.target_box.currentData() or "")
             if not called:
@@ -431,20 +413,10 @@ class CallEditor(QWidget):
 
     def _refresh(self) -> None:
         delegating = self.mode() == MODE_DELEGATE
-        # B14와 같은 판정 — 실행 위치를 적지 않은 그림도 위임을 쓸 수 없다.
-        server = self.run_location == "server"
-        # 이미 적힌 위임은 끄지 않는다 — 지우지 않고 「적용」을 막는다 (B14).
-        self.mode_picks[MODE_DELEGATE].setEnabled(server or delegating)
-        self.mode_note.setText("" if server else PC_NO_DELEGATE)
-        self.mode_note.setVisible(not server)
         self.target_box.setEnabled(not delegating)
         self.delegate_box.setVisible(delegating)
 
         target = self.target()
-        server_bot = delegating and target is not None and target.run_location == "server"
-        self.bot_ui_box.setEnabled(not server_bot or bool(self.bot_ui_box.text().strip()))
-        self.bot_ui_note.setText(SERVER_BOT_NO_PC if server_bot else "")
-        self.bot_ui_note.setVisible(server_bot)
 
         known = target is not None
         for one in (self.fill_inputs, self.fill_outputs):
@@ -552,8 +524,6 @@ __all__ = [
     "BOUNDARY_NOTE",
     "MODE_DELEGATE",
     "MODE_LOCAL",
-    "PC_NO_DELEGATE",
-    "SERVER_BOT_NO_PC",
     "TAB_LABEL",
     "CallEditor",
     "local_targets",

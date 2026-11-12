@@ -1,7 +1,7 @@
-"""데스크톱 앱을 묶는다 — Studio·PC 실행기 ([ADR-0024](../docs/decisions/0024-desktop-packaging-extensions.md)).
+"""데스크톱 앱을 묶는다 — Studio ([ADR-0024](../docs/decisions/0024-desktop-packaging-extensions.md)).
 
     uv run --group build python packaging/build.py              # 둘 다
-    uv run --group build python packaging/build.py bot-ui       # 하나만
+    uv run --group build python packaging/build.py studio       # 하나만
     uv run --group build python packaging/build.py --want <확장 id>
     uv run --group build python packaging/build.py --version 0.2.0
     uv run --group build python packaging/build.py --installer      # Windows에서만 — 설치 파일까지
@@ -48,7 +48,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from bpm.bot_ui.autostart import TASK_NAME
 from bpm.core.build_info import STAMP_NAME, Stamp, package_version, valid_version
 
 # **한글을 찍는 CLI는 stdout도 UTF-8로 고정한다** (CLAUDE.md §5) — Windows 기본 코드페이지
@@ -89,14 +88,6 @@ class App:
 
 
 APPS = (
-    App(
-        "bot-ui", "BPMBot", "botui_main.py", "bpm-bot-ui",
-        app_id="2F476024-75DF-4DDE-A28C-A05E0E1909CB",
-        title="BPM PC 실행기",
-        dir_name="BotUI",
-        # 이름은 앱이 쓰는 그 자리에서 읽는다 — 베끼면 이름을 바꿀 때 지우지 못한 작업이 남는다.
-        autostart_task=TASK_NAME,
-    ),
     App(
         "studio", "BPMStudio", "studio_main.py", "bpm-studio",
         app_id="AAAE763A-0A3C-4675-BCFB-16CB6B53C0C3",
@@ -304,7 +295,7 @@ def check_install(app: App, setup: Path, want: list[str], version: str) -> float
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="데스크톱 앱 묶기 (ADR-0024)")
-    parser.add_argument("apps", nargs="*", choices=[one.key for one in APPS], help="비우면 둘 다")
+    parser.add_argument("apps", nargs="*", choices=[one.key for one in APPS], help="비우면 전부")
     parser.add_argument("--want", default="", help="묶음에 켜져 있어야 하는 확장 id (쉼표로 여럿)")
     parser.add_argument("--keep", action="store_true", help="이전 산출물을 지우지 않는다")
     parser.add_argument("--version", default=None, help="찍을 판 (비우면 태그 또는 <core 판>+g<커밋>)")

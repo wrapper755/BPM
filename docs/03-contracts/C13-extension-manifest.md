@@ -2,9 +2,9 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **구현됨** (2026-10-12). 모델·검사 규칙(E1~E7)과 **기여 지점마다 읽는 쪽**이 있다 — 확장 호스트(`core.extensions`), Studio(팔레트·편집기·`studio.resource_views`), PC 실행기(확장별 설정·사전 점검), 콘솔(`console.pages` 생성물), Center(외부 확장 등록). **지금 설치 파일에 든 내장 확장은 없다** — 호스트 규칙은 시험용 가짜 확장으로 본다 ([ADR-0114](../decisions/0114-remove-ui-automation.md)) |
+| 상태 | **구현됨** (2026-10-12). 모델·검사 규칙(E1~E7)과 **기여 지점마다 읽는 쪽**이 있다 — 확장 호스트(`core.extensions`), Studio(팔레트·편집기·`studio.resource_views`), 서버 실행기(확장별 설정·사전 점검), 콘솔(`console.pages` 생성물), Center(외부 확장 등록). **지금 설치 파일에 든 내장 확장은 없다** — 호스트 규칙은 시험용 가짜 확장으로 본다 ([ADR-0114](../decisions/0114-remove-ui-automation.md)) |
 | schema | 2 (1은 옛 기여 지점의 명령 배열을 쓰던 것 — 아래 변경 이력) |
-| 보내는 쪽 → 받는 쪽 | 확장 작성자 → Studio·PC 실행기·실행기·서버 실행기(확장 호스트), Center(리소스 목록·검사), 관리 콘솔 |
+| 보내는 쪽 → 받는 쪽 | 확장 작성자 → Studio·서버 실행기(확장 호스트), Center(리소스 목록·검사), 관리 콘솔 |
 | 코드 위치 | `bpm.contracts.extension`, 인터페이스 `shared/extension_api/`, 호스트 `bpm.core.extensions` |
 | 관련 ADR | [0018](../decisions/0018-extensions.md), [0010](../decisions/0010-service-apps.md), [0013](../decisions/0013-api-keys.md), [0041](../decisions/0041-extension-run-events.md), [0042](../decisions/0042-extension-contributed-panels.md), [0112](../decisions/0112-escalation-review-from-extensions.md), [0114](../decisions/0114-remove-ui-automation.md) |
 | 관련 화면 | BUI-03·11, STU-03·14·15, SVC-00 |
@@ -15,7 +15,7 @@
 >
 > **HTTP 어댑터 해석기(§4-2·§4-3)가 돈다** (M5 조각 11) — `bpm.core.http_adapter`. 템플릿은 위치마다 다르게 채우고(경로는 조각 하나로 퍼센트 인코딩, 헤더는 제어 문자·`Authorization`/`Host`/`Cookie` 거부, 본문은 **칸 전체가 슬롯이면 값 그대로**), 나가기 전에 `allowed_hosts` → **DNS 한 번 풀어 그 IP로** → 사설·루프백 → https를 본다. 리다이렉트를 따라가지 않고, `max_response_kb`는 **읽는 동안** 끊는다. 키는 참조 이름으로 받아 이 PC에서 풀고 **ASCII가 아니면 거절한다**(헤더에 넣을 수 없다). `AdapterCaller`가 `ServiceCaller` 자리에 들어가므로 **엔진은 서비스 앱인지 외부 앱인지 모른다**.
 >
-> **실행하는 쪽은 정의만 본다** ([ADR-0102](../decisions/0102-calling-outside-is-pull.md)) — 외부 앱을 **부르는 것은 어댑터 일꾼**이고 실행하는 쪽은 C15로 올린다. 그래도 PC 실행기·서버 실행기·Studio는 BPM 프로세스를 띄우기 **전에** `GET /resources/extensions/{id}`(정의·봉투)를 받아 `bpm.core.app_directory`로 **봉투를 다시 검증하고**(E6) **패키지가 고정한 `definition_hash`와 대조해**(C1) 다르면 **시작조차 하지 않는다** — 중간에 알면 이미 한 일을 되돌릴 수 없다. 닿지 못하면 들고 있던 것을 쓰고(ADR-0007), 404는 버린다(철회는 보안 동작이다). 묻는 대상은 매니페스트의 `requires.extensions` **전부**이고 어느 것이 외부인가는 Center의 답이 말해 준다. **서비스 앱 주소는 받지 않는다** — 누구도 들지 않는다.
+> **실행하는 쪽은 정의만 본다** ([ADR-0102](../decisions/0102-calling-outside-is-pull.md)) — 외부 앱을 **부르는 것은 어댑터 일꾼**이고 실행하는 쪽은 C15로 올린다. 그래도 서버 실행기·Studio는 BPM 프로세스를 띄우기 **전에** `GET /resources/extensions/{id}`(정의·봉투)를 받아 `bpm.core.app_directory`로 **봉투를 다시 검증하고**(E6) **패키지가 고정한 `definition_hash`와 대조해**(C1) 다르면 **시작조차 하지 않는다** — 중간에 알면 이미 한 일을 되돌릴 수 없다. 닿지 못하면 들고 있던 것을 쓰고(ADR-0007), 404는 버린다(철회는 보안 동작이다). 묻는 대상은 매니페스트의 `requires.extensions` **전부**이고 어느 것이 외부인가는 Center의 답이 말해 준다. **서비스 앱 주소는 받지 않는다** — 누구도 들지 않는다.
 >
 > **어댑터 일꾼**(`bpm-adapter-consumer`, `server/adapter_consumer`)은 같은 정의를 일꾼 토큰으로 받아 봉투를 다시 검증하고 §4를 돌린다. **주소·키는 그 일꾼의 설정이 쥔다** — 확장마다 `BPM_ADAPTER__EXT__<확장>__BASE_URL`(없으면 정의의 `base_url`)·`…__KEY`(키를 받는 앱만)·`…__TEST_BASE_URL`·`…__TEST_KEY`(시험 일감 — `origin: test` — 에 쓴다, 없으면 운영 쪽)·`BPM_ADAPTER__ALLOW_PRIVATE_NETWORK`(정의가 허용해도 일꾼 설정이 또 열어야 사설 IP로 나간다 — 기본 닫힘). OAuth·mTLS 같은 인증을 늘리는 일도 이 일꾼 안의 일이다.
 
@@ -32,7 +32,7 @@
 - 확장 패키지 안에 `extension.json`을 둔다. 확장 호스트가 엔트리 포인트 `bpm.extensions`로 찾는다.
   - **파이썬 패키지 안**이다 (`extensions/<id>/src/bpm/ext/<id>/extension.json`). 호스트가 `importlib.resources`로 읽으므로, 패키지 밖에 두면 설치 파일로 묶은 뒤 사라진다 ([ADR-0024](../decisions/0024-desktop-packaging-extensions.md)).
 - 정의는 설치 파일에 들어 있으므로 서명된 설치 파일이 곧 신뢰의 근거다.
-- 실행하는 쪽(PC 실행기, 서버 실행기)은 설치된 확장의 `{id, version, definition_hash}`를 Center에 보고한다 (C4·C12 `extensions`).
+- 실행하는 쪽(서버 실행기)은 설치된 확장의 `{id, version, definition_hash}`를 Center에 보고한다 (C4·C12 `extensions`).
 - 서버 부분이 있으면 그 서비스 앱의 `/manifest`가 `extension: {id, version, definition_hash}`를 싣는다 (C11).
 
 ### 외부 확장
@@ -52,7 +52,7 @@
 | `PUT /api/v1/consumers/self/extension` `{definition}` | 일꾼 토큰 (그 토픽) — Center가 C2 `extension` 봉투에 서명한다 | 외부 확장 등록 (C15) |
 | `POST·PUT·DELETE /api/v1/resources/extensions…` | Center 관리자 — Center가 서명한다 | HTTP 어댑터 앱 만들기·고치기·내리기 (C7, ADR-0141) |
 | `GET /api/v1/consumers/self/extensions` | 일꾼 토큰 | 원본 `console`인 맡은 정의 받기 (C15) |
-| `GET /api/v1/resources?type=extension` | 읽기·관리자 토큰, Studio·PC 실행기·서버 실행기 키 (C5 권한표) | 목록 |
+| `GET /api/v1/resources?type=extension` | 읽기·관리자 토큰, Studio·서버 실행기 키 (C5 권한표) | 목록 |
 | `GET /api/v1/resources/extensions/{id}` | 같음 | 하나 (외부면 정의와 봉투 포함) |
 
 - **실행하는 쪽은 받은 외부 정의의 봉투를 다시 검증한다** (C2 V1~V3, `definition_hash` 일치). 검증되지 않은 정의는 쓰지 않는다.
@@ -97,21 +97,19 @@
 
 | 키 | 모양 | 누가 쓰나 | 외부 확장 |
 | --- | --- | --- | --- |
-| `task_types` | `[{id, label, icon, bpmn: "serviceTask", editor, executor, run_locations}]` | Studio 팔레트·속성 패널, 실행기 | 불가 (서비스 앱 태스크로 씀) |
+| `task_types` | `[{id, label, icon, bpmn: "serviceTask", editor, executor}]` | Studio 팔레트·속성 패널, 실행기 | 불가 (서비스 앱 태스크로 씀) |
 | `studio.editors` | `[{task_type, entry}]` | Studio | 불가 (자동 폼) |
 | `studio.resource_views` | `[{id, label, resource_type, creates_task_type?, creates_task_field?}]` | STU-03 | 가능 (선언) |
-| `configuration` | `[{key, label, scope, schema, secret}]` | 설정 화면 칸 (BUI-03 「확장별 설정」, STU-10, 서버 실행기 설정) | 불가 |
-| `preflight` | `[{id, entry}]` | Studio·PC 실행기·서버 실행기 사전 점검 | 불가 |
+| `configuration` | `[{key, label, scope, schema, secret}]` | 설정 화면 칸 (STU-10, 서버 실행기 설정) | 불가 |
+| `preflight` | `[{id, entry}]` | Studio·서버 실행기 사전 점검 | 불가 |
 | `console.pages` | `[{id, label, module}]` | 서비스 앱 관리 콘솔 | 불가 (자기 콘솔 링크만) |
 | `resources` | `[{type, label, catalog_url}]` | Center 리소스 목록 (C7) | 가능 |
 
-**걷은 기여 지점** — `bot_ui.utilities`·`tool_ui.tools`·`bot_ui.panels`·`bot_ui.local_runtimes`·`agent_environments`는 아무 호스트도 읽지 않는다 ([ADR-0114](../decisions/0114-remove-ui-automation.md)). 정의에 적혀 있으면 호스트가 **경고 한 줄**을 남기고(`LEGACY_CONTRIBUTION_KEYS` — 모르는 열쇠라고 조용히 사라지지 않게) 그 열쇠만 읽지 않는다. 그 열쇠 하나로 확장을 끄지는 않는다.
+**걷은 기여 지점** — `bot_ui.utilities`·`tool_ui.tools`·`bot_ui.panels`·`bot_ui.local_runtimes`·`agent_environments`는 아무 호스트도 읽지 않는다 ([ADR-0114](../decisions/0114-remove-ui-automation.md), [ADR-0144](../decisions/0144-remove-the-pc-runner.md)). 정의에 적혀 있으면 호스트가 **경고 한 줄**을 남기고(`LEGACY_CONTRIBUTION_KEYS` — 모르는 열쇠라고 조용히 사라지지 않게) 그 열쇠만 읽지 않는다. 그 열쇠 하나로 확장을 끄지는 않는다.
 
 필드 설명:
 
-- `run_locations`: 이 태스크 종류를 쓸 수 있는 실행 위치 (`pc`·`server`).
-  - **`server`를 적는 것은 「화면도, 그 PC에만 있는 자원도 필요 없다」는 약속이다** ([ADR-0064](../decisions/0064-extension-tasks-on-the-server.md)) — 서버 실행기는 동시 실행이 기본이고 현장 사람이 없다. 확장 저자만 아는 사실이라 플랫폼은 집행하지 못한다.
-  - 실행하는 쪽은 **제 실행 위치를 적지 않은 종류의 수행기를 내지 않는다.** 그런 BPM 프로세스는 시작 전에 사전 점검이 `task_types_wrong_location`으로 막는다 — 「그 확장이 없다」(`task_types_unsupported`)와 **다른 점검**이다(고치는 길이 다르다: 실행 위치를 PC로 바꾸거나 PC 위임으로 보낸다).
+- **태스크 종류에 실행 위치 칸이 없다** ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)) — 확장 태스크가 돌 자리는 **서버 실행기 하나**다. 그 종류를 서버에 두는 것은 「화면도, 그 PC에만 있는 자원도 필요 없다」는 약속이고([ADR-0064](../decisions/0064-extension-tasks-on-the-server.md)) 확장 저자만 아는 사실이라 플랫폼은 집행하지 못한다. 확장이 깔려 있지 않으면 사전 점검이 `task_types_unsupported`로 막는다.
 - `studio.resource_views`: 리소스 탐색기(STU-03)의 뿌리 하나. 목록은 **C7 기여 자원**(`resource_type`)에서 오고, Studio는 항목의 `name`·`summary`만 그린다 — **`data`를 해석하지 않는다** (§5). 그래서 기여 뿌리는 **한 단계**다.
   - `creates_task_type`(선택): 「캔버스에 추가」(끌어다 놓기)가 만들 **태스크 종류 id**. 없으면 그 뿌리에서 태스크를 만들 수 없다.
   - `creates_task_field`(선택): 새 태스크의 `data`에서 **자원 id를 받을 칸 이름**. 선언하면 Studio가 `{"<creates_task_field>": "<자원 id>"}`만 넣고 그 밖은 비운다 — 선언이 없으면 `data`를 비운 채 만들고 사람이 편집기에서 고른다. **플랫폼은 `data`의 모양을 모른다** — 선언대로만 넣는다.
@@ -121,10 +119,10 @@
   | --- | --- |
   | `storage.dir` | 이 확장이 **자기 파일을 둘 폴더** (호스트가 **제 데이터 폴더 아래에** 만들어 준다 — 앱마다 다른 자리다). 밀린 큐처럼 확장이 혼자 들고 있어야 하는 것을 여기 둔다. **비밀은 두지 않는다** (OS 비밀 저장소로 간다) |
   | `center.url` | **Center 주소** — 확장 클라이언트가 외부 작업(C15)을 올리는 곳 (ADR-0102). 서버 부분의 주소는 없다 |
-  | `center.call_token` | 비밀이라 설정이 아니라 **`ctx.secret("call_token")`**으로 푼다 — 호출 토큰 (C15). PC 실행기는 PC 실행기가 청한 것, Studio는 Studio가 청한 것 |
+  | `center.call_token` | 비밀이라 설정이 아니라 **`ctx.secret("call_token")`**으로 푼다 — 호출 토큰 (C15). 그 호스트가 제 키로 청한 것이다 |
 
   `center.`·`storage.`로 시작하는 키는 **호스트가 소유한다** — 확장이 `configuration`에 같은 이름을 선언하면 거부한다 (E7). 옛 머리 `service.`·`runtime.`도 계속 막는다 — 옛 확장이 그 이름으로 칸을 선언해 호스트의 값과 섞이지 않게.
-- `configuration`의 `scope`: `bot_ui`, `studio`, `server_runner` 중 하나. 그 밖의 값은 검사 오류 `unknown_scope`다.
+- `configuration`의 `scope`: `studio`, `server_runner` 중 하나. 그 밖의 값은 검사 오류 `unknown_scope`다 — `bot_ui`는 PC 실행기와 함께 걷었다 ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)).
 - `configuration`의 `schema`: JSON Schema. 확장이 설정 칸을 이것으로 선언한다.
 - **`secret: true`인 칸은 OS 비밀 저장소에 둔다** (ADR-0013). 설정 파일·로그에는 남기지 않는다. 서비스 앱 키는 없다 (ADR-0102, 아래 KeyNeed) — 비밀 칸은 바깥 도구의 암호 같은 것에만 쓴다.
 - `editor`: 두 가지 중 하나다.
@@ -245,10 +243,10 @@ Operation:
   "contributes": {
     "task_types": [{"id": "seal_check", "label": "인감 대조", "icon": "stamp", "bpmn": "serviceTask",
                     "editor": {"kind": "schema"},
-                    "executor": {"entry": "seal_check.client:SealCheckExecutor"}, "run_locations": ["pc", "server"]}],
+                    "executor": {"entry": "seal_check.client:SealCheckExecutor"}}],
     "studio.resource_views": [{"id": "seal-specimens", "label": "인감 견본", "resource_type": "seal_specimen",
                                "creates_task_type": "seal_check", "creates_task_field": "specimen_id"}],
-    "configuration": [{"key": "scan_dir", "label": "스캔 폴더", "scope": "bot_ui",
+    "configuration": [{"key": "scan_dir", "label": "스캔 폴더", "scope": "server_runner",
                        "schema": {"type": "string"}, "secret": false}],
     "preflight": [{"id": "specimens-registered", "entry": "seal_check.client:SpecimensRegisteredCheck"}],
     "console.pages": [{"id": "overview", "label": "개요", "module": "seal-check/overview"}],
@@ -311,6 +309,7 @@ Studio 「확장」(STU-15)의 「정의 파일 열기...」는 E1·E3을 로컬
 | 2026-11-08 | 2 | 연결 앱 카탈로그(CON-18) 칸 — 정의의 `app_group{id, name}`·`keywords`, `adapter.groups`와 작업의 `group`·`keywords`(모두 선택). E3가 없는 묶음 id를 거부한다. 선택 칸이라 schema는 그대로다 | [0138](../decisions/0138-console-app-catalog.md) |
 | 2026-11-08 | 2 | HTTP 어댑터 작업의 `kind`는 `api`다(기본, 다른 값은 검사 오류) — 선택 칸이라 schema는 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 2 | 외부 확장 등록은 **그 토픽의 일꾼이 정의를 올리는 것**이다(C15 `PUT …/self/extension`) — `POST/DELETE /resources/extensions`를 걷었다. 맡은 일꾼이 일꾼 폴더에서 빠지면 Center가 거둔다. 낮은 판은 409 `older_than_registered`. 정의 모양은 그대로다 | [0122](../decisions/0122-consumer-folder.md) |
+| 2026-11-12 | 2 | `task_types[].run_locations`와 `configuration.scope`의 `bot_ui`를 걷었다 — PC 실행기와 함께. 확장 태스크가 돌 자리가 서버 실행기 하나라 그 선언이 늘 `["server"]`이고, 사전 점검의 `task_types_wrong_location`도 사라졌다. 열쇠가 선택이라 schema는 그대로다 | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-10-31 | 2 | 기여 지점 `tool_ui.tools`·`bot_ui.panels`·`bot_ui.local_runtimes`·`agent_environments`, **E8**, 예약 키 `runtime.<id>.*`, `scope: tool_ui`, `requires_keys[].purpose: utility`를 걷었다 — UI 자동화 확장과 함께. 걷은 열쇠는 호스트가 경고하고 읽지 않는다(`LEGACY_CONTRIBUTION_KEYS`), E7은 옛 머리도 막는다. 열쇠가 모두 선택이라 schema는 그대로이고 `extension_api`는 **2.0.0**이다(이름을 지웠다 — 예시의 `api`는 `>=2,<3`) | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-30 | 2 | 수행기가 전환할 때 **사람에게 보일 검토 자료**(`TaskFailed(review=…)`)를 넘긴다 — `extension_api` **1.5**. 정의는 그대로다 | [0112](../decisions/0112-escalation-review-from-extensions.md) |
 | 2026-10-29 | 2 | `requires_keys`에 키가 없다 — `run`은 빌드가 `requires.service_apps` 줄을 적는 뜻, `extra_scopes`는 Center가 PC 스위치로 건다. 외부 앱은 **어댑터 일꾼**이 부른다 — 주소·키는 그 일꾼 설정(`BPM_ADAPTER__EXT__<확장>__*`), 실행하는 쪽은 정의 검증·고정만. 예약 키 `service.base_url`·`service.key_ref` → `center.url`·`call_token` 비밀, `BPM_RUNTIME__SERVICE_URL` → `BPM_RUNTIME__CENTER_URL`. 예약 접두 `service.` → `center.` | [0102](../decisions/0102-calling-outside-is-pull.md) |

@@ -11,7 +11,6 @@
   <bpmn:process id="Proc_bx34_incident_alert" name="장애 알림 대응" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "observability",

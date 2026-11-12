@@ -173,7 +173,7 @@ DEMO: dict[str, Any] = {
         "configuration": [
             {"key": "region", "label": "지역", "scope": "studio", "schema": {"type": "string"}},
             {"key": "token", "label": "개발용 토큰", "scope": "studio", "secret": True},
-            {"key": "elsewhere", "label": "현장 칸", "scope": "bot_ui"},
+            {"key": "elsewhere", "label": "서버 칸", "scope": "server_runner"},
         ]
     },
 }
@@ -190,7 +190,7 @@ def demo_extensions(**kw: Any) -> Extensions:
 def test_extension_fields_come_from_the_contribution(qt: Any, settings: Settings) -> None:
     """창은 어느 확장인지 모른다 — `scope: studio` 칸만 그 확장의 이름 아래 짓는다."""
     found = dialog(settings, demo_extensions(), Vault())
-    assert set(found.extension_fields) == {("demo-ext", "region"), ("demo-ext", "token")}, "bot_ui 칸은 없다"
+    assert set(found.extension_fields) == {("demo-ext", "region"), ("demo-ext", "token")}, "서버 실행기 칸은 없다"
     _, secret = found.extension_fields[("demo-ext", "token")]
     from PySide6.QtWidgets import QLineEdit  # noqa: PLC0415
 

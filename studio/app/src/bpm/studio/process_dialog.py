@@ -25,7 +25,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 from collections.abc import Mapping, Sequence
@@ -33,7 +32,6 @@ from dataclasses import replace
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -41,9 +39,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMessageBox,
     QPlainTextEdit,
-    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -60,9 +56,7 @@ TITLE = "BPM 프로세스 정보"
 DEFAULT_SIZE = (720, 440)
 
 #: 실행 위치 (ADR-0015). 글은 STU-05와 **같은 말**을 쓴다.
-LOCATIONS = (("server", "서버 — 대부분의 업무. 여러 건 동시에"), ("pc", "PC (PC 실행기) — 화면 조작·현장 확인"))
 #: 생략하면 서버다 (C1 R1·ADR-0016).
-DEFAULT_LOCATION = "server"
 
 
 #: 그림을 고칠 수 없는 까닭 (U3 — 끄고 **가까이에** 적는다).
@@ -141,24 +135,16 @@ class ProcessInfoDialog(QDialog):
         workspace: Workspace,
         *,
         editable: bool = True,
-        task_type_locations: Mapping[str, Sequence[str]] | None = None,
         drawn: BpmnProcess | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.process = process
         self.workspace = workspace
-        #: 확장 태스크 종류 → 실행 위치 (확장 호스트가 C13에서 읽어 준다). **F6과 같은 표**여야
-        #: 한다 — 창이 세지 못하는 것을 검사가 막으면 사람이 영문을 모른다.
-        self.task_type_locations = task_type_locations
-        #: 진입 정의가 열려 있나 — **그림을 고칠 수 있는가**다 (아니면 실행 위치가 꺼진다).
+        #: 진입 정의가 열려 있나 — 열려 있으면 **캔버스의 그림**으로 「서버에서 못 하는 것」을 센다.
         self.editable = editable
-        #: 「저장」을 눌러 바뀐 것. 부르는 쪽이 캔버스에 넘길 `bpm:process`가 여기 있다.
+        #: 「적용」을 눌러 저장된 기록.
         self.saved: BpmProcess | None = None
-        self.process_patch: str | None = None
-        #: 「이 부분을 PC BPM 프로세스로 나누기...」를 눌렀다 — 창은 저장하지 않고 닫히고 메인 창이
-        #: STU-06a를 연다 (ADR-0071). 그림을 바꾸는 것은 캔버스를 쥔 메인 창의 일이다.
-        self.split_requested = False
 
         entry = process.entry_definition
         self.entry = entry
@@ -180,18 +166,6 @@ class ProcessInfoDialog(QDialog):
         self.tags_box = QLineEdit(", ".join(process.tags), self)
         self.tags_box.setPlaceholderText("쉼표로 구분 — 재무, 월말")
 
-        self.location_box = QComboBox(self)
-        for value, label in LOCATIONS:
-            self.location_box.addItem(label, value)
-        at = self.location_box.findData(self.info.run_location or DEFAULT_LOCATION)
-        self.location_box.setCurrentIndex(max(0, at))
-        self.location_box.currentIndexChanged.connect(self._refresh_warning)
-
-        self.to_pc = QPushButton("실행 위치를 PC로 바꾸기", self)
-        self.to_pc.clicked.connect(self._choose_pc)
-        self.to_split = QPushButton("이 부분을 PC BPM 프로세스로 나누기...", self)
-        self.to_split.setObjectName("splitToPc")
-        self.to_split.clicked.connect(self._ask_split)
         self.warning = QLabel("", self)
         self.warning.setWordWrap(True)
         self.warning.setObjectName("serverWarning")
@@ -223,7 +197,6 @@ class ProcessInfoDialog(QDialog):
             ("설명", self.description_box),
             ("담당자", self.owner_box),
             ("태그", self.tags_box),
-            ("실행 위치", self.location_box),
         )
         for text, field in fields:
             caption = QLabel(text, self)
@@ -252,8 +225,6 @@ class ProcessInfoDialog(QDialog):
 
         warning_row = QHBoxLayout()
         warning_row.addWidget(self.warning, 1)
-        warning_row.addWidget(self.to_pc)
-        warning_row.addWidget(self.to_split)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACE_4, SPACE_4, SPACE_4, SPACE_4)
@@ -266,7 +237,7 @@ class ProcessInfoDialog(QDialog):
         layout.addWidget(self._rule())
         layout.addWidget(buttons)
 
-        self._lock_graph_fields()
+        self._note_the_graph()
         self._refresh_warning()
         self.note.setVisible(bool(self.note.text()))
         # 창 높이는 내용에 맞춘다 — 남는 빈 곳을 두지 않는다 (STU-06 배치).
@@ -294,63 +265,28 @@ class ProcessInfoDialog(QDialog):
         rule.setObjectName("Rule")  # 토큰 색 가로선 (STU-01 「변수」 탭과 같은 것)
         return rule
 
-    def _graph_open(self) -> bool:
-        return self.editable and self.entry is not None
-
-    def _lock_graph_fields(self) -> None:
-        """그림을 고칠 수 없으면 **실행 위치만** 끄고 까닭을 적는다 (나머지는 저장된다)."""
-        if self._graph_open():
+    def _note_the_graph(self) -> None:
+        """그림을 읽을 수 없으면 까닭을 적는다 (기록은 그래도 저장된다)."""
+        if self.editable and self.entry is not None:
             return
         why = NO_ENTRY if self.entry is None else NO_CANVAS.format(entry=self.entry.path.name)
-        self.location_box.setEnabled(False)
-        self.location_box.setToolTip(why)
         self.note.setText(why)
         self.note.setTextFormat(Qt.TextFormat.MarkdownText)
 
-    # ── 실행 위치 ──
-
-    def location(self) -> str:
-        found = self.location_box.currentData()
-        return str(found or DEFAULT_LOCATION)
+    # ── 돌릴 수 없는 것 ──
 
     def blockers(self) -> list[str]:
-        """서버에서 걸리는 것들 — **검사와 같은 함수**다 (`contracts.server_blockers`).
-
-        확장 태스크도 센다 — 부르는 쪽이 넘긴 표로 본다 (`task_type_locations`). F6이 **같은
-        표**를 쓰므로 둘이 같은 것을 말한다 (어긋나면 「검사는 통과했는데 창이 막는다」가 된다).
-        **표에 없는 종류는 세지 않는다** — 그 확장이 깔려 있지 않으면 실행 위치를 모른다.
-        """
+        """돌릴 수 없는 태스크들 — **검사와 같은 함수**다 (`contracts.server_blockers`)."""
         found = self.drawn or (self.entry.process if self.entry is not None else None)
         if found is None:
             return []
-        return server_blockers(found, self.task_type_locations)
+        return server_blockers(found)
 
     def _refresh_warning(self) -> None:
-        """「서버」일 때만 센다. **저장을 막지 않는다** (화면 설계서 STU-06)."""
-        found = server_warning(self.blockers()) if self.location() == "server" else ""
+        """**저장을 막지 않는다** (화면 설계서 STU-06)."""
+        found = server_warning(self.blockers())
         self.warning.setText(found)
         self.warning.setVisible(bool(found))
-        self.to_pc.setVisible(bool(found) and self.location_box.isEnabled())
-        self.to_split.setVisible(bool(found) and self.location_box.isEnabled())
-
-    def _ask_split(self) -> None:
-        """STU-06a로 간다 — **이 창에서 고친 것은 저장되지 않는다**고 먼저 말한다."""
-        answer = QMessageBox.question(
-            self,
-            "PC BPM 프로세스로 나누기",
-            "이 창을 닫고 「나누기」 창을 엽니다. 이 창에서 고친 것은 저장되지 않습니다.",
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
-        )
-        if answer != QMessageBox.StandardButton.Ok:
-            return
-        self.split_requested = True
-        self.reject()
-
-    def _choose_pc(self) -> None:
-        at = self.location_box.findData("pc")
-        if at >= 0:
-            self.location_box.setCurrentIndex(at)
 
     # ── 저장 ──
 
@@ -397,26 +333,11 @@ class ProcessInfoDialog(QDialog):
             return
 
         self.saved = made
-        # 그림 쪽은 **고칠 수 있을 때만** 짓는다 — 꺼져 있으면 `None`이고 부르는 쪽이 넘기지 않는다.
-        if self.location_box.isEnabled():
-            self.process_patch = self._patch()
         self.accept()
-
-    def _patch(self) -> str:
-        """캔버스에 넘길 `bpm:process` 본문 (JSON 글 그대로 — `setProperties`의 규약).
-
-        **읽은 것을 통째로 되돌려 쓴다** — `extensions`·`inputs`·`outputs`를 빼면 그 선언이
-        사라진다 (창이 모르는 칸도 지키는 자리다). 옛 그림의 `service_keys`도 모르는 칸으로 **그대로** 간다.
-        """
-        made = self.info.model_copy(deep=True)
-        made.run_location = self.location()  # type: ignore[assignment]
-        return json.dumps(made.to_json_dict(), ensure_ascii=False, indent=2)
 
 
 __all__ = [
-    "DEFAULT_LOCATION",
     "DEFAULT_SIZE",
-    "LOCATIONS",
     "NO_CANVAS",
     "NO_ENTRY",
     "NO_MEMORY",

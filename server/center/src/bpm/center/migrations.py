@@ -324,7 +324,7 @@ MIGRATIONS: tuple[Step, ...] = (
             "CREATE TABLE process_places ("
             " bpm_process_id TEXT PRIMARY KEY, company TEXT NOT NULL, scope TEXT NOT NULL,"
             " department TEXT, staff TEXT, updated_at TEXT NOT NULL, updated_by TEXT NOT NULL)",
-            # 회사 소유: 패키지(올린 Studio의 회사)·PC 실행기·Studio 키·등록 요청. 서버 실행기는 공용이라 없다.
+            # 회사 소유: 패키지(올린 Studio의 회사)·서버 실행기·Studio 키·등록 요청. 서버 실행기는 공용이라 없다.
             "ALTER TABLE packages ADD COLUMN company TEXT",
             "ALTER TABLE bot_uis ADD COLUMN company TEXT",
             "ALTER TABLE center_keys ADD COLUMN company TEXT",
@@ -382,6 +382,20 @@ MIGRATIONS: tuple[Step, ...] = (
             "UPDATE extensions SET source = 'consumer' WHERE source = 'worker'",
             "ALTER TABLE external_tasks ADD COLUMN definition_version TEXT",
         ),
+    ),
+    Step(
+        28,
+        "PC 실행기를 걷었다 — 명부를 지우고 맡기기의 대상 열을 실행기로 바꾼다 (ADR-0144)",
+        (
+            "ALTER TABLE delegations RENAME COLUMN bot_ui_id TO target_runner_id",
+            "ALTER TABLE delegations RENAME COLUMN pc_run_id TO child_run_id",
+            "DROP TABLE IF EXISTS bot_uis",
+        ),
+    ),
+    Step(
+        29,
+        "확인도 결재함으로 온다 — 어느 층인가를 적어 둔다 (C6 `layer`, ADR-0144)",
+        ("ALTER TABLE approvals ADD COLUMN layer TEXT NOT NULL DEFAULT 'approval'",),
     ),
 )
 

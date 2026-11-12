@@ -62,7 +62,6 @@ from bpm.core.run_state import (
     WAIT_SIGNAL,
     WAIT_TIMER,
     WHERE_CENTER,
-    WHERE_FIELD,
     Consume,
     Context,
     EngineError,
@@ -83,8 +82,6 @@ from bpm.core.senders import EmailMessage, SendError, WebhookRequest
 from bpm.core.services import RETRYABLE_STATUS, OpCall, OpOutcome, ServiceCallError, ServicePending
 from bpm.extension_api import (
     ESCALATE_CONFIRMATION,
-    RUN_LOCATION_PC,
-    RUN_LOCATION_SERVER,
     ExtensionEvent,
     TaskContext,
 )
@@ -248,9 +245,7 @@ def handle_subprocess(context: Context) -> Outcome:
 def handle_approval(context: Context) -> Outcome:
     """`userTask`(결재)·`manualTask`(확인) — 요청을 올리고 **기다린다**.
 
-    PC BPM 프로세스는 기다리는 동안에도 실행 자리를 쥔다 (ADR-0014). 어디서 답하는지(`where`)는
-    `location`과 실행하는 쪽의 기본값(`RunEnv.approval_where`)이 정한다 (ADR-0038). **확인은 늘
-    현장이다** — 화면 앞 사람만 답할 수 있다 (C6).
+    **결재도 확인도 Center 결재함에서 답한다** (C6, ADR-0144) — 답하는 자리가 하나다.
     """
     run, node = context.run, context.node
     approval = node.prop("approval")
@@ -263,9 +258,9 @@ def handle_approval(context: Context) -> Outcome:
     form = Form(fields=list(approval.fields)) if approval.fields else None
     # 「표시 변수」만 담는다 (C6 `review` — 결재자가 판단할 값, 원칙 6의 예외).
     review = {name: run.variables.get(name) for name in approval.show}
-    where = _approval_where(layer, approval.location, run.env.approval_where)
+    where = WHERE_CENTER
     expires_at = _expires_at(approval.expires, run.variables, run.env.clock())
-    # 확인에는 담당자가 없다 — 화면 앞 사람이 답한다 (B12가 그림에서 알린다).
+    # 확인에는 담당자가 없다 — 그 실행을 보는 사람이 답한다 (B12가 그림에서 알린다).
     assignees = _assignees(approval.assignees, run.variables, node.id) if layer == "approval" else []
 
     run.pendings[request_id] = Pending(
@@ -312,15 +307,6 @@ def _assignees(spec: list[str] | str | None, variables: Mapping[str, Any], node_
         return normalize_assignees(value)
     except TypeError as exc:
         raise EngineError(str(exc), node_id=node_id, code="assignees_invalid") from exc
-
-
-def _approval_where(layer: str, location: str, default: str) -> str:
-    """어디서 답하나 (ADR-0038). `follow`는 실행하는 쪽의 기본값, 확인은 늘 현장."""
-    if layer == "confirmation":
-        return WHERE_FIELD
-    if location in (WHERE_FIELD, WHERE_CENTER):
-        return location
-    return WHERE_CENTER if default == WHERE_CENTER else WHERE_FIELD
 
 
 def _expires_at(expires: str | None, variables: Mapping[str, Any], now: datetime) -> str | None:
@@ -461,7 +447,6 @@ def handle_extension_task(context: Context, spec: ExtensionTask) -> Outcome:
         node_instance=context.instance(),
         attempt=1,
         mode=run.mode,
-        run_location=run.process.info.run_location or RUN_LOCATION_PC,
         inputs=dict(scope.variables),
         properties=_with_defaults(spec.data, run.process.defaults),
         business_key=f"{run.run_id}:{node.id}:{context.instance()}:1",
@@ -473,9 +458,8 @@ def handle_extension_task(context: Context, spec: ExtensionTask) -> Outcome:
     except ExtensionTaskFailed as e:
         # **실패한 태스크도 남긴다** (ADR-0041) — 전환으로 끝난 UI 태스크가 가장 보고 싶은 줄이다.
         write_extension_events(context, e.events)
-        if e.escalate == ESCALATE_CONFIRMATION and asks_a_person(context):
-            return escalate_to_person(context, e.message or str(e), review=e.review)
-        # 오류 경계로 가면 확장의 검토 자료는 버린다 — 보일 사람이 없다 (ADR-0112).
+        # **전환도 늘 오류 경계다** (ADR-0106의 서버 갈래) — 확장의 검토 자료는 버린다
+        # (보일 사람이 없다, ADR-0112).
         raise TaskFailed(e.message or str(e), node_id=node.id, code=_failure_code(e)) from e
     write_extension_events(context, outcome.events)
     for name, value in dict(outcome.outputs).items():
@@ -488,6 +472,10 @@ def handle_extension_task(context: Context, spec: ExtensionTask) -> Outcome:
     return Go()
 
 
+#: 엔진이 붙이는 C3 칸 — 확장이 `data`에 적어 보내도 쓰지 않는다 (ADR-0041).
+ENGINE_OWNED_FIELDS = frozenset({"schema", "run_id", "seq", "ts", "kind", "node_id"})
+
+
 def _failure_code(error: ExtensionTaskFailed) -> str:
     """확장의 실패를 오류 경계 코드로 — **전환은 `ESCALATED`**다 (C14, ADR-0105).
 
@@ -497,67 +485,6 @@ def _failure_code(error: ExtensionTaskFailed) -> str:
     if error.escalate == ESCALATE_CONFIRMATION:
         return ERROR_ESCALATED
     return error.code or ERROR_TASK_FAILED
-
-
-def asks_a_person(context: Context, *, code: str = ERROR_ESCALATED) -> bool:
-    """전환을 **사람 확인**으로 넘기나 (ADR-0106) — PC 실행이고 그림이 `code`를 이름으로 받지 않을 때.
-
-    서버에는 확인에 답할 사람이 없다 (C1 R2) — 늘 오류 경계다. 그림이 그 코드의 경계를 달았으면 흐름으로
-    받겠다고 적은 것이다. **코드를 적지 않은 경계**는 「전환을 흐름으로」라고 말하지 않았으므로 확인을 띄운다.
-    서비스 호출의 결과 모름은 `TASK_FAILED`로 묻는다 (ADR-0107 — 「중단」이 그 코드다).
-    """
-    run, node = context.run, context.node
-    if (run.process.info.run_location or RUN_LOCATION_PC) == RUN_LOCATION_SERVER:
-        return False
-    named = run.process.errors.get(code)
-    return not any(
-        "errorEventDefinition" in b.event_definitions and named is not None and b.error_ref == named
-        for b in run.boundaries(node.id)
-    )
-
-
-def escalate_to_person(
-    context: Context,
-    message: str,
-    *,
-    retry_attempt: int = 0,
-    retry_call_seq: int = 0,
-    review: Mapping[str, Any] | None = None,
-) -> Outcome:
-    """그 자리에서 **현장 확인 하나**로 멈춘다 (ADR-0106, C10 `escalated`·C13 §4).
-
-    요청은 `manualTask`의 확인과 같은 모양이라(C6 `confirmation`, 늘 현장) PC 실행기·CMN-01이 그대로
-    띄우고 답을 나른다. 답은 `Engine.answer`가 받는다 — 「계속」은 넘어가고 「중단」은 `ESCALATED`다.
-    `retry_attempt`가 있으면 서비스 호출의 결과 모름이다 (ADR-0107) — 「계속」은 그 번째로 다시 부르고
-    「중단」은 `TASK_FAILED`다.
-
-    `review`는 확장이 사람에게 보이라고 준 검토 자료다 (ADR-0112, C6 `review`) — 요청에 **옮기기만** 하고
-    `human_requested`에는 싣지 않는다 (실행 기록에 남지 않는다 — 원칙 6).
-    """
-    run, node = context.run, context.node
-    instance = context.instance()
-    request_id = request_id_for(run.run_id, node.id, instance)
-    run.pendings[request_id] = Pending(
-        request_id=request_id,
-        node_id=node.id,
-        layer="confirmation",
-        title=f"실행 확인 요청 — {node.name or node.id}",
-        form=None,
-        node_instance=instance,
-        where=WHERE_FIELD,
-        description=message or None,
-        escalation=True,
-        retry_attempt=retry_attempt,
-        retry_call_seq=retry_call_seq,
-        review=dict(review or {}),
-    )
-    context.emit("log", level="warn", message=f"전환 — 사람 확인으로 넘긴다: {message}")
-    context.emit("human_requested", layer="confirmation", request_id=request_id, where=WHERE_FIELD)
-    return Wait(key=request_id)
-
-
-#: 엔진이 붙이는 C3 칸 — 확장이 `data`에 적어 보내도 쓰지 않는다 (ADR-0041).
-ENGINE_OWNED_FIELDS = frozenset({"schema", "run_id", "seq", "ts", "kind", "node_id"})
 
 
 def write_extension_events(context: Context, events: Sequence[ExtensionEvent]) -> None:
@@ -676,8 +603,7 @@ def handle_ai_task(context: Context, spec: AiTask) -> Outcome:
         raise EngineError(str(e), node_id=node.id, code=CODE_PATH_DENIED) from e
     except AgentError as e:
         if e.escalated:
-            if asks_a_person(context):
-                return escalate_to_person(context, str(e))
+            # **서버는 늘 오류 경계다** (ADR-0106의 서버 갈래 — 사람에게 묻는 PC 갈래는 ADR-0144가 걷었다).
             raise TaskFailed(str(e), node_id=node.id, code=ERROR_ESCALATED) from e
         if e.business:
             raise TaskFailed(str(e), node_id=node.id) from e
@@ -826,9 +752,7 @@ def service_attempts(
     attempts = (retry.max if retry else 0) + 1
 
     last: ServiceCallError | None = None
-    tried = first
     for attempt in range(first, max(attempts, first) + 1):
-        tried = attempt
         call = service_call_of(context, spec, attempt=attempt, call_seq=call_seq)
         try:
             if done is not None:
@@ -873,14 +797,7 @@ def service_attempts(
         return Go()
 
     assert last is not None
-    if last.outcome_unknown and asks_a_person(context, code=ERROR_TASK_FAILED):
-        return escalate_to_person(
-            context,
-            f"{spec.app_id}/{spec.operation}의 결과를 모릅니다 — 외부 앱에서 처리됐는지 확인하세요. "
-            f"처리되지 않았으면 「계속」(다시 부른다), 처리됐으면 「중단」입니다. ({last})",
-            retry_attempt=tried + 1,
-            retry_call_seq=call_seq,
-        )
+    # **결과를 모르는 실패도 오류 경계다** (ADR-0107의 서버 갈래 — ADR-0144가 PC 갈래를 걷었다).
     raise TaskFailed(f"{spec.app_id}/{spec.operation}: {last}", node_id=node.id) from last
 
 
@@ -1077,9 +994,6 @@ def handle_call(context: Context) -> Outcome:
     **적은 것만 오간다** (`bpm:call`의 `input`·`output`). 바깥 토큰은 안쪽이 끝날 때까지
     세워 두고, 안쪽은 같은 `run_id`·같은 기록을 쓴다 (C3는 실행 하나에 `run_started` 하나다).
 
-    **PC 위임은 여기서 돌리지 않는다** (`bpm:call.delegate`, [ADR-0062](../decisions/0062-pc-delegation.md)) —
-    대상이 **다른 패키지**라 이 패키지 안에 그 정의가 없다. 맡길 자리(`RunEnv`의 포트)가
-    아직 없으므로 **그림·설치 오류로 멈춘다** — 안쪽을 서버에서 대신 돌리는 폴백은 두지 않는다.
     """
     engine, run, node = context.engine, context.run, context.node
     spec: Call | None = node.prop("call")
@@ -1119,7 +1033,7 @@ def handle_call(context: Context) -> Outcome:
 
 
 def _delegate(context: Context, spec: Call, delegate: Delegate) -> Outcome:
-    """**PC 위임** — 맡기고 기다린다 (ADR-0062 §2, C12 §PC 위임).
+    """**맡기기** — 맡기고 기다린다 (ADR-0082 §2, C12 §맡기기).
 
     안쪽을 여기서 돌리지 않는다 — 부르는 대상은 **다른 패키지**라 이 패키지에 그 정의가 없다.
     맡기는 길은 `RunEnv.delegate` 포트 하나이고, 엔진은 **어디에 맡기는지 모른다**.
@@ -1132,7 +1046,6 @@ def _delegate(context: Context, spec: Call, delegate: Delegate) -> Outcome:
     scope = context.scope()
     inputs = {name: evaluate(expression, scope) for name, expression in spec.input.items()}
     # **어느 PC인가도 식이다** (담당자 PC 같은 업무 규칙) — 비우면 받는 쪽이 고른다.
-    bot_ui = evaluate(delegate.bot_ui, scope) if delegate.bot_ui else None
     # **엔진이 이미 센 것을 읽는다** — 여기서 또 올리면 같은 자리가 두 번째로 보이고
     # 멱등 키가 달라져 **작업이 두 번 만들어진다** (`Engine._step`이 노드를 밟을 때 올린다).
     instance = run.instances.get(node.id, 1)
@@ -1142,7 +1055,6 @@ def _delegate(context: Context, spec: Call, delegate: Delegate) -> Outcome:
         node_instance=instance,
         bpm_process_id=delegate.bpm_process_id,
         version=delegate.version,
-        bot_ui=None if bot_ui is None else str(bot_ui),
         inputs=inputs,
         # **반복 차례도 자리의 일부다** (ADR-0082) — 엔진은 반복 중에 `node_instance`를 올리지
         # 않으므로 이것 없이는 2건째부터 1건째 작업이 돌아온다.
@@ -1160,7 +1072,7 @@ def _delegate(context: Context, spec: Call, delegate: Delegate) -> Outcome:
     run.waits[key] = Waiting(
         key=key, node_id=node.id, kind=WAIT_DELEGATION, job_id=job_id, token_id=context.token.id
     )
-    context.emit("log", level="info", message=f"PC 위임: {delegate.bpm_process_id} (작업 {job_id})")
+    context.emit("log", level="info", message=f"맡겼다: {delegate.bpm_process_id} (작업 {job_id})")
     return Wait(key=key)
 
 

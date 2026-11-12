@@ -1,6 +1,6 @@
 """서버 실행기 설정 — 환경변수 `BPM_SERVER_RUNNER__*` (ADR-0011).
 
-**화면이 없으므로 설정 파일도 없다** — 서버는 환경변수·compose로 설정한다 (PC 실행기의 BUI-03에
+**화면이 없으므로 설정 파일도 없다** — 서버는 환경변수·compose로 설정한다 (실행기의 BUI-03에
 해당하는 자리가 없다). 기본값은 여기 한 곳에만 둔다 (`docs/04-setup.md` §6).
 
 **비밀은 여기 두지 않는다** — Center API 키는 `credentials.py`가 환경변수나 OS 비밀 저장소에서
@@ -33,7 +33,7 @@ DEFAULT_HEARTBEAT_S = 10
 DEFAULT_RETRY_S = 30
 #: 외부 작업을 **이만큼 기다려 끝나지 않으면** 기다림으로 넘기고 자리를 놓는다 (초, ADR-0103).
 DEFAULT_PARK_AFTER_S = 20.0
-#: 기본 모델 (ADR-0027). **이 앱의 기본값은 이 앱이 가진다** — PC 실행기의 것을 import하지 않는다
+#: 기본 모델 (ADR-0027). **이 앱의 기본값은 이 앱이 가진다** — 실행기의 것을 import하지 않는다
 #: (앱끼리 import하지 않는다). 둘이 어긋나면 `docs/04-setup.md` §6의 표가 원본이다.
 DEFAULT_LLM_MODEL = "qwen2.5:7b"
 
@@ -97,7 +97,7 @@ class Settings:
     park_after_s: float = DEFAULT_PARK_AFTER_S
 
     def smtp(self) -> SmtpConfig:
-        """보내기 설정 한 벌 — **PC 실행기와 같은 모양**이다 (`core.senders`)."""
+        """보내기 설정 한 벌 — 실행기의 모양이다 (`core.senders`)."""
         return SmtpConfig(
             host=self.smtp_host,
             port=self.smtp_port,

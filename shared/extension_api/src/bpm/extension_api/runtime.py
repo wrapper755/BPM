@@ -16,10 +16,6 @@ from bpm.contracts.service_app import MODE_DETERMINISTIC, Usage
 #: 수행 모드 — 값은 C11이 소유한다 (`contracts.service_app.MODES`). 받는 쪽은 바꾸지 않는다.
 Mode = str
 
-#: 실행 위치 (C1 `run_location`).
-RUN_LOCATION_PC = "pc"
-RUN_LOCATION_SERVER = "server"
-
 #: 확장 코드를 돌리는 쪽 (C11 `caller.type`과 같은 값).
 HOST_STUDIO = "studio"
 HOST_BOT_UI = "bot_ui"
@@ -80,7 +76,6 @@ class TaskContext:
     node_instance: int = 1
     attempt: int = 1
     mode: Mode = MODE_DETERMINISTIC
-    run_location: str = RUN_LOCATION_PC
     #: 태스크 입력 (BPM 프로세스 변수에서 꺼낸 것).
     inputs: Mapping[str, Any] = field(default_factory=dict)
     #: BPMN `bpm:*` 확장 속성 (C14) — 태스크 종류가 정한 모양이다.

@@ -1,7 +1,7 @@
 """서버 예제 재통과 — **Center 배포 → 서버 실행기 실행**으로 한 번 더 (M7 인수 시험).
 
 로드맵 M7 인수 시험의 첫 칸이다: 「실행 위치 서버인 업무·기능 예제 전부가 서버 실행기에서
-통과」. 대상 목록은 **그림에서 읽는다** (`bpm:process.run_location == "server"`) — README의
+통과」. 대상 목록은 **그림에서 읽는다** — README의
 묶음 표에는 「서버 예제 전부」라고만 적혀 있고, 어느 것이 서버인지는 그림이 안다.
 
 `tests/integration/test_m5_pc_rerun.py`가 PC 쪽에서 같은 꼴을 보므로, 여기서 다른 것만 적는다.
@@ -32,7 +32,7 @@ import os
 import threading
 import time
 from collections.abc import Iterator
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -83,9 +83,8 @@ def server_examples() -> list[str]:
     """
     found = []
     for path in sorted(EXAMPLES.glob("*.bpmn")):
-        process = read_process(path.read_text(encoding="utf-8"))
-        if process.info.run_location == "server":
-            found.append(path.stem)
+        read_process(path.read_text(encoding="utf-8"))  # 읽히는가까지 본다
+        found.append(path.stem)
     return found
 
 
@@ -131,10 +130,10 @@ def case_messages(example: str) -> list[dict[str, Any]]:
 
 
 def case_delegations(example: str) -> dict[str, Any]:
-    """PC 위임이 돌려주는 값 — 케이스의 `delegations`를 **하나로 합친** 것 (C14).
+    """맡긴 것이 돌려주는 값 — 케이스의 `delegations`를 **하나로 합친** 것 (C14).
 
-    Studio 시험 실행은 노드별로 쓰지만(`CaseDelegator`) 현장에서 돌아오는 길은 **PC의 작업
-    ack**다 (C4 `JobAck.outputs`). 그 PC는 자기가 어느 노드에 맡겨졌는지 모르므로 값만 올린다.
+    Studio 시험 실행은 노드별로 쓰지만(`CaseDelegator`) 현장에서 돌아오는 길은 **맡은 쪽의
+    작업 ack**다 (C4 `JobAck.outputs`). 맡은 쪽은 어느 노드에 맡겨졌는지 모르므로 값만 올린다.
     """
     found: dict[str, Any] = {}
     for one in (_first_case(example).get("delegations") or {}).values():
@@ -459,15 +458,12 @@ def _answer_open_approvals(
         if run_id is not None and one.get("run_id") != run_id:
             continue
         body = dict(answers.get(one.get("node_id") or "") or {})
-        decision = str(body.pop("decision", "approve") or "approve")
+        # **폼이 없으면 답은 `decision` 하나다** (C6) — 폼이 있으면 그 칸들이 답이다.
+        if not (one.get("form") or {}).get("fields"):
+            body.setdefault("decision", "approve")
         answer = client.post(
             f"/api/v1/approvals/{one['request_id']}/answer",
-            json={
-                "schema": 1,
-                "decision": decision,
-                "answer": body,
-                "answered_by": "시험",
-            },
+            json={"schema": 1, "answer": body},
             headers=ADMIN,
         )
         # 틀린 답은 Center가 칸과 함께 돌려준다 — 그러면 그 자리에서 말한다 (조용히 넘기지
@@ -507,15 +503,10 @@ def run_to_the_end(
     answers: dict[str, dict[str, Any]],
     messages: list[dict[str, Any]],
     timeout_s: float = WAIT_S,
-    pc: Any = None,
 ) -> dict[str, Any]:
     """하트비트를 돌리며 결재에 답하고 메시지를 넣는다. 끝난 작업 정보를 돌려준다.
 
-    **답·메시지는 Center를 거친다** — 서버 실행기에는 현장 창구가 없다 (C12).
-
-    `pc`를 주면 주기마다 부른다 — **PC 위임을 가짜 PC가 끝내는 자리**다 (BX-16, ADR-0062).
-    위임은 Center가 PC 작업으로 만들고 **그 PC의 ack로** 값이 돌아오므로, 아무도 끝내 주지
-    않으면 서버 실행이 영원히 기다린다.
+    **답·메시지는 Center를 거친다** — 결재함이 유일한 창구다 (C6·C12).
     """
     client, _ = center
     left = list(messages)
@@ -529,8 +520,6 @@ def run_to_the_end(
         if run_id:
             _answer_open_approvals(client, answers, run_id)
             left = [one for one in left if not _post_message(client, one)]
-        if pc is not None:
-            pc()
         time.sleep(0.05)
     raise AssertionError(
         f"작업 {job_id}이 끝나지 않았다 — 마지막 상태 "
@@ -542,10 +531,6 @@ def run_to_the_end(
 
 # **파라미터 묶음에서 빠지는 것은 이제 하나**다 — BX-33은 **일부러 실패하는** 교육 예제라
 # (`_ON_PURPOSE`, ADR-0039) 「열린다」가 맞지 않는다. 아래에 **의도한 실패를 보는 시험**이 있다.
-#
-# **BX-16도 돈다 — 다만 전용 시험이다** (`test_bx16_delegates_a_part_to_a_pc_and_continues`).
-# **PC 위임**이라(ADR-0062) 맡긴 작업을 끝내 줄 PC가 있어야 하고, 없으면 그 실행은 영원히
-# 기다린다 — 묶음에 넣으면 **시험마다** 가짜 PC가 뜬다.
 #
 # **사유는 돌려 보고 적는다.** 조각 9에서 일곱이 틀렸고, 조각 10에서 둘, 조각 12에서 다섯,
 # 조각 13에서 셋이다 — FX-04는 **빈 폴더**, **FX-13은 신호가 아니라 타이머**(`ready`·`abort`는
@@ -576,11 +561,6 @@ ELSEWHERE: dict[str, str] = {
         "맡길 서버 BPM 프로세스(FX-25)도 같은 실행기에 배포되어 있어야 한다. 묶음은 예제 하나만 배포하므로 "
         "거기서는 위임이 `no_deployment`로 실패해 오류 경계로 간다. "
     ),
-    "bx16_reorder_proposal": (
-        "`test_bx16_delegates_a_part_to_a_pc_and_continues`가 본다 — **PC 위임**이라(ADR-0062) "
-        "맡긴 작업을 끝내 줄 PC가 있어야 한다(등록된 PC 실행기·배포된 FX-19·그 PC의 작업 ack). "
-        "아무도 끝내 주지 않으면 그 실행은 영원히 기다리므로 파라미터 묶음에 넣지 않는다. "
-    ),
 }
 
 GREEN = [one for one in SERVER if one not in REMAINING and one not in ELSEWHERE]
@@ -591,8 +571,8 @@ def test_the_server_examples_are_read_from_the_drawings() -> None:
     assert len(SERVER) >= 40, f"서버 예제가 너무 적다: {SERVER}"
     assert "bx03_expense_approval" in SERVER
     assert "fx03b_amount_branch" in SERVER
-    # PC 예제는 여기 들지 않는다 (그쪽은 `test_m5_pc_rerun.py`다).
-    assert "fx19_manual_task_pc" not in SERVER
+    # **실행 자리가 하나라 예제도 모두 여기 든다** (ADR-0144) — 옛 PC 예제까지.
+    assert "fx19_manual_task_pc" in SERVER
 
 
 def test_every_server_example_is_in_the_bundle_or_has_a_reason() -> None:
@@ -768,181 +748,6 @@ def test_the_canned_answers_are_the_shared_ones() -> None:
     # FX-09의 그 자리 — 답이 없으면 스텁이 타입으로 때우고 케이스가 어긋난다.
     found = canned({"판정": "dict"}, {"신청": {"id": 1, "금액": 30000, "영수증": True}})
     assert found is not None and found["판정"]["승인"] is True
-
-
-# ─────────── BX-16: 서버 BPM 프로세스가 PC에 **한 부분을 맡긴다** (전용 발판, ADR-0062) ───────────
-
-#: 맡길 PC 예제 — 그 PC에 **배포돼 있어야** 위임이 작업이 된다 (C5 `no_deployment`).
-BX16_TARGET = "fx19_manual_task_pc"
-
-#: 가짜 PC의 Center API 키 (`bot_ui_id` → 키). 위임 결과를 **그 PC의 ack로** 올린다 (C4).
-PC_KEYS: dict[str, str] = {}
-
-def register_a_pc(client: Any) -> str:
-    """등록된 PC 실행기 하나 — 작업이 갈 PC다 (C4 「키 묶기」). `bot_ui_id`를 준다.
-
-    **하트비트까지 보낸다** — 깔린 확장을 보고한다(지금은 없다 — 확장을 요구하는 PC BPM 프로세스는
-    보고가 없으면 **배포가 막힌다**, C7 누락 검사). `Agent`를 쓰지 않고 C4를 직접 부른다 —
-    여기서 보는 것은 PC 실행기가 아니라 **작업이 만들어지나**다.
-    """
-    from bpm.core.extensions import load_host
-
-    key = client.post(
-        "/api/v1/center-keys", json={"name": "BX-16 대상 PC", "type": "bot_ui"}, headers=ADMIN
-    ).json()["key"]
-    auth = {"Authorization": f"Bearer {key}"}
-    versions = {"bot_ui": "0.1.0", "core": "0.1.0"}
-    answer = client.post(
-        "/api/v1/bot-ui/register",
-        # C4 — PC 고유값의 SHA-256만 보낸다 (원값은 보내지 않는다).
-        json={"schema": 1, "machine_id": "b" * 64, "name": "구매 PC-01", "os": "Windows 11", "versions": versions},
-        headers=auth,
-    )
-    assert answer.status_code < 400, answer.text
-    bot_ui_id = str(answer.json()["bot_ui_id"])
-    PC_KEYS[bot_ui_id] = str(key)
-
-    beat = client.post(
-        "/api/v1/bot-ui/heartbeat",
-        json={
-            "schema": 1,
-            "status": "idle",
-            "current_run": None,
-            "queue": {"max": 20, "items": []},
-            "versions": versions,
-            "extensions": [one.to_json_dict() for one in load_host().states()],
-        },
-        headers=auth,
-    )
-    assert beat.status_code < 400, beat.text
-    return bot_ui_id
-
-
-@dataclass
-class FakePc:
-    """맡겨진 PC 작업을 **끝내 주는 가짜 PC** (C4 — `JobAck.outputs`는 **선언한 것만**).
-
-    고르는 기준은 **`requested_by`** 하나다 (`server_bot:<run_id>` — 「이 작업이 위임인가」를
-    말해 주는 자리이고 그 글은 `contracts.center_api`에 한 자리다, ADR-0062 §4). 진짜 PC 실행기를
-    띄우지 않는다 — 그쪽 한 바퀴는 `test_server_runner_delegation.py`가 **진짜 자식 프로세스**로
-    본다. 여기서 보는 것은 **예제의 그림이 그 길과 맞물리나**다.
-    """
-
-    client: Any
-    bot_ui_id: str
-    outputs: dict[str, Any]
-    seen: set[str] = field(default_factory=set)
-
-    def __call__(self) -> None:
-        listed = self.client.get("/api/v1/jobs?state=pending,dispatched,accepted", headers=READ).json()
-        for one in listed:
-            job_id = str(one["job_id"])
-            if job_id in self.seen or not str(one.get("requested_by") or "").startswith("server_bot:"):
-                continue
-            self.seen.add(job_id)
-            run_id = f"run_20261016_1200{len(self.seen):02d}_cccccc"
-            for ack in (
-                {"job_id": job_id, "result": "started", "run_id": run_id},
-                {"job_id": job_id, "result": "finished", "run_id": run_id, "outputs": self.outputs},
-            ):
-                beat = self.client.post(
-                    "/api/v1/bot-ui/heartbeat",
-                    json={
-                        "schema": 1,
-                        "status": "idle",
-                        "current_run": None,
-                        "queue": {"max": 20, "items": []},
-                        "job_acks": [ack],
-                    },
-                    headers={"Authorization": f"Bearer {PC_KEYS[self.bot_ui_id]}"},
-                )
-                assert beat.status_code == 200, beat.text
-
-
-def deploy_to_pc(client: Any, bot_ui_id: str, example: str, tmp_path: Path) -> str:
-    """PC 예제 하나를 **승인 → 배포**로 그 PC에 배포한다 (C2 — 봉투는 Center가 짓는다).
-
-    설치까지 가지 않는다 — `POST /jobs`가 보는 것은 **Center의 배포**이고(`no_deployment`)
-    설치는 하트비트 뒤의 일이다 (PC 쪽 한 바퀴는 `tests/integration/test_m5_pc_rerun.py`가 본다).
-    """
-    space = Workspace(tmp_path / "bx16-target").ensure()
-    made = space.import_example(EXAMPLES, example)
-    package = export(made, tmp_path / default_name(made))
-    answer = client.post(
-        "/api/v1/packages",
-        files={"file": (package.name, package.read_bytes(), "application/zip")},
-        headers=ADMIN,
-    )
-    assert answer.status_code in (200, 201), answer.text
-    info = dict(answer.json())
-
-    approve(client, info["id"], info["version"], headers=ADMIN)
-    deploy_id(
-        client,
-        target={"type": "bot_ui", "id": bot_ui_id},
-        bpm_process_id=info["id"],
-        version=info["version"],
-        headers=ADMIN,
-    )
-    return str(info["id"])
-
-
-def test_bx16_delegates_a_part_to_a_pc_and_continues(
-    tmp_path: Path,
-    center: CenterHandle,
-    runner: agent_mod.Agent,
-    receiver: Receiver,
-) -> None:
-    """BX-16 — **서버 BPM 프로세스가 한 부분을 PC에 맡기고 결과로 이어 간다** (ADR-0062).
-
-    전에는 이 자리를 사내 확장 서비스 앱(`center-jobs`)으로 메우고 있었고, 그래서 발판이 넷
-    필요했다 — **소켓 Center**(모의 앱이 제 스레드에서 `POST /jobs`를 불러야 했다)·연동용 키·
-    등록된 PC 실행기·배포된 PC BPM 프로세스. **위임이 본문이 되어 앞의 둘이 없어졌다**: 맡기는 것은 실행기
-    자신이고(`CenterDelegator`) 작업을 만드는 것은 Center다. 남은 둘은 그대로다 — 맡길 PC가
-    **등록돼 있고** 그 PC에 FX-19가 **배포돼 있어야** 한다 (C5 `no_deployment`).
-
-    묶음에 넣지 않는 까닭은 하나다 — **아무도 끝내 주지 않으면 서버 실행이 영원히 기다린다**
-    (위임은 PC의 작업 ack로 돌아온다, C4). 그래서 가짜 PC가 그 자리를 맡는다.
-
-    **보는 것은 셋이다**: 위임이 **PC 작업이 되었나**, 그 값으로 서버 실행이 **끝까지 갔나**,
-    그리고 Center가 ack를 받고 **업무 값을 지웠나** (원칙 6의 예외는 좁게 쓴다).
-    """
-    client, store = center
-    bot_ui_id = register_a_pc(client)
-    target = deploy_to_pc(client, bot_ui_id, BX16_TARGET, tmp_path)
-
-    info = deploy(center, runner, packaged(tmp_path, "bx16_reorder_proposal"))
-    make_samples_for(runner, str(info["id"]))
-    job_id = dispatch(center, info, case_inputs("bx16_reorder_proposal", receiver))
-
-    # 케이스가 적어 둔 위임 결과를 **가짜 PC가 올린다** (Studio는 케이스로 끝내지만 현장에서는
-    # C4 ack가 그 길이다 — 같은 값을 쓴다).
-    outputs = case_delegations("bx16_reorder_proposal")
-    pc = FakePc(client=client, bot_ui_id=bot_ui_id, outputs=outputs)
-    done = run_to_the_end(
-        center,
-        runner,
-        job_id,
-        answers=case_approvals("bx16_reorder_proposal"),
-        messages=case_messages("bx16_reorder_proposal"),
-        pc=pc,
-    )
-    assert done["run_status"] == "success", done
-
-    # **위임이 PC 작업이 되었다** — 대상은 그 PC이고 「누가 맡겼나」가 실행 이름으로 적힌다.
-    assert pc.seen, "맡긴 PC 작업이 없다"
-    handed = [
-        one
-        for one in client.get("/api/v1/jobs?state=finished,accepted", headers=READ).json()
-        if one["bpm_process_id"] == target
-    ]
-    assert handed, "PC에 넘긴 작업이 없다"
-    assert handed[0]["target"] == {"type": "bot_ui", "id": bot_ui_id}
-    assert str(handed[0]["requested_by"]).startswith("server_bot:")
-
-    # **값은 ack와 함께 지워진다** (ADR-0062 §4) — 누가·언제·성패는 남는다.
-    rows = client.get(f"/api/v1/server-runners/{runner.server_runner_id}", headers=ADMIN).json()
-    assert rows, "실행기 상세를 읽지 못했다"
 
 
 # ─────────────── 일괄 기동 — FX-24 → FX-25 (ADR-0079·0082) ───────────────

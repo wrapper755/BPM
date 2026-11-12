@@ -5,8 +5,8 @@
 | 종류 | 어디서 |
 | --- | --- |
 | 서비스 앱 | 그 앱 id를 토픽으로 승인받은 **일꾼이 올린 manifest** (C15) |
-| 런타임 | `bot_uis`가 등록·하트비트로 보고한 것 (C4) |
-| 확장 | 실행하는 쪽의 보고(`bot_uis`·`server_runners` — C4·C12) + 일꾼 manifest의 `extension` |
+| 런타임 | `server_runners`가 등록·하트비트로 보고한 것 (C4·C12) |
+| 확장 | 실행하는 쪽의 보고(`server_runners` — C4·C12) + 일꾼 manifest의 `extension` |
 | | + **외부로 등록된 정의** (C13) |
 | 확장 기여 자원 | 일꾼이 올린 카탈로그 (C15 `PUT …/consumers/self/catalogs/{type}`) |
 
@@ -221,19 +221,19 @@ def service_apps(store: Store, *, probe: bool = True) -> list[ServiceAppResource
 
 
 def runtimes(store: Store) -> list[RuntimeResource]:
-    """런타임 (C4 등록·하트비트가 보고한 그대로). 서버 실행기는 M7이다."""
+    """런타임 (C4·C12 등록·하트비트가 보고한 그대로)."""
     out = []
-    for row in store.rows("SELECT * FROM bot_uis ORDER BY name"):
-        reported = loads(row["runtimes_json"], {}) or {}
+    for row in store.rows("SELECT * FROM server_runners ORDER BY name"):
         versions = loads(row["versions_json"], {}) or {}
+        installed = loads(row["extensions_json"], []) or []
         out.append(
             RuntimeResource(
-                host=RuntimeHost(type="bot_ui", id=str(row["bot_ui_id"]), name=str(row["name"])),
+                host=RuntimeHost(
+                    type="server_runner", id=str(row["server_runner_id"]), name=str(row["name"])
+                ),
                 os=str(row["os"]),
                 versions={k: str(v) for k, v in versions.items() if v},
-                browsers=[str(one) for one in (reported.get("browsers") or [])],
-                desktop_backend=reported.get("desktop_backend"),
-                extensions=[one for one in (reported.get("extensions") or []) if isinstance(one, dict)],
+                extensions=[one for one in installed if isinstance(one, dict)],
             )
         )
     return out
@@ -243,13 +243,11 @@ def extensions(store: Store, *, probe: bool = True) -> list[ExtensionResource]:
     """확장 — 실행하는 쪽의 보고와 일꾼 manifest와 외부 정의를 **합친** 것 (C7)."""
     found: dict[str, dict[str, Any]] = {}
 
-    # 1) 실행하는 쪽이 보고한 것 — 몇 대에 깔렸는지는 여기서만 안다. **PC와 서버를 함께 센다**.
+    # 1) 실행하는 쪽이 보고한 것 — 몇 대에 깔렸는지는 여기서만 안다.
     reports = [
-        (loads(row["state_json"], {}) or {}).get("extensions")
-        or (loads(row["runtimes_json"], {}) or {}).get("extensions")
-        or []
-        for row in store.rows("SELECT runtimes_json, state_json FROM bot_uis")
-    ] + [loads(row["extensions_json"], []) or [] for row in store.rows("SELECT extensions_json FROM server_runners")]
+        loads(row["extensions_json"], []) or []
+        for row in store.rows("SELECT extensions_json FROM server_runners")
+    ]
     for installed in reports:
         for one in installed:
             if not isinstance(one, dict) or not one.get("id"):

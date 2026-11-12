@@ -12,7 +12,6 @@
   <bpmn:process id="Proc_bx05_month_end_close" name="월말 마감 체크리스트" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

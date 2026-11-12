@@ -11,7 +11,6 @@
   <bpmn:process id="Proc_bx03_expense_approval" name="지출 결재" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

@@ -136,7 +136,7 @@ def test_a_wrong_key_type_blocks_and_stops_knocking(
 ) -> None:
     """키 종류가 틀리면 **다시 걸어도 같다** — 막아 두고 두드리지 않는다 (C12 403)."""
     raw = center.post(
-        "/api/v1/center-keys", json={"name": "PC 키", "type": "bot_ui"}, headers=ADMIN
+        "/api/v1/center-keys", json={"name": "Studio 키", "type": "studio"}, headers=ADMIN
     ).json()["key"]
     found = build(settings, raw, center)
 
@@ -652,7 +652,6 @@ class _FakeBot:
                 "version": "1.0.0",
                 "name": "시험 BPM 프로세스",
                 "kind": "bpm_process",
-                "run_location": "server",
                 "entry": "main.bpmn",
                 "content_hash": "sha256:" + "0" * 64,
                 "requires": requires or {},

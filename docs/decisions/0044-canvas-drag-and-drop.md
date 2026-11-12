@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 대체됨([ADR-0143](0143-design-happens-in-the-console.md)) — 원래 수락. **끌어다 놓기도 캔버스 명령 하나를 쓴다는 규칙은 웹 편집기가 이어받는다** |
 | 날짜 | 2026-10-11 |
 | 관련 | 스파이크 `spikes/s9-canvas-drop/`, [ADR-0022](0022-studio-canvas.md), STU-03·STU-01, `docs/09-gaps.md` §4-4 |
 

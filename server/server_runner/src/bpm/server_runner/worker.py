@@ -1,7 +1,7 @@
 """실행 하나를 돌리는 일꾼 — **스레드 하나** (C12, ADR-0054 §5
 — `docs/decisions/0054-server-run-state-and-concurrency.md`).
 
-PC와 **모양이 다르다**: PC 실행기는 BPM 프로세스 하나마다 **자식 프로세스**를 띄우고(ADR-0023) 제어
+PC와 **모양이 다르다**: 실행기는 BPM 프로세스 하나마다 **자식 프로세스**를 띄우고(ADR-0023) 제어
 파일로 말을 건넨다. 서버는 한 프로세스 안에서 **실행마다 스레드 하나**다 — 협력 루프는
 막히는 걸음 하나가 루프 전체를 세워 상한 10이 사실상 1이 되는 것을 스파이크가 재 보았다
 (`spikes/s10-server-runner-state/`).
@@ -47,7 +47,7 @@ from bpm.core.services import OpCall, OpOutcome, ServiceCallError
 
 log = logging.getLogger(__name__)
 
-#: 한 번 깨어날 때 밟는 노드 수 — 중지 신호를 자주 본다 (PC 실행기와 같은 수).
+#: 한 번 깨어날 때 밟는 노드 수 — 중지 신호를 자주 본다 (실행기와 같은 수).
 STEPS_PER_TICK = 50
 #: 멈춘 뒤 타이머를 보는 간격 (초).
 TICK_S = 0.2
@@ -56,7 +56,7 @@ TICK_S = 0.2
 WAITING_APPROVAL = "approval"
 WAITING_MESSAGE = "message"
 WAITING_TIMER = "timer"
-#: **PC 위임**을 기다린다 (ADR-0062). 짝 칸은 `job_id`다.
+#: **맡긴 것**을 기다린다 (ADR-0082). 짝 칸은 `job_id`다.
 WAITING_DELEGATION = "delegation"
 #: **긴 외부 작업**을 기다린다 (ADR-0103). 짝 칸은 `task_id`다.
 WAITING_EXTERNAL_TASK = "external_task"
@@ -67,7 +67,7 @@ RESUME_MESSAGE = "message"
 RESUME_TIMER = "timer"
 RESUME_RESTART = "restart"
 RESUME_WITHDRAW = "withdraw"
-#: PC 위임의 결과가 돌아왔다 (ADR-0062 — C3 `KNOWN_RESUME_REASONS`에 함께 더했다).
+#: 맡긴 것의 결과가 돌아왔다 (ADR-0082).
 RESUME_DELEGATION = "delegation"
 #: 넘겨받은 외부 작업이 끝났다 (ADR-0103 — 실패·만료로 돌아온 것도).
 RESUME_EXTERNAL_TASK = "external_task"
@@ -156,7 +156,7 @@ class Worker:
     queued_s: float | None = None
     #: 멈출 때 상태를 담아 둘 곳 (ADR-0054 §3). 없으면 담지 않는다 (시험·한 번 돌리기).
     store: Any | None = None
-    #: **맡긴 서버 실행** — 위임으로 받은 작업일 때만 (C3 `parent_run_id`, ADR-0082). 있으면
+    #: **맡긴 실행** — 맡아서 받은 작업일 때만 (C3 `parent_run_id`, ADR-0082). 있으면
     #: 성공으로 끝날 때 선언한 `outputs`를 작업 ack에 싣는다 (`delegated_outputs()`).
     parent_run_id: str | None = None
     #: **작업의 주인**(업무 자리) — Center가 붙여 내려 준 것 (C12·C16, ADR-0125). 시작할 때 출처가
@@ -339,7 +339,7 @@ class Worker:
         outputs: Mapping[str, Any] | None = None,
         reason: str | None = None,
     ) -> None:
-        """**PC 위임이 끝났다** — 결과를 넣고 이어 간다 (C12 §PC 위임, ADR-0062).
+        """**맡기기이 끝났다** — 결과를 넣고 이어 간다 (C12 §맡기기, ADR-0082).
 
         `finished`가 아니면 엔진이 **업무 실패**로 올려 오류 경계가 받는다 — 이쪽은 가리지
         않는다 (결재 답과 회수를 가르는 것과 달리 길이 하나다).
@@ -355,7 +355,7 @@ class Worker:
         self._continue(run, RESUME_DELEGATION)
 
     def delegation_jobs(self) -> list[str]:
-        """지금 기다리는 **PC 위임 작업들** (ADR-0062 §5 — 취소할 때 거둘 것들).
+        """지금 기다리는 **맡기기 작업들** (ADR-0082 — 취소할 때 거둘 것들).
 
         **걷히기 전에 읽어야 한다** — `Engine.cancel`이 기다림을 비우므로(아무도 답할 사람이
         없어진다) 취소된 뒤에 물으면 빈 목록이다. 그래서 부르는 쪽은 **중지를 부탁하기 전에**
@@ -572,7 +572,7 @@ class Worker:
             data["until"] = row.until
         if row.waiting_for == WAITING_DELEGATION and row.job_id:
             # **`running[].job_id`와 다른 것이다** — 그것은 이 실행을 만든 작업이고 이것은
-            # 이 실행이 **맡긴** 작업이다 (ADR-0062). 위임일 때만 적는다.
+            # 이 실행이 **맡긴** 작업이다 (ADR-0082).
             data["job_id"] = row.job_id
         if row.waiting_for == WAITING_EXTERNAL_TASK and row.task_id:
             data["task_id"] = row.task_id
@@ -725,16 +725,12 @@ class Worker:
                     message_name=found.name,
                     correlation=found.correlation,
                 )
-        # **타이머보다 먼저 본다** — 위임한 호출에 타이머 경계를 달면(업무 기한은 그림이
-        # 맡는다, ADR-0062 §2) 멈춘 동안 그 타이머가 켜져 있다. 아래의 `next_due()`가 먼저
-        # 답하면 「무엇을 기다리나」가 `timer`가 되어 Center가 결과를 내려줄 곳을 모른다.
+        # **타이머보다 먼저 본다** — 맡긴 호출에 타이머 경계를 달면 멈춘 동안 그 타이머가
+        # 켜져 있어 「무엇을 기다리나」가 `timer`가 되고 Center가 결과를 내려줄 곳을 모른다.
         for found in run.waits.values():
             if found.kind == WAIT_DELEGATION:
-                return WaitingRun(
-                    **common, waiting_for=WAITING_DELEGATION, job_id=found.job_id
-                )
-        # 외부 작업도 **타이머보다 먼저** — 같은 까닭이다(호출에 기한 경계를 단다). 호출이 띄운
-        # 안쪽 실행의 것도 본다.
+                return WaitingRun(**common, waiting_for=WAITING_DELEGATION, job_id=found.job_id)
+        # 외부 작업도 같은 까닭으로 타이머보다 먼저다. 호출이 띄운 안쪽 실행의 것도 본다.
         for _, found in self.engine.external_waits(run):
             return WaitingRun(**common, waiting_for=WAITING_EXTERNAL_TASK, task_id=found.task_id)
         due = run.next_due()
@@ -745,10 +741,10 @@ class Worker:
         return None
 
     def delegated_outputs(self) -> dict[str, Any]:
-        """맡겨진 실행이 **성공으로 끝났으면** 그 BPM 프로세스가 선언한 `outputs`만 (C4 `JobAck.outputs`).
+        """맡아서 받은 실행이 **성공으로 끝났으면** 그 BPM 프로세스가 선언한 `outputs`만 (C4 `JobAck.outputs`).
 
-        위임이 아니거나 성공이 아니면 **비운다** — 업무 값을 실을 일이 없다 (원칙 6의 예외는 좁게,
-        실행 프로세스와 같은 `core.outputs.pick`이 거른다 — ADR-0062 §4).
+        맡은 것이 아니거나 성공이 아니면 **비운다** — 업무 값을 실을 일이 없다 (원칙 6의 예외는 좁게,
+        `core.outputs.pick`이 거른다 — ADR-0082).
         """
         if not self.parent_run_id or self.snapshot().finished != "success":
             return {}
@@ -772,6 +768,8 @@ class Worker:
 
 
 __all__ = [
+    "WAITING_DELEGATION",
+    "RESUME_DELEGATION",
     "ACK_CANCELLED",
     "reopen_log",
     "EMPTY_COUNTS",
@@ -779,7 +777,6 @@ __all__ = [
     "ACK_FINISHED",
     "ACK_STARTED",
     "RESUME_ANSWER",
-    "RESUME_DELEGATION",
     "RESUME_MESSAGE",
     "RESUME_RESTART",
     "RESUME_TIMER",
@@ -787,7 +784,6 @@ __all__ = [
     "STEPS_PER_TICK",
     "TICK_S",
     "WAITING_APPROVAL",
-    "WAITING_DELEGATION",
     "WAITING_MESSAGE",
     "WAITING_TIMER",
     "Snapshot",

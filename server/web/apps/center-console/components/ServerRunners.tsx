@@ -7,7 +7,7 @@ import type { JobInfo } from "@bpm/api-types/c5-job-info";
 import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import { CenterError, center } from "@/lib/center";
 import { queueReason, runnerStatus, serverDeployments } from "@/lib/summary";
-import { fullTime, time } from "@/app/bot-uis/page";
+import { fullTime, time } from "@/lib/time";
 import { CancelQueuedJob } from "@/app/server-runners/queue-cancel";
 import { RestartRunner } from "@/app/server-runners/actions-ui";
 

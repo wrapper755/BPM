@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx07_email" name="메일 보내기" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

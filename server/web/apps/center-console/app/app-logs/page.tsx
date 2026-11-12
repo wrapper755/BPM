@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { DataTable, EmptyState, ErrorBanner, type Column } from "@bpm/ui";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
-import { fullTime } from "@/app/bot-uis/page";
+import { fullTime } from "@/lib/time";
 import { APP_KINDS, APP_LABEL, buildAppLog, type AppKind, type AppLogRow } from "@/lib/app-logs";
 
 /**
@@ -31,17 +31,15 @@ export default async function AppLogsPage({
   let rows: AppLogRow[] = [];
   let failure: string | null = null;
   try {
-    const [enrollments, keys, bots, runners] = await Promise.all([
+    const [enrollments, keys, runners] = await Promise.all([
       center.enrollmentHistory(),
       center.centerKeys(),
-      center.botUis(),
       center.serverRunners(),
     ]);
     rows = buildAppLog({
       enrollments,
       keys,
       hosts: [
-        ...bots.map((one) => ({ kind: "bot_ui" as const, name: one.name, results: one.deployment_results ?? [] })),
         ...runners.map((one) => ({
           kind: "server_runner" as const,
           name: one.name,

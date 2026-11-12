@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx04_folder_poll" name="폴더 감시 (조건 시작 대체)" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

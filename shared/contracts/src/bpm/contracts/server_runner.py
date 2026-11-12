@@ -2,14 +2,14 @@
 
 단일 원본: `docs/03-contracts/C12-server-runner-center.md`.
 
-**C4(PC 실행기)와 같은 틀이고 다른 것은 셋이다** (ADR-0015·ADR-0054 —
+**C4(실행기 공통)의 틀이고 다른 것은 셋이다** (ADR-0054 —
 `docs/decisions/0054-server-run-state-and-concurrency.md`).
 
-| | C4 PC 실행기 | C12 서버 실행기 |
+| | C4 실행기 | C12 서버 실행기 |
 | --- | --- | --- |
 | 실행 자리 | `current_run` 하나 (ADR-0014) | `capacity` + `running[]` — 상한까지 여럿 |
 | 기다리는 실행 | 자리를 쥔다 | **`waiting[]`로 빠져 자리를 놓는다** |
-| 대기열 | PC 실행기가 가진다 (`queue`) | **Center가 가진다** — 실행기는 빈자리만큼만 받는다 |
+| 대기열 | 실행기가 가진다 (`queue`) | **Center가 가진다** — 실행기는 빈자리만큼만 받는다 |
 
 그래서 **같은 모양인 칸은 C4의 모델을 그대로 쓴다** — `JobAck`·`ApprovalAck`·
 `DeploymentResult`·`Readiness`·`ExtensionState`·`JobDispatch`·`ApprovalDispatch`. 베끼면 한쪽만
@@ -27,7 +27,8 @@ from typing import Annotated, Any
 from pydantic import Field
 
 from bpm.contracts._base import ContractModel, SchemaVersioned, Timestamp
-from bpm.contracts.bot_ui import (
+from bpm.contracts.enrollment import PublicKey, RotatedKey
+from bpm.contracts.runner import (
     ApprovalAck,
     ApprovalDispatch,
     DeploymentResult,
@@ -37,7 +38,6 @@ from bpm.contracts.bot_ui import (
     MachineId,
     Readiness,
 )
-from bpm.contracts.enrollment import PublicKey, RotatedKey
 from bpm.contracts.signing import AdminKey
 
 #: 하트비트 기본 간격과 오프라인 판정 (C12 §재시작과 유실 — PC보다 촘촘하다).
@@ -57,12 +57,13 @@ ServerRunnerId = Annotated[str, Field(pattern=r"^srv_[0-9a-f]{8}$")]
 
 # 알려진 값 (모두 열린 문자열).
 KNOWN_RUNNER_STATUSES = frozenset({"running", "paused", "draining", "error"})
-#: `waiting[].waiting_for` — C3 `run_waiting.waiting_for`와 **같은 말**이다.
-WAITING_DELEGATION = "delegation"
 #: **긴 외부 작업** — 한 번 기다려 끝나지 않은 C15 일감 ([ADR-0103](../decisions/0103-long-external-tasks.md)).
 WAITING_EXTERNAL_TASK = "external_task"
+#: `waiting[].waiting_for` — C3 `run_waiting.waiting_for`와 **같은 말**이다.
+#: **맡긴 것**을 기다린다 (ADR-0082). 짝 칸은 `job_id`다.
+WAITING_DELEGATION = "delegation"
 KNOWN_WAITING_FOR = frozenset({"approval", "message", "timer", WAITING_DELEGATION, WAITING_EXTERNAL_TASK})
-#: 위임 결과의 `state` — 작업 ack와 **같은 값**이다 (C4). `finished`가 아니면 업무 실패다.
+#: 맡긴 결과의 `state` — 작업 ack와 **같은 값**이다 (C4). `finished`가 아니면 업무 실패다.
 KNOWN_DELEGATION_STATES = frozenset({"finished", "failed", "cancelled", "expired", "rejected"})
 KNOWN_MESSAGE_ACK_REASONS = frozenset({"no_receiver", "run_ended", "not_waiting", "duplicate"})
 #: 되살리지 못한 실행의 사유 (ADR-0054 — C5 `run_status`의 `error_code`로도 간다).
@@ -180,7 +181,7 @@ class MessageAck(ContractModel):
 
 
 class DelegationAck(ContractModel):
-    """위임 결과 하나를 **받았다** (C12 §PC 위임, ADR-0062).
+    """맡긴 결과 하나를 **받았다** (C12 §맡기기, ADR-0082).
 
     받으면 Center가 그 값을 지운다 — 업무 값이 Center에 남는 시간을 줄인다 (원칙 6의 예외는
     **좁게** 쓴다). ack가 오기 전에는 매번 다시 내려온다 (작업·메시지와 같다).
@@ -191,21 +192,21 @@ class DelegationAck(ContractModel):
 
 
 class DelegationResult(ContractModel):
-    """끝난 PC 위임 하나 (C12 §PC 위임) — 하트비트 응답으로 내려간다.
+    """끝난 맡기기 하나 (C12 §맡기기) — 하트비트 응답으로 내려간다.
 
     **`outputs`가 업무 값이다** — 원칙 6의 명시한 예외이고, 올라오는 것은 그 BPM 프로세스가 **선언한
     `outputs`만**이다 (C1). `state`가 `finished`가 아니면 실행기가 오류 경계로 넘긴다.
     """
 
     job_id: str
-    #: 맡긴 **서버 실행** (어느 실행으로 돌려줄지 — C3 소유로 대조한 그 실행이다).
+    #: 맡긴 **실행** (어느 실행으로 돌려줄지 — C3 소유로 대조한 그 실행이다).
     run_id: str
     state: str  # 열린 문자열 (KNOWN_DELEGATION_STATES)
-    #: PC 실행이 돌려준 값. 실패·거절이면 비어 있다.
+    #: 맡은 실행이 돌려준 값. 실패·거절이면 비어 있다.
     outputs: dict[str, Any] = Field(default_factory=dict)
     reason: str | None = None
-    #: PC 쪽 실행 (CON-01에서 오갈 수 있게 — C3 `parent_run_id`의 반대 방향).
-    pc_run_id: str | None = None
+    #: 맡은 쪽 실행 (CON-01에서 오갈 수 있게 — C3 `parent_run_id`의 반대 방향).
+    child_run_id: str | None = None
 
 
 class ServerRunnerHeartbeatRequest(SchemaVersioned):
@@ -259,7 +260,7 @@ class ServerRunnerHeartbeatResponse(ContractModel):
     cancel_jobs: list[str] = Field(default_factory=list)
     approvals: list[ApprovalDispatch] = Field(default_factory=list)
     messages: list[MessageDispatch] = Field(default_factory=list)
-    #: 끝난 **PC 위임**의 결과. ack가 올 때까지 다시 싣는다 (ADR-0062).
+    #: 끝난 **맡기기**의 결과. ack가 올 때까지 다시 싣는다 (ADR-0082).
     delegations: list[DelegationResult] = Field(default_factory=list)
     #: 참이면 **새 작업을 받지 않는다** (CON-12 「일시 중지」). 도는 것은 끝까지 간다.
     paused: bool = False
@@ -288,14 +289,14 @@ class MessageRequest(SchemaVersioned):
 
 
 class DelegationRequest(SchemaVersioned):
-    """`POST /api/v1/server-runner/delegations` — **PC 위임을 맡긴다** (ADR-0062).
+    """`POST /api/v1/server-runner/delegations` — **다른 패키지에 맡긴다** (ADR-0082).
 
     **멱등 키와 `requested_by`는 본문에서 받지 않는다** — Center가 `run_id`·`node_id`·
     `node_instance`로 짓는다(`dlg_…`). 부르는 쪽마다 짓는 규칙이 갈라지면 되살린 실행이
     **같은 자리에서 작업을 두 번 만든다**.
     """
 
-    #: 맡기는 서버 실행. **보낸 키의 실행이어야 한다** (C3 소유와 같은 대조).
+    #: 맡기는 실행. **보낸 키의 실행이어야 한다** (C3 소유와 같은 대조).
     run_id: str
     node_id: str
     node_instance: int = 1
@@ -305,8 +306,6 @@ class DelegationRequest(SchemaVersioned):
     bpm_process_id: str
     #: 비우면 **배포된 판** (작업 지시와 같은 규칙 — 둘 이상이면 422).
     version: str | None = None
-    #: 적으면 **그 PC로만** (그림의 `bot_ui` 식을 실행기가 값으로 푼 것). 서버 대상이면 422.
-    bot_ui: str | None = None
     inputs: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -314,10 +313,8 @@ class DelegationResponse(ContractModel):
     """맡긴 결과 — **201이 새 작업, 200이 이미 만든 것**이다."""
 
     job_id: str
-    #: 대상 종류 — 대상 패키지의 `run_location`이 정한다 (ADR-0082). `bot_ui` | `server_runner`.
-    target_type: str = "bot_ui"
-    #: Center가 고른 PC (또는 요청이 지정한 PC). **서버 대상이면 없다** — 실행기는 내려줄 때 고른다.
-    bot_ui_id: str | None = None
+    #: 대상 종류 — 실행기가 한 종류다 (ADR-0144).
+    target_type: str = "server_runner"
     state: str  # C5 작업 상태 (열린 문자열)
 
 
@@ -357,7 +354,7 @@ class ServerRunnerInfo(ContractModel):
     versions: RunnerVersions | None = None
     last_heartbeat_at: Timestamp | None = None
     registered_at: Timestamp | None = None
-    #: 이 실행기가 쓰는 Center API 키의 **앞자리**. 원문·해시는 주지 않는다 (C7 `BotUiKey`와 같은 결).
+    #: 이 실행기가 쓰는 Center API 키의 **앞자리**. 원문·해시는 주지 않는다 (C7 `RunnerKey`와 같은 결).
     #: 만료만 보이면 운영자가 CON-11의 어느 줄인지 못 찾는다 — 키가 여럿이면 만료일이 겹친다.
     key_prefix: str | None = None
     key_expires_at: Timestamp | None = None
@@ -520,21 +517,15 @@ __all__ += [
     "DEFAULT_HEARTBEAT_S",
     "DEFAULT_MAX_CONCURRENCY",
     "DEFAULT_PER_BOT_CONCURRENCY",
-    "KNOWN_DELEGATION_STATES",
     "KNOWN_MESSAGE_ACK_REASONS",
     "KNOWN_MESSAGE_TARGETS",
     "KNOWN_RESTORE_REFUSALS",
     "KNOWN_RUNNER_STATUSES",
     "KNOWN_WAITING_FOR",
     "OFFLINE_AFTER_S",
-    "WAITING_DELEGATION",
     "WAITING_EXTERNAL_TASK",
     "WAITING_REQUIRES",
     "Capacity",
-    "DelegationAck",
-    "DelegationRequest",
-    "DelegationResponse",
-    "DelegationResult",
     "MessageAck",
     "MessageDispatch",
     "MessageRequest",

@@ -1,4 +1,4 @@
-"""PC 위임을 맡기는 자리 ([ADR-0062](../decisions/0062-pc-delegation.md), C12 §PC 위임).
+"""**맡기기**를 내보내는 자리 (ADR-0082 일괄 기동, C12 §맡기기).
 
 **엔진이 바깥 세계에 닿는 길은 `RunEnv` 하나다** — 위임도 포트 하나로 나간다 (`senders`·
 `services`와 같은 결). 엔진은 **어디에 맡기는지 모른다**: 서버 실행기는 Center에 요청하는 것을,
@@ -28,8 +28,6 @@ class DelegationCall:
     node_instance: int
     bpm_process_id: str
     version: str | None = None
-    #: 어느 PC인가 — **식을 푼 값**이다 (비우면 받는 쪽이 고른다).
-    bot_ui: str | None = None
     inputs: Mapping[str, Any] = field(default_factory=dict)
     #: 반복 차례(0부터) — 반복이 붙은 호출일 때만 (ADR-0082). 받는 쪽이 멱등 키에 넣는다.
     loop_index: int | None = None
@@ -38,7 +36,7 @@ class DelegationCall:
 class DelegationError(RuntimeError):
     """맡기지 못했다 — **업무 실패**다 (오류 경계가 받는다).
 
-    배포된 PC가 없거나(`no_deployment`) 판이 여럿이거나, Center에 닿지 못한 것이다.
+    배포된 것이 없거나(`no_deployment`) 판이 여럿이거나, Center에 닿지 못한 것이다.
     """
 
     def __init__(self, message: str, *, code: str = "delegation_failed") -> None:
@@ -52,7 +50,7 @@ class DelegationUnsupported(RuntimeError):
 
 @runtime_checkable
 class Delegator(Protocol):
-    """위임을 맡는 쪽. 돌려주는 것은 **그 작업의 id**다 (기다릴 때 그것으로 찾는다).
+    """맡기기를 맡는 쪽. 돌려주는 것은 **그 작업의 id**다 (기다릴 때 그것으로 찾는다).
 
     `withdraw`는 **기다림을 걷을 때** 엔진이 부른다 — 함께 도는 반복에서 한 건이 실패했거나
     중단 경계가 울려 그 결과를 받을 쪽이 없어졌다 ([ADR-0087](../decisions/0087-parallel-loop-on-the-server.md)).
@@ -69,12 +67,12 @@ class NoDelegator:
     """기본 — **맡기지 못한다.** 실행하는 쪽이 꽂아야 위임이 선다.
 
     여기서 「안쪽을 그 자리에서 돌리는」 폴백을 두지 않는다 — 부르는 대상은 **다른 패키지**라
-    이 패키지 안에 그 정의가 없다 (ADR-0062 §2). 돌릴 것이 없으니 되는 척할 수 없다.
+    이 패키지 안에 그 정의가 없다 (ADR-0082). 돌릴 것이 없으니 되는 척할 수 없다.
     """
 
     def delegate(self, call: DelegationCall) -> str:
         raise DelegationUnsupported(
-            f"PC 위임을 맡길 곳이 없다: {call.bpm_process_id} — 실행하는 쪽이 끼워야 한다"
+            f"맡길 곳이 없다: {call.bpm_process_id} — 실행하는 쪽이 끼워야 한다"
         )
 
     def withdraw(self, job_id: str) -> None:

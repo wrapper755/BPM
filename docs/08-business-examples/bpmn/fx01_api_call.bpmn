@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx01_api_call" name="API AI 태스크" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": []

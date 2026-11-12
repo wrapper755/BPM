@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 (2026-10-14) |
+| 상태 | 대체됨([ADR-0143](0143-design-happens-in-the-console.md)) — 원래 수락 (2026-10-14). **정의 고정의 조건은 웹 편집기가 이어받는다** |
 | 날짜 | 2026-10-14 |
 | 관련 | 계약 C1 `requires.extensions[].definition_hash`·C14 `chk:process.extensions`·C13 E6(「전송」)·C2(승인 서명), [ADR-0022](0022-studio-canvas.md)(그림은 캔버스를 거친다), [ADR-0013](0013-api-keys.md), `docs/09-gaps.md` §3-10, 화면 STU-06·STU-15 |
 

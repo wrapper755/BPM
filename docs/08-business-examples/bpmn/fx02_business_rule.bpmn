@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx02_business_rule" name="규칙 태스크 (DMN)" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

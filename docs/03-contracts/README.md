@@ -34,17 +34,17 @@
 
 | # | 계약 | 누가 → 누구 | 상태 | 프로토타입 참고 ([대응표](../reference/README.md)) |
 | --- | --- | --- | --- | --- |
-| [C1](C1-package-manifest.md) | 패키지 매니페스트 (실행 위치 `run_location` 기본 `server`, 부르는 서비스 앱(= C15 토픽), 키 값 없음) | Studio → Center → PC 실행기·서버 실행기 | **구현됨** | Studio·BPM 프로세스 `packages/protocol/…/manifest.py` |
-| [C2](C2-signing-envelope.md) | 해시·서명 봉투 | Center(관리자 계정의 승인·배포) → PC 실행기·서버 실행기 | **구현됨** | Studio·BPM 프로세스 `packages/protocol/…/hashing.py`, `signing.py` |
-| [C3](C3-run-events.md) | 실행 이벤트 (실행 위치 포함) | PC 실행기(실행 중 BPM 프로세스)·서버 실행기 → Center | **구현됨** | Studio·BPM 프로세스 `packages/protocol/…/events.py` |
-| [C4](C4-bot-ui-center.md) | Center API: PC 실행기 (Center API 키 인증·등록·하트비트 — 실행 중 BPM 프로세스 1건과 대기열 보고) | PC 실행기 ↔ Center | **구현됨** | Center `api/bots.py`, `schemas/api.py` |
-| [C5](C5-packages-deployments-jobs.md) | Center API: 패키지·배포·작업 (배포 대상 PC 실행기 / 서버 실행기, 서버 배포의 동시 실행 상한, 작업 상태에 「대기열」, 거절 사유 「대기열 가득」) | Studio·콘솔·PC 실행기·서버 실행기 ↔ Center | **구현됨** | Center `api/packages.py`, `deployments.py`, `jobs.py` |
-| [C6](C6-approvals.md) | Center API: 결재 | PC 실행기·서버 실행기 ↔ Center ↔ 콘솔 | **구현됨** | Center `api/hitl.py` |
-| [C7](C7-resources-center-keys.md) | Center API: 리소스 (확장·서비스 앱·확장 기여 자원·런타임) + Center API 키 관리 | 서비스 앱·PC 실행기·Studio ↔ Center | **구현됨** | 없음 |
+| [C1](C1-package-manifest.md) | 패키지 매니페스트 (부르는 서비스 앱(= C15 토픽), 맡기는 BPM 프로세스, 키 값 없음) | Studio → Center → 서버 실행기 | **구현됨** | Studio·BPM 프로세스 `packages/protocol/…/manifest.py` |
+| [C2](C2-signing-envelope.md) | 해시·서명 봉투 | Center(관리자 계정의 승인·배포) → 서버 실행기 | **구현됨** | Studio·BPM 프로세스 `packages/protocol/…/hashing.py`, `signing.py` |
+| [C3](C3-run-events.md) | 실행 이벤트 | 서버 실행기(실행 중 BPM 프로세스)·Studio → Center | **구현됨** | Studio·BPM 프로세스 `packages/protocol/…/events.py` |
+| [C4](C4-runner-center.md) | 실행기 ↔ Center 공통 (등록 요청과 승인·봉함·키 회전·키 묶기, 공통 모델 — 경로는 C12) | 실행기 ↔ Center | **구현됨** | Center `api/bots.py`, `schemas/api.py` |
+| [C5](C5-packages-deployments-jobs.md) | Center API: 패키지·배포·작업 (배포 대상 서버 실행기, 배포의 동시 실행 상한, 작업 상태에 「대기열」, 거절 사유 「대기열 가득」) | Studio·콘솔·서버 실행기 ↔ Center | **구현됨** | Center `api/packages.py`, `deployments.py`, `jobs.py` |
+| [C6](C6-approvals.md) | Center API: 결재 (결재와 **확인** 둘 다) | 서버 실행기·Studio ↔ Center ↔ 콘솔 | **구현됨** | Center `api/hitl.py` |
+| [C7](C7-resources-center-keys.md) | Center API: 리소스 (확장·서비스 앱·확장 기여 자원·런타임) + Center API 키 관리 | 서비스 앱·서버 실행기·Studio ↔ Center | **구현됨** | 없음 |
 | [C11](C11-service-app-common.md) | 서비스 앱 공통 (일꾼 — healthz·manifest·작업 모양·수행 모드·멱등, 관리 콘솔 최소 기능) | 모든 서비스 앱(일꾼) → Center (C15) | **구현됨** | 없음 ([ADR-0010](../decisions/0010-service-apps.md), [ADR-0013](../decisions/0013-api-keys.md)) |
-| [C12](C12-server-runner-center.md) | Center API: 서버 실행기 (Center API 키 인증·등록·하트비트, 실행 중·기다리는 실행·대기열 보고, 일시 중지, 메시지, PC 위임 요청·결과) | 서버 실행기 ↔ Center | **구현됨** (M7) | 없음 ([ADR-0015](../decisions/0015-run-location.md)) |
-| [C13](C13-extension-manifest.md) | 확장 정의 (`extension.json`: 등급, 서버 부분, 기여 지점, 외부 앱 HTTP 어댑터) | 확장 → Studio·PC 실행기·실행기·서버 실행기·Center | **구현됨** | 없음 ([ADR-0018](../decisions/0018-extensions.md)) |
-| [C14](C14-bpmn-extensions.md) | BPMN 확장 속성 (`bpm:*` — 태스크 종류별 속성, 반복·파일 출력·이벤트 규칙, 시험 케이스 형식·비교 규칙, 실행 전 검사 B1~B16) | Studio → 패키지 → 실행기·서버 실행기, Center 업로드 검사 | **구현됨** | Studio `agentworks:*` 확장 속성 ([업무 예제](../08-business-examples/README.md)가 이 형식으로 쓰였다) |
+| [C12](C12-server-runner-center.md) | Center API: 서버 실행기 (Center API 키 인증·등록·하트비트, 실행 중·기다리는 실행·대기열 보고, 일시 중지, 메시지, 맡기기 요청·결과) | 서버 실행기 ↔ Center | **구현됨** (M7) | 없음 ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)) |
+| [C13](C13-extension-manifest.md) | 확장 정의 (`extension.json`: 등급, 서버 부분, 기여 지점, 외부 앱 HTTP 어댑터) | 확장 → Studio·서버 실행기·Center | **구현됨** | 없음 ([ADR-0018](../decisions/0018-extensions.md)) |
+| [C14](C14-bpmn-extensions.md) | BPMN 확장 속성 (`bpm:*` — 태스크 종류별 속성, 반복·파일 출력·이벤트 규칙, 시험 케이스 형식·비교 규칙, 실행 전 검사 B1~B17) | Studio → 패키지 → 서버 실행기, Center 업로드 검사 | **구현됨** | Studio `agentworks:*` 확장 속성 ([업무 예제](../08-business-examples/README.md)가 이 형식으로 쓰였다) |
 | [C15](C15-external-tasks.md) | Center API: 외부 작업 (올리기·기다리기·가져가기(롱폴링)·끝내기, 일꾼 들이기 — 바깥 기능을 부르는 길이 모두 Pull, [ADR-0102](../decisions/0102-calling-outside-is-pull.md)) | 서버 실행기·실행 프로세스·Studio → Center ← 일꾼 | **구현됨** | 없음 |
 | [C16](C16-organization.md) | Center API: 조직·업무 자리 (회사 > 부서 > 직원, 장비의 회사, 승인 때 고르는 업무 자리, 회사 관리자 — 가상 직원을 대신한다, [ADR-0125](../decisions/0125-organization-and-work-placement.md)) | 콘솔·연동용 키 ↔ Center → 서버 실행기 | **합의** | 없음 |
 
@@ -63,7 +63,7 @@
 | C2 | `bpm.contracts.hashing` | `canonical_json()`, `content_hash_dir()`·`content_hash_zip()` | 같음 |
 | C2 | `bpm.contracts.signing` | `sign()`, `verify()`(V1~V4), `verify_time()`(V5), `verify_target()`(V6), `verify_package()`(V7), `verify_admin_key_addition()`(V8) | 같음 |
 | C3 | `bpm.contracts.events` | `missing_data_keys()` — 줄 단위 거부용 | 같음 |
-| C4 | `bpm.contracts.bot_ui` | (모델 검증만) | 같음 |
+| C4 | `bpm.contracts.runner` | (모델 검증만 — 공통 모델) | 같음 |
 | C5 | `bpm.contracts.center_api` | `validate_deployment()` — **Center `POST /deployments`가 이것을 부른다** (ADR-0047), 상태는 `deployment_refusal()`이 고른다. `validate_job_create()`, `cancel_outcome()` | (문서에 JSON 예시 없음) |
 | C6 | `bpm.contracts.approvals` | `validate_answer()` — Center와 실행하는 쪽이 **같이 쓴다**. `validate_create()`, `request_id_for()`, `apply_defaults()` | `tests/shared/test_contract_examples.py` |
 | C7 | `bpm.contracts.resources` | `missing()` — C1 `requires` ↔ 리소스 목록 대조. `blocking_at_deploy()`가 배포를 막을 것만 고른다 | (문서에 JSON 예시 없음) |
@@ -71,7 +71,7 @@
 | C11 | `bpm.contracts.service_app` | `resolve_mode()`(폴백 규칙), `idempotency_key()` | (문서 예시는 HTTP라 모델 시험은 `tests/server/test_service_kit.py`) |
 | C12 | `bpm.contracts.server_runner` | `validate_heartbeat()`(자리 셈·`waiting[]` 짝 칸 — 보내는 쪽과 받는 쪽이 **같이 쓴다**), `free_slots()`·`pick_jobs()`(작업 나누기), `restorable()`(되살리기 판정, ADR-0054), `message_matches()`·`pick_message_target()`(받는 곳 고르기 — **엔진의 규칙 그대로**이고 `tests/shared/test_core_events.py`가 둘을 대조한다) | `tests/shared/test_contracts_server_runner.py`·`tests/shared/test_contract_examples.py` |
 | C12 | **`bpm.core.run_snapshot`** | 기다리는 실행을 담고 되살린다 (ADR-0054 §1~§2) — `Run`의 칸을 **셋으로 가르고**(담는다/다시 꽂는다/버린다) `audit_fields()`가 **칸이 늘면 묻는다** | `tests/shared/test_core_run_snapshot.py` |
-| C12 | **`bpm.center.api.server_runner`** + **`bpm.server_runner`** | 받는 쪽(등록·하트비트·운영 API 셋·작업 나누기·**메시지** `api.messages`)과 보내는 쪽(`agent.tick()` — 배포 설치·준비 상태·작업 실행·저장·재개·결재·**메시지**까지. 실행 하나는 `worker.Worker` 스레드 하나이고, 기다리는 실행은 `store.Store`(SQLite)에 담긴다). 키 묶기는 C4와 **한 코드**(`center.host_keys`), `machine_id`·설치·배포 적용·`RunEnv` 짓기·**담고 되살리기**도 하나(`core.machine`·`core.packages`·`core.deploy`·`core.run_env`·`core.run_snapshot`). 현황 목록은 **콘솔 토큰만**(`auth.require_console` — CON-03도 같이 좁혔다) | `tests/server/test_center_server_runner.py`·`tests/server/test_server_runner_agent.py`·`tests/server/test_server_runner_deploy.py`·`tests/server/test_center_messages.py`·`tests/server/test_server_runner_messages.py` |
+| C12 | **`bpm.center.api.server_runner`** + **`bpm.server_runner`** | 받는 쪽(등록·하트비트·운영 API 셋·작업 나누기·**메시지** `api.messages`)과 보내는 쪽(`agent.tick()` — 배포 설치·준비 상태·작업 실행·저장·재개·결재·**메시지**까지. 실행 하나는 `worker.Worker` 스레드 하나이고, 기다리는 실행은 `store.Store`(SQLite)에 담긴다). 키 묶기 규칙은 C4이고 코드는 `center.host_keys` 한 자리다. `machine_id`·설치·배포 적용·`RunEnv` 짓기·**담고 되살리기**는 `core.machine`·`core.packages`·`core.deploy`·`core.run_env`·`core.run_snapshot`이다. 현황 목록은 **콘솔 토큰만**(`auth.require_console`) | `tests/server/test_center_server_runner.py`·`tests/server/test_server_runner_agent.py`·`tests/server/test_server_runner_deploy.py`·`tests/server/test_center_messages.py`·`tests/server/test_server_runner_messages.py` |
 | C11 | **`bpm.service_kit`** | 계약을 지키는 일꾼 — 작업 함수를 받아 `create_app`(`/healthz`·관리 API)과 `service_kit.consumer`(`Consumer` 가져가기 루프·`Enrollment` 들이기·`TokenFile`)를 준다. 멱등, 수행 모드·폴백, 오류 형식, 사용 기록 | `tests/server/test_service_kit.py`·`tests/server/test_service_kit_consumer.py` |
 | C13 | `bpm.contracts.extension` | `validate()` — E1·E2·E3 + 모양. `task_type_conflicts()`(E4), `check_api()`(E5), `verify_external()`(E6), `check_size()`, `definition_hash()` | `tests/shared/test_contract_examples.py` |
 | C13 | **`bpm.core.extensions`** | 확장 호스트 — 엔트리 포인트로 찾기, 검사 규칙 적용, 기여 지점별 목록, `entry` 해석(그 확장 패키지 안으로 제한). 인터페이스는 `bpm.extension_api` | `tests/shared/test_extension_host.py` |
@@ -88,7 +88,7 @@ V5~V8은 **역할에 따라 누가 검사하는지가 다르므로** 함수를 �
 
 ## 프로토타입에서 이미 알려진 결함 (새 계약에서 막을 것)
 
-- Center는 BPM 프로세스별 인증이 없어 공용 토큰으로 아무 `bot_id`나 쓸 수 있었다 → C4에서 PC 실행기별 Center API 키.
+- Center는 BPM 프로세스별 인증이 없어 공용 토큰으로 아무 `bot_id`나 쓸 수 있었다 → C4에서 실행기별 Center API 키.
 - 문서(`X-Bot-Id` 헤더, `{"events": [...]}` 본문)와 코드(`?bot_id=`, 배열 본문)가 달랐다 → 명세에서 예시 요청을 테스트로 돌린다.
 - 계약 패키지 버전(1.2.0)과 사용 태그(v1.3/v1.4)가 어긋났다 → 버전은 `schema` 정수와 패키지 버전 두 가지만, 태그 없이 워크스페이스 의존.
 - BPM 프로세스 상태 값이 닫힌 목록이라, 모르는 상태 하나로 하트비트 전체가 422 거부되었다 → C4의 상태 필드는 열린 문자열 + 알려진 값 목록.

@@ -1,5 +1,4 @@
 import type { JobInfo } from "@bpm/api-types/c5-job-info";
-import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
 
 /**
  * CON-05 작업 지시의 표기 — 목록과 상세가 같이 쓴다.
@@ -26,16 +25,13 @@ export const REASON_LABEL: Record<string, string> = {
   queue_full: "대기열 가득",
   no_deployment: "배포 없음",
   not_ready: "준비 안 됨",
-  bot_ui_shutdown: "Bot 종료",
-  bot_ui_lost: "Bot 기록 유실",
-  server_location: "서버 실행 프로세스",
-  cancelled_on_pc: "현장에서 취소",
+  runner_lost: "실행기 기록 유실",
   global_limit: "서버 실행기 빈자리 없음",
   per_bot_limit: "프로세스별 동시 실행 상한",
   paused: "일시 중지",
 };
 
-/** PC 위임의 요청자 예약값 (C5 `server_bot:<run_id>`). */
+/** 맡기기의 요청자 예약값 (C5 `server_bot:<run_id>`). */
 const SERVER_BOT = "server_bot:";
 
 export function time(value: string | null | undefined): string {
@@ -45,16 +41,9 @@ export function time(value: string | null | undefined): string {
   return `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
 }
 
-/** 실행 위치 — PC / 서버 (C5 `target.type`). */
-export function location(job: JobInfo): string {
-  return job.target.type === "server_runner" ? "서버" : "PC";
-}
-
-/** 대상 — PC 실행기 이름, 서버면 「서버」. 이름은 바뀌므로 읽을 때 찾는다. */
-export function targetName(job: JobInfo, botUis: BotUiInfo[]): string {
-  if (job.target.type === "server_runner") return "서버";
-  const id = job.target.id ?? "";
-  return botUis.find((one) => one.bot_ui_id === id)?.name ?? id;
+/** 대상 — 실행기 이름(id), 비우면 「Center가 고름」 (C5 `JobTarget`). */
+export function targetName(job: JobInfo): string {
+  return job.target.id ?? "Center가 고름";
 }
 
 /** `이름@버전`, 버전을 비웠으면 「(배포된 버전)」 (CON-05). */
@@ -62,7 +51,7 @@ export function botLabel(job: JobInfo): string {
   return `${job.bpm_process_id}@${job.version ?? "(배포된 버전)"}`;
 }
 
-/** PC 위임이면 그 서버 실행의 id, 아니면 `null`. */
+/** 맡긴 것이면 그 실행의 id, 아니면 `null`. */
 export function delegatedFrom(job: JobInfo): string | null {
   return job.requested_by.startsWith(SERVER_BOT) ? job.requested_by.slice(SERVER_BOT.length) : null;
 }
@@ -74,18 +63,16 @@ export function delegatedFrom(job: JobInfo): string | null {
  * - 도는 서버 실행(`accepted`)을 멈춰 달라고 했으면 「중지 요청함 — 다음 하트비트에 반영」
  *   (ADR-0063 — 실행기가 닫으면 「취소됨」이 된다).
  * - 그사이 시작됐으면 작업은 「수락」 그대로이고 「취소 못 함 — 이미 시작됨」.
- * - 대기열이면 「PC 실행기 대기열 N번째 — 실행 중 <BPM 프로세스>」 (PC 실행기가 보고한 지금 실행).
+ * - 대기열이면 「Center 대기열 N번째」 (서버 작업의 대기열은 Center가 가진다, C12).
  */
-export function stateNote(job: JobInfo, botUis: BotUiInfo[]): string | null {
+export function stateNote(job: JobInfo): string | null {
   if (job.cancel_result === "refused_already_started") return "취소 못 함 — 이미 시작됨";
   if (job.cancel_requested && job.state === "accepted" && job.target.type === "server_runner") {
     return "중지 요청함 — 다음 하트비트에 반영";
   }
   if (job.cancel_requested && job.state !== "cancelled") return "취소 요청함 — 다음 하트비트에 반영";
   if (job.state === "queued" && job.queue_position) {
-    const host = botUis.find((one) => one.bot_ui_id === job.target.id);
-    const running = host?.current_run?.bpm_process_id;
-    return `Bot 대기열 ${job.queue_position}번째${running ? ` — 실행 중 ${running}` : ""}`;
+    return `Center 대기열 ${job.queue_position}번째`;
   }
   return null;
 }

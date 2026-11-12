@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 대체됨([ADR-0143](0143-design-happens-in-the-console.md)) — 원래 수락. **기여 뿌리는 한 단계라는 규칙은 웹 편집기가 이어받는다** |
 | 날짜 | 2026-10-11 |
 | 관련 | C13 §5, C7, [ADR-0018](0018-extensions.md), [ADR-0044](0044-canvas-drag-and-drop.md), STU-03·STU-13, `docs/09-gaps.md` §4-4 |
 

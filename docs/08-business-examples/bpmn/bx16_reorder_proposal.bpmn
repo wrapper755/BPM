@@ -6,11 +6,9 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:bpm="urn:chaeksas:bpmn:1"
   id="Defs_bx16_reorder_proposal" targetNamespace="urn:chaeksas:examples" exporter="bpm-examples" exporterVersion="1">
-  <bpmn:error id="Err_DELEGATION_FAILED" name="DELEGATION_FAILED" errorCode="DELEGATION_FAILED" />
-  <bpmn:process id="Proc_bx16_reorder_proposal" name="재고 발주 제안 (서버) → 발주서 출력 준비 (PC)" isExecutable="true">
+  <bpmn:process id="Proc_bx16_reorder_proposal" name="재고 발주 제안 → 발주서 출력 준비" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "wms",
@@ -73,8 +71,7 @@
       "type": "text",
       "required": false
     }
-  ],
-  "location": "center"
+  ]
 }</bpm:approval>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_04</bpmn:incoming>
@@ -90,51 +87,46 @@
       <bpmn:outgoing>Flow_09</bpmn:outgoing>
       <bpmn:script>확정 = 제안</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:callActivity id="Call_Print" name="출력 준비 (PC 위임)" calledElement="Proc_fx19_manual_task_pc">
+    <bpmn:manualTask id="Manual_Print" name="출력 준비">
       <bpmn:extensionElements>
-        <bpm:call>{
-  "delegate": {
-    "bpm_process_id": "fx19-manual-task-pc"
-  },
-  "input": {},
-  "output": {
-    "출력준비": "확인됨"
-  }
-}</bpm:call>
+        <bpm:approval>{
+  "title": "발주서를 프린터로 뽑아 주세요",
+  "description": "",
+  "show": [
+    "확정"
+  ],
+  "fields": []
+}</bpm:approval>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_09</bpmn:incoming>
       <bpmn:outgoing>Flow_10</bpmn:outgoing>
-    </bpmn:callActivity>
+    </bpmn:manualTask>
     <bpmn:scriptTask id="Task_Note" name="발주 기록" scriptFormat="bpm-expr">
       <bpmn:incoming>Flow_10</bpmn:incoming>
       <bpmn:outgoing>Flow_11</bpmn:outgoing>
-      <bpmn:script>발주건수 = len(확정)</bpmn:script>
+      <bpmn:script>발주건수 = len(확정)
+출력준비 = True</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:sendTask id="Task_Failed" name="출력 준비 실패 알림">
+    <bpmn:sendTask id="Task_Failed" name="발주 보류 알림">
       <bpmn:extensionElements>
         <bpm:email>{
   "to": [
     "purchasing@example.com"
   ],
-  "subject": "발주서 출력 준비 실패",
-  "body": "발주 {제안수}건의 발주서 출력 준비가 끝나지 않았습니다. 사유: {error_message}\n직접 뽑아 주세요.",
+  "subject": "발주 보류",
+  "body": "발주 {제안수}건이 보류되었습니다. 필요하면 직접 뽑아 주세요.",
   "attachments": [],
   "store_as": null
 }</bpm:email>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_12</bpmn:incoming>
-      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+      <bpmn:incoming>Flow_08</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
     </bpmn:sendTask>
     <bpmn:endEvent id="End" name="끝">
       <bpmn:incoming>Flow_05</bpmn:incoming>
-      <bpmn:incoming>Flow_08</bpmn:incoming>
       <bpmn:incoming>Flow_11</bpmn:incoming>
-      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:incoming>Flow_12</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:boundaryEvent id="Bnd_Delegation" name="위임 실패" attachedToRef="Call_Print">
-      <bpmn:outgoing>Flow_12</bpmn:outgoing>
-      <bpmn:errorEventDefinition errorRef="Err_DELEGATION_FAILED" />
-    </bpmn:boundaryEvent>
     <bpmn:sequenceFlow id="Flow_01" sourceRef="Start" targetRef="Task_Stock" />
     <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_Stock" targetRef="Task_Calc" />
     <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_Calc" targetRef="Gw_Any" />
@@ -146,12 +138,11 @@
     <bpmn:sequenceFlow id="Flow_07" name="발주" sourceRef="Gw_Order" targetRef="Task_Confirm">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">승인</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_08" name="보류" sourceRef="Gw_Order" targetRef="End" />
-    <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_Confirm" targetRef="Call_Print" />
-    <bpmn:sequenceFlow id="Flow_10" sourceRef="Call_Print" targetRef="Task_Note" />
+    <bpmn:sequenceFlow id="Flow_08" name="보류" sourceRef="Gw_Order" targetRef="Task_Failed" />
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_Confirm" targetRef="Manual_Print" />
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Manual_Print" targetRef="Task_Note" />
     <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_Note" targetRef="End" />
-    <bpmn:sequenceFlow id="Flow_12" sourceRef="Bnd_Delegation" targetRef="Task_Failed" />
-    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_Failed" targetRef="End" />
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_Failed" targetRef="End" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="Diagram_1">
     <bpmndi:BPMNPlane id="Plane_1" bpmnElement="Proc_bx16_reorder_proposal">
@@ -162,11 +153,10 @@
       <bpmndi:BPMNShape id="Approve_Order_di" bpmnElement="Approve_Order"><dc:Bounds x="726" y="230" width="100" height="80" /></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gw_Order_di" bpmnElement="Gw_Order" isMarkerVisible="true"><dc:Bounds x="896" y="245" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="876" y="299" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Confirm_di" bpmnElement="Task_Confirm"><dc:Bounds x="1016" y="380" width="100" height="80" /></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Call_Print_di" bpmnElement="Call_Print"><dc:Bounds x="1186" y="380" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Manual_Print_di" bpmnElement="Manual_Print"><dc:Bounds x="1186" y="380" width="100" height="80" /></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Note_di" bpmnElement="Task_Note"><dc:Bounds x="1356" y="380" width="100" height="80" /></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_Failed_di" bpmnElement="Task_Failed"><dc:Bounds x="1356" y="530" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Failed_di" bpmnElement="Task_Failed"><dc:Bounds x="1016" y="230" width="100" height="80" /></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="End_di" bpmnElement="End"><dc:Bounds x="1526" y="102" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1506" y="142" width="76" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Bnd_Delegation_di" bpmnElement="Bnd_Delegation"><dc:Bounds x="1246" y="442" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1242" y="480" width="44" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_01_di" bpmnElement="Flow_01"><di:waypoint x="196" y="120" /><di:waypoint x="266" y="120" /></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_02_di" bpmnElement="Flow_02"><di:waypoint x="366" y="120" /><di:waypoint x="436" y="120" /></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_03_di" bpmnElement="Flow_03"><di:waypoint x="536" y="120" /><di:waypoint x="606" y="120" /></bpmndi:BPMNEdge>
@@ -174,12 +164,11 @@
       <bpmndi:BPMNEdge id="Flow_05_di" bpmnElement="Flow_05"><di:waypoint x="656" y="120" /><di:waypoint x="1526" y="120" /><bpmndi:BPMNLabel><dc:Bounds x="660" y="102" width="24" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_06_di" bpmnElement="Flow_06"><di:waypoint x="826" y="270" /><di:waypoint x="896" y="270" /></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_07_di" bpmnElement="Flow_07"><di:waypoint x="921" y="295" /><di:waypoint x="921" y="420" /><di:waypoint x="1016" y="420" /><bpmndi:BPMNLabel><dc:Bounds x="925" y="402" width="24" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_08_di" bpmnElement="Flow_08"><di:waypoint x="921" y="245" /><di:waypoint x="921" y="120" /><di:waypoint x="1526" y="120" /><bpmndi:BPMNLabel><dc:Bounds x="925" y="102" width="24" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_08_di" bpmnElement="Flow_08"><di:waypoint x="946" y="270" /><di:waypoint x="1016" y="270" /><bpmndi:BPMNLabel><dc:Bounds x="950" y="252" width="24" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_09_di" bpmnElement="Flow_09"><di:waypoint x="1116" y="420" /><di:waypoint x="1186" y="420" /></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10"><di:waypoint x="1286" y="420" /><di:waypoint x="1356" y="420" /></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11"><di:waypoint x="1456" y="420" /><di:waypoint x="1501" y="420" /><di:waypoint x="1501" y="120" /><di:waypoint x="1526" y="120" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12"><di:waypoint x="1264" y="478" /><di:waypoint x="1264" y="570" /><di:waypoint x="1356" y="570" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_13_di" bpmnElement="Flow_13"><di:waypoint x="1456" y="570" /><di:waypoint x="1501" y="570" /><di:waypoint x="1501" y="120" /><di:waypoint x="1526" y="120" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12"><di:waypoint x="1116" y="270" /><di:waypoint x="1501" y="270" /><di:waypoint x="1501" y="120" /><di:waypoint x="1526" y="120" /></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

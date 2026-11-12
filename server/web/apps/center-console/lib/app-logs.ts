@@ -1,6 +1,6 @@
 import type { EnrollmentInfo } from "@bpm/api-types/c5-enrollment-info";
 import type { CenterKeyInfo } from "@bpm/api-types/c7-center-key-info";
-import type { DeploymentResult } from "@bpm/api-types/c5-bot-ui-info";
+import type { DeploymentResult } from "@bpm/api-types/c12-server-runner-info";
 
 /**
  * CON-16 앱 로그 — Center가 이미 들고 있는 것(등록 요청·키·배치 결정)을 **읽어 합친다** (ADR-0121).
@@ -10,9 +10,9 @@ import type { DeploymentResult } from "@bpm/api-types/c5-bot-ui-info";
  */
 
 /** 앱 종류 — 등록 요청·키의 `type` 값. 일꾼(`consumer`)은 앱이 아니라 넣지 않는다. */
-export type AppKind = "studio" | "bot_ui" | "server_runner";
-export const APP_KINDS: AppKind[] = ["studio", "bot_ui", "server_runner"];
-export const APP_LABEL: Record<AppKind, string> = { studio: "Studio", bot_ui: "Bot", server_runner: "서버 실행기" };
+export type AppKind = "studio" | "server_runner";
+export const APP_KINDS: AppKind[] = ["studio", "server_runner"];
+export const APP_LABEL: Record<AppKind, string> = { studio: "Studio", server_runner: "서버 실행기" };
 
 /** 들이기 비밀로 받는 자리에서 승인된 요청의 「누가」 (ADR-0117 — Center `JOIN_TOKEN_ACTOR`). */
 const JOIN_TOKEN_ACTOR = "join_token";
@@ -41,7 +41,7 @@ export interface AppLogRow {
   who: string;
 }
 
-/** 배치 결정을 올린 앱 하나 — Bot(C4)·서버 실행기(C12)가 같은 모양이다. */
+/** 배치 결정을 올린 앱 하나 — 실행기가 올린다 (C4 모델, C12 전송). */
 export interface ReportingHost {
   kind: AppKind;
   name: string;

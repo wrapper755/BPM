@@ -14,7 +14,7 @@
 가리는 데는 import와 속성 찾기까지면 충분하고, Qt 위젯을 만들려면 화면 없는 환경에서도
 `QApplication`이 필요해 빌드 검사가 무거워진다.
 
-**쓰는 쪽은 둘이다** (PC 실행기·Studio의 `--selftest`) — 한 자리에 두어 둘이 같은 것을 본다.
+**쓰는 쪽은 둘이다** (서버 실행기·Studio의 `--selftest`) — 한 자리에 두어 둘이 같은 것을 본다.
 깃발을 읽는 것도 여기다(`main`) — 두 앱이 깃발을 따로 늘리면 빌드가 한쪽에만 넘긴다.
 
 **찍힌 판도 함께 싣는다** ([ADR-0067](../../../../../docs/decisions/0067-build-stamp.md)) — 빌드가
@@ -38,7 +38,7 @@ from bpm.core import build_info
 from bpm.core.extensions import ExtensionHost, load_host, summarize
 from bpm.extension_api.entry import module_root, resolve
 
-#: 빌드 검사 깃발 — **PC 실행기·Studio가 같은 이름을 쓴다** (ADR-0024). 빌드가 이것으로 부른다.
+#: 빌드 검사 깃발 — **서버 실행기·Studio가 같은 이름을 쓴다** (ADR-0024). 빌드가 이것으로 부른다.
 SELFTEST_FLAG = "--selftest"
 
 

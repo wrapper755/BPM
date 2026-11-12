@@ -10,7 +10,6 @@
   <bpmn:process id="Proc_fx08_error_boundary" name="오류 경계와 대체 경로" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": []

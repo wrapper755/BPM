@@ -1,7 +1,7 @@
 """결재 — 실행하는 쪽이 올리고, 콘솔에서 답하고, 하트비트로 내려간다 (C6).
 
-**Center로 올라오는 것은 결재(`approval`)뿐이다.** 확인(`confirmation`)은 화면 앞 사람만
-답할 수 있으므로 올리지 않는다 — 올라오면 422다.
+**결재(`approval`)와 확인(`confirmation`) 둘 다 올라온다** (ADR-0144) — 확인이 화면 앞 사람의
+창으로만 가던 길은 PC 실행기와 함께 걷었다. 모르는 층은 422 `unknown_layer`다.
 
 세 가지가 이 모듈의 뼈대다.
 
@@ -9,8 +9,8 @@
    대조한다. 키가 새도 남의 결재를 가로채지 못한다.
 2. **거절은 되돌림이다** — 실행하는 쪽이 답을 받아들이지 못하면(`rejected_by_host`) 곧바로
    `open`으로 돌아가고 사유만 남는다. 결재자가 고쳐서 다시 답한다.
-3. **답할 곳이 없어진 결재는 자동으로 회수한다** — 실행이 끝났거나(`run_ended`) PC 실행기가
-   대기열을 잃으면(`host_lost`). 답은 할 수 있는데 전달될 데가 없는 결재를 남기지 않는다.
+3. **답할 곳이 없어진 결재는 자동으로 회수한다** — 실행이 끝났거나(`run_ended`) 실행기가
+   기록을 잃으면(`host_lost`). 답은 할 수 있는데 전달될 데가 없는 결재를 남기지 않는다.
    **끝난 실행의 결재는 다시 열리지 않는다** — 2의 되돌림은 답에만, 실행이 도는 동안에만이다.
 """
 
@@ -38,7 +38,7 @@ from bpm.contracts.approvals import (
     validate_answer,
     validate_create,
 )
-from bpm.contracts.bot_ui import ApprovalAck, ApprovalDispatch
+from bpm.contracts.runner import ApprovalAck, ApprovalDispatch
 
 #: 결재 상태 (C6). 열린 문자열이지만 Center가 **짓는** 것은 이것들뿐이다.
 OPEN = "open"
@@ -50,10 +50,10 @@ WITHDRAWN = "withdrawn"
 SETTLED = (ANSWERED, EXPIRED, WITHDRAWN)
 
 #: 결재를 올릴 수 있는 키 종류 (C6 §전송).
-HOST_KEY_TYPES = {"bot_ui": "bot_ui", "server_runner": "server_runner"}
+HOST_KEY_TYPES = {"server_runner": "server_runner"}
 
 #: 올린 쪽이 스스로 회수할 수 있는 사유. 그 밖은 관리자만 (`admin_withdraw`).
-HOST_WITHDRAW_REASONS = frozenset({"answered_in_field", "run_ended"})
+HOST_WITHDRAW_REASONS = frozenset({"run_ended"})
 ADMIN_WITHDRAW = "admin_withdraw"
 
 
@@ -61,9 +61,9 @@ ADMIN_WITHDRAW = "admin_withdraw"
 
 
 def _host_key(found: Caller) -> Any:
-    """결재를 올릴 수 있는 키인가 (C6 — PC 실행기·서버 실행기만)."""
+    """결재를 올릴 수 있는 키인가 (C6 — 서버 실행기만)."""
     if found.key is None or found.key.type not in HOST_KEY_TYPES:
-        raise ApiError(403, "wrong_key_type", "결재는 PC 실행기·서버 실행기 키로 올린다")
+        raise ApiError(403, "wrong_key_type", "결재는 서버 실행기 키로 올린다")
     return found.key
 
 
@@ -109,8 +109,8 @@ def create(store: Store, found: Caller, raw: dict[str, Any]) -> tuple[ApprovalIn
         cur.execute(
             "INSERT INTO approvals (request_id, owner_key_id, host_type, host_id, run_id, node_id,"
             " node_instance, bpm_process_id, version, title, description, form_json, review_json,"
-            " expires_at, body_hash, created_at, state, assignees_json, review_digest)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " expires_at, body_hash, created_at, state, assignees_json, review_digest, layer)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 request.request_id,
                 key.key_id,
@@ -133,6 +133,7 @@ def create(store: Store, found: Caller, raw: dict[str, Any]) -> tuple[ApprovalIn
                 dumps(request.assignees) if request.assignees else None,
                 # 지문은 **값을 지워도 남는다** (ADR-0083) — 업무 값이 아니라 그 값의 지문이다.
                 review_digest(request.review),
+                request.layer,
             ),
         )
     return _info(_must(store, request.request_id), store), True
@@ -145,16 +146,9 @@ def _host_of(store: Store, key: Any) -> ApprovalHost:
     여기서 키 이름을 적어 두면 **올린 쪽이 그 답을 영영 못 받는다**. 서버 실행기를 붙이다
     실제로 그랬다.
     """
-    from bpm.center.api import bot_ui, server_runner  # noqa: PLC0415 — 순환 import를 피한다
+    from bpm.center.api import server_runner  # noqa: PLC0415 — 순환 import를 피한다
 
-    if key.type == "bot_ui":
-        found = bot_ui.id_for_key(store, key.key_id)
-        if found is not None:
-            row = store.row("SELECT name FROM bot_uis WHERE bot_ui_id = ?", (found,))
-            return ApprovalHost(
-                type="bot_ui", id=found, name=str(row["name"]) if row else key.name
-            )
-    elif key.type == "server_runner":
+    if key.type == "server_runner":
         found = server_runner.id_for_key(store, key.key_id)
         if found is not None:
             row = store.row(
@@ -353,7 +347,7 @@ def _expire(store: Store, request_id: str) -> None:
 
 
 def withdraw_for_run(store: Store, run_id: str, *, event: str) -> int:
-    """그 실행의 `open` 결재를 거둔다. `event`는 `run_finished`·`bot_ui_lost`다.
+    """그 실행의 `open` 결재를 거둔다. `event`는 `run_finished`·`runner_lost`다.
 
     **답할 수는 있지만 전달될 곳이 없는 결재를 결재함에 남기지 않는다** (C6).
     """
@@ -533,9 +527,11 @@ def _form_of(row: Any) -> Form | None:
 
 def _host_name(store: Store, row: Any) -> str | None:
     """실행하는 곳의 **지금** 이름 (CON-04). 이름은 바뀌므로 읽을 때 찾는다."""
-    if row["host_type"] != "bot_ui":
+    if row["host_type"] != "server_runner":
         return None
-    found = store.row("SELECT name FROM bot_uis WHERE bot_ui_id = ?", (row["host_id"],))
+    found = store.row(
+        "SELECT name FROM server_runners WHERE server_runner_id = ?", (row["host_id"],)
+    )
     return str(found["name"]) if found is not None else None
 
 
@@ -560,7 +556,7 @@ def _info(row: Any, store: Store | None = None) -> ApprovalInfo:
     return ApprovalInfo(
         schema=1,
         request_id=row["request_id"],
-        layer="approval",  # Center는 이것만 받는다 (C6)
+        layer=row["layer"],  # 결재·확인 둘 다 온다 (C6, ADR-0144)
         run_id=row["run_id"],
         node_id=row["node_id"],
         node_instance=row["node_instance"],

@@ -2,11 +2,11 @@
 
 단일 원본: `docs/03-contracts/C6-approvals.md`.
 
-**Center로 올라가는 것은 결재(`approval`)뿐이다.** 확인(`confirmation`)은 화면 앞 사람만 답할 수
-있으므로 올리지 않는다. PC BPM 프로세스는 답이 올 때까지 실행 자리를 쥐고 기다리고(ADR-0014),
-서버 BPM 프로세스는 상태를 저장하고 기다린다(ADR-0015).
+**결재(`approval`)와 확인(`confirmation`) 둘 다 Center 결재함으로 올라간다** (ADR-0144) —
+확인이 답할 사람 앞의 창을 쓰던 길은 PC 실행기와 함께 걷었다. 기다리는 실행은 상태를 저장하고
+자리를 놓는다 (ADR-0054).
 
-답이 내려가는 길은 C4 하트비트 응답 `approvals[]`(PC)과 C12(서버, M7)다.
+답이 내려가는 길은 C12 하트비트 응답의 `approvals[]`이고 모델은 C4 `ApprovalDispatch`다.
 """
 
 from __future__ import annotations
@@ -36,13 +36,13 @@ KNOWN_FIELD_TYPES = frozenset({"bool", "number", "text", "choice"})
 
 # 열린 문자열의 알려진 값 (README 원칙 10).
 KNOWN_STATES = frozenset({"open", "answered", "expired", "withdrawn", "rejected_by_host"})
-KNOWN_WITHDRAW_REASONS = frozenset({"answered_in_field", "run_ended", "admin_withdraw", "host_lost"})
-KNOWN_HOST_TYPES = frozenset({"bot_ui", "server_runner"})
+KNOWN_WITHDRAW_REASONS = frozenset({"run_ended", "admin_withdraw", "host_lost"})
+KNOWN_HOST_TYPES = frozenset({"server_runner"})
 
 #: 실행 쪽 사건 → 자동 회수 사유. 답할 수는 있지만 전달될 곳이 없는 결재를 결재함에 남기지 않는다.
 AUTO_WITHDRAW_REASONS = {
     "run_finished": "run_ended",  # C3 run_finished를 받았을 때
-    "bot_ui_lost": "host_lost",  # 작업이 bot_ui_lost가 되었을 때 (C4 맞추기 규칙)
+    "runner_lost": "host_lost",  # 작업이 runner_lost가 되었을 때 (C4 맞추기 규칙)
 }
 
 
@@ -156,7 +156,7 @@ class ApprovalCreateRequest(SchemaVersioned):
     """
 
     request_id: str
-    layer: str  # Center는 "approval"만 받는다 (`validate_create`가 검사)
+    layer: str  # `approval`(결재) 또는 `confirmation`(확인) — 둘 다 결재함으로 온다 (ADR-0144)
     run_id: str
     node_id: str
     node_instance: int = Field(ge=1)
@@ -214,17 +214,23 @@ class AnswerRequest(ContractModel):
     if_review_digest: str | None = None
 
 
+#: 결재함이 받는 층 (ADR-0144 — 확인도 결재함에서 답한다).
+KNOWN_LAYERS = frozenset({"approval", "confirmation"})
+
+
 def validate_create(req: ApprovalCreateRequest) -> list[Violation]:
     """올라온 결재 요청 중 Center가 거부할 것.
 
-    확인(`confirmation`)은 Center로 올리지 않는다 — 화면 앞 사람만 답할 수 있다.
+    **층은 둘이다** — 결재(`approval`)와 확인(`confirmation`). 확인이 현장 창으로만 가던
+    길은 PC 실행기와 함께 걷었다 (ADR-0144). 모르는 층은 거부한다 — 결재함이 어떻게
+    보여야 할지 모르는 것을 받아 두면 화면이 조용히 틀린다.
     """
-    if req.layer != "approval":
+    if req.layer not in KNOWN_LAYERS:
         return [
             Violation(
                 rule="C6",
-                code="confirmation_not_allowed",
-                message=f"Center는 layer=approval만 받는다 (받은 값 {req.layer})",
+                code="unknown_layer",
+                message=f"결재함은 layer={'·'.join(sorted(KNOWN_LAYERS))}만 받는다 (받은 값 {req.layer})",
             )
         ]
     return []

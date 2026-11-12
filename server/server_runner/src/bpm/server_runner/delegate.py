@@ -1,13 +1,10 @@
-"""엔진이 맡긴 PC 위임을 **Center에 요청한다** (`RunEnv.delegate`, C12 §PC 위임
+"""엔진이 맡긴 것을 **Center에 요청한다** (`RunEnv.delegate`, C12 §맡기기
 — ADR-0062, `docs/decisions/0062-pc-delegation.md`).
 
 꽂는 쪽이 둘인 포트의 하나다 — 여기는 Center에 요청하고, Studio 시험 실행은 **케이스가 적어
-둔 결과를 돌려준다**. 엔진은 어느 쪽인지 모른다 (C12 §PC 위임).
+둔 결과를 돌려준다**. 엔진은 어느 쪽인지 모른다 (C12 §맡기기).
 
-**어느 PC인가를 고르는 것은 Center다** (ADR-0049 — 배포가 정하는 자리다). 이쪽이 하는 일은
-그림이 적어 둔 것을 그대로 옮기고 **돌려받은 작업 id를 엔진에게 주는 것**뿐이다.
-
-**맡기지 못한 것은 업무 실패다** (`DelegationError`) — 배포된 활성 PC가 없거나(404
+**맡기지 못한 것은 업무 실패다** (`DelegationError`) — 배포된 것이 없거나(404
 `no_deployment`), 판이 둘 이상이거나(422), Center에 닿지 못한 것이다. 오류 경계가 받아야
 사람이 안다. 「맡길 곳이 아예 없다」(`DelegationUnsupported`)는 여기서 나지 않는다 — 그것은
 포트를 꽂지 않았을 때의 일이다 (`NoDelegator`).
@@ -51,7 +48,6 @@ class CenterDelegator:
             loop_index=call.loop_index,
             bpm_process_id=call.bpm_process_id,
             version=call.version,
-            bot_ui=call.bot_ui,
             inputs=dict(call.inputs),
         )
         try:
@@ -64,7 +60,7 @@ class CenterDelegator:
             "위임을 맡겼다: %s → 작업 %s (%s)",
             call.bpm_process_id,
             answer.job_id,
-            answer.bot_ui_id or answer.target_type,
+            answer.target_type,
         )
         return answer.job_id
 
@@ -72,7 +68,7 @@ class CenterDelegator:
         """맡긴 것을 **거둘 줄에 넣는다** — 그 자리에서 Center를 부르지 않는다.
 
         실행 취소가 거두는 것과 **같은 줄**이다 (ADR-0062 §5) — 닿지 못하면 들고 있다 다시
-        걸고, 4xx(이미 시작된 PC 실행 등)는 답으로 본다. 실행 중에 부르면 느린 Center가
+        걸고, 4xx(이미 시작된 실행 등)는 답으로 본다. 실행 중에 부르면 느린 Center가
         업무를 붙잡고, 닿지 못한 것을 다시 걸 자리도 없다.
         """
         if self.on_withdraw is None:

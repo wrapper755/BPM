@@ -131,7 +131,7 @@ def test_register_is_idempotent(client: TestClient) -> None:
 
 def test_only_a_server_runner_key_is_accepted(client: TestClient) -> None:
     """다른 종류의 키는 403 `wrong_key_type` (C12)."""
-    for other in ("bot_ui", "studio", "integration"):
+    for other in ("studio", "integration", "relay"):
         key = issue(client, name=f"{other} 키", key_type=other)
         response = client.post(f"{RUNNER}/register", json=register_body(), headers=auth(key))
         assert response.status_code == 403, other
@@ -579,7 +579,7 @@ def test_a_rejected_job_is_not_resent(client: TestClient, store: Store) -> None:
 
 
 def test_a_lost_runner_job_says_runner_lost(client: TestClient, store: Store) -> None:
-    """맞추기 규칙의 사유는 **호스트마다 다르다** — 서버에 「bot_ui_lost」라고 적지 않는다."""
+    """맞추기 규칙의 사유는 **호스트마다 다르다** — 서버에 「runner_lost」라고 적지 않는다."""
     key = issue(client)
     runner_id = register(client, key)["server_runner_id"]
     _insert_job(store, job_id="job_a", target_id=runner_id, state=jobs_api.ACCEPTED)

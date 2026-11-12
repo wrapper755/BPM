@@ -4,44 +4,40 @@
 | --- | --- |
 | 상태 | **구현됨** (2026-10-09, [09-gaps](../09-gaps.md) §1 대조) |
 | schema | 1 |
-| 보내는 쪽 → 받는 쪽 | PC 실행기(실행 중 BPM 프로세스)·서버 실행기 → Center ↔ Center 콘솔(결재함) |
+| 보내는 쪽 → 받는 쪽 | 서버 실행기(실행 중 BPM 프로세스)·Studio 시험 실행 → Center ↔ Center 콘솔(결재함) |
 | 코드 위치 | `shared/contracts/src/bpm/contracts/approvals.py` (import `bpm.contracts.approvals`, [ADR-0019](../decisions/0019-package-names.md)) |
 | JSON Schema | [`c6-approval-create-request.json`](../../shared/contracts/schemas/c6-approval-create-request.json) · [`c6-approval-info.json`](../../shared/contracts/schemas/c6-approval-info.json) · [`c6-answer-request.json`](../../shared/contracts/schemas/c6-answer-request.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
-| 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0014](../decisions/0014-one-bot-per-pc.md), [0015](../decisions/0015-run-location.md), [0017](../decisions/0017-web-nextjs-design-system.md), [0080](../decisions/0080-approval-assignees.md)·[0081](../decisions/0081-answering-on-behalf.md), [0112](../decisions/0112-escalation-review-from-extensions.md) |
-| 관련 화면 | CON-04 결재함, CMN-01, BUI-05, STU-04(결재 위치) |
+| 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0017](../decisions/0017-web-nextjs-design-system.md), [0080](../decisions/0080-approval-assignees.md)·[0081](../decisions/0081-answering-on-behalf.md), [0112](../decisions/0112-escalation-review-from-extensions.md) |
+| 관련 화면 | CON-04 결재함 |
 
 ## 목적
 
 BPM 프로세스의 결재(UserTask)를 Center 결재함으로 올린다. 결재자가 콘솔에서 답하면, 실행하는 쪽이 그 답을 받아 실행을 이어 간다.
 
-> 상태: **Center 쪽·결재함(CON-04)·현장 연결이 돈다** ([ADR-0038](../decisions/0038-approval-request-channel.md)).
-> - 엔진이 `where`를 고른다 (`location` + 실행하는 쪽의 기본값 — PC 실행기는 BUI-03 「원격 결재」).
-> - `center`면 실행기가 요청 파일(`runs/<run_id>.requests.jsonl`)에 이 계약의 `ApprovalCreateRequest`를 그대로 쓰고, PC 실행기가 하트비트 뒤에 올린다.
-> - 현장(`field`) 결재·확인도 같은 본문을 `runs/<run_id>.field-requests.jsonl`에 쓴다 ([ADR-0078](../decisions/0078-field-approval-shows-what-to-judge.md)) — **올리지 않고** CMN-01이 제목·설명·검토 자료를 읽는다. 끝나면 지운다.
-> - 답·회수·만료는 하트비트(`approvals[]`)로 내려와 제어 파일을 거쳐 실행기에 간다. 받아 간 것은 `approval_acks`로 알린다 — 지금 기다리지 않는 결재의 답은 `accepted: false`(`not_waiting`)다.
+> 상태: **Center 쪽·결재함(CON-04)·실행기 연결이 돈다** ([ADR-0038](../decisions/0038-approval-request-channel.md)).
+> - 실행기가 요청 파일(`runs/<run_id>.requests.jsonl`)에 이 계약의 `ApprovalCreateRequest`를 그대로 쓰고 하트비트 뒤에 올린다.
+> - 답·회수·만료는 하트비트(`approvals[]`)로 내려와 기다리던 실행을 이어 간다. 받아 간 것은 `approval_acks`로 알린다 — 지금 기다리지 않는 결재의 답은 `accepted: false`(`not_waiting`)다.
 > - 회수·만료는 실행하는 쪽에 **답 없이 끝남**(`TaskFailed` `APPROVAL_WITHDRAWN`·`APPROVAL_EXPIRED`)으로 간다. 오류 경계가 있으면 그리로, 없으면 실행이 실패로 끝난다.
-> - 현장에서 먼저 답하면 PC 실행기가 `DELETE …?reason=answered_in_field`로 거둔다.
 >
 > 상태: **결재 담당자·대리 답도 돈다** ([ADR-0080](../decisions/0080-approval-assignees.md)·[ADR-0081](../decisions/0081-answering-on-behalf.md)) — 엔진이 그림의 담당자를 풀어 싣고(서버 스냅샷에도 간다), Center가 `?assignee=`로 거르고 대리 답용 키를 담당자와 대조하며, `answered_via`가 하트비트를 거쳐 C3 `human_answered`까지 간다. CON-04에 「담당」 칸·거르기가 있다.
 > - **결재 읽기는 콘솔 토큰과 대리 답용 키뿐이다** — 권한표 그대로다. 실행하는 쪽 키로는 읽지 못한다(검토 자료가 업무 값이다. 답은 하트비트로 받는다).
 
-- **Center로 올라가는 것은 결재(`approval`)뿐이다.** 확인(실행 중 막힘, `confirmation`)은 화면 앞 사람만 답할 수 있으므로 올리지 않는다 (용어집 §3). 서버 BPM 프로세스에는 확인이 없다 (C1 R2).
-- PC BPM 프로세스는 답이 올 때까지 실행 자리를 쥐고 기다린다 (ADR-0014 §5). 서버 BPM 프로세스는 상태를 저장하고 기다린다 (ADR-0015).
+- **층은 둘이고 둘 다 결재함으로 온다** — 결재(`approval`)와 확인(`confirmation`, 실행 중 막힘). 확인이 화면 앞 사람의 창으로만 가던 길은 PC 실행기와 함께 걷었다 ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)) — 서버에는 그 사람이 없고, 「누가 보고 답했나」가 남아야 하는 것은 결재와 같다. **모르는 층은 422 `unknown_layer`**다.
+- 기다리는 실행은 상태를 저장하고 자리를 놓는다 ([ADR-0054](../decisions/0054-server-run-state-and-concurrency.md)).
 
 ## 전송
 
 | 메서드·경로 | 인증 | 뜻 |
 | --- | --- | --- |
-| `POST /api/v1/approvals` | PC 실행기·서버 실행기 키 | 결재 요청 올리기 |
-| `DELETE /api/v1/approvals/{request_id}` | 올린 쪽 키 (`reason: "answered_in_field"` 또는 `"run_ended"`) / 관리자 토큰 (`reason: "admin_withdraw"`) | 회수 |
+| `POST /api/v1/approvals` | 실행기·Studio 키 | 결재 요청 올리기 |
+| `DELETE /api/v1/approvals/{request_id}` | 올린 쪽 키 (`reason: "run_ended"`) / 관리자 토큰 (`reason: "admin_withdraw"`) | 회수 |
 | `GET /api/v1/approvals?state=&bpm_process_id=&host=&assignee=` | 읽기·관리자 토큰 / 대리 답용 키 (**담당인 것만**) | 결재함 목록 |
 | `GET /api/v1/approvals/{request_id}` | 읽기·관리자 토큰 / 대리 답용 키 (**담당인 것만**, 아니면 404) | 하나 |
 | `POST /api/v1/approvals/{request_id}/answer` | 관리자 토큰 (콘솔 BFF, `X-BPM-Actor`) / 대리 답용 키 (`X-BPM-On-Behalf-Of`, **담당자일 때만**) | 답하기 |
 
 **답 전달:**
 
-- PC: C4 하트비트 응답 `approvals[]`로 내려가고, PC 실행기가 `approval_acks[]`로 받았다고 알린다.
-- 서버: C12 (M7).
+- C12 하트비트 응답 `approvals[]`로 내려가고(모델은 C4 `ApprovalDispatch`), 실행기가 `approval_acks[]`로 받았다고 알린다.
 - **ack가 올 때까지 매번 다시 내려간다** (`delivered = 0`이면 다시 싣는다). 그래서 실행하는 쪽은 **지금 넣을 수 없는 답을 ack하지 않고 그냥 둔다** — 서버 실행기에서는 **빈자리가 없을 때**가 그렇다(기다리던 실행이 이어 가면 자리를 다시 쥐므로 상한을 넘기면 하트비트가 스스로 막힌다, C12). **거절로 적지 않는다**: `accepted: false`는 결재를 `open`으로 되돌리며 **답을 지우므로**(아래) 사람이 답한 결재가 버려진다. ack하지 않으면 다음 주기에 그대로 다시 온다.
 
 **식별자·멱등성·소유:**
@@ -77,7 +73,7 @@ BPM 프로세스의 결재(UserTask)를 Center 결재함으로 올린다. 결재
 | --- | --- | --- | --- |
 | `schema` | int | ✓ | 1 |
 | `request_id` | str | ✓ | 위 형식 |
-| `layer` | str | ✓ | `approval`만 받는다. 그 밖이면 422 `confirmation_not_allowed` (열린 문자열이지만 Center는 이 값만 받는다) |
+| `layer` | str | ✓ | `approval`(결재) 또는 `confirmation`(확인). 그 밖이면 422 `unknown_layer` — 결재함이 어떻게 보여야 할지 모르는 것을 받아 두지 않는다 |
 | `run_id`, `node_id`, `node_instance` | str, str, int | ✓ | C3과 같은 값 |
 | `bpm_process_id`, `version` | str | ✓ | **패키지 id**와 그 판 (C3 `run_started`와 같은 값, [ADR-0086](../decisions/0086-run-identity-is-the-package-id.md)) |
 | `title`, `description` | str | | 폼 제목·설명. 없으면 「결재 요청」. **`description`은 Markdown**이다 (C14 「결재 설명」 — 그리는 쪽이 HTML은 그리지 않는다) |
@@ -96,7 +92,7 @@ Form: `fields: [{key, label, type: "bool" | "number" | "text" | "choice", choice
 
 | 필드 | 뜻 |
 | --- | --- |
-| `host` | `{type: bot_ui \| server_runner, id, name}` |
+| `host` | `{type: server_runner, id, name}` |
 | `state` | 아래 상태 표 |
 | `answer`?, `answered_by`?, `answered_at`? | |
 | `answered_via`? | 대리 답이면 **그 키의 이름**. 콘솔 답이면 없다 (ADR-0081) |
@@ -114,7 +110,7 @@ Form: `fields: [{key, label, type: "bool" | "number" | "text" | "choice", choice
 | `open` | 대기 | 답을 기다림 |
 | `answered` | 답함 | |
 | `expired` | 시간 초과 | |
-| `withdrawn` | 회수됨 | `withdraw_reason`: `answered_in_field`(현장에서 먼저 답함), `run_ended`(실행이 끝남·취소됨), `admin_withdraw`(관리자 회수), `host_lost`(PC 실행기 기록 유실) |
+| `withdrawn` | 회수됨 | `withdraw_reason`: `run_ended`(실행이 끝남·취소됨), `admin_withdraw`(관리자 회수), `host_lost`(실행기 기록 유실) |
 | `rejected_by_host` | BPM 프로세스 거절 | 실행하는 쪽이 답을 받아들이지 못함 (`delivery_reason`) |
 
 **상태 전이 규칙:**
@@ -124,11 +120,11 @@ Form: `fields: [{key, label, type: "bool" | "number" | "text" | "choice", choice
   **실행이 끝났으면 되돌리지 않는다** — 답의 거절이 와도 C3 `run_finished`를 받은 실행이면 `open`이 아니라 `withdrawn`(`run_ended`)이다. 기다리는 이가 없는 결재를 다시 열면 결재함에 「대기」로 보이고 답해도 아무 일이 없다.
 - **자동 회수:** Center는 다음 경우 그 실행의 `open` 결재를 `withdrawn`으로 바꾼다.
   - C3 `run_finished`를 받았을 때 (`run_ended`)
-  - 작업이 `bot_ui_lost`가 되었을 때 (`host_lost`)
+  - 작업이 `runner_lost`가 되었을 때 (`host_lost`)
 
   이렇게 해서 답할 수는 있지만 전달될 곳이 없는 결재가 결재함에 남지 않게 한다.
   **끝난 실행의 결재에 온 답은 받지 않는다** — `run_finished`보다 결재가 늦게 닿았거나 위의 규칙 전에 다시 열린 것이 `open`으로 남아 있으면, 답이 오는 그 자리에서 `run_ended`로 거두고 409 `not_open`이다. 하트비트도 그런 결재를 쓸어 거둔다.
-- **관리자 회수(`admin_withdraw`)의 효과:** 실행하는 쪽은 이 결재를 "답 없이 끝남"으로 받는다. 그 노드에 오류 경계 이벤트가 있으면 그쪽으로 가고, 없으면 실행이 실패로 끝난다 (CON-04 「그 실행은 실패로 끝납니다」). 현장에서 먼저 답해서 회수된 경우는 실행에 영향이 없다.
+- **관리자 회수(`admin_withdraw`)의 효과:** 실행하는 쪽은 이 결재를 "답 없이 끝남"으로 받는다. 그 노드에 오류 경계 이벤트가 있으면 그쪽으로 가고, 없으면 실행이 실패로 끝난다 (CON-04 「그 실행은 실패로 끝납니다」).
 
 ### AnswerRequest
 
@@ -140,7 +136,7 @@ Form: `fields: [{key, label, type: "bool" | "number" | "text" | "choice", choice
 - **내용 고정** ([ADR-0083](../decisions/0083-review-digest.md)) — `review_digest`는 `contracts.approvals.review_digest`가 짓는다: `json.dumps(review, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`를 UTF-8로 SHA-256, 16진 소문자, 앞에 `sha256:`. `review`가 비어도 있다. 연동하는 쪽은 **Center가 준 값을 그대로** 되돌려 보낸다(제 손으로 다시 계산하지 않는다 — 수의 표기가 갈라질 수 있다). 이 칸이 생기기 전의 결재는 남은 `review`로 읽을 때 계산하고, 값도 지워졌으면 없다 — 그때 `if_review_digest`를 실으면 `review_changed`다.
 - **Center가 폼으로 답을 검증한다** (필수·타입·선택지, `contracts.approvals.validate_answer`). 틀리면 422로 콘솔에 바로 보인다. 실행하는 쪽도 같은 함수로 한 번 더 검증한다.
 - **검증 전에 빈 칸을 기본값으로 채운다** (`contracts.approvals.apply_defaults`) — 콘솔 폼이 안 보낸 칸이 「필수인데 비었다」가 되지 않게.
-- **폼의 칸은 모두 변수가 된다** (`contracts.approvals.answer_variables`) — 실행하는 쪽이 답을 변수로 옮길 때 기본값으로, 그것도 없으면 **`None`**으로 채운다. 결재 창(CMN-01)이 빈 칸에 보내는 것과 같은 값이다.
+- **폼의 칸은 모두 변수가 된다** (`contracts.approvals.answer_variables`) — 실행하는 쪽이 답을 변수로 옮길 때 기본값으로, 그것도 없으면 **`None`**으로 채운다.
 - **답한 사람은 폼 칸이 아니다** — 그림이 C14 `answered_by_as`·`answered_via_as`를 적었을 때만 `answered_by`·`answered_via`가 그 변수에 들어간다 ([ADR-0096](../decisions/0096-answerer-into-variables.md)). 폼에 「확인자」 칸을 두지 않는다(스스로 적은 이름과 Center가 대조한 이름이 둘이 된다).
   - 빼 두면 BPM 프로세스가 그 칸의 이름을 쓸 수 없고(웹훅 `fields:[…]`·스크립트), 더 나쁘게는 **이름이 식 도우미로 떨어진다** — `기간`·`합계`처럼 겹치는 이름이면 변수가 아니라 **함수**가 잡혀 나간다. 식 쪽에서도 막는다 (호출형 도우미는 이름만으로 잡히지 않는다, [ADR-0025](../decisions/0025-expression-language.md)).
   - **지나지 않은 결재의 칸은 채우지 않는다.** 그 칸은 애초에 없었으므로 그것을 가리키는 식은 그대로 실패해야 한다.
@@ -179,14 +175,14 @@ Form: `fields: [{key, label, type: "bool" | "number" | "text" | "choice", choice
 | 409 | `review_changed` | `if_review_digest`가 지금 결재의 지문과 다르다 | 연동하는 쪽: 결재를 다시 읽어 사람에게 다시 보인다 |
 | 409 | `idempotency_conflict` | 같은 `request_id`에 다른 키·본문 | 버그 |
 | 422 | `answer_invalid` (`detail.fields`) | 폼과 맞지 않는 답 | 콘솔: 칸마다 오류를 표시한다 |
-| 422 | `confirmation_not_allowed` | `layer`가 `approval`이 아님 | 버그 |
+| 422 | `unknown_layer` | `layer`가 `approval`·`confirmation`이 아님 | 버그 |
 | 422 | `on_behalf_invalid` | `X-BPM-On-Behalf-Of`가 비었거나 200자를 넘거나 예약 앞머리로 시작함 | 연동하는 쪽 버그 |
 
 ## 호환 규칙
 
 - 상태 값은 열린 문자열이다. 모르는 필드는 무시한다.
-- `review`의 값 타입은 자유다 (문자열·숫자·목록). 콘솔은 문자열은 글자로, 목록은 글머리표로 보인다 (CMN-01과 같은 규칙).
-- **표 값** ([ADR-0112](../decisions/0112-escalation-review-from-extensions.md)): `{"headers": [글], "rows": [[값]]}` — 열쇠가 **정확히 그 둘**이고 줄마다 칸 수가 머리줄과 같을 때만 표다 (`contracts.approvals.review_table`·`as_table`). 아니면 보통 사전처럼 「열쇠: 값」 줄이다. CMN-01은 표를 읽기 전용 표로 그린다. 지금 이 모양을 싣는 것은 **확장이 전환할 때 낸 확인**뿐이고 확인은 Center로 올라가지 않으므로, 콘솔 결재 화면(CON-04)은 아직 표로 그리지 않는다.
+- `review`의 값 타입은 자유다 (문자열·숫자·목록). 콘솔은 문자열은 글자로, 목록은 글머리표로 보인다.
+- **표 값** ([ADR-0112](../decisions/0112-escalation-review-from-extensions.md)): `{"headers": [글], "rows": [[값]]}` — 열쇠가 **정확히 그 둘**이고 줄마다 칸 수가 머리줄과 같을 때만 표다 (`contracts.approvals.review_table`·`as_table`). 아니면 보통 사전처럼 「열쇠: 값」 줄이다. 이 모양을 싣는 것은 **확장이 전환할 때 낸 확인**이고 확인도 결재함으로 오므로(ADR-0144) **CON-04가 읽기 전용 표로 그린다**.
 
 ```json
 {
@@ -202,6 +198,7 @@ Form: `fields: [{key, label, type: "bool" | "number" | "text" | "choice", choice
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-12 | 1 | **확인(`confirmation`)도 결재함으로 온다** — `layer`가 둘이 되고 거부 코드는 `confirmation_not_allowed` → **`unknown_layer`**다. `host.type`은 `server_runner` 하나, `withdraw_reason`의 `answered_in_field`를 걷었다(현장 창이 없다). 검토 자료의 표 값은 CON-04가 그린다 | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-10-30 | 1 | `review`의 **표 값**(`{headers, rows}`)을 정했다 — 확장이 전환할 때 낸 확인의 검토 자료(CMN-01 [R]). 값 타입이 원래 자유라 schema는 그대로다 | [0112](../decisions/0112-escalation-review-from-extensions.md) |
 | 2026-10-28 | 1 | **회수는 다시 열리지 않는다** (형식은 그대로다) — 서버 실행기가 이미 닫은 실행의 회수에 `not_waiting`으로 답하자 Center가 「거절은 되돌림」으로 읽어 취소된 실행의 결재를 `open`으로 되살렸다(답하면 효과 없이 200). 되돌림은 답에만, 끝난 실행의 결재는 되돌리지 않고 답은 409 `not_open`, 하트비트가 남은 것을 쓸어 거둔다 | — |
 | 2026-10-20 | 1 | **내용 고정** — `ApprovalInfo.review_digest`(값을 지워도 남는다), `AnswerRequest.if_review_digest?`, 409 `review_changed`. 선택 칸이라 schema는 그대로다 | [0083](../decisions/0083-review-digest.md) |

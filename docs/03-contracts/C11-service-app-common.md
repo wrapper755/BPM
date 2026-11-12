@@ -100,7 +100,7 @@
 | `schema` | 1 | |
 | `mode` | 수행 모드. **받는 쪽은 바꾸지 않는다** (원칙 7 — 폴백은 위 `fallback`뿐) | `mode` |
 | `run_id`·`node_id`·`node_instance`·`attempt`·`call_seq` | 멱등 칸 | `idempotency` |
-| `caller` | `{type, host, bpm_process_id, version}`. `bpm_process_id`는 **패키지 id**다 (C3, [ADR-0086](../decisions/0086-run-identity-is-the-package-id.md)). `type`은 열린 문자열 — `bot_ui` `server_runner` `studio` `console`(Center가 콘솔의 시험 호출을 올릴 때 — C7, ADR-0141) | `caller` |
+| `caller` | `{type, host, bpm_process_id, version}`. `bpm_process_id`는 **패키지 id**다 (C3, [ADR-0086](../decisions/0086-run-identity-is-the-package-id.md)). `type`은 열린 문자열 — `server_runner` `studio` `console`(Center가 콘솔의 시험 호출을 올릴 때 — C7, ADR-0141) | `caller` |
 | `business_key` | 여러 호출을 한 업무로 잇는 키 (선택, 부르는 쪽이 정한다) | `business_key` |
 | `input` | `input_schema`를 따름 | `input` |
 | `origin` | `run` \| `test` — 시험 일감이면 앱이 시험 쪽으로 보낼지 정한다 (ADR-0102 §6) | `origin` |

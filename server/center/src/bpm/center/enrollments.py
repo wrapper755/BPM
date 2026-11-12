@@ -23,7 +23,6 @@ from typing import Any
 from bpm.center import host_keys, keys
 from bpm.center.errors import ApiError
 from bpm.center.storage import Store, dumps, loads, now_iso
-from bpm.contracts.bot_ui import EnrollRequest
 from bpm.contracts.center_keys import DEFAULT_EXPIRY_DAYS, BoundTo, expires_soon
 from bpm.contracts.enrollment import (
     DELIVERY_HOURS,
@@ -47,7 +46,7 @@ from bpm.contracts.server_runner import ServerRunnerEnrollRequest
 
 #: 요청 종류 → 키 묶기를 지킬 표 (C4·C12 — 규칙은 `host_keys`에 하나다). **Studio는 표가 없다** —
 #: 등록(`register`)이 없어 그 PC는 키 자체에만 묶인다 (C5 §Studio 등록 요청과 승인, ADR-0093).
-TABLES = {"bot_ui": host_keys.BOT_UI, "server_runner": host_keys.SERVER_RUNNER}
+TABLES = {"server_runner": host_keys.SERVER_RUNNER}
 STUDIO = "studio"
 #: 들이기 비밀로 승인한 요청의 「누가」 (ADR-0117) — 사람 계정 이름과 겹치지 않는다(계정은 `_`를 쓰지 않는다).
 JOIN_TOKEN_ACTOR = "join_token"
@@ -55,7 +54,6 @@ JOIN_TOKEN_ACTOR = "join_token"
 OPEN_MODE_ACTOR = "open_mode"
 #: 요청 본문 모델 — 각자의 `RegisterRequest` + `public_key` (Studio는 제 모양).
 MODELS: dict[str, Any] = {
-    "bot_ui": EnrollRequest,
     "server_runner": ServerRunnerEnrollRequest,
     STUDIO: StudioEnrollRequest,
 }
@@ -121,7 +119,7 @@ def request(
     **들이기 비밀이 실려 오면** (C12, ADR-0117) 그 자리에서 승인해 봉한 키를 바로 싣는다 —
     승인은 버튼과 **같은 `approve()`**다. 실려 왔는데 맞지 않으면 403이고 대기 줄을 만들지 않는다.
 
-    **열린 모드도 같은 자리에서 승인한다** (ADR-0142). PC 실행기·Studio는 **회사가 하나뿐일 때만**
+    **열린 모드도 같은 자리에서 승인한다** (ADR-0142). 서버 실행기·Studio는 **회사가 하나뿐일 때만**
     — 둘 이상이면 누구의 장비인지 짐작하지 않고 승인 대기로 남긴다 (C16). 서버 실행기는 Center
     공용이라 회사를 받지 않으니 늘 승인된다.
     """
@@ -328,7 +326,7 @@ def approve(
 ) -> EnrollmentDecision:
     """승인 (C5). 키를 만들어 **그 기계에 미리 묶고** 요청의 공개키로 봉해 둔다.
 
-    **PC 실행기·Studio는 회사를 정해 승인한다** (C16, ADR-0125 §2) — 회사 관리자(`scope`)는 제 회사로만.
+    **서버 실행기·Studio는 회사를 정해 승인한다** (C16, ADR-0125 §2) — 회사 관리자(`scope`)는 제 회사로만.
     서버 실행기는 Center 공용이라 회사를 받지 않고, Center 관리자만 승인한다.
     """
     row = _pending(store, enrollment_id)

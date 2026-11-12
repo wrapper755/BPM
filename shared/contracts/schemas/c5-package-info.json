@@ -64,16 +64,11 @@
     },
     "HumanNeeds": {
       "additionalProperties": true,
-      "description": "사람 개입 종류. 서버 실행 가능 여부(R2) 판정에 쓴다.",
+      "description": "사람 개입 종류 — 결재와 확인 (C6). 둘 다 Center 결재함에서 답한다 (ADR-0144).",
       "properties": {
         "approval_center": {
           "default": false,
           "title": "Approval Center",
-          "type": "boolean"
-        },
-        "approval_field": {
-          "default": false,
-          "title": "Approval Field",
           "type": "boolean"
         },
         "confirmation": {
@@ -87,7 +82,7 @@
     },
     "Manifest": {
       "additionalProperties": true,
-      "description": "패키지 매니페스트 (C1 최상위).\n\n`kind=\"bpm_process\"`이고 `run_location`이 없으면 **`server`로 채운다** (서버 우선, 호환 규칙).",
+      "description": "패키지 매니페스트 (C1 최상위).",
       "properties": {
         "built": {
           "$ref": "#/$defs/Built"
@@ -199,22 +194,6 @@
         },
         "requires": {
           "$ref": "#/$defs/Requires"
-        },
-        "run_location": {
-          "anyOf": [
-            {
-              "enum": [
-                "server",
-                "pc"
-              ],
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Run Location"
         },
         "schema": {
           "description": "이 계약의 schema 번호",
@@ -454,22 +433,6 @@
           "title": "Reads",
           "type": "array"
         },
-        "run_location": {
-          "anyOf": [
-            {
-              "enum": [
-                "server",
-                "pc"
-              ],
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Run Location"
-        },
         "writes": {
           "items": {
             "type": "string"
@@ -641,7 +604,7 @@
     },
     "TaskTypeNeed": {
       "additionalProperties": true,
-      "description": "확장이 기여한 태스크 종류와, 그 확장 정의에 적힌 실행 위치. R2 판정에 쓴다.",
+      "description": "확장이 기여한 태스크 종류 (C13). 배포 때 그 확장이 깔려 있나를 Center가 본다.",
       "properties": {
         "extension": {
           "title": "Extension",
@@ -650,21 +613,6 @@
         "id": {
           "title": "Id",
           "type": "string"
-        },
-        "run_locations": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Run Locations"
         }
       },
       "required": [
@@ -816,18 +764,6 @@
     },
     "preflight": {
       "$ref": "#/$defs/PreflightSummary"
-    },
-    "run_location": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Run Location"
     },
     "signed_at": {
       "anyOf": [

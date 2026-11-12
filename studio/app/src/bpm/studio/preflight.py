@@ -58,26 +58,17 @@ def inspect(
     process: BpmnProcess,
     owner: BpmProcess | None = None,
     *,
-    task_type_locations: Mapping[str, Sequence[str]] | None = None,
     delegated_outputs: Mapping[str, Sequence[str]] | None = None,
 ) -> list[Violation]:
     """B1~B16. 작업 폴더가 있으면 DMN·호출 대조까지 한다 (B14).
 
-    `task_type_locations`는 확장 호스트가 주는 `{종류: [실행 위치]}`다 — B6이 **확장 태스크를**
-    서버에서 되는지 보는 데 쓴다. 주지 않으면 B6이 확장 태스크를 건너뛰므로 Studio는 늘 준다
-    (STU-06의 셈과 **같은 표**여야 한다 — 어긋나면 창이 「바꿔도 된다」고 하고 F6이 막는다).
-
-    `delegated_outputs`는 **PC 위임으로 부르는 BPM 프로세스가 선언한 `outputs`**다 (C1, ADR-0062) —
-    남의 패키지 매니페스트라 작업 폴더에 없고 **Center만 안다**. 받아 둔 것을 **부르는 쪽이**
-    넘긴다 (이 모듈은 서버를 부르지 않는다 — `readiness()`와 같은 결). 주지 않거나 비어 있으면
-    B14가 그 대조를 건너뛴다 — **모르는 것으로 막지 않는다.**
+    `delegated_outputs`는 **맡기는 BPM 프로세스가 선언한 `outputs`**다 (C1) — 남의 패키지
+    매니페스트라 작업 폴더에 없고 **Center만 안다**. 받아 둔 것을 **부르는 쪽이** 넘긴다
+    (이 모듈은 서버를 부르지 않는다). 주지 않거나 비어 있으면 B14가 그 대조를 건너뛴다 —
+    **모르는 것으로 막지 않는다.**
     """
     if owner is None:
-        violations = validate_bpmn(
-            process,
-            task_type_locations=task_type_locations,
-            delegated_outputs=delegated_outputs or None,
-        )
+        violations = validate_bpmn(process, delegated_outputs=delegated_outputs or None)
     else:
         violations = validate_bpmn(
             process,
@@ -85,9 +76,8 @@ def inspect(
             called_processes={
                 other.id: list(other.info.outputs) for other in owner.processes().values()
             },
-            task_type_locations=task_type_locations,
             # **빈 사전은 주지 않는다** — 「아무 BPM 프로세스도 아무것도 선언하지 않았다」가 되어
-            # 멀쩡한 위임이 모두 막힌다. 못 받았으면 `None`이고 그러면 건너뛴다.
+            # 멀쩡한 맡기기가 모두 막힌다. 못 받았으면 `None`이고 그러면 건너뛴다.
             delegated_outputs=delegated_outputs or None,
         )
     return violations + check_expressions(process)
@@ -103,7 +93,7 @@ def readiness(
 ) -> list[Violation]:
     """사전 점검 — **이 PC에서 지금 돌릴 수 있나** (`core.preflight`, ADR-0013).
 
-    PC 실행기와 **같은 러너**를 쓴다 (BUI-04 「준비」가 쓰는 것) — 갖춰야 할 설정·확장 태스크 종류·`web`·
+    서버 실행기와 **같은 러너**를 쓴다 (`readiness`가 쓰는 것) — 갖춰야 할 설정·확장 태스크 종류·`web`·
     `desktop` AI 환경과 확장이 기여한 점검(C13)이다. 결과를 `Violation`으로 옮겨 검사 탭이 한
     모양만 다루게 한다.
 
@@ -124,12 +114,8 @@ def readiness(
     if dirty:
         out.append(Violation(rule=PREFLIGHT_RULE, code="unsaved", message=UNSAVED, severity=SEVERITY_WARNING))
     try:
-        # 확장 태스크의 실행 위치는 **호스트만** 안다 (C13) — 매니페스트에 진짜 값이 들어가야
-        # R2가 거짓으로 막지 않는다. 호스트가 없으면 넣지 않는다 (「모른다」).
         manifest = build_manifest(
-            owner,
-            task_type_locations=None if host is None else host.task_type_locations(),
-            key_extensions=None if host is None else host.key_extensions(),
+            owner, key_extensions=None if host is None else host.key_extensions()
         )
     except (PackageError, AssertionError, ValueError) as e:
         # 시작 정의가 없거나 읽히지 않는다 — B 규칙이 이미 말하고 있을 것이다. 덮어쓰지 않는다.

@@ -468,7 +468,6 @@ def package(bot: str, *, version: str = "1.0.0", outputs: list[str] | None = Non
             "id": bot,
             "version": version,
             "name": bot,
-            "run_location": "pc",
             "entry": "process/main.bpmn",
             "process_id": "Proc_x",
             "outputs": outputs or [],

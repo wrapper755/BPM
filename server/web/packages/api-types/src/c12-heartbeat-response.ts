@@ -53,17 +53,17 @@ export interface ApprovalDispatch {
   [k: string]: unknown;
 }
 /**
- * 끝난 PC 위임 하나 (C12 §PC 위임) — 하트비트 응답으로 내려간다.
+ * 끝난 맡기기 하나 (C12 §맡기기) — 하트비트 응답으로 내려간다.
  *
  * **`outputs`가 업무 값이다** — 원칙 6의 명시한 예외이고, 올라오는 것은 그 BPM 프로세스가 **선언한
  * `outputs`만**이다 (C1). `state`가 `finished`가 아니면 실행기가 오류 경계로 넘긴다.
  */
 export interface DelegationResult {
+  child_run_id?: string | null;
   job_id: string;
   outputs?: {
     [k: string]: unknown;
   };
-  pc_run_id?: string | null;
   reason?: string | null;
   run_id: string;
   state: string;

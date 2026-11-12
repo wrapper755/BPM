@@ -12,7 +12,6 @@
   <bpmn:process id="Proc_fx13_signal" name="신호 던지기·받기" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

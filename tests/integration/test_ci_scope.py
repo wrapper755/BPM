@@ -45,7 +45,7 @@ def _imports(path: Path) -> set[str]:
 
 @pytest.mark.parametrize("name", SERVER_FILES)
 def test_a_server_file_does_not_run_client_code(name: str) -> None:
-    """PC에서 도는 코드(PC 실행기·Tool UI·Qt·Worker·UI 자동화 클라이언트)를 부르면 그 파일은 양쪽이다."""
+    """화면을 끌고 오는 코드(Qt·PySide6)를 부르면 그 파일은 서버 쪽이 아니다 — 서버에 PySide6가 없다."""
     used = _imports(TESTS / SERVER_FOLDER / f"{name}.py")
     client = sorted(m for m in used if any(m == c or m.startswith(c + ".") for c in CLIENT_MODULES))
     assert client == [], f"{name}은 클라이언트 코드를 쓴다 — tests/server/에서 뺀다"
@@ -55,19 +55,9 @@ def test_the_marker_is_put_on_server_files(pytestconfig: pytest.Config) -> None:
     assert any("server:" in line for line in pytestconfig.getini("markers")), "pyproject에 표시를 등록한다"
 
 
-def test_windows_ci_leaves_out_server_tests_and_linux_runs_all() -> None:
+def test_ci_runs_every_test_on_linux_only() -> None:
+    """**Windows 잡은 걷었다** (ADR-0144) — 볼 클라이언트가 없다. Linux는 전부 돈다."""
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    assert 'uv run pytest -m "not server"' in workflow, "Windows 잡이 서버 시험을 뺀다"
-    assert "uv run pytest\n" in workflow, "Linux 잡은 전부 돈다"
-
-
-def test_windows_runs_weekly_and_by_hand_not_on_every_pr() -> None:
-    """ADR-0108 — PR은 Linux만, 주 1회·수동 실행이 Windows까지 돈다. 두 잡(파이썬·웹)이 같은 규칙이다."""
-    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    assert "schedule:" in workflow and "workflow_dispatch:" in workflow
-    rule = (
-        "os: ${{ fromJSON(github.event_name == 'pull_request' && '[\"ubuntu-latest\"]'"
-        " || '[\"ubuntu-latest\", \"windows-latest\"]') }}"
-    )
-    assert workflow.count(rule) == 2, "테스트·웹 두 매트릭스가 같은 규칙을 쓴다"
-    assert "os: [ubuntu-latest, windows-latest]" not in workflow
+    assert "uv run pytest\n" in workflow, "전부 돈다"
+    assert "windows-latest" not in workflow, "Windows 잡은 없다"
+    assert "matrix:" not in workflow, "OS 매트릭스가 없다"

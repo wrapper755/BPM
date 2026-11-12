@@ -10,7 +10,6 @@
   <bpmn:process id="Proc_bx20_employee_onboarding" name="입사자 온보딩" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "directory",

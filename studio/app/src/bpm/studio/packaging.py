@@ -71,12 +71,7 @@ def collect_requires(
 
     `definitions`를 주면 **그 정의들만** 본다 (공유 BPM 프로세스 패키지는 고른 정의만 담는다).
     `inside`는 「이 패키지 안에 있는 정의 id」로, 그 밖을 부르면 `libs`가 된다.
-    **PC 위임은 그 셈에서 빠진다** — `bpm:call.delegate`가 붙은 호출은 `delegations`로 가고
     `libs`에 넣지 않는다 (복사해 넣는 것이 아니라 따로 배포된 BPM 프로세스이다, ADR-0062).
-
-    `task_type_locations`는 확장 호스트가 주는 `{종류: [실행 위치]}`다
-    (`ExtensionHost.task_type_locations()`). **표에 없는 종류는 넣지 않는다** — 그림은 태스크
-    종류의 실행 위치를 모르고, 확장 정의만 안다 (ADR-0018).
 
     **키 참조는 적지 않는다** (ADR-0102 — 키가 없다. 옛 그림의 `key_ref`·`service_keys`는 보지 않는다).
     `requires.service_apps`의 줄은 C15 토픽이다 — 서비스 앱 태스크가 부르는 앱, 그리고 서버 부분을
@@ -128,19 +123,12 @@ def collect_requires(
                     app_id=task.extension, operations=list(before.operations) if before else []
                 )
             if task is not None:
-                # **어느 실행 위치에서 되는지는 확장이 안다** (ADR-0018) — 호스트가 준 표에
-                # 없으면 **넣지 않는다**. 빈 목록을 적으면 R2가 「서버에서 안 된다」로 읽는다.
-                where = None if task_type_locations is None else task_type_locations.get(task.type)
-                task_types[task.type] = TaskTypeNeed(
-                    id=task.type,
-                    extension=task.extension,
-                    run_locations=None if where is None else list(where),
-                )
+                task_types[task.type] = TaskTypeNeed(id=task.type, extension=task.extension)
             sub_call = node.prop("call")
             if sub_call is not None and sub_call.delegate is not None:
-                # **PC 위임은 `libs`가 아니다** (ADR-0062) — 복사해 넣는 것이 아니라 따로
+                # **맡기기는 `libs`가 아니다** (ADR-0082) — 복사해 넣는 것이 아니라 따로
                 # 배포된 BPM 프로세스이다. `libs`에 넣으면 **없는 공유 BPM 프로세스를 요구하는 패키지**가
-                # 되어 설치가 막히고, R3이 「PC 정의를 부른다」고 읽는다.
+                # 되어 설치가 막힌다.
                 #
                 # 판은 **적은 대로** 간다 — 비우면 「배포된 판」이라는 뜻이라(C14) 여기서
                 # 지어내지 않는다.
@@ -172,18 +160,16 @@ def collect_requires(
 
 def human_of(found: BpmnProcess) -> HumanNeeds:
     """정의 하나의 사람 개입 종류. 공유 정의마다도 적는다 (C1 `provides.processes[].human`)."""
-    center = field = confirmation = False
+    center = confirmation = False
     for node in found.all_nodes():
         approval = node.prop("approval")
         if approval is None:
             continue
         if node.kind == "manualTask":
             confirmation = True
-        elif approval.location == "field":
-            field = True
         else:
             center = True
-    return HumanNeeds(approval_center=center, approval_field=field, confirmation=confirmation)
+    return HumanNeeds(approval_center=center, confirmation=confirmation)
 
 
 def collect_human(process: BpmProcess, *, definitions: Sequence[Definition] | None = None) -> HumanNeeds:
@@ -195,7 +181,6 @@ def collect_human(process: BpmProcess, *, definitions: Sequence[Definition] | No
         here = human_of(definition.process)
         out = HumanNeeds(
             approval_center=out.approval_center or here.approval_center,
-            approval_field=out.approval_field or here.approval_field,
             confirmation=out.confirmation or here.confirmation,
         )
     return out
@@ -224,7 +209,6 @@ def collect_provides(definitions: Sequence[Definition]) -> Provides:
                 name=found.name or found.id,
                 reads=[one.name for one in found.info.inputs],
                 writes=list(found.info.outputs),
-                run_location=found.info.run_location,
                 ai_tasks=sum(1 for node in found.all_nodes() if node.prop("aiTask") is not None),
                 human=human_of(found),
             )
@@ -286,8 +270,6 @@ def build_manifest(
         description=process.description or None,
         # 업무 자리 — 올리기 창에서 고른 것 (C1 `place`, ADR-0127). 비면 회사 공통이라 넣지 않는다.
         place=Place.model_validate(process.place) if process.place else None,
-        # 실행 위치는 **처음부터** 들어간다. 생략하면 서버다 (C1 R1·ADR-0016).
-        run_location=entry.process.info.run_location or "server",
         entry=f"process/{entry.path.name}",
         process_id=entry.process.id,
         triggers=collect_triggers(entry),

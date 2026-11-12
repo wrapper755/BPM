@@ -31,7 +31,6 @@ BASE: dict[str, Any] = {
     "version": "1.0.0",
     "name": "주문 입력",
     "kind": "bpm_process",
-    "run_location": "pc",
     "entry": "main.bpmn",
     "content_hash": "sha256:" + "0" * 64,
     "human": {"approval_center": False, "approval_field": False, "confirmation": False},
@@ -58,7 +57,7 @@ def test_a_service_app_bot_needs_no_key_on_this_pc() -> None:
 
 def test_a_task_type_no_extension_contributes_blocks() -> None:
     """C13 — 종류가 없으면 엔진이 `node_kind_unsupported`로 끝낸다. 시작하기 전에 말한다."""
-    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr", run_locations=["pc"])])
+    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr")])
     found = preflight.check(m, host=ExtensionHost())
 
     assert found.blocked == (preflight.TASK_TYPES_UNSUPPORTED,)
@@ -170,7 +169,7 @@ def test_without_a_context_only_the_platform_checks_run() -> None:
 
 def test_without_a_host_the_extension_and_platform_extension_checks_are_skipped() -> None:
     """확장이 없는 PC 실행기도 BPM 프로세스는 돈다."""
-    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="x", run_locations=["pc"])])
+    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="x")])
     assert not preflight.check(m, host=None).blocks
 
 
@@ -226,7 +225,6 @@ OCR = {
                 "id": "ocr_task",
                 "label": "문서 인식",
                 "executor": {"entry": "doc_ocr.client:X"},
-                "run_locations": ["pc"],
             }
         ]
     },
@@ -238,7 +236,7 @@ def test_a_turned_off_extension_gets_its_own_finding() -> None:
 
     한 칸으로 뭉치면 켜면 될 일에 「PC 실행기를 다시 깔라」고 안내하게 된다 (ADR-0043).
     """
-    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr", run_locations=["pc"])])
+    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr")])
 
     on = preflight.check(m, host=_host_with(OCR))
     assert not on.blocks
@@ -251,70 +249,21 @@ def test_a_turned_off_extension_gets_its_own_finding() -> None:
 
 def test_a_missing_extension_still_says_install_it() -> None:
     """꺼 둔 것이 아니면 안내가 그대로다 — 깔려 있지 않으면 켤 수가 없다."""
-    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr", run_locations=["pc"])])
+    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr")])
     found = preflight.check(m, host=ExtensionHost())
     assert found.blocked == (preflight.TASK_TYPES_UNSUPPORTED,)
     assert "판으로 올리세요" in (found.findings[0].fix_hint or "")
 
 
-# ───────────── 실행 위치가 아닌 태스크 종류 (ADR-0064 — 서버에서만 생긴다) ─────────────
-
-
-def _server_host(definition: dict[str, Any]) -> ExtensionHost:
-    import json  # noqa: PLC0415
-
-    host = ExtensionHost(run_location="server")
-    host.add_installed(json.dumps(definition).encode("utf-8"), origin="test", root="fake_extension")
-    return host
-
-
-def test_a_pc_only_task_type_gets_its_own_finding_on_the_server() -> None:
-    """**셋째 까닭이다** (ADR-0064) — 꺼 둔 것도, 없는 것도 아니고 **이 위치에서 못 돈다**.
-
-    뭉치면 「그 확장이 깔린 판으로 올리세요」라고 하는데, 올려도 서버에서는 못 돈다 — 고칠
-    것은 **실행 위치**(STU-06)나 그림(PC 위임)이다. 전에는 이것을 아무도 막지 않아 배포·시작
-    까지 가서 **실행 중에** `node_kind_unsupported`로 죽었다.
-    """
-    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr", run_locations=["pc"])])
-
-    found = preflight.check(m, host=_server_host(OCR))
-    assert found.blocked == (preflight.TASK_TYPES_WRONG_LOCATION,)
-    assert found.findings[0].items == ("ocr_task (문서 인식 확장 — pc)",)
-    assert "실행 위치를" in (found.findings[0].fix_hint or "")
-
-
-def test_a_task_type_that_declares_the_server_is_not_blocked_there() -> None:
-    """**적어 둔 것은 돈다** — 거짓 차단이 거짓 통과보다 나쁘다."""
-    task: dict[str, Any] = {
-        "id": "ocr_task",
-        "label": "문서 인식",
-        "executor": {"entry": "doc_ocr.client:X"},
-        "run_locations": ["pc", "server"],
-    }
-    server_ocr = {**OCR, "contributes": {"task_types": [task]}}
-    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr", run_locations=["pc", "server"])])
-
-    assert not preflight.check(m, host=_server_host(server_ocr)).blocks
-
-
-def test_an_absent_extension_on_the_server_does_not_say_bot_ui() -> None:
-    """**서버에서 「PC 실행기를 올리세요」는 할 수 없는 일을 시키는 셈이다** — 그 자리에 PC 실행기가 없다."""
-    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr", run_locations=["server"])])
-    found = preflight.check(m, host=ExtensionHost(run_location="server"))
+def test_an_absent_extension_says_the_server_runner() -> None:
+    """고칠 자리는 **서버 실행기**다 — 「PC 실행기를 올리세요」라고 할 PC가 없다 (ADR-0144)."""
+    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr")])
+    found = preflight.check(m, host=ExtensionHost())
 
     assert found.blocked == (preflight.TASK_TYPES_UNSUPPORTED,)
     assert "서버 실행기" in (found.findings[0].fix_hint or "")
     assert "PC 실행기" not in (found.findings[0].fix_hint or "")
     assert "서버에서 수행할 수 없습니다" in found.findings[0].message
-
-
-def test_the_pc_wording_is_unchanged_when_nobody_holds_a_run_location() -> None:
-    """실행 위치를 쥐지 않은 호스트(Studio·PC 실행기)의 안내는 **그대로다**."""
-    m = manifest(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr", run_locations=["pc"])])
-    found = preflight.check(m, host=ExtensionHost())
-
-    assert "이 PC에서" in found.findings[0].message
-    assert "PC 실행기 판으로 올리세요" in (found.findings[0].fix_hint or "")
 
 
 # ─────────────────── 갖춰야 할 설정 (C1 `requires.settings`, ADR-0059) ───────────────────

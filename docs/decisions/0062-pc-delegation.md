@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 (2026-10-15) |
+| 상태 | 대체됨([ADR-0144](0144-remove-the-pc-runner.md)) — 원래 수락 (2026-10-15). 맡길 PC가 없다 |
 | 날짜 | 2026-10-15 |
 | 대체 | [ADR-0016](0016-server-first.md) §3의 제안 중 **「표현」 한 줄** — 부르는 대상이 「패키지 안의 `run_location: pc` 정의」에서 **「따로 배포된 PC Bot」**으로 바뀐다. §3의 나머지(Call Activity 모양, 상태 저장·기다림, 오류 경계, 기록 잇기)는 그대로 확정한다 |
 | 관련 | [ADR-0014](0014-one-bot-per-pc.md), [ADR-0015](0015-run-location.md), [ADR-0046](0046-no-wildcard-pc-deployment.md), [ADR-0049](0049-deployment-target-must-exist.md), [ADR-0054](0054-server-run-state-and-concurrency.md), 계약 C1·C3·C4·C5·C12·C14 |

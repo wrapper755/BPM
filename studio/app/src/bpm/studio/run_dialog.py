@@ -106,13 +106,7 @@ class RunDialog(QDialog):
         self.setWindowTitle("실행")
         self.setMinimumWidth(460)
 
-        location = (definition.process.info.run_location if definition.process else None) or "pc"
-        where = QLabel(
-            "실행 위치: PC"
-            if location == "pc"
-            else "실행 위치: 서버 — 이 시험 실행은 Studio에서 돕니다",
-            self,
-        )
+        where = QLabel("이 시험 실행은 Studio에서 돕니다", self)
 
         self.case_box = QComboBox(self)
         self.case_box.addItem(NO_CASE)

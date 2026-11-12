@@ -2,7 +2,7 @@
 
 - **Studio는 어느 확장인지 모른다** — 표와 상세의 글은 모두 정의(`extension.json`)에서 온다.
   이 파일에 확장 이름이 없다 (`tests/integration/test_import_direction.py`가 막는다).
-- **끄고 켜는 것 말고는 읽기만 한다.** 끈 목록은 **Studio 설정**에 있다 (ADR-0043) — PC 실행기는 제
+- **끄고 켜는 것 말고는 읽기만 한다.** 끈 목록은 **Studio 설정**에 있다 (ADR-0043) — 실행기는 제
   설정에 따로 둔다. 개발 도구에서 끈 것이 그 PC의 현장 BPM 프로세스를 멈추면 안 된다.
 - **끄면 그 자리에서 사라진다** — 호스트를 다시 읽어 기여(태스크 종류·편집기·런타임·점검)가
   한꺼번에 빠진다. 다음 「실행 전 검사」가 「확장이 꺼져 있습니다」로 막는다 (`core.preflight`).
@@ -164,9 +164,8 @@ def detail_sections(loaded: LoadedExtension) -> list[tuple[str, list[str]]]:
 
     tasks = []
     for t in m.contributes.task_types:
-        where = ", ".join(t.run_locations) if t.run_locations else "제한 없음"
         icon = t.icon or "없음"
-        tasks.append(f"{t.label} ({t.id}) · 아이콘 {icon} · 실행 위치 {where} · BPMN {t.bpmn}")
+        tasks.append(f"{t.label} ({t.id}) · 아이콘 {icon} · BPMN {t.bpmn}")
     out.append(("태스크 종류", tasks or [NOTHING]))
 
     editors = []

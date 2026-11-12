@@ -19,7 +19,6 @@ MEMBERS = {
     "shared/qt": "bpm.qt",
     "server/service_kit": "bpm.service_kit",
     "studio/app": "bpm.studio",
-    "bot/app": "bpm.bot_ui",
     "server/server_runner": "bpm.server_runner",
     # 외부 앱을 부르는 범용 일꾼 (C13 §4·C15, ADR-0102).
     "server/adapter_consumer": "bpm.adapter_consumer",
@@ -40,7 +39,6 @@ MEMBER_GLOBS = (
     "server/service_kit",
     "server/unified_consumer",
     "studio/app",
-    "bot/app",
     "samples/*",
 )
 

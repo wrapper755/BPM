@@ -22,10 +22,8 @@ from typing import Any
 
 import pytest
 
-from bpm.contracts.approvals import request_id_for
 from bpm.contracts.bpmn_ext import read_process
 from bpm.core.engine import Engine, RunEnv, State
-from bpm.core.requests import create_request
 from bpm.core.run_log import RunLog
 from bpm.extension_api import ExtensionEvent, TaskContext, TaskFailed, TaskOutcome, review_table
 
@@ -37,7 +35,7 @@ PROCESS = """<?xml version="1.0" encoding="UTF-8"?>
                   targetNamespace="urn:chaeksas:example">
   <bpmn:process id="Proc_ext" name="확장 태스크" isExecutable="true">
     <bpmn:extensionElements>
-      <bpm:process>{"run_location": "pc", "service_keys": {"demo": "demo-key"}}</bpm:process>
+      <bpm:process>{"service_keys": {"demo": "demo-key"}}</bpm:process>
     </bpmn:extensionElements>
     <bpmn:startEvent id="Start" />
     <bpmn:serviceTask id="Task_Ext" name="확장 태스크">
@@ -128,8 +126,8 @@ def test_defaults_web_and_desktop_reach_the_task_and_the_task_wins(tmp_path: Pat
     """`bpm:defaults`의 `web`·`desktop`은 확장 태스크 속성의 기본값이다 — **태스크에 적은 값이 이긴다**
     (C14, ADR-0033). UI 태스크가 띄울 앱 이름을 이렇게 받는다."""
     with_defaults = PROCESS.replace(
-        '<bpm:process>{"run_location": "pc", "service_keys": {"demo": "demo-key"}}</bpm:process>',
-        '<bpm:process>{"run_location": "pc", "service_keys": {"demo": "demo-key"}}</bpm:process>'
+        '<bpm:process>{"service_keys": {"demo": "demo-key"}}</bpm:process>',
+        '<bpm:process>{"service_keys": {"demo": "demo-key"}}</bpm:process>'
         '<bpm:defaults>{"desktop": {"app": "ERP Client"}, "web": {"profile": "업무"}}</bpm:defaults>',
     ).replace('{"page_id": "p", "steps": []}', '{"page_id": "p", "steps": [], "web": {"profile": "태스크"}}')
     executor = FakeExecutor()
@@ -139,7 +137,6 @@ def test_defaults_web_and_desktop_reach_the_task_and_the_task_wins(tmp_path: Pat
     assert seen["desktop"] == {"app": "ERP Client"}
     assert seen["web"] == {"profile": "태스크"}
     assert seen["page_id"] == "p"
-
 
 
 def test_the_outputs_become_variables(tmp_path: Path) -> None:
@@ -161,7 +158,6 @@ def test_the_executor_sees_the_contract_shape(tmp_path: Path) -> None:
     assert seen.key_ref is None, "서비스 앱 키가 없어졌다 (ADR-0102)"
     assert seen.bpm_process_id, "그 실행의 BPM 프로세스(패키지 id)가 간다"
     assert seen.mode == "autonomous" or seen.mode == "deterministic"
-    assert seen.run_location == "pc"
 
 
 def test_the_task_properties_are_not_the_values(tmp_path: Path) -> None:
@@ -200,35 +196,22 @@ NAMED_ESCALATED = WITH_BOUNDARY.replace(
 ).replace('<bpmn:errorEventDefinition id="err" />', '<bpmn:errorEventDefinition id="err" errorRef="Err_Esc" />')
 
 
-def test_on_the_server_an_escalation_reaches_the_escalated_boundary(tmp_path: Path) -> None:
-    """서버에서 확장의 **전환**(`escalate: confirmation`)은 `ESCALATED`다 — C14의 경계가 그 코드로 받는다
-    (ADR-0105·0106). 확장이 준 코드(`ui_escalated`)를 그대로 올리면 `ESCALATED` 경계가 받지 못한다.
+def test_an_escalation_reaches_the_escalated_boundary(tmp_path: Path) -> None:
+    """확장의 **전환**(`escalate: confirmation`)은 `ESCALATED`다 — C14의 경계가 그 코드로 받는다
+    (ADR-0105). 확장이 준 코드(`ui_escalated`)를 그대로 올리면 `ESCALATED` 경계가 받지 못한다.
+    **사람에게 묻지 않는다** — 그 갈래는 PC 실행기와 함께 걷었다 (ADR-0144).
     """
     run = run_it(tmp_path, ON_SERVER, Host({"demo_task": escalating()}))
     assert run.state == State.DONE
     assert run.variables.get("error_code") == "ESCALATED"
-    assert not run.pendings, "서버는 사람에게 묻지 않는다"
+    assert not run.pendings
 
 
-def test_a_named_escalated_boundary_wins_over_asking_on_a_pc(tmp_path: Path) -> None:
-    """PC여도 그림이 `ESCALATED`를 **이름으로** 받으면 확인을 띄우지 않는다 (ADR-0106 §2)."""
+def test_a_named_escalated_boundary_takes_it_too(tmp_path: Path) -> None:
+    """그림이 `ESCALATED`를 **이름으로** 받아도 같다."""
     run = run_it(tmp_path, NAMED_ESCALATED, Host({"demo_task": escalating()}))
     assert run.state == State.DONE and not run.pendings
     assert run.variables.get("error_code") == "ESCALATED"
-
-
-def test_on_a_pc_an_escalation_asks_a_person_in_the_field(tmp_path: Path) -> None:
-    """PC에서는 **그 자리에서 현장 확인 하나**로 멈춘다 (C10 `escalated`, ADR-0106) — `manualTask`와 같은 요청."""
-    run = run_it(tmp_path, PROCESS, Host({"demo_task": escalating()}))
-    assert run.state == State.WAITING
-    (pending,) = run.pendings.values()
-    assert pending.escalation and pending.layer == "confirmation" and pending.where == "field"
-    assert pending.node_id == "Task_Ext" and pending.form is None
-    assert pending.request_id == request_id_for(RUN, "Task_Ext", 1), "결재·확인과 같은 규칙이다"
-    assert pending.title == "실행 확인 요청 — 확장 태스크"
-    assert pending.description == "화면을 확인해 주세요"
-    asked = [one for one in events(tmp_path) if one["kind"] == "human_requested"]
-    assert asked and asked[-1]["data"]["layer"] == "confirmation" and asked[-1]["data"]["where"] == "field"
 
 
 #: 확장이 사람에게 보이라고 준 검토 자료 (ADR-0112) — 표 하나와 글 하나.
@@ -246,17 +229,6 @@ def reviewing() -> FakeExecutor:
     )
 
 
-def test_the_extensions_review_reaches_the_field_request_but_not_the_log(tmp_path: Path) -> None:
-    """확장의 검토 자료는 **확인 요청의 C6 `review`**로 가고(CMN-01 [R]) 실행 기록에는 없다 (ADR-0112, 원칙 6)."""
-    run = run_it(tmp_path, PROCESS, Host({"demo_task": reviewing()}))
-    (pending,) = run.pendings.values()
-    assert pending.review == SHOWN
-    # 실행 프로세스가 `.field-requests.jsonl`에 쓰는 본문 그대로다 (ADR-0078).
-    assert create_request(run, pending).review == SHOWN
-    logged = json.dumps(events(tmp_path), ensure_ascii=False)
-    assert "주문.저장" not in logged and "여러 개 맞음" not in logged and "시도한 로케이터" not in logged
-
-
 @pytest.mark.parametrize("xml", [ON_SERVER, NAMED_ESCALATED], ids=["server", "named-boundary"])
 def test_the_review_is_dropped_when_the_boundary_takes_it(tmp_path: Path, xml: str) -> None:
     """오류 경계로 가면 보일 사람이 없다 — 검토 자료는 **어디에도 가지 않는다** (ADR-0112 §4)."""
@@ -266,58 +238,21 @@ def test_the_review_is_dropped_when_the_boundary_takes_it(tmp_path: Path, xml: s
     assert "주문.저장" not in json.dumps(run.variables, ensure_ascii=False, default=str)
 
 
-def test_continue_passes_the_task_without_doing_it_again(tmp_path: Path) -> None:
-    """「계속」은 **다시 하지 않고 넘어간다** — 결과 변수도 `decision`도 채우지 않는다 (ADR-0106 §4)."""
-    executor = escalating()
-    engine = Engine()
-    run = engine.start(
-        read_process(PROCESS), run_id=RUN, log=RunLog(run_id=RUN, path=tmp_path / "run.jsonl"),
-        env=RunEnv(extensions=Host({"demo_task": executor})),
-    )
-    engine.run_until_blocked(run)
-    (request_id,) = run.pendings
-    assert engine.run_until_blocked(run) is State.WAITING
-    engine.answer(run, request_id, {"decision": "approve"}, answered_by="현장")
-    assert engine.run_until_blocked(run) is State.DONE
-    assert len(executor.seen) == 1, "다시 하면 입력이 두 번 들어간다"
-    assert "읽은값" not in run.variables and "decision" not in run.variables
-    finished = [one for one in events(tmp_path) if one["kind"] == "run_finished"][-1]["data"]
-    assert finished["confirmations"] == 1, "확인으로 센다 (CON-02 확인률)"
-
-
 @pytest.mark.parametrize(("xml", "state"), [(PROCESS, State.FAILED), (WITH_BOUNDARY, State.DONE)])
-def test_stop_is_an_escalated_failure(tmp_path: Path, xml: str, state: State) -> None:
-    """「중단」은 `ESCALATED` 업무 실패다 — 코드 없는 경계가 받고, 없으면 실행이 실패로 끝난다 (ADR-0106 §5)."""
+def test_an_escalation_is_a_business_failure(tmp_path: Path, xml: str, state: State) -> None:
+    """전환은 `ESCALATED` 업무 실패다 — 코드 없는 경계가 받고, 없으면 실행이 실패로 끝난다."""
     engine = Engine()
     run = engine.start(
         read_process(xml), run_id=RUN, log=RunLog(run_id=RUN, path=tmp_path / "run.jsonl"),
         env=RunEnv(extensions=Host({"demo_task": escalating()})),
     )
-    engine.run_until_blocked(run)
-    (request_id,) = run.pendings
-    engine.answer(run, request_id, {"decision": "reject"}, answered_by="현장")
     assert engine.run_until_blocked(run) is state
+    assert not run.pendings, "묻지 않는다 (ADR-0144)"
     if state is State.DONE:
         assert run.variables["error_code"] == "ESCALATED"
         assert "화면을 확인해 주세요" in run.variables["error_message"]
     else:
         assert run.error is not None and run.error.code == "ESCALATED"
-
-
-def test_an_escalation_answer_is_a_decision(tmp_path: Path) -> None:
-    from bpm.core.engine import EngineError
-
-    engine = Engine()
-    run = engine.start(
-        read_process(PROCESS), run_id=RUN, log=RunLog(run_id=RUN, path=tmp_path / "run.jsonl"),
-        env=RunEnv(extensions=Host({"demo_task": escalating()})),
-    )
-    engine.run_until_blocked(run)
-    (request_id,) = run.pendings
-    with pytest.raises(EngineError) as caught:
-        engine.answer(run, request_id, {"메모": "봤다"}, answered_by="현장")
-    assert caught.value.code == "answer_incomplete"
-    assert request_id in run.pendings, "틀린 답은 요청을 지우지 않는다"
 
 
 def test_a_missing_extension_is_a_setup_error(tmp_path: Path) -> None:

@@ -58,7 +58,7 @@ RETRY_STATUS_CODES: dict[int, str] = {503: "dependency_down", 429: "rate_limited
 
 #: 일꾼을 들이는 요청 종류 (`contracts.enrollment.ENROLLMENT_TYPES`에 더한다).
 CONSUMER = "consumer"
-#: 호출 토큰 (C15 「정한 것」) — PC 실행기가 제 키로 청해 실행 프로세스에 넘긴다.
+#: 호출 토큰 (C15 「정한 것」) — Studio가 제 키로 청해 확장에게 넘긴다.
 CALL_TOKEN = "call_token"
 CALL_TOKEN_HOURS = 24
 #: 호출 토큰이 열 수 있는 경로의 앞자리 — 밖은 403 `call_token_scope`.

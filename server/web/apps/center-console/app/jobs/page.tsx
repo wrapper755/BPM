@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
 import type { JobInfo } from "@bpm/api-types/c5-job-info";
-import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { cancelControl } from "@/lib/jobs";
@@ -13,7 +12,6 @@ import {
   STATE_LABEL,
   botLabel,
   delegatedFrom,
-  location,
   reason,
   stateNote,
   targetName,
@@ -40,27 +38,25 @@ function clampLimit(raw: string | undefined): number {
 export default async function JobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ state?: string | string[]; bot_ui?: string; limit?: string }>;
+  searchParams: Promise<{ state?: string | string[]; runner?: string; limit?: string }>;
 }) {
   const found = await session();
   if (!found) redirect("/login");
   const asked = await searchParams;
   // 상태는 여러 개 (체크 칸) — 하나면 글자, 여럿이면 배열로 온다.
   const states = ([] as string[]).concat(asked.state ?? []).filter((one) => STATES.includes(one));
-  const botUi = asked.bot_ui ?? "";
+  const runner = asked.runner ?? "";
   const limit = clampLimit(asked.limit);
   const admin = found.mode === "admin";
 
   let rows: JobInfo[] = [];
-  let botUis: BotUiInfo[] = [];
   let failure: string | null = null;
   try {
     rows = await center.jobs({
       state: states.length > 0 ? states.join(",") : undefined,
-      target_id: botUi || undefined,
+      target_id: runner || undefined,
       limit,
     });
-    botUis = await center.botUis();
   } catch (cause) {
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
   }
@@ -71,7 +67,7 @@ export default async function JobsPage({
       header: "상태",
       width: "16ch",
       cell: (row) => {
-        const note = stateNote(row, botUis);
+        const note = stateNote(row);
         return (
           <div className="flex flex-col gap-1">
             <StatusBadge group="작업" label={STATE_LABEL[row.state] ?? row.state} />
@@ -91,8 +87,7 @@ export default async function JobsPage({
         </Link>
       ),
     },
-    { key: "location", header: "실행 위치", width: "8ch", cell: location },
-    { key: "target", header: "Bot", width: "14ch", cell: (row) => targetName(row, botUis) },
+    { key: "target", header: "실행기", width: "16ch", cell: (row) => targetName(row) },
     { key: "bot", header: "프로세스", cell: botLabel },
     {
       // **키만** 보인다 (U10) — 값은 상세에서 접힌 채로만.
@@ -145,7 +140,7 @@ export default async function JobsPage({
     });
   }
 
-  const filtered = states.length > 0 || Boolean(botUi);
+  const filtered = states.length > 0 || Boolean(runner);
 
   return (
     <Shell mode={found.mode} actor={found.actor} current="/jobs">
@@ -176,19 +171,14 @@ export default async function JobsPage({
           </div>
         </fieldset>
         <label className="flex flex-col gap-1 text-body-sm">
-          <span className="text-text-muted">Bot</span>
-          <select
-            name="bot_ui"
-            defaultValue={botUi}
+          <span className="text-text-muted">실행기</span>
+          <input
+            type="text"
+            name="runner"
+            defaultValue={runner}
+            placeholder="(전체)"
             className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
-          >
-            <option value="">(전체)</option>
-            {botUis.map((one) => (
-              <option key={one.bot_ui_id} value={one.bot_ui_id}>
-                {one.name}
-              </option>
-            ))}
-          </select>
+          />
         </label>
         <label className="flex flex-col gap-1 text-body-sm">
           <span className="text-text-muted">최대</span>

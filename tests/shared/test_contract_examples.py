@@ -29,8 +29,6 @@ from bpm.contracts import (
     FetchResponse,
     FolderConsumer,
     FolderKey,
-    HeartbeatRequest,
-    HeartbeatResponse,
     Manifest,
     MessageRequest,
     RunEvent,
@@ -43,13 +41,10 @@ DOCS = Path(__file__).resolve().parents[2] / "docs" / "03-contracts"
 
 # (문서, 예시 번호, 모델) — 번호는 문서에 나오는 순서. 예시를 더하면 여기도 더한다.
 EXAMPLES: list[tuple[str, int, Any]] = [
-    ("C1-package-manifest", 0, Manifest),  # 서버 BPM 프로세스
-    ("C1-package-manifest", 1, Manifest),  # PC BPM 프로세스
+    ("C1-package-manifest", 0, Manifest),  # BPM 프로세스
     ("C2-signing-envelope", 0, Envelope),  # 배포 봉투
     ("C3-run-events", 0, TypeAdapter(list[RunEvent])),  # 이벤트 배치
     ("C3-run-events", 1, EventBatchResponse),  # 응답
-    ("C4-bot-ui-center", 0, HeartbeatRequest),
-    ("C4-bot-ui-center", 1, HeartbeatResponse),
     ("C6-approvals", 0, ApprovalCreateRequest),
     ("C6-approvals", 1, TypeAdapter(dict[str, Any])),  # 표 값이 든 검토 자료 (ADR-0112)
     ("C7-resources-center-keys", 0, ConsumerFolderScan),  # 일꾼 폴더 (ADR-0122)
@@ -113,8 +108,10 @@ def test_c1_example_passes_validate() -> None:
     """C1 예시 두 개는 검사 규칙을 통과해야 한다 (R1·R2·R4·R7)."""
     from bpm.contracts import validate
 
-    for index in (0, 1):
-        m = Manifest.model_validate(json.loads(expand_abbreviations(json_blocks("C1-package-manifest")[index])))
+    blocks = json_blocks("C1-package-manifest")
+    assert blocks, "C1에 예시가 하나도 없다"
+    for index, block in enumerate(blocks):
+        m = Manifest.model_validate(json.loads(expand_abbreviations(block)))
         assert validate(m) == [], f"예시 {index}가 검사에 걸렸다: {[str(v) for v in validate(m)]}"
 
 
@@ -125,7 +122,7 @@ def test_c2_example_payload_reads_as_a_deployment_claim() -> None:
     env = Envelope.model_validate(json.loads(expand_abbreviations(json_blocks("C2-signing-envelope")[0])))
     claim = parse_claim(env)
     assert isinstance(claim, DeploymentClaim)
-    assert claim.target.type == "bot_ui"
+    assert claim.target.type == "server_runner"
     assert claim.not_before is None
 
 

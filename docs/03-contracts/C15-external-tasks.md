@@ -17,14 +17,14 @@ BPM 프로세스가 네트워크 건너의 기능을 부를 때, 부르는 쪽�
 
 1. **최소 한 번 실행이다.** 일꾼이 일을 끝냈는데 「끝냈다」가 Center에 닿지 못하면 잠금이 지나 일감이 다시 나간다. **일꾼은 `idempotency`(C11과 같은 여섯 칸)로 스스로 한 번만 수행한다.** 같은 칸으로 다시 오면 저장해 둔 결과를 그대로 끝낸다(`replayed: true`). Center는 이것을 대신 지켜 줄 수 없다 — 바깥에서 일어난 일을 모른다.
 2. **아무도 가져가지 않으면 기한에 실패한다** (`no_consumer`). 조용히 쌓아 두지 않는다 — 부르는 쪽 오류 경계가 받는다.
-3. **업무 값은 결과를 부른 쪽이 받을 때까지만 있다.** 받으면(`ack`) 입력·출력을 지우고 누가·언제·성패만 남긴다. 못 받은 것은 7일에 지운다 (원칙 6의 예외 — PC 위임 결과와 같은 자리, ADR-0062).
+3. **업무 값은 결과를 부른 쪽이 받을 때까지만 있다.** 받으면(`ack`) 입력·출력을 지우고 누가·언제·성패만 남긴다. 못 받은 것은 7일에 지운다 (원칙 6의 예외 — 맡긴 것의 결과와 같은 자리, C12 §맡기기).
 
 ## 전송
 
 | 엔드포인트 | 인증 | 뜻 |
 | --- | --- | --- |
-| `POST /api/v1/call-tokens` | PC 실행기·Studio의 Center API 키 | 호출 토큰 받기 (24시간) |
-| `POST /api/v1/external-tasks` | 호출 토큰 · PC 실행기·서버 실행기·Studio의 Center API 키 | 일감 올리기 (멱등) |
+| `POST /api/v1/call-tokens` | Studio의 Center API 키 | 확장에게 줄 호출 토큰 받기 (24시간) |
+| `POST /api/v1/external-tasks` | 서버 실행기·Studio의 Center API 키 | 일감 올리기 (멱등) |
 | `GET /api/v1/external-tasks/{task_id}?wait_s=` | 올린 쪽 | 결과 기다리기 (롱폴링). 아직이면 `wait_s`(최대 25) 뒤 `state: pending` |
 | `POST /api/v1/external-tasks/{task_id}/ack` | 올린 쪽 | 결과를 받았다 → 값을 지운다 |
 | `POST /api/v1/external-tasks/{task_id}/cancel` | 올린 쪽 | 거두기 (실행이 취소됐다) |
@@ -328,7 +328,8 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 ## 정한 것 (처음에 미정이던 셋)
 
-- **호출 토큰은 PC 실행기(또는 Studio)가 제 Center API 키로 청한다** — `POST /api/v1/call-tokens` → `{token, expires_at}`(수명 24시간). 봉하지 않는다: 청하는 길이 이미 그 PC 실행기의 키로 인증된 연결이라 다른 응답과 같은 길로 온다(환경변수 키처럼 **공개키가 없는 PC 실행기도** 받을 수 있어야 한다 — 하트비트 봉함으로는 그 PC 실행기가 못 받는다). PC 실행기는 실행을 띄울 때 하나 청해 실행 프로세스에게 제어 파일로 넘긴다(만료 2시간 전부터 새것을 같은 길로 넣는다). 토큰은 PC 실행기 **메모리에만** 있고 비밀 저장소에 두지 않는다. **호출 토큰으로 부르면 Center는 그 PC 실행기의 Center API 키로 부른 것과 같이 본다** — 소유(C3)·배포 대조가 같은 신원으로 돈다. 호출 토큰은 `/api/v1/external-tasks`와 **리소스 목록 읽기**(`GET /api/v1/resources…` — 확장 클라이언트가 기여 자원 카탈로그를 읽는 자리) 밖을 모두 403 `call_token_scope`로 막는다. 서버 실행기·Studio는 제 프로세스 안에서 부르므로 제 Center API 키를 쓴다.
+- **부르는 쪽은 제 Center API 키를 쓴다** — 서버 실행기·Studio 모두 제 프로세스 안에서 엔진을 돌리므로 따로 토큰을 받을 일이 없다. 자식 프로세스에 토큰을 건네던 길은 PC 실행기와 함께 걷었다 ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)).
+- **호출 토큰은 Studio가 확장에게 줄 때만 쓴다** — `POST /api/v1/call-tokens` → `{token, expires_at}`(수명 24시간, Studio 키로만 청한다). 확장 클라이언트는 `ctx.secret("call_token")`으로 이것을 받으므로 Studio의 오래 사는 키를 쥐지 않는다. **호출 토큰으로 부르면 Center는 그 Studio의 키로 부른 것과 같이 본다** — 소유(C3)·배포 대조가 같은 신원으로 돈다. 열리는 것은 `/api/v1/external-tasks`와 **리소스 목록 읽기**(`GET /api/v1/resources…`)뿐이고 밖은 모두 403 `call_token_scope`다. 서버 실행기의 확장은 **실행기의 Center API 키를 그 이름으로** 받는다.
 - **롱폴링 상한은 설정의 기본 200** (`BPM_CENTER__EXTERNAL_TASKS__MAX_WAITERS` — 올리는 쪽·일꾼의 기다림을 함께 센다). 한 번 가져가기에 잠글 수 있는 수는 **10건까지**(`max_tasks`가 그보다 크면 10으로 깎는다). **`max_tasks: 0`은 일감을 가져가지 않는다** — 열린 모드의 들이기만 하는 한 번이다(§일꾼 들이기).
 - **어댑터 일꾼은 맡은 외부 확장의 정의를 제가 들고 있다가 올린다** (ADR-0122, §외부 확장 정의 올리기) — `BPM_ADAPTER__DEFINITIONS`의 파일들이다. **원본이 콘솔인 정의는 Center에서 받는다**(ADR-0141, §콘솔이 원본인 정의 받기).
 - 출력 검사는 **`output_schema.required`의 칸이 다 있는가**까지다 — 계약 패키지에 JSON Schema 검증기를 두지 않는다(입력 쪽도 그렇다). 더 깊은 모양은 일꾼과 엔진의 `output` 매핑이 본다.

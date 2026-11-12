@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx12_daily_report" name="타이머 시작 + 파일 출력" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": []

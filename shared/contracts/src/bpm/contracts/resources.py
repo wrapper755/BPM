@@ -244,7 +244,7 @@ class ContributedResource(ContractModel):
 
 
 class RuntimeHost(ContractModel):
-    type: str  # bot_ui | server_runner
+    type: str  # server_runner
     id: str
     name: str | None = None
 
@@ -254,9 +254,7 @@ class RuntimeResource(ContractModel):
 
     host: RuntimeHost
     os: str | None = None
-    versions: dict[str, str] = Field(default_factory=dict)  # {bot_ui?, core}
-    browsers: list[str] = Field(default_factory=list)
-    desktop_backend: str | None = None
+    versions: dict[str, str] = Field(default_factory=dict)  # {server_runner?, core}
     extensions: list[dict[str, Any]] = Field(default_factory=list)
 
 
@@ -328,7 +326,7 @@ def _adapter_operations(ext: ExtensionResource | None) -> dict[str, AdapterOpera
 
 def _check_service_apps(m: Manifest, index: ResourceIndex) -> list[MissingResource]:
     out = []
-    server = m.run_location == "server"
+    server = True  # 실행 자리는 서버 하나다 (ADR-0144)
     for need in m.requires.service_apps:
         app = index.service_app(need.app_id)
         # `bpm:serviceCall`은 서비스 앱과 외부 확장을 가리지 않는다 (C13 §4) — 같은 id의 외부
@@ -348,7 +346,7 @@ def _check_service_apps(m: Manifest, index: ResourceIndex) -> list[MissingResour
             if op is None:
                 out.append(MissingResource(type="operation", id=op_id, reason="not_found"))
                 continue
-            # 실행하는 쪽(PC 실행기·서버 실행기)은 결정 수행으로 부른다.
+            # 실행하는 쪽(서버 실행기)은 결정 수행으로 부른다.
             if "deterministic" not in op.modes:
                 out.append(MissingResource(type="operation", id=op_id, reason="not_deterministic"))
             if server and not op.server_ok:

@@ -60,7 +60,7 @@ class NoSecrets:
     """`extension_api.Secrets` — **Studio에는 비밀이 없다**.
 
     설계할 때는 키가 필요 없다 (공개 카탈로그만 읽는다, ADR-0008·C9). 키가 필요한 일은
-    PC 실행기·실행기가 한다 (ADR-0013).
+    실행기가 한다 (ADR-0013).
     """
 
     def resolve(self, ref: str) -> str | None:
@@ -142,7 +142,7 @@ class Extensions:
         """그 확장의 Studio 설정 + 예약 키 (C13 — `center.url`).
 
         칸의 값은 STU-10 「확장별 설정」이 넣은 것이고, 넣지 않은 칸은 `None`이다. **비밀 칸은
-        여기 오지 않는다** — `secrets.resolve(<칸>)`으로 푼다 (PC 실행기와 같다).
+        여기 오지 않는다** — `secrets.resolve(<칸>)`으로 푼다 .
         """
         found = self.host.get(extension_id)
         values: dict[str, Any] = {}

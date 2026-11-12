@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx20_external_adapter" name="외부 확장 HTTP 어댑터 호출" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "ext-credit",

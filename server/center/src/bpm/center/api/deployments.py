@@ -27,7 +27,6 @@ from bpm.center import signer
 from bpm.center.api.signing import LIVE_STATUSES, admin_keys
 from bpm.center.errors import ApiError
 from bpm.center.storage import Store, now_iso
-from bpm.contracts.bot_ui import DeploymentResult
 from bpm.contracts.center_api import (
     RECENT_RESULTS,
     DeploymentInfo,
@@ -36,13 +35,11 @@ from bpm.contracts.center_api import (
     validate_deployment,
 )
 from bpm.contracts.manifest import Manifest
+from bpm.contracts.runner import DeploymentResult
 from bpm.contracts.signing import TARGET_ANY, Envelope, verify, verify_time
 
 #: `id`에 `"*"`로 **모두**를 가리킬 수 있는 대상 종류 (C2 §배포 대상 규칙, ADR-0046).
-#:
-#: **PC(`bot_ui`)는 들어 있지 않다** — `DeploymentTarget.matches`가 `*`를 서버 실행기에만
-#: 주므로(V6) `{bot_ui, "*"}` 봉투는 **모든 PC가 `wrong_target`으로 거부한다**. 그런 것을
-#: Center가 풀어 내려 주면 CON-03이 거짓 ⛔로 차고 운영자는 승인·해시·키를 뒤진다.
+#: 실행기가 한 종류라 이 묶음에 그것만 있다 (ADR-0144).
 WILDCARD_TARGETS = frozenset({"server_runner"})
 
 
@@ -78,17 +75,19 @@ def live_sql() -> tuple[str, tuple[str, ...]]:
 def _registered(store: Store, target: Any) -> bool | None:
     """그 대상이 Center에 있나 — **읽는 것은 Center, 판정은 계약이다** (ADR-0049·0047 ②).
 
-    `None`은 **「묻지 않았다」**다. PC(`bot_ui`)만 명부(`bot_uis`)가 있으므로 나머지 종류는
-    묻지 않고 넘긴다 — 서버 실행기는 M7이고(그쪽은 `server_runner_not_available`이 막는다)
-    `False`를 주면 **없는 규칙으로** 막게 된다.
+    `None`은 **「묻지 않았다」**다 — 전체 대상(`"*"`)은 명부에 없다.
 
-    **`bot_uis`를 아는 자리는 `api.bot_ui`다** — 키 묶기 규칙이 갈라지지 않게 거기로 묻는다.
+    **`server_runners`를 아는 자리는 `api.server_runner`다** — 키 묶기 규칙이 갈라지지 않게
+    거기로 묻는다.
     """
-    if not isinstance(target, dict) or str(target.get("type") or "") != "bot_ui":
+    if not isinstance(target, dict) or str(target.get("type") or "") != "server_runner":
         return None
-    from bpm.center.api import bot_ui  # noqa: PLC0415 — 순환 import를 피한다
+    found = str(target.get("id") or "")
+    if not found or found == TARGET_ANY:
+        return None
+    from bpm.center.api import server_runner  # noqa: PLC0415 — 순환 import를 피한다
 
-    return bot_ui.exists(store, str(target.get("id") or ""))
+    return server_runner.exists(store, found)
 
 
 def _envelope(raw: Any) -> Envelope:
@@ -221,27 +220,14 @@ def targets_for(store: Store, *, bpm_process_id: str, version: str, target_type:
     return sorted(str(row["id"]) for row in rows)
 
 
-def versions_deployed_to(store: Store, *, bpm_process_id: str, target_type: str) -> list[str]:
-    """그 BPM 프로세스가 그 종류의 대상에 배포된 판들 (C5) — 위임이 판을 비웠을 때 고를 거리다."""
-    live, statuses = live_sql()
-    rows = store.rows(
-        "SELECT DISTINCT d.version AS v FROM deployments d"
-        " JOIN packages p ON p.id = d.bpm_process_id AND p.version = d.version"
-        f" WHERE {live} AND d.target_type = ?"
-        "   AND d.bpm_process_id = ?",
-        (*statuses, target_type, bpm_process_id),
-    )
-    return sorted(str(row["v"]) for row in rows)
-
-
 def _refuse_unapproved_delegations(manifest: Manifest | None, store: Store) -> None:
-    """**PC 위임으로 부르는 BPM 프로세스가 승인되어 있어야** 한다 (C12 §PC 위임, ADR-0062).
+    """**맡겨서 부르는 BPM 프로세스가 승인되어 있어야** 한다 (C12 §맡기기, ADR-0082).
 
-    C1 R8처럼 **배포 시점에** 본다 — 매니페스트만으로는 알 수 없다. 반대로 **PC에 배포됐는가는
-    묻지 않는다**: 서버 BPM 프로세스를 먼저 배포하는 순서를 막으면 안 되고, 실제 관문은 위임을 요청할
-    때다 (그때 `no_deployment`로 거절한다).
+    C1 R8처럼 **배포 시점에** 본다 — 매니페스트만으로는 알 수 없다. 반대로 **배포됐는가는
+    묻지 않는다**: 맡기는 쪽을 먼저 배포하는 순서를 막으면 안 되고, 실제 관문은 맡길 때다
+    (그때 `no_deployment`로 거절한다).
 
-    판을 비운 위임(`<id>`)은 **승인된 판이 하나라도 있으면** 통과다 — 어느 판으로 돌릴지는
+    판을 비운 것(`<id>`)은 **승인된 판이 하나라도 있으면** 통과다 — 어느 판으로 돌릴지는
     요청할 때 정한다 (둘 이상이면 그때 `version_ambiguous`다).
     """
     from bpm.center.api.signing import STATUS_APPROVED  # noqa: PLC0415 — 순환 import를 피한다
@@ -266,21 +252,31 @@ def _refuse_unapproved_delegations(manifest: Manifest | None, store: Store) -> N
     raise ApiError(
         422,
         "delegation_not_approved",
-        f"PC 위임으로 부르는 BPM 프로세스가 승인되지 않았다: {missing[0]}",
+        f"맡겨서 부르는 BPM 프로세스가 승인되지 않았다: {missing[0]}",
         {"delegations": missing},
     )
 
 
-def _refuse_other_company(store: Store, company: str | None, target: Any) -> None:
-    """**PC 배포는 그 회사의 PC에만** — 422 `company_mismatch` (C16, ADR-0125 §2).
+def versions_deployed_to(store: Store, *, bpm_process_id: str, target_type: str) -> list[str]:
+    """그 BPM 프로세스가 그 종류의 대상에 배포된 판들 (C5) — 위임이 판을 비웠을 때 고를 거리다."""
+    live, statuses = live_sql()
+    rows = store.rows(
+        "SELECT DISTINCT d.version AS v FROM deployments d"
+        " JOIN packages p ON p.id = d.bpm_process_id AND p.version = d.version"
+        f" WHERE {live} AND d.target_type = ?"
+        "   AND d.bpm_process_id = ?",
+        (*statuses, target_type, bpm_process_id),
+    )
+    return sorted(str(row["v"]) for row in rows)
 
-    서버 실행기는 Center 공용이라 보지 않는다. 회사를 모르는 옛 행(옮기기 전)은 막지 않는다.
+
+def _refuse_other_company(store: Store, company: str | None, target: Any) -> None:
+    """**서버 실행기는 Center 공용이라 회사로 가리지 않는다** (C16, ADR-0125 §2).
+
+    실행기가 한 종류가 되면서(ADR-0144) 가릴 대상이 없어졌다 — 자리는 남겨 둔다(회사마다
+    제 실행기를 두는 날 여기가 그 자리다).
     """
-    if str(target.get("type") or "") != "bot_ui" or company is None:
-        return
-    row = store.row("SELECT company FROM bot_uis WHERE bot_ui_id = ?", (str(target.get("id") or ""),))
-    if row is not None and row["company"] is not None and row["company"] != company:
-        raise ApiError(422, "company_mismatch", "그 PC 실행기는 다른 회사의 것이다 — 그 회사의 PC를 고르세요")
+    return
 
 
 def _refuse_missing_resources(manifest: Manifest | None, store: Store) -> None:
@@ -336,15 +332,15 @@ def listing(
     store: Store,
     *,
     target_id: str | None = None,
-    target_type: str = "bot_ui",
+    target_type: str = "server_runner",
     active_only: bool = False,
     company: str | None = None,
 ) -> list[DeploymentInfo]:
     """`GET /deployments` (C5). 철회된 것도 **행이 남으므로** 목록에 보인다.
 
     좁히는 기준은 `envelopes_for`와 **같다** (ADR-0046) — 보이는 것과 내려가는 것이 어긋나면
-    CON-03의 「배포」가 그 PC가 받지 못할 것을 보인다. 묻는 쪽이 종류를 적지 않으면 **PC**다
-    (`GET /deployments?target_id=`는 PC 실행기 id를 받는다).
+    CON-12의 「배포」가 그 실행기가 받지 못할 것을 보인다. 묻는 쪽이 종류를 적지 않으면
+    **서버 실행기**다.
     """
     rows = store.rows("SELECT * FROM deployments ORDER BY at DESC")
     if company is not None:
@@ -505,7 +501,7 @@ def results_of(store: Store, *, host_id: str, limit: int = RECENT_RESULTS) -> li
 def remember_results(store: Store, *, host_id: str, results: Sequence[DeploymentResult]) -> None:
     """하트비트가 실어 온 배치 결정을 쌓는다 (C4).
 
-    **같은 `(deployment_id, at)`은 한 번만** — PC 실행기가 보내 놓고 응답을 못 받아 다시 보내도
+    **같은 `(deployment_id, at)`은 한 번만** — 실행기가 보내 놓고 응답을 못 받아 다시 보내도
     목록이 부풀지 않는다.
     """
     for one in results:

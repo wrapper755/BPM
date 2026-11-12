@@ -10,7 +10,6 @@
   <bpmn:process id="Proc_bx33_access_request" name="IT 권한 신청" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "directory",

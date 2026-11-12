@@ -775,15 +775,6 @@ class MainWindow(QMainWindow):
 
     # ── 실행 전 검사 (B1~B15 + 사전 점검) ──
 
-    def task_type_locations(self) -> dict[str, list[str]]:
-        """확장 태스크 종류 → 실행 위치 (C13). **F6·STU-06·매니페스트가 같은 표를 쓴다.**
-
-        베껴 두면 셋이 서로 다른 말을 한다 — 창이 「서버로 바꿔도 된다」고 하고 F6이 막거나,
-        올리기가 거짓으로 422를 받는다. **꺼 둔 확장은 표에 없다** (ADR-0043) — 받는 쪽은
-        모르는 종류를 막지 않는다.
-        """
-        return self.extensions.host.task_type_locations()
-
     def key_extensions(self) -> list[str]:
         """서버 부분을 부르는 켜진 확장 (C13 `requires_keys` `run`) — 빌드가 그 확장의 토픽 줄을 적는다 (C15)."""
         return self.extensions.host.key_extensions()
@@ -807,7 +798,7 @@ class MainWindow(QMainWindow):
         )
 
     def delegated_outputs(self) -> dict[str, tuple[str, ...]]:
-        """PC 위임으로 부르는 BPM 프로세스들이 **선언한 `outputs`** (C1 → C14 B14, ADR-0062).
+        """맡기는 BPM 프로세스들이 **선언한 `outputs`** (C1 → C14 B14, ADR-0082).
 
         **창은 Center를 부르지 않는다** — 받아 둔 카탈로그에서 꺼낸다 (「새로 고침」·정의를 열
         때·설정을 저장한 뒤에 받는다). 못 받았으면 **비어 있고** 그러면 B14가 그 대조를
@@ -836,7 +827,6 @@ class MainWindow(QMainWindow):
         violations = inspect(
             found,
             self.process,
-            task_type_locations=self.task_type_locations(),
             delegated_outputs=self.delegated_outputs(),
         ) + self.readiness()
         self.preflight.show_result(found, violations)
@@ -955,60 +945,15 @@ class MainWindow(QMainWindow):
             self.process,
             self.workspace,
             editable=editable,
-            # 창은 호스트를 들고 있지 않다 — **F6과 같은 표**를 여기서 넘긴다 (C13).
-            task_type_locations=self.task_type_locations(),
             drawn=drawn,
             parent=self,
         )
         if not dialog.exec() or dialog.saved is None:
-            if dialog.split_requested:
-                self.split_to_pc()
             return
         self.process = dialog.saved
         self.retitle()
         self.explorer.refresh(opened=self.definition.as_posix() if self.definition else "")
         self.say(f"BPM 프로세스 정보를 저장했습니다: {dialog.saved.display} (v{dialog.saved.version})")
-        if dialog.process_patch is None or entry is None or drawn is None:
-            return
-        # 그림은 **캔버스에만** 반영된다 — 파일로 가는 것은 「저장」(Ctrl+S)이다 (STU-04의 「적용」과
-        # 같은 결). 그렇게 말해 둬야 「저장했다는데 패키지에 안 들어갔다」가 생기지 않는다.
-        self._apply_properties(drawn.id, {"chk": {"process": dialog.process_patch}})
-        self.say("실행 위치·키 참조는 그림에 적용했습니다 — 「저장」(Ctrl+S)으로 파일에 씁니다.")
-
-    def split_to_pc(self) -> None:
-        """STU-06a — 서버에서 못 하는 노드 하나를 새 PC BPM 프로세스로 옮긴다 (ADR-0071).
-
-        진입 정의가 열려 있고 실행 위치가 「서버」일 때만 한다(그 밖은 까닭을 말한다). 창은 고르기만
-        하고 그림은 `split_actions.split()`이 **캔버스로** 바꾼다.
-        """
-        from bpm.studio import split_actions  # noqa: PLC0415 — 쓸 때만 든다
-        from bpm.studio.split_dialog import SplitDialog  # noqa: PLC0415
-
-        if self.process is None:
-            self.say("열린 BPM 프로세스가 없습니다.")
-            return
-        entry = self.process.entry_definition
-        if entry is None or entry.process is None or self.definition != entry.path:
-            self.say("나누기는 진입 정의를 연 채로 합니다 — 진입 정의를 여세요.")
-            return
-        if (entry.process.info.run_location or "server") != "server":
-            self.say("실행 위치가 「서버」인 BPM 프로세스만 나눕니다.")
-            return
-        found = split_actions.blockers(entry.process, self.task_type_locations())
-        if not found:
-            self.say("서버에서 못 하는 노드가 없습니다 — 나눌 것이 없습니다.")
-            return
-        dialog = SplitDialog(
-            entry.process,
-            found,
-            server_id=self.process.id,
-            server_name=self.process.display,
-            taken=lambda one: self.workspace.find(one) is not None,
-            parent=self,
-        )
-        if not dialog.exec() or dialog.plan is None:
-            return
-        split_actions.split(self, dialog.plan)
 
     def edit_cases(self) -> None:
         """STU-07. 케이스는 **열린 정의 옆**에 있다 — 무엇의 케이스인지 모호하지 않게."""

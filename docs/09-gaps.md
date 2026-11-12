@@ -24,7 +24,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 | C1 | **구현됨** | `contracts.manifest` R1~R8 (R8은 Center 배포가 짓는다) | — (닫았다 — Studio가 `Provides`를 짓고 CON-06이 읽는다). — (닫았다). `definition_hash`는 **STU-15에서 사람이 고정한다**([ADR-0060](decisions/0060-pinning-external-definitions.md) — 고정하지 않으면 경고만 한다), `requires.settings`는 Studio가 그림에서 채운다 (`bpm:email` → `smtp`, [ADR-0059](decisions/0059-sending-mail-and-webhooks.md)) |
 | C2 | **구현됨** | `contracts.hashing`·`signing` V1~V8 | — (닫았다) |
 | C3 | **구현됨** | `contracts.events`·`core.run_log` | — (닫았다: 확장이 남기는 줄은 [ADR-0041](decisions/0041-extension-run-events.md), `case_id`·`queued_s`는 아는 쪽이 넣는다, `confirmations`는 **세는 쪽**이 가르고 `bot_ui_id`는 **Center가 읽을 때** 채운다) |
-| C4 | **구현됨** | `contracts.bot_ui`, Center·PC 실행기 양쪽 | — (`key_expires_at`으로 BUI-05 Center API 키 만료를 닫았다). `runtimes.browsers`·`desktop_backend`는 채우는 쪽이 없다 — §3-28 |
+| C4 | **구현됨** | `contracts.runner` (실행기 공통 모델 — 경로는 C12) | — (`key_expires_at`으로 BUI-05 Center API 키 만료를 닫았다). `runtimes.browsers`·`desktop_backend`는 채우는 쪽이 없다 — §3-28 |
 | C5 | **구현됨** | `contracts.center_api`, Center 전부 | — (닫았다 — 지원 종료·참조·삭제, 그리고 **권한표**까지. 패키지 쪽은 키 종류를 보는 관문이 따로 있다: `auth.require_upload`·`require_package_read`·`api.package_access.guard_download`) |
 | C6 | **구현됨** | `contracts.approvals`, Center·현장 | — (닫았다) |
 | C7 | **구현됨** | `contracts.resources`·`center_keys` | — (닫았다 — 상태는 토픽에서 온다, C15). `requires.resources`를 짓는 쪽이 없어 `used_by`가 빈다 — §3-24 |
@@ -46,21 +46,15 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18). **보안을 어디까지 조일지는 §3-33으로 미뤘다** — 관문은 다 있고 스위치 하나로 지나간다([ADR-0142](decisions/0142-open-mode.md)).
 
-### 3-29. 조직·업무 자리 — Center·Studio·콘솔은 돈다, PC 작업의 자리와 연동 키의 회사가 아직
+### 3-29. 조직·업무 자리 — Center·Studio·콘솔은 돈다, 연동 키의 회사가 아직
 
-[ADR-0125](decisions/0125-organization-and-work-placement.md)·[ADR-0127](decisions/0127-studio-picks-the-work-place.md), 계약 [C16](03-contracts/C16-organization.md) 「합의」. 도는 것: 조직 API, 장비의 회사(등록 승인), 올릴 때 업무 자리 검사(매니페스트 `place`), PC 배포의 회사 관문, 작업의 주인·`owner_stopped`·서버 작업의 `place`, 회사 관리자 거르기, STU-12b 자리 고르기, 콘솔 승인 창·등록 승인·계정의 회사, 조직 화면 CON-13, CON-01의 회사·부서·직원 열. 가상 직원은 없앴다. **남은 것**: ① PC 작업에 `place` 나르기(> 미정 — C4 실행기 파일) ② 연동용·대리 답용 키의 회사(> 미정) ③ 직원 사이의 업무 요청 ADR(ADR-0125 §8 — 조직이 선 뒤).
+[ADR-0125](decisions/0125-organization-and-work-placement.md)·[ADR-0127](decisions/0127-studio-picks-the-work-place.md), 계약 [C16](03-contracts/C16-organization.md) 「합의」. 도는 것: 조직 API, 장비의 회사(등록 승인), 올릴 때 업무 자리 검사(매니페스트 `place`), PC 배포의 회사 관문, 작업의 주인·`owner_stopped`·서버 작업의 `place`, 회사 관리자 거르기, STU-12b 자리 고르기, 콘솔 승인 창·등록 승인·계정의 회사, 조직 화면 CON-13, CON-01의 회사·부서·직원 열. 가상 직원은 없앴다. **남은 것**: ① 연동용·대리 답용 키의 회사(> 미정) ② 직원 사이의 업무 요청 ADR(ADR-0125 §8 — 조직이 선 뒤). PC 작업에 자리를 나르는 줄은 **PC 실행기와 함께 사라졌다** ([ADR-0144](decisions/0144-remove-the-pc-runner.md)).
 
-### 3-21. PC BPM 프로세스로 메시지를 넣는 길이 없다
+### 3-21. PC BPM 프로세스로 메시지를 넣는 길이 없다 — **사라졌다**
 
-**무엇이 없나.** C12 「C4와 다른 점」 표는 PC 쪽 메시지를 「PC 실행기 메시지 수신(8790)」으로 적었고, C14 §이벤트도 「PC는 PC 실행기 메시지 수신」이라고 적었으며, ADR-0014 §1도 메시지 수신을 PC 실행기 대기열의 출처로 든다. 그런데 **받는 쪽이 아무 데도 없다.** 그래서 실행 위치가 `pc`인 그림의 받기 태스크·메시지 중간 받기·경계는 영원히 기다리고(타이머 경계가 없으면), 메시지 시작 트리거는 울리지 않는다. 그림 검사도 이것을 말하지 않는다 — B6은 반대쪽(서버에서 못 하는 것)만 본다.
-
-**근거.**
-- Center `api/messages.py`는 **서버 실행기만** 고른다 — 기다리는 실행은 `server_runners` 행에서 찾고(:145), 메시지 시작은 `target: {"type": "server_runner"}`로 작업을 만든다(:220). C4 하트비트 응답에는 `messages[]`가 없다.
-- PC 실행기에는 설정 칸만 있다 — `bot_ui/settings.py:23` `DEFAULT_WEBHOOK_PORT = 8790`·`webhook_port`를 읽는 곳이 없고, BUI-03 「나중에」 탭이 「메시지 수신 포트 — … M5」를 꺼 둔 채 보인다(`settings_dialog.py:502-512`).
-- `contracts.bpmn_ext.server_blockers`(:1304)는 서버의 막힘만 센다. PC에서 메시지를 받는 그림을 막는 검사는 없다.
-- 업무 예제 중 메시지를 받는 16개는 **모두** `run_location: server`라 예제가 이 길을 밟지 않는다.
-
-**먼저 정할 것.** 「PC도 Center를 거쳐 받는다」(C12 §메시지와 같은 길 — C4 하트비트 응답에 `messages[]`·ack, PC 실행기 → 제어 파일 → 실행 프로세스. 8790과 「나중에」 탭은 걷는다)인가, 「PC 그림은 메시지를 받지 않는다」(B 검사로 막고 C12·C14·ADR-0014의 줄을 걷는다)인가. ADR-0102(바깥에서 들어오는 길은 Center)와 ADR-0007(밀지 않는다)은 첫째 쪽을 가리킨다.
+PC 실행기를 걷어([ADR-0144](decisions/0144-remove-the-pc-runner.md)) **받을 쪽이 없어졌다**. 메시지는
+Center 메시지 API(C12 §메시지)로 들어와 서버 실행기가 받는 길 하나다. 8790 포트·「나중에」 탭·C12·C14·
+ADR-0014의 PC 쪽 줄은 함께 걷었다.
 
 ### 3-22. 지원 종료가 돌던 배포를 멈춘다 — 닫았다
 
@@ -107,7 +101,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 ### 3-27. 「미정」으로 적혀 있는데 이 목록에 없던 것
 
-- **PC 작업에 작업의 주인이 가지 않는다** — C14 §입력의 값 출처, C4 `JobDispatch.place`(C16). PC 실행기는 그 칸을 읽지 않아, PC BPM 프로세스가 `company.*`·`department.*`·`staff.*` 출처 입력을 필수로 선언하면 시작하지 못한다. 먼저 정할 것: C4 실행기 파일에 싣는 길 하나다(Center가 `place`를 붙이는 조각 2 뒤의 일).
+- **Center가 작업에 `place`를 아직 붙이지 않는다** — C14 §입력의 값 출처, C4 `JobDispatch.place`(C16). 서버 실행기는 `sourced_inputs()`로 풀 준비가 되어 있는데 Center가 내려줄 때 채우지 않는다. 그래서 `company.*`·`department.*`·`staff.*` 출처 입력을 **필수로** 선언한 BPM 프로세스는 시작하지 못한다 (C16 「합의」).
 
 ### 3-30. 세 기둥(ADR-0135) — 남은 것은 RPA 일꾼과 NowView 나누기 (이 저장소 밖)
 
@@ -127,6 +121,8 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 ### 3-33. 보안을 어디까지 조일지 — 열린 모드를 켜 두고 미뤘다
 
 [ADR-0142](decisions/0142-open-mode.md) (2026-11-11). 들이는 관문(등록 승인·일꾼 폴더 파일·연동용 키)은 **다 구현되어 있고 코드가 그대로 남아 있다** — 다만 `BPM_CENTER__OPEN_MODE`를 켜면 지나간다. 지금 운영 서버도 켜 두었다(사용자 결정).
+
+**M11로 급해졌다** ([ADR-0143](decisions/0143-design-happens-in-the-console.md)) — 설계가 콘솔 안으로 들어오면서 **콘솔 로그인 하나가 그림까지 고치게 된다**. 지금은 Studio 키가 올리기를 가렸는데, 웹 편집기에서는 그 관문이 로그인뿐이다. 여기에 손대기 전에 그것을 함께 본다.
 
 **남은 것**: ① 어디까지 조일지 정하기 — 그 회사의 망·계정 체계·운영 주체가 함께 정하는 것이라 우리 안에서 결정할 수 없었다. ② 정해지면 스위치를 끄고 그때 필요한 관문만 남기는 ADR(이것을 대체한다). ③ 열어 둔 Center를 **망에서** 막는 것(방화벽·역방향 프록시)은 지금도 사람 몫이다 — 코드가 지키는 것이 없다.
 
@@ -327,17 +323,17 @@ CON-07 상세 「서버 주소」에서 넣고 **정의의 허용 호스트 안�
 
 ## 8. 화면 문서가 약속했는데 코드에 없는 것 (2026-10-31 대조)
 
-제품 화면의 줄은 제품 문서로 옮겼다 — [Studio](../studio/docs/gaps.md), [PC 실행기](../bot/docs/gaps.md), [Center 콘솔](../server/docs/gaps.md) §8 ([ADR-0129](decisions/0129-product-folders.md)). 번호는 그대로이고, 여기에는 여러 앱이 같이 쓰는 창의 줄만 남는다.
+제품 화면의 줄은 제품 문서로 옮겼다 — [Studio](../studio/docs/gaps.md), [Center 콘솔](../server/docs/gaps.md) §8 ([ADR-0129](decisions/0129-product-folders.md)). 번호는 그대로이고, 여기에는 여러 앱이 같이 쓰는 창의 줄만 남는다.
 
-§7은 화면 문서가 스스로 「아직」이라 적은 것이었다. 이번에는 **상태 줄이 「돈다」인데** 표의 단추·칸·문구가 코드에 없는 것을 모았다. 화면 문서의 라벨 글을 코드에서 찾고 손으로 읽어 맞췄다. 정직한 「아직」인데 여기 없던 것(STU-05 「실행 위치」, STU-07 `delegations` 칸, BUI-11 「필요한 키」·주소 줄, CON-07 「PC N대에서 시작되지 않음」)도 함께 둔다.
+§7은 화면 문서가 스스로 「아직」이라 적은 것이었다. 이번에는 **상태 줄이 「돈다」인데** 표의 단추·칸·문구가 코드에 없는 것을 모았다. 화면 문서의 라벨 글을 코드에서 찾고 손으로 읽어 맞췄다. 정직한 「아직」인데 여기 없던 것(STU-07 `delegations` 칸)도 함께 둔다.
 
 | 자리 | 화면 | 약속한 것 | 코드 근거 | 먼저 정할 것 |
 | --- | --- | --- | --- | --- |
-| 8-26 | CMN-01 확인 | 한 줄 「응답 입력」, 「직접 처리했음」, 시간 초과 기록 「결재 요청이 시간 초과로 취소되었습니다.」 | `shared/qt/…/approval.py:205-209`는 「계속」·「중단」 둘뿐 | 「직접 처리했음」이 엔진에서 무엇인가(「계속」과 다른가) — ADR-0106은 둘만 정했다 |
+| 8-26 | CMN-01 확인 | — | **사라졌다**: 결재·확인 창을 PC 실행기와 함께 걷었다 ([ADR-0144](decisions/0144-remove-the-pc-runner.md)) — 확인은 CON-04에서 답한다 | — |
 
 ## 9. 업무 예제가 밟지 않는 기능 (2026-10-31 대조)
 
-예제 55개의 `bpm:*` JSON을 모두 읽어 쓰인 키를 세고 이벤트·게이트웨이 요소를 찾았다. 커버리지 표(`_source/build.py:279-388`)는 **노드 종류 + 칸 하나**로 행을 짓고 런타임 응답은 보지 못하므로, 아래는 표에 행이 없거나 행이 있어도 0인 것이다. **케이스 형식이 서비스 응답을 지어낼 수 없다** — 케이스 키는 `inputs`·`expected`·`approvals`·`manual`·`messages`·`delegations`뿐이라 「서비스가 실패·보류·결과 모름」을 예제가 시험하지 못하고 설명 글로만 적는다(BX-32의 「실패·결과 모름을 오류 경계로」가 그렇다 — 케이스는 정상 길 하나다). 아래 기능은 대부분 **단위·통합 시험은 있다** — 빠진 것은 「예제가 오라클」인 자리다.
+예제 49개의 `bpm:*` JSON을 모두 읽어 쓰인 키를 세고 이벤트·게이트웨이 요소를 찾았다. 커버리지 표(`_source/build.py:279-388`)는 **노드 종류 + 칸 하나**로 행을 짓고 런타임 응답은 보지 못하므로, 아래는 표에 행이 없거나 행이 있어도 0인 것이다. **케이스 형식이 서비스 응답을 지어낼 수 없다** — 케이스 키는 `inputs`·`expected`·`approvals`·`manual`·`messages`·`delegations`뿐이라 「서비스가 실패·보류·결과 모름」을 예제가 시험하지 못하고 설명 글로만 적는다(BX-32의 「실패·결과 모름을 오류 경계로」가 그렇다 — 케이스는 정상 길 하나다). 아래 기능은 대부분 **단위·통합 시험은 있다** — 빠진 것은 「예제가 오라클」인 자리다.
 
 | 기능 | 예제 | 코드 | 시험 |
 | --- | --- | --- | --- |
@@ -353,7 +349,7 @@ CON-07 상세 「서버 주소」에서 넣고 **정의의 허용 호스트 안�
 | 메시지 중간 받기 | 0 — 중간 받기는 타이머·신호뿐 | `nodes.py:1088` | |
 | 타이머 `timeDate`·ISO 반복 `R[n]/…` 시작 | 0 — 시작 12개 모두 5필드 cron | `engine.py:855-872`, `contracts/schedule.py` | `test_center_timers.py`·`test_core_events.py` |
 | 태스크 단위 AI 덮어쓰기(`aiTask.forbidden_actions`·`confirm_triggers`·`web`·`desktop`) | 0 — `bpm:defaults`만 쓴다 | `nodes.py:723-735` | `test_core_ai_task.py` |
-| 작은 칸 — `email.cc`·`serviceCall.timeout_s`·`call.delegate.version`·`.bot_ui`·`fileList.limit`·`web.session` | 0 | `bpmn_ext.py:154`·`249`·`284`·`318-320`·`364` | 일부 |
+| 작은 칸 — `email.cc`·`serviceCall.timeout_s`·`fileList.limit` | 0 | `bpmn_ext.py:154`·`249`·`284` | 일부 |
 | AI 태스크 `web` | 0 (표가 이미 「없음」) | 웹 환경을 주는 확장이 없다 | |
 
 **표의 주석 하나가 낡았다** — `build.py:375`가 「**없음**인 요소는 C14 schema 1에서 쓰지 않거나(조건 시작)」라고 적지만 표에 조건 시작 행이 없다(생성기 글이라 다음 생성기 조각에서 고친다).

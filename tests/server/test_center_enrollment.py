@@ -51,52 +51,44 @@ def machine(seed: str) -> str:
     return hashlib.sha256(seed.encode()).hexdigest()
 
 
-def bot_body(public_key: str, *, seed: str = "pc1", name: str = "현장 PC 1") -> dict[str, Any]:
+def bot_body(public_key: str, *, seed: str = "srv1", name: str = "서버 1") -> dict[str, Any]:
     return {
         "schema": 1,
         "machine_id": machine(seed),
         "name": name,
-        "os": "windows-11-23H2",
-        "versions": {"bot_ui": "0.1.0", "core": "0.1.0"},
-        "public_key": public_key,
-    }
-
-
-def runner_body(public_key: str, *, seed: str = "srv1") -> dict[str, Any]:
-    return {
-        "schema": 1,
-        "machine_id": machine(seed),
-        "name": "서버 1",
         "os": "ubuntu-24.04",
         "versions": {"server_runner": "0.1.0", "core": "0.1.0"},
         "public_key": public_key,
     }
 
 
+def runner_body(public_key: str, *, seed: str = "srv2") -> dict[str, Any]:
+    return bot_body(public_key, seed=seed, name="서버 2")
+
+
 def heartbeat_body() -> dict[str, Any]:
     return {
         "schema": 1,
         "status": "idle",
-        "current_run": None,
-        "queue": {"max": 20, "items": []},
+        "capacity": {"max": 20, "running": 0},
     }
 
 
-def enroll(client: TestClient, body: dict[str, Any], *, kind: str = "bot-ui") -> EnrollStatus:
+def enroll(client: TestClient, body: dict[str, Any], *, kind: str = "server-runner") -> EnrollStatus:
     response = client.post(f"/api/v1/{kind}/enroll", json=body)
     assert response.status_code == 201, response.text
     return EnrollStatus.model_validate(response.json())
 
 
 def approve(client: TestClient, enrollment_id: str, **body: Any) -> dict[str, Any]:
-    # PC 실행기·Studio는 회사를 정해 승인한다 (C16) — 서버 실행기는 받은 회사를 무시한다.
+    # 서버 실행기·Studio는 회사를 정해 승인한다 (C16) — 서버 실행기는 받은 회사를 무시한다.
     body.setdefault("company", "default")
     response = client.post(f"/api/v1/enrollments/{enrollment_id}/approve", json=body, headers=ADMIN)
     assert response.status_code == 200, response.text
     return dict(response.json())
 
 
-def receive_key(client: TestClient, private: str, enrollment_id: str, *, kind: str = "bot-ui") -> str:
+def receive_key(client: TestClient, private: str, enrollment_id: str, *, kind: str = "server-runner") -> str:
     """현장이 하는 일 — 물어서 봉함을 받아 연다."""
     status = EnrollStatus.model_validate(client.get(f"/api/v1/{kind}/enroll/{enrollment_id}").json())
     assert status.state == "approved"
@@ -154,7 +146,7 @@ def test_enroll_approve_register_end_to_end(client: TestClient, store: Store) ->
     assert listed[0]["existing"] is None
 
     # 승인 전에는 봉함이 없다.
-    waiting = client.get(f"/api/v1/bot-ui/enroll/{pending.enrollment_id}").json()
+    waiting = client.get(f"/api/v1/server-runner/enroll/{pending.enrollment_id}").json()
     assert waiting["state"] == "pending" and waiting["sealed_key"] is None
 
     decision = approve(client, pending.enrollment_id)
@@ -163,18 +155,18 @@ def test_enroll_approve_register_end_to_end(client: TestClient, store: Store) ->
     assert key.startswith("bpm_ctr_")
 
     response = client.post(
-        "/api/v1/bot-ui/register", json=bot_body(public), headers={"Authorization": f"Bearer {key}"}
+        "/api/v1/server-runner/register", json=bot_body(public), headers={"Authorization": f"Bearer {key}"}
     )
     assert response.status_code == 200, response.text
     # **받은 뒤에는 봉함이 없다** — Center에도 원문이 남지 않는다.
-    again = client.get(f"/api/v1/bot-ui/enroll/{pending.enrollment_id}").json()
+    again = client.get(f"/api/v1/server-runner/enroll/{pending.enrollment_id}").json()
     assert again["sealed_key"] is None
     row = store.row("SELECT sealed_json FROM enrollments WHERE enrollment_id = ?", (pending.enrollment_id,))
     assert row is not None and row["sealed_json"] is None
 
     info = next(k for k in client.get("/api/v1/center-keys", headers=ADMIN).json() if k["key_id"] == decision["key_id"])
     assert info["enrollment_id"] == pending.enrollment_id
-    assert info["bound_to"]["id"] == machine("pc1")
+    assert info["bound_to"]["id"] == machine("srv1")
 
 
 def test_approval_takes_over_an_already_registered_pc(client: TestClient) -> None:
@@ -183,26 +175,30 @@ def test_approval_takes_over_an_already_registered_pc(client: TestClient) -> Non
     first = enroll(client, bot_body(public))
     approve(client, first.enrollment_id)
     old_key = receive_key(client, private, first.enrollment_id)
-    old = client.post("/api/v1/bot-ui/register", json=bot_body(public), headers={"Authorization": f"Bearer {old_key}"})
-    bot_ui_id = old.json()["bot_ui_id"]
+    old = client.post(
+        "/api/v1/server-runner/register",
+        json=bot_body(public),
+        headers={"Authorization": f"Bearer {old_key}"},
+    )
+    server_runner_id = old.json()["server_runner_id"]
 
     # 다시 설치 — 키 쌍도 새로 만든다.
     private2, public2 = new_keypair()
     second = enroll(client, bot_body(public2))
     row = client.get("/api/v1/enrollments", headers=READ).json()[0]
-    assert row["existing"]["id"] == bot_ui_id
+    assert row["existing"]["id"] == server_runner_id
 
     decision = approve(client, second.enrollment_id)
-    assert decision["host_id"] == bot_ui_id
+    assert decision["host_id"] == server_runner_id
     new_key = receive_key(client, private2, second.enrollment_id)
     again = client.post(
-        "/api/v1/bot-ui/register", json=bot_body(public2), headers={"Authorization": f"Bearer {new_key}"}
+        "/api/v1/server-runner/register", json=bot_body(public2), headers={"Authorization": f"Bearer {new_key}"}
     )
     assert again.status_code == 200, again.text
-    assert again.json()["bot_ui_id"] == bot_ui_id  # 배포·기록이 가리키는 자리를 이어받았다
+    assert again.json()["server_runner_id"] == server_runner_id  # 배포·기록이 가리키는 자리를 이어받았다
     # 옛 키는 폐기됐다.
     old_auth = {"Authorization": f"Bearer {old_key}"}
-    beat = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=old_auth)
+    beat = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=old_auth)
     assert beat.status_code == 403
 
 
@@ -213,7 +209,7 @@ def test_reject_tells_the_reason_and_cannot_be_decided_twice(client: TestClient)
         f"/api/v1/enrollments/{pending.enrollment_id}/reject", json={"reason": "모르는 PC"}, headers=ADMIN
     )
     assert response.status_code == 200, response.text
-    status = client.get(f"/api/v1/bot-ui/enroll/{pending.enrollment_id}").json()
+    status = client.get(f"/api/v1/server-runner/enroll/{pending.enrollment_id}").json()
     assert status["state"] == "rejected" and status["reason"] == "모르는 PC"
     twice = client.post(
         f"/api/v1/enrollments/{pending.enrollment_id}/approve", json={"company": "default"}, headers=ADMIN
@@ -237,11 +233,11 @@ def test_same_pc_asking_again_closes_the_old_request(client: TestClient) -> None
     second = enroll(client, bot_body(public))
     listed = client.get("/api/v1/enrollments", headers=READ).json()
     assert [one["enrollment_id"] for one in listed] == [second.enrollment_id]
-    assert client.get(f"/api/v1/bot-ui/enroll/{first.enrollment_id}").json()["state"] == "expired"
+    assert client.get(f"/api/v1/server-runner/enroll/{first.enrollment_id}").json()["state"] == "expired"
 
 
 def test_bad_public_key_is_refused(client: TestClient) -> None:
-    response = client.post("/api/v1/bot-ui/enroll", json=bot_body("A" * 10))
+    response = client.post("/api/v1/server-runner/enroll", json=bot_body("A" * 10))
     assert response.status_code == 422 and response.json()["code"] == "public_key_invalid"
 
 
@@ -250,7 +246,7 @@ def test_too_many_requests_from_one_place(client: TestClient) -> None:
         _, public = new_keypair()
         enroll(client, bot_body(public, seed=f"pc{n}"))
     _, public = new_keypair()
-    response = client.post("/api/v1/bot-ui/enroll", json=bot_body(public, seed="pc-extra"))
+    response = client.post("/api/v1/server-runner/enroll", json=bot_body(public, seed="pc-extra"))
     assert response.status_code == 429 and response.json()["code"] == "enroll_rate_limited"
 
 
@@ -260,7 +256,7 @@ def test_pending_expires_after_a_day(client: TestClient, store: Store) -> None:
     past = (datetime.now(UTC) - timedelta(minutes=1)).isoformat()
     with store.tx() as cur:
         cur.execute("UPDATE enrollments SET expires_at = ? WHERE enrollment_id = ?", (past, pending.enrollment_id))
-    assert client.get(f"/api/v1/bot-ui/enroll/{pending.enrollment_id}").json()["state"] == "expired"
+    assert client.get(f"/api/v1/server-runner/enroll/{pending.enrollment_id}").json()["state"] == "expired"
     assert client.get("/api/v1/enrollments", headers=READ).json() == []
 
 
@@ -271,7 +267,7 @@ def test_unclaimed_key_is_revoked_after_a_day(client: TestClient, store: Store) 
     past = (datetime.now(UTC) - timedelta(hours=25)).isoformat()
     with store.tx() as cur:
         cur.execute("UPDATE enrollments SET decided_at = ? WHERE enrollment_id = ?", (past, pending.enrollment_id))
-    status = client.get(f"/api/v1/bot-ui/enroll/{pending.enrollment_id}").json()
+    status = client.get(f"/api/v1/server-runner/enroll/{pending.enrollment_id}").json()
     assert status["state"] == "expired" and status["sealed_key"] is None
     info = next(k for k in client.get("/api/v1/center-keys", headers=ADMIN).json() if k["key_id"] == decision["key_id"])
     assert info["state"] == "revoked"
@@ -282,8 +278,6 @@ def test_server_runner_enrolls_the_same_way(client: TestClient) -> None:
     pending = enroll(client, runner_body(public), kind="server-runner")
     listed = client.get("/api/v1/enrollments?type=server_runner", headers=READ).json()
     assert [one["type"] for one in listed] == ["server_runner"]
-    # 종류가 다른 경로로는 보이지 않는다.
-    assert client.get(f"/api/v1/bot-ui/enroll/{pending.enrollment_id}").status_code == 404
     approve(client, pending.enrollment_id)
     key = receive_key(client, private, pending.enrollment_id, kind="server-runner")
     response = client.post(
@@ -356,46 +350,62 @@ def test_key_rotates_before_it_expires(client: TestClient, store: Store) -> None
     pending = enroll(client, bot_body(public))
     approve(client, pending.enrollment_id)
     key = receive_key(client, private, pending.enrollment_id)
-    bot_ui_id = client.post(
-        "/api/v1/bot-ui/register", json=bot_body(public), headers={"Authorization": f"Bearer {key}"}
-    ).json()["bot_ui_id"]
+    server_runner_id = client.post(
+        "/api/v1/server-runner/register", json=bot_body(public), headers={"Authorization": f"Bearer {key}"}
+    ).json()["server_runner_id"]
 
     # 멀리 있으면 싣지 않는다.
-    beat = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers={"Authorization": f"Bearer {key}"})
+    beat = client.post(
+        "/api/v1/server-runner/heartbeat",
+        json=heartbeat_body(),
+        headers={"Authorization": f"Bearer {key}"},
+    )
     assert beat.json().get("rotated_key") is None
 
     soon = (datetime.now(UTC) + timedelta(days=10)).isoformat()
     with store.tx() as cur:
         cur.execute("UPDATE center_keys SET expires_at = ? WHERE enrollment_id = ?", (soon, pending.enrollment_id))
-    first = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers={"Authorization": f"Bearer {key}"})
+    first = client.post(
+        "/api/v1/server-runner/heartbeat",
+        json=heartbeat_body(),
+        headers={"Authorization": f"Bearer {key}"},
+    )
     rotated = first.json()["rotated_key"]
     assert rotated is not None
     # 같은 것을 다시 싣는다 (새 키로 첫 요청이 올 때까지).
-    second = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers={"Authorization": f"Bearer {key}"})
+    second = client.post(
+        "/api/v1/server-runner/heartbeat",
+        json=heartbeat_body(),
+        headers={"Authorization": f"Bearer {key}"},
+    )
     assert second.json()["rotated_key"] == rotated
 
-    new_key = open_sealed(private, Sealed.model_validate(rotated["sealed_key"]), salt=bot_ui_id)
+    new_key = open_sealed(private, Sealed.model_validate(rotated["sealed_key"]), salt=server_runner_id)
     with_new = client.post(
-        "/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers={"Authorization": f"Bearer {new_key}"}
+        "/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers={"Authorization": f"Bearer {new_key}"}
     )
     assert with_new.status_code == 200, with_new.text
     assert with_new.json().get("rotated_key") is None
     # 옛 키는 폐기됐다.
-    old = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers={"Authorization": f"Bearer {key}"})
+    old = client.post(
+        "/api/v1/server-runner/heartbeat",
+        json=heartbeat_body(),
+        headers={"Authorization": f"Bearer {key}"},
+    )
     assert old.status_code == 403
 
 
 def test_keys_without_a_public_key_do_not_rotate(client: TestClient, store: Store) -> None:
     """환경변수로 받은 키(공개키를 모른다)는 회전하지 않는다 — 지금처럼 BUI-05가 알린다."""
-    made = client.post("/api/v1/center-keys", json={"name": "자동화", "type": "bot_ui"}, headers=ADMIN).json()
+    made = client.post("/api/v1/center-keys", json={"name": "자동화", "type": "server_runner"}, headers=ADMIN).json()
     soon = (datetime.now(UTC) + timedelta(days=3)).isoformat()
     with store.tx() as cur:
         cur.execute("UPDATE center_keys SET expires_at = ? WHERE key_id = ?", (soon, made["key_id"]))
     body = bot_body(new_keypair()[1])
     del body["public_key"]
     headers = {"Authorization": f"Bearer {made['key']}"}
-    assert client.post("/api/v1/bot-ui/register", json=body, headers=headers).status_code == 200
-    beat = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=headers)
+    assert client.post("/api/v1/server-runner/register", json=body, headers=headers).status_code == 200
+    beat = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=headers)
     assert beat.json().get("rotated_key") is None
 
 
@@ -407,7 +417,7 @@ def studio_body(public_key: str, *, seed: str = "designer-pc", name: str = "설�
         "schema": 1,
         "machine_id": machine(seed),
         "name": name,
-        "os": "windows-11-23H2",
+        "os": "ubuntu-24.04",
         "versions": {"studio": "0.1.0", "core": "0.1.0"},
         "public_key": public_key,
     }

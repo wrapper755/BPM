@@ -10,7 +10,6 @@
   <bpmn:process id="Proc_bx15_quotation" name="견적서 작성" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "erp",

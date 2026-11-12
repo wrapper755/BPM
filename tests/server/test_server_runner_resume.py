@@ -118,7 +118,6 @@ def package_zip() -> bytes:
         "id": BOT,
         "version": VERSION,
         "name": "지출 결재",
-        "run_location": "server",
         "entry": "process/main.bpmn",
         "process_id": "Proc_bx03_expense_approval",
         "requires": {},

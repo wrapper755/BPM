@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_bx06_bulk_credit_check" name="다건 거래처 신용 조회" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "ext-credit",

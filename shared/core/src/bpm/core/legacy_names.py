@@ -5,7 +5,7 @@
 이 파일과 부르는 자리를 함께 걷는다.
 
 - 폴더는 **앱마다 제 폴더를** 통째로 옮긴다(복사하지 않는다 — 두 벌이 생기면 어느 쪽이 원본인지 모른다).
-  윗 폴더째 옮기지 않는다 — Windows는 대소문자를 가리지 않아 Studio(`BPM\\BPM`)와 PC 실행기(`bpm`)가 윗 폴더를
+  윗 폴더째 옮기지 않는다 — Windows는 대소문자를 가리지 않아 Studio(`BPM\\BPM`)와 실행기(`bpm`)가 윗 폴더를
   나눠 쓰므로, 먼저 뜬 앱이 남의 폴더까지 가져가 다른 앱이 빈 폴더로 뜬다.
   못 옮기면(파일을 쥔 프로세스가 있다) 옛 자리를 그대로 쓰고 로그에 남긴다.
 - 키는 새 이름에서 찾지 못했을 때만 옛 이름에서 찾고, 찾으면 새 이름에 쓰고 옛 것을 지운다.
@@ -19,21 +19,16 @@ from typing import Any
 
 log = logging.getLogger(__name__)
 
-#: `platformdirs.user_data_dir`에 주던 옛 이름 — PC 실행기·서버 실행기 (`appauthor=False`).
+#: `platformdirs.user_data_dir`에 주던 옛 이름 — 서버 실행기 (`appauthor=False`).
 OLD_DATA_NAME = "chaeksas"
 #: Studio가 주던 옛 이름·작성자 (`user_data_dir(APP_NAME, APP_AUTHOR)`).
 OLD_STUDIO_DATA = ("Chaeksas", "Chaeksas")
 
 #: OS 비밀 저장소의 서비스 이름 — 새 이름 → 옛 이름.
 OLD_KEYRING_SERVICES = {
-    "bpm-bot-ui": "chaeksas-bot-ui",
     "bpm-studio": "chaeksas-studio",
     "bpm-server-runner": "chaeksas-server-runner",
 }
-
-#: PC 실행기 자동 시작의 옛 이름 — 작업 스케줄러 작업 이름, XDG `.desktop` 파일 이름.
-OLD_AUTOSTART_TASK = "Chaeksas PC 실행기"
-OLD_AUTOSTART_DESKTOP_FILE = "chaeksas-bot-ui.desktop"
 
 
 def adopt_dir(new: Path, old: Path) -> Path:
@@ -70,8 +65,6 @@ def take_old_secret(backend: Any, service: str, name: str) -> str | None:
 
 
 __all__ = [
-    "OLD_AUTOSTART_DESKTOP_FILE",
-    "OLD_AUTOSTART_TASK",
     "OLD_DATA_NAME",
     "OLD_KEYRING_SERVICES",
     "OLD_STUDIO_DATA",

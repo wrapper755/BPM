@@ -13,7 +13,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from bpm.core.delegation import Delegator
-from bpm.core.engine import WHERE_FIELD, RunEnv
+from bpm.core.engine import RunEnv
 from bpm.core.extensions import HostTasks
 from bpm.core.files import Workspace
 from bpm.core.llm import NoLlm, OpenAiCompatibleLlm
@@ -34,7 +34,6 @@ def make_env(
     llm_key: str = "",
     llm_model: str,
     extensions: HostTasks | None = None,
-    approval_where: str = WHERE_FIELD,
     services: ServiceCaller | None = None,
     sender: Sender | None = None,
     delegate: Delegator | None = None,
@@ -43,9 +42,6 @@ def make_env(
 
     `sender`를 주지 않으면 **보내지 않고 실패한다** (`NoSender`) — 조용히 넘어가지 않는다.
 
-    `delegate`도 그렇다 — 주지 않으면 `NoDelegator`가 남아 PC 위임이 **그림·설치 오류**가
-    된다 (ADR-0062 §2). **PC 실행기는 주지 않는다**: PC 실행은 자리를 끝까지 쥐므로 PC가 다른
-    PC를 기다리면 둘이 서로를 기다릴 수 있다 (C1 R10이 그림에서 이미 막는다).
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     space = Workspace(output_dir=output_dir, readable=readable, writable=writable)
@@ -62,7 +58,6 @@ def make_env(
         tools=builtin_tools(space),
         memory=read_memory(package.folder),
         # `location: follow` 결재를 어디서 답하나 — BUI-03 「원격 결재」 (ADR-0038).
-        approval_where=approval_where,
     )
     if extensions is not None:
         # 확장 태스크·`web`·`desktop` AI 태스크 (ADR-0018·ADR-0037) — 없으면 그림·설치 오류가 된다.
@@ -72,7 +67,7 @@ def make_env(
         # 작업(C15). 없으면 `NoServiceCaller`가 남아 부르지 않고 실패한다.
         made = replace(made, services=services)
     if delegate is not None:
-        # **PC 위임을 맡기는 포트 하나** (ADR-0062 §2) — 엔진은 어디에 맡기는지 모른다.
+        # **맡기기 포트 하나** (ADR-0082) — 엔진은 어디에 맡기는지 모른다.
         made = replace(made, delegate=delegate)
     return made
 

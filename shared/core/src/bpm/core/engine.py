@@ -6,7 +6,7 @@
 (ADR-0087). 어느 쪽이든 **한 번에 토큰 하나씩** 번갈아 밟는다 (ADR-0014·C14 §반복).
 
 사람을 기다리면 그 토큰만 멈춘다 (`State.WAITING`). 엔진은 스레드를 만들지 않는다 — 부르는
-쪽(PC 실행기·Studio)이 `step()`을 돈다.
+쪽(서버 실행기·Studio)이 `step()`을 돈다.
 
 세 모듈로 나뉘어 있고, **쓰는 쪽은 여기 하나만 보면 된다** (나머지를 다시 내보낸다).
 
@@ -77,7 +77,6 @@ from bpm.core.run_state import (
     WAIT_SIGNAL,
     WAIT_TIMER,
     WHERE_CENTER,
-    WHERE_FIELD,
     Compensable,
     Compensation,
     Consume,
@@ -201,8 +200,8 @@ class Engine:
         """실행을 만들고 `run_started`를 남긴다. 토큰은 시작 이벤트에 놓인다.
 
         `job_id`·`case_id`·`queued_s`·`parent_run_id`는 C3 `run_started`의 선택 칸이다 —
-        **그 자리에서 아는 쪽이** 준다 (작업 지시·대기열은 PC 실행기, 케이스는 Studio,
-        **맡긴 서버 실행은 작업의 `requested_by`를 읽은 PC 실행기**다 — ADR-0062 §6).
+        **그 자리에서 아는 쪽이** 준다 (작업 지시·대기열은 실행기, 케이스는 Studio,
+        **맡겨진 실행은 작업의 `requested_by`를 읽은 실행기**가 적는다 — ADR-0082 §6).
 
         `bpm_process_id`는 **패키지 id**다 (ADR-0086) — 엔진은 자기가 도는 패키지를 모르므로
         실행하는 쪽이 `version`과 함께 준다. 주지 않으면 그림의 process id를 쓴다.
@@ -245,14 +244,13 @@ class Engine:
         if queued_s is not None:
             extra["queued_s"] = round(queued_s, 3)
         if parent_run_id:
-            # **두 실행이 서로를 안다** (ADR-0062 §6) — Center가 이 줄을 읽어
-            # `RunInfo.parent_run_id`에 담고 CON-01이 서버 실행 ↔ PC 실행을 오간다.
+            # **두 실행이 서로를 안다** (ADR-0082) — Center가 이 줄을 읽어
+            # `RunInfo.parent_run_id`에 담고 CON-01이 둘을 오간다.
             extra["parent_run_id"] = parent_run_id
         log.emit(
             "run_started",
             bpm_process_id=run.identity,
             version=version,
-            run_location=process.info.run_location or "pc",
             executor=executor,
             mode=mode,
             source=source,
@@ -673,7 +671,7 @@ class Engine:
             raise EngineError(
                 f"반복할 목록이 아니다: {type(items).__name__}", node_id=node.id, code="loop_not_a_list"
             )
-        together = node.is_sequential is False and run.process.info.run_location == "server"
+        together = node.is_sequential is False
         token.loop = LoopState(
             items=list(items),
             item_name=spec.item,
@@ -967,7 +965,7 @@ class Engine:
         correlation: Any = None,
         payload: Mapping[str, Any] | None = None,
     ) -> State:
-        """메시지를 넣는다 (C12 Center 메시지 API·PC 실행기 수신이 부른다).
+        """메시지를 넣는다 (C12 Center 메시지 API·실행기 수신이 부른다).
 
         **상관 키가 맞는 것만** 깨운다. 받을 곳이 없으면 아무 일도 없다 — 케이스가 `no_receiver`로
         기록만 하고 실패시키지 않는 것과 같은 태도다 (C14 시험 케이스 형식).
@@ -994,7 +992,7 @@ class Engine:
         return run.state
 
     def tick(self, run: Run, now: datetime | None = None) -> State:
-        """시간이 된 타이머를 울린다. 부르는 쪽(PC 실행기·서버 실행기)이 주기적으로 부른다."""
+        """시간이 된 타이머를 울린다. 부르는 쪽(서버 실행기)이 주기적으로 부른다."""
         at = now or run.env.clock()
         for found in run.due(at):
             if found.key in run.waits:
@@ -1205,7 +1203,7 @@ class Engine:
         outputs: Mapping[str, Any] | None = None,
         reason: str | None = None,
     ) -> State:
-        """**PC 위임이 끝났다** — 결과를 받아 이어 간다 (C12 §PC 위임, ADR-0062).
+        """**맡기기이 끝났다** — 결과를 받아 이어 간다 (C12 §맡기기, ADR-0082).
 
         `state`가 `finished`면 **`bpm:call.output`이 적은 것만** 변수가 된다 (C14 — 적은 것만
         오간다). 그 밖에는 **업무 실패**로 올려 오류 경계가 받게 한다 — PC 쪽이 실패·거절·
@@ -1236,7 +1234,7 @@ class Engine:
         context = Context(engine=self, run=run, token=token, node=node)
         if state != DELEGATION_FINISHED:
             error = TaskFailed(
-                f"PC 위임이 끝나지 못했습니다 ({state}{f': {reason}' if reason else ''})",
+                f"맡긴 것이 끝나지 못했습니다 ({state}{f': {reason}' if reason else ''})",
                 node_id=node.id,
                 code=ERROR_DELEGATION_FAILED,
             )
@@ -1251,13 +1249,13 @@ class Engine:
             # (빈 값으로 이어 가면 뒤에서 「왜 없나」가 된다). B14가 미리 보지만 **판이
             # 바뀌었을 수 있다**.
             error = TaskFailed(
-                f"PC 위임이 돌려주지 않은 값을 받으려 한다: {', '.join(missing)}",
+                f"맡기기이 돌려주지 않은 값을 받으려 한다: {', '.join(missing)}",
                 node_id=node.id,
                 code=ERROR_DELEGATION_FAILED,
             )
             return self._handle_failure(context, error)
         run.variables.update({mine: given[theirs] for mine, theirs in mapping.items()})
-        run.log.emit("log", node_id=node.id, level="info", message=f"PC 위임이 끝났다 (작업 {job_id})")
+        run.log.emit("log", node_id=node.id, level="info", message=f"맡기기이 끝났다 (작업 {job_id})")
         try:
             return self._apply(context, Go())
         except ExprError as e:
@@ -1363,6 +1361,14 @@ def _withdraw_external(run: Run, waiting: Waiting) -> None:
         withdraw(waiting.task_id)
 
 __all__ = [
+    "NoDelegator",
+    "Delegator",
+    "DelegationUnsupported",
+    "DelegationError",
+    "DelegationCall",
+    "WAIT_DELEGATION",
+    "ERROR_DELEGATION_FAILED",
+    "DELEGATION_FINISHED",
     "BUILTIN_NOW",
     "BUILTIN_RUN_ID",
     "BUILTIN_TODAY",
@@ -1370,12 +1376,10 @@ __all__ = [
     "CODE_UNSUPPORTED",
     "DECISION_KEY",
     "DEFAULT_HANDLERS",
-    "DELEGATION_FINISHED",
     "ERROR_CODE_VAR",
     "ERROR_MESSAGE_VAR",
     "ERROR_APPROVAL_EXPIRED",
     "ERROR_APPROVAL_WITHDRAWN",
-    "ERROR_DELEGATION_FAILED",
     "ERROR_ESCALATED",
     "ERROR_SEND_FAILED",
     "ESCALATION_CONTINUE",
@@ -1385,10 +1389,6 @@ __all__ = [
     "MAX_STEPS",
     "Consume",
     "Context",
-    "DelegationCall",
-    "DelegationError",
-    "DelegationUnsupported",
-    "Delegator",
     "Engine",
     "EngineError",
     "Form",
@@ -1396,7 +1396,6 @@ __all__ = [
     "Go",
     "Handler",
     "LoopState",
-    "NoDelegator",
     "Outcome",
     "Pending",
     "Run",
@@ -1404,13 +1403,11 @@ __all__ = [
     "State",
     "TaskFailed",
     "Token",
-    "WAIT_DELEGATION",
     "WAIT_EXTERNAL_TASK",
     "WAIT_MESSAGE",
     "WAIT_SIGNAL",
     "WAIT_TIMER",
     "WHERE_CENTER",
-    "WHERE_FIELD",
     "Wait",
     "Waiting",
     "Workspace",

@@ -76,8 +76,8 @@ class Case:
     description: str = ""
     manual: bool = False
     messages: list[dict[str, Any]] = field(default_factory=list)  # [{after_s, name, correlation?, payload}]
-    #: 노드 id → **PC 위임이 돌려주는 값** (C14 — 돌릴 남의 패키지가 없어 케이스가 적는다).
-    #: **적어 두지 않은 위임은 그 자리에서 실패**다 (`DELEGATION_FAILED` — 경계를 시험하는 길이다).
+    #: 노드 id → **맡긴 것이 돌려주는 값** (C14 — 돌릴 남의 패키지가 없어 케이스가 적는다).
+    #: **적어 두지 않은 것은 그 자리에서 실패**다 (`DELEGATION_FAILED` — 경계를 시험하는 길이다).
     delegations: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
@@ -88,7 +88,6 @@ class Example:
     name: str
     dept: str
     origin: str
-    run_location: str  # server | pc
     trigger: str
     background: str
     why_location: str
@@ -139,8 +138,8 @@ def svc(id, name, app_id, operation, input, output, loop=None, **p):
     return Node(id, "svc", name, dict(task=d, loop=loop))
 
 
-def appr(id, name, title, show, fields, location="follow", description="", manual=False, **p):
-    d = dict(title=title, description=description, show=show, fields=fields, location=location)
+def appr(id, name, title, show, fields, description="", manual=False, **p):
+    d = dict(title=title, description=description, show=show, fields=fields)
     d.update(p)
     return Node(id, "manual" if manual else "appr", name, dict(task=d))
 
@@ -181,12 +180,11 @@ def recv(id, name, message, correlation, payload=None):
 
 
 def call(id, name, called, input, output, delegate=None, loop=None):
-    """다른 BPM 프로세스 호출. `delegate`를 주면 **위임**이다 (C14 `bpm:call.delegate`).
+    """다른 BPM 프로세스 호출. `delegate`를 주면 **맡기기**다 (C14 `bpm:call.delegate`).
 
-    위임의 대상은 **패키지 안의 정의가 아니라 따로 배포된 BPM 프로세스**이라(ADR-0062) `called`는
-    읽는 사람을 위한 표시로만 남는다 — 검사가 패키지 안에서 찾지 않는다 (B14). PC BPM 프로세스이든
-    서버 BPM 프로세스이든 같은 칸이다 — 어디서 도는지는 대상 패키지가 정한다 (ADR-0082). `loop`를 주면
-    차례마다 하나씩 맡긴다 (**일괄 기동**).
+    맡기는 대상은 **패키지 안의 정의가 아니라 따로 배포된 BPM 프로세스**이라(ADR-0082)
+    `called`는 읽는 사람을 위한 표시로만 남는다 — 검사가 패키지 안에서 찾지 않는다 (B14).
+    `loop`를 주면 차례마다 하나씩 맡긴다 (**일괄 기동**).
     """
     task = dict(input=input, output=output)
     if delegate is not None:
@@ -315,9 +313,7 @@ def validate(ex: Example) -> list[str]:
                         errs.append(f"{n.id} choice 칸에 choices 없음")
                 if not isinstance(n.props["task"]["show"], list):
                     errs.append(f"{n.id} show가 배열이 아님")
-                if ex.run_location == "server" and n.props["task"]["location"] == "field":
-                    errs.append(f"{n.id} 서버인데 현장 결재")
-            if ex.run_location == "server" and n.kind == "ai" and n.props["task"]["domain"] in ("web", "desktop"):
+            if n.kind == "ai" and n.props["task"]["domain"] in ("web", "desktop"):
                 errs.append(f"{n.id} 서버 BPM 프로세스에 web/desktop AI 태스크")
             if n.kind == "ai":
                 for t in n.props["task"]["results"].values():
@@ -728,8 +724,7 @@ def to_bpmn(ex: Example) -> str:
         data_by_writer.setdefault(d.writer, []).append(d)
     msgs, sigs, errs = collect_refs(ex)
     pid = "Proc_" + ex.file
-    proc_meta = dict(run_location=ex.run_location,
-                     extensions=ex.extensions, outputs=ex.outputs,
+    proc_meta = dict(extensions=ex.extensions, outputs=ex.outputs,
                      inputs=[dict(name=i[0], type=i[1], required=i[2], description=i[3], **({'default': i[4]} if len(i) > 4 else {}),
                                   **({'source': ex.input_sources[i[0]]} if i[0] in ex.input_sources else {})) for i in ex.inputs])
     s = ['<?xml version="1.0" encoding="UTF-8"?>',
@@ -979,8 +974,7 @@ def node_summary(n: Node) -> str:
     if k in ("appr", "manual"):
         t = p["task"]
         fl = ", ".join(f"`{x['key']}`({x['type']}{'*' if x['required'] else ''})" for x in t["fields"])
-        loc = {"follow": "PC 실행기 설정을 따름", "center": "Center 결재함", "field": "현장 PC"}[t["location"]]
-        return f"「{t['title']}」 · 보임 {', '.join(t['show'])} · 칸 {fl} · {loc}"
+        return f"「{t['title']}」 · 보임 {', '.join(t['show'])} · 칸 {fl} · Center 결재함"
     if k == "rule":
         t = p["task"]
         return f"DMN `{t['decision']}` → {', '.join(t['output'])}"
@@ -1012,19 +1006,18 @@ def node_summary(n: Node) -> str:
 
 
 def to_card(ex: Example, bpmn_rel: str, cases_rel: str) -> str:
-    loc = "서버 (서버 BPM 프로세스)" if ex.run_location == "server" else "PC (BPM 프로세스)"
     apps = sorted({n.props["task"]["app_id"] for n in all_nodes(ex.nodes) if n.kind == "svc"})
     apps_txt = ", ".join(f"`{a}`" for a in apps) or "없음"
     L = [f"## {ex.id}. {ex.name}", ""]
     L += ["| 항목 | 값 |", "| --- | --- |",
-          f"| 분야 | {ex.dept} |", f"| 출처 | {ex.origin} |", f"| 실행 위치 | **{loc}** |",
+          f"| 분야 | {ex.dept} |", f"| 출처 | {ex.origin} |",
           f"| 시작 | {md_cell(ex.trigger)} |",
           f"| 서비스 앱 | {apps_txt} |",
           f"| 확장 | {', '.join(e['id'] for e in ex.extensions) or '없음 (플랫폼 기본 태스크만)'} |",
           f"| 마일스톤 | {ex.milestone} |",
           f"| 파일 | [BPMN]({bpmn_rel}) · [시험 케이스]({cases_rel})" + "".join(f" · [DMN](bpmn/{d.id}.dmn)" for d in ex.decisions) + " |", ""]
     L += ["**업무 배경과 목표**", "", ex.background.strip(), "",
-          f"**왜 {'서버' if ex.run_location == 'server' else 'PC'}에서 도는가**", "", ex.why_location.strip(), ""]
+          "**이 업무의 성격**", "", ex.why_location.strip(), ""]
     if ex.inputs:
         L += ["**입력** (`bpm:process.inputs` — 작업 지시·메시지 본문·케이스가 채운다. 값 출처가 있으면 Center가 넣는다)", "", "| 이름 | 타입 | 필수 | 기본값 | 값 출처 | 뜻 |", "| --- | --- | --- | --- | --- | --- |"]
         L += [f"| `{i[0]}` | {i[1]} | {'✓' if i[2] else ''} | {md_cell(json.dumps(i[4], ensure_ascii=False)) if len(i) > 4 else ''} | {('`' + ex.input_sources[i[0]] + '`') if i[0] in ex.input_sources else '부르는 쪽'} | {md_cell(i[3])} |" for i in ex.inputs]

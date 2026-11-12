@@ -108,7 +108,6 @@ def package_zip(*, package_id: str = BOT, version: str = "1.0.0", requires: Any 
         "id": package_id,
         "version": version,
         "name": "청구서 발행",
-        "run_location": "server",
         "entry": "process/main.bpmn",
         "process_id": "Proc_invoice",
         "requires": requires or {},
@@ -334,7 +333,7 @@ def test_a_revoked_deployment_makes_jobs_not_ready(
     center: TestClient, store: Store, runner: agent_mod.Agent
 ) -> None:
     """철회하면 다음 하트비트에서 「실행 불가」다 — 파일은 남고 작업은 `not_ready` (C12, ADR-0113)."""
-    from bpm.contracts.bot_ui import JobDispatch
+    from bpm.contracts.runner import JobDispatch
     from bpm.core.deploy import DEPLOYMENT_WITHDRAWN
 
     made = deployed(center, store, runner).json()

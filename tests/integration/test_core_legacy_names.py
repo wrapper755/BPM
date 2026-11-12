@@ -66,9 +66,9 @@ class FakeKeyring:
 
 
 def test_an_old_secret_moves_to_the_new_service() -> None:
-    backend = FakeKeyring({("chaeksas-bot-ui", "center_api_key"): "k"})
-    assert legacy_names.take_old_secret(backend, "bpm-bot-ui", "center_api_key") == "k"
-    assert backend.items == {("bpm-bot-ui", "center_api_key"): "k"}
+    backend = FakeKeyring({("chaeksas-server-runner", "center_api_key"): "k"})
+    assert legacy_names.take_old_secret(backend, "bpm-server-runner", "center_api_key") == "k"
+    assert backend.items == {("bpm-server-runner", "center_api_key"): "k"}
 
 
 def test_no_old_secret_is_none() -> None:
@@ -78,30 +78,20 @@ def test_no_old_secret_is_none() -> None:
 
 
 def test_every_new_service_name_has_its_old_name() -> None:
-    """세 앱의 서비스 이름이 옮기는 표에 있어야 옛 키를 찾는다."""
-    from bpm.bot_ui.credentials import SERVICE as BOT  # noqa: PLC0415
+    """두 앱의 서비스 이름이 옮기는 표에 있어야 옛 키를 찾는다."""
     from bpm.server_runner.credentials import SERVICE as RUNNER  # noqa: PLC0415
     from bpm.studio.credentials import SERVICE as STUDIO  # noqa: PLC0415
 
-    assert set(legacy_names.OLD_KEYRING_SERVICES) == {BOT, RUNNER, STUDIO}
+    assert set(legacy_names.OLD_KEYRING_SERVICES) == {RUNNER, STUDIO}
 
 
-def test_the_bot_ui_reads_a_key_left_under_the_old_name(monkeypatch: pytest.MonkeyPatch) -> None:
-    from bpm.bot_ui.credentials import Credentials  # noqa: PLC0415
+def test_the_runner_reads_a_key_left_under_the_old_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    from bpm.server_runner.credentials import Credentials  # noqa: PLC0415
 
-    backend = FakeKeyring({("chaeksas-bot-ui", "center_api_key"): "k"})
-    monkeypatch.delenv("BPM_BOT_UI__CENTER_API_KEY", raising=False)
+    backend = FakeKeyring({("chaeksas-server-runner", "center_api_key"): "k"})
+    monkeypatch.delenv("BPM_SERVER_RUNNER__CENTER_API_KEY", raising=False)
     monkeypatch.setattr(Credentials, "_keyring", lambda self: backend)
     assert Credentials().center_api_key() == "k"
-    assert ("bpm-bot-ui", "center_api_key") in backend.items
+    assert ("bpm-server-runner", "center_api_key") in backend.items
 
 
-def test_an_old_desktop_autostart_is_taken_over(tmp_path: Path) -> None:
-    from bpm.bot_ui.autostart import DESKTOP_FILE, FreedesktopAutostart  # noqa: PLC0415
-
-    (tmp_path / legacy_names.OLD_AUTOSTART_DESKTOP_FILE).write_text("[Desktop Entry]\n", encoding="utf-8")
-    entry = FreedesktopAutostart(directory=tmp_path, command=["bpm-bot-ui"])
-    assert entry.take_old() is True
-    assert not (tmp_path / legacy_names.OLD_AUTOSTART_DESKTOP_FILE).exists()
-    assert (tmp_path / DESKTOP_FILE).is_file()
-    assert entry.take_old() is False, "두 번째는 할 일이 없다"

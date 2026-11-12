@@ -2,7 +2,7 @@
 
 **설정 파일에 넣지 않는다** (CLAUDE.md §5). OS 비밀 저장소(`keyring`)의 `bpm-studio`에 두고,
 읽기는 **환경변수가 먼저**다 (개발·CI). 저장소가 없으면 저장이 **분명히 실패한다** — 평문으로
-흘리지 않는다 (PC 실행기의 `credentials.py`와 같은 규칙, 이름 공간은 따로다 — 값이 다르다).
+흘리지 않는다 (실행기의 `credentials.py`와 같은 규칙, 이름 공간은 따로다 — 값이 다르다).
 """
 
 from __future__ import annotations
@@ -16,16 +16,16 @@ from bpm.core import legacy_names
 
 log = logging.getLogger(__name__)
 
-#: OS 비밀 저장소에서 Studio가 쓰는 이름 (PC 실행기는 `bpm-bot-ui`).
+#: OS 비밀 저장소에서 Studio가 쓰는 이름 (실행기는 `bpm-bot-ui`).
 SERVICE = "bpm-studio"
 #: 모델 키.
 LLM_KEY_NAME = "llm"
 ENV_LLM_API_KEY = "BPM_STUDIO__LLM__API_KEY"
 #: Center API 키 (`studio` 종류) — 시험 실행이 리소스 목록에서 **앱 주소를 읽는 데만** 쓴다.
-#: 읽기 전용이고, **Studio용**으로 따로 발급받은 것이다 (PC 실행기의 것과 값이 다르다).
+#: 읽기 전용이고, **Studio용**으로 따로 발급받은 것이다 (실행기의 것과 값이 다르다).
 CENTER_KEY_NAME = "center"
 ENV_CENTER_API_KEY = "BPM_STUDIO__CENTER_API_KEY"
-#: 확장의 비밀 설정 칸 — 확장마다 이름 공간을 가른다 (`ext:<확장>:<칸>`, PC 실행기와 같은 규칙).
+#: 확장의 비밀 설정 칸 — 확장마다 이름 공간을 가른다 (`ext:<확장>:<칸>`).
 EXTENSION_PREFIX = "ext:"
 ENV_EXTENSION_PREFIX = "BPM_STUDIO__EXT__"
 

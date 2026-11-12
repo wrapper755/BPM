@@ -97,7 +97,6 @@ class CompanyInfo(CompanyRequest):
     departments: int = 0
     staff: int = 0
     processes: int = 0
-    bot_uis: int = 0
     studios: int = 0
     #: 하나를 읽을 때만 찬다 — **회사 공통** 자리의 업무와 그 최근 실행 (부서·직원 자리는 그쪽 상세에).
     work: list[WorkItem] = Field(default_factory=list)

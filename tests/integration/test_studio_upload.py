@@ -59,7 +59,7 @@ def package_bytes(
         "content_hash": "sha256:" + "0" * 64,
     }
     if kind == "bpm_process":
-        manifest |= {"run_location": "pc", "entry": "process/main.bpmn", "process_id": "Proc_x"}
+        manifest |= {"entry": "process/main.bpmn", "process_id": "Proc_x"}
     manifest.update(extra or {})
     body = files or {"process/main.bpmn": "<definitions />"}
 
@@ -179,12 +179,12 @@ def test_the_same_version_with_other_contents_tells_you_to_bump_it(
     assert "version_conflict" in str(caught.value), "Center의 코드도 싣는다"
 
 
-def test_a_bot_ui_key_cannot_upload_and_the_message_points_at_the_setting(
+def test_a_runner_key_cannot_upload_and_the_message_points_at_the_setting(
     center: TestClient, tmp_path: Path
 ) -> None:
     """키 종류를 틀리면 **어디를 고칠지** 말한다 (C5 권한표 — Studio 키여야 한다)."""
     created = center.post(
-        "/api/v1/center-keys", json={"name": "현장 PC", "type": "bot_ui"}, headers=ADMIN
+        "/api/v1/center-keys", json={"name": "서버 1", "type": "server_runner"}, headers=ADMIN
     )
     with pytest.raises(upload.UploadFailed) as caught:
         uploader(center, str(created.json()["key"])).upload(written(tmp_path, package_bytes()))
@@ -396,56 +396,6 @@ def test_no_center_key_opens_stu16_and_later_means_no_uploader(window: Any, monk
     monkeypatch.setattr(type(window), "ensure_center", later)
     assert export_actions.uploader(window) is None
     assert opened == [True]
-
-
-def test_the_run_location_table_comes_from_the_host_and_goes_to_all_three(
-    window: Any, monkeypatch: Any, tmp_path: Path
-) -> None:
-    """**F6·STU-06·매니페스트가 같은 표를 쓴다** (C13 `task_types[].run_locations`).
-
-    베껴 두면 셋이 서로 다른 말을 한다 — 창이 「서버로 바꿔도 된다」고 하고 F6이 막거나,
-    올리기가 거짓으로 422를 받는다 (`docs/09-gaps.md` §4-12에 있던 것).
-    """
-    table = window.task_type_locations()
-    assert table == window.extensions.host.task_type_locations()
-    # 지금은 깔린 확장이 없어 비어 있다 (ADR-0114) — 비어 있어도 **같은 것**이 셋에 간다.
-
-    examples = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
-    from bpm.studio.workspace import Workspace
-
-    window.process = Workspace(tmp_path / "작업").ensure().import_example(
-        examples, "fx19_manual_task_pc"
-    )
-    monkeypatch.setattr(type(window), "saved_to_disk", lambda self: True)
-    monkeypatch.setattr(type(window), "may_drop_edits", lambda self: True)
-
-    # ① 내보내기·올리기 → 매니페스트
-    seen: list[Any] = []
-
-    def fake_export(process: Any, target: Path, **kw: Any) -> Path:
-        seen.append(kw.get("task_type_locations"))
-        return target
-
-    monkeypatch.setattr(export_actions, "_pick", lambda w, title, name: tmp_path / "out.zip")
-    monkeypatch.setattr(export_actions, "export", fake_export)
-    export_actions.export_package(window)
-    assert seen == [table]
-
-    # ② STU-06 창 — 창은 호스트를 들고 있지 않아 메인 창이 넘긴다.
-    given: list[Any] = []
-
-    class FakeDialog:
-        def __init__(self, *a: Any, **kw: Any) -> None:
-            given.append(kw.get("task_type_locations"))
-            self.saved = None
-            self.split_requested = False
-
-        def exec(self) -> int:
-            return 0
-
-    monkeypatch.setattr("bpm.studio.main_window.ProcessInfoDialog", FakeDialog)
-    window.edit_info()
-    assert given == [table]
 
 
 def test_the_center_resources_dialog_opens_from_the_explorer(window: Any, monkeypatch: Any) -> None:

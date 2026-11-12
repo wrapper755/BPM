@@ -99,11 +99,6 @@
   "additionalProperties": true,
   "description": "`GET /companies…` — 셈은 읽을 때 센다.",
   "properties": {
-    "bot_uis": {
-      "default": 0,
-      "title": "Bot Uis",
-      "type": "integer"
-    },
     "created_at": {
       "title": "Created At",
       "type": "string"

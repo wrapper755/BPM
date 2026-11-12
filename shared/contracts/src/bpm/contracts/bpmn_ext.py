@@ -40,7 +40,6 @@ from bpm.contracts.manifest import (
     KNOWN_DOMAINS,
     PC_ONLY_DOMAINS,
     ExtensionNeed,
-    RunLocation,
 )
 from bpm.contracts.replay import REPLAY_DEFAULT, REPLAY_MODES
 
@@ -61,7 +60,6 @@ GENERATED_ID_PATTERN = re.compile(r"^(Activity|Gateway|Event|Flow)_[0-9a-z]{7}$"
 VALUE_TYPES = frozenset({"string", "int", "number", "bool", "list", "dict", "date"})
 
 #: 결재가 어디서 답을 받나.
-APPROVAL_LOCATIONS = frozenset({"follow", "center", "field"})
 
 #: 파일 출력 형식.
 FILE_FORMATS = frozenset({"md", "xlsx", "json", "txt", "csv"})
@@ -92,9 +90,6 @@ TIMER_KINDS = ("timeDate", "timeDuration", "timeCycle")
 
 #: 보상 이벤트 정의 (C14 §보상, ADR-0135) — 경계에 달면 보상 경계, 던지기·종료에 달면 보상 던지기.
 COMPENSATE_DEFINITION = "compensateEventDefinition"
-
-#: `location: field` 결재의 시간 제한 경고 기준 (B13) — 하루.
-FIELD_APPROVAL_MAX_HOURS = 24
 
 #: **엔진이 늘 주는 변수.** 선언하지 않아도 식·템플릿에서 쓸 수 있다 (예제가 `일일/{오늘}.md`
 #: 처럼 파일 이름에 쓴다). 늘어나면 C14 문서의 표와 함께 고친다.
@@ -179,7 +174,6 @@ INPUT_SOURCE_TYPES = {
 class ProcessInfo(ContractModel):
     """`bpm:process` — BPM 프로세스 정보 (STU-06). 빌드가 이것을 모아 C1 매니페스트를 만든다."""
 
-    run_location: RunLocation | None = None
     extensions: list[ExtensionNeed] = Field(default_factory=list)
     inputs: list[InputDecl] = Field(default_factory=list)
     outputs: list[str] = Field(default_factory=list)
@@ -253,7 +247,6 @@ class Approval(ContractModel):
     #: **변수 이름 배열**이다. 문자열 하나로 쓰면 검사 오류 (B2).
     show: list[str] = Field(default_factory=list)
     fields: list[FormField] = Field(default_factory=list)
-    location: str = "follow"  # APPROVAL_LOCATIONS
     expires: str | None = None  # ISO 기간 또는 변수 이름
     #: 결재 담당자 (ADR-0080) — 이름 배열이거나 **변수 이름 하나**다 (`expires`와 같은 결). B2가 본다.
     assignees: list[str] | str | None = None
@@ -301,18 +294,17 @@ class Receive(ContractModel):
 
 
 class Delegate(ContractModel):
-    """`bpm:call.delegate` — **PC 위임** ([ADR-0062](../decisions/0062-pc-delegation.md)).
+    """`bpm:call.delegate` — **다른 패키지에 맡긴다** (ADR-0082 일괄 기동, ADR-0144).
 
-    부르는 것은 **따로 올리고 따로 배포한 PC BPM 프로세스 패키지**다 — 이 패키지 안의 정의가 아니다.
-    그래서 `calledElement`가 가리키는 것을 패키지 안에서 찾지 않는다 (B14).
+    부르는 것은 **따로 올리고 따로 배포한 BPM 프로세스 패키지**다 — 이 패키지 안의 정의가 아니다.
+    그래서 `calledElement`가 가리키는 것을 패키지 안에서 찾지 않는다 (B14). 맡은 것은 Center
+    작업이 되어 **서버 실행기**가 돌린다.
     """
 
-    #: 부를 PC BPM 프로세스 패키지 id (C1 — BPM 프로세스의 신원은 패키지 id다).
+    #: 부를 BPM 프로세스 패키지 id (C1 — BPM 프로세스의 신원은 패키지 id다).
     bpm_process_id: str
     #: 판. **비우면 배포된 판** (작업 지시와 같은 규칙 — 둘 이상이면 Center가 거절한다).
     version: str | None = None
-    #: 어느 PC인가를 정하는 **식**. 비우면 Center가 고른다.
-    bot_ui: str | None = None
 
 
 class Call(ContractModel):
@@ -320,7 +312,7 @@ class Call(ContractModel):
 
     input: dict[str, str] = Field(default_factory=dict)  # {호출 대상 변수: 식}
     output: dict[str, str] = Field(default_factory=dict)  # {내 변수: 호출 대상 변수}
-    #: 적으면 **PC 위임**이다 (ADR-0062). 선택 칸이라 옛 그림은 그대로 읽힌다.
+    #: 적으면 **맡기기**다 (ADR-0082). 선택 칸이라 옛 그림은 그대로 읽힌다.
     delegate: Delegate | None = None
 
 
@@ -768,9 +760,9 @@ class Case(ContractModel):
     #: 노드 id → 폼 응답. 없는 결재는 **답하지 않고 기다린다** (기한 초과 시험).
     approvals: dict[str, dict[str, Any]] = Field(default_factory=dict)
     messages: list[CaseMessage] = Field(default_factory=list)
-    #: 노드 id → **PC 위임이 돌려주는 값** (그 BPM 프로세스가 선언한 `outputs`, ADR-0062).
-    #: Studio에는 부를 PC BPM 프로세스의 그림이 없어 **케이스가 결과를 적는다**. 적지 않은 위임은
-    #: **그 자리에서 실패**다 — 결재처럼 기다리게 두면 끝나지 않는다(현장 PC가 없다).
+    #: 노드 id → **맡긴 BPM 프로세스가 돌려주는 값** (그 패키지가 선언한 `outputs`).
+    #: Studio에는 남의 패키지 그림이 없어 **케이스가 결과를 적는다**. 적지 않은 것은
+    #: **그 자리에서 실패**다 — 결재처럼 기다리게 두면 끝나지 않는다.
     delegations: dict[str, dict[str, Any]] = Field(default_factory=dict)
     #: 노드 id → **답한 사람** (ADR-0096). 적지 않은 결재는 `CASE_ANSWERER`가 답한 것이 된다.
     answered_by: dict[str, str] = Field(default_factory=dict)
@@ -1043,9 +1035,6 @@ def read_vars(node: Node, flows: Sequence[Flow]) -> set[str]:
     sub_call: Call | None = node.prop("call")
     if sub_call is not None:
         out |= {v for expression in sub_call.input.values() for v in expression_vars(expression)}
-        # **어느 PC인가를 정하는 식도 읽기다** (ADR-0062) — 담당자 PC처럼 업무 값이 고른다.
-        if sub_call.delegate is not None and sub_call.delegate.bot_ui:
-            out |= expression_vars(sub_call.delegate.bot_ui)
     email: Email | None = node.prop("email")
     if email is not None:
         out |= set(email.attachments)
@@ -1352,44 +1341,26 @@ def _check_b4_b5(process: BpmnProcess) -> list[Violation]:
     return out
 
 
-def server_blockers(
-    process: BpmnProcess, task_type_locations: Mapping[str, Sequence[str]] | None = None
-) -> list[str]:
-    """서버에서 할 수 없는 것들 (ADR-0015·0016) — 노드마다 한 줄.
+def server_blockers(process: BpmnProcess) -> list[str]:
+    """서버에서 할 수 없는 것들 — 노드마다 한 줄 (ADR-0016·ADR-0144).
 
-    **`run_location`을 보지 않는다.** 「서버로 바꾸면 무엇이 걸리나」를 미리 세는 쪽(STU-06)과
-    「지금 걸려 있다」고 말하는 쪽(B6)이 **같은 판정**을 써야 하기 때문이다 — 베껴 두면 화면이
-    「바꿔도 된다」고 하고 검사가 막는 일이 생긴다.
+    실행 자리가 서버 하나가 되면서(ADR-0144) **웹·데스크톱 AI 태스크만** 남았다 — 그 판은
+    아직 돌릴 수 없다 (ADR-0114). C1 R2가 매니페스트에서 같은 것을 본다.
     """
     items: list[str] = []
     for node in process.all_nodes():
         ai: AiTask | None = node.prop("aiTask")
         if ai is not None and ai.domain in PC_ONLY_DOMAINS:
             items.append(f"{node.id}: AI 태스크 domain={ai.domain}")
-        approval: Approval | None = node.prop("approval")
-        if approval is not None and node.kind == "manualTask":
-            # 확인은 `location`과 상관없이 늘 현장이다 (C6·ADR-0015) — C1 R2 `human.confirmation`과 같다.
-            items.append(f"{node.id}: 확인 (늘 현장에서 답한다)")
-        elif approval is not None and approval.location == "field":
-            items.append(f"{node.id}: 현장 결재")
-        task: ExtensionTask | None = node.prop("task")
-        if task is not None and task_type_locations is not None:
-            locations = task_type_locations.get(task.type)
-            if locations is not None and "server" not in locations:
-                items.append(f"{node.id}: 태스크 종류 {task.type} (실행 위치 {list(locations)})")
     return items
 
 
-def _check_b6(process: BpmnProcess, task_type_locations: Mapping[str, Sequence[str]] | None) -> list[Violation]:
-    """실행 위치가 server면 PC에서만 되는 것이 없어야 한다 (C1 R2와 같은 판정)."""
-    if process.info.run_location != "server":
-        return []
-    items = server_blockers(process, task_type_locations)
+def _check_b6(process: BpmnProcess) -> list[Violation]:
+    """서버에서 할 수 없는 것이 없어야 한다 (C1 R2와 같은 판정)."""
+    items = server_blockers(process)
     if not items:
         return []
-    return [
-        _error("B6", "실행 위치가 server인데 서버에서 할 수 없는 것이 있다", code="server_incompatible", items=items)
-    ]
+    return [_error("B6", "서버에서 할 수 없는 것이 있다", code="server_incompatible", items=items)]
 
 
 #: B7 — 옛 칸 (ADR-0102). 서비스 앱 키가 없어 아무도 보지 않는다. 모델에서 걷었으므로 옛 그림의
@@ -1497,19 +1468,8 @@ def _check_b12(process: BpmnProcess) -> list[Violation]:
     for node in process.all_nodes():
         approval: Approval | None = node.prop("approval")
         if approval is not None:
-            if approval.location not in APPROVAL_LOCATIONS:
-                out.append(
-                    _error("B12", f"{node.id}의 결재 location을 모른다: {approval.location}",
-                           items=sorted(APPROVAL_LOCATIONS))
-                )
-            elif node.kind == "manualTask" and approval.location == "center":
-                # 확인은 화면 앞 사람만 답한다 (C6) — 적어 둔 것을 말없이 바꾸지 않고 알린다 (ADR-0038).
-                out.append(
-                    _warn("B12", f"{node.id}는 확인(수동 작업)이라 늘 현장에서 답한다 — "
-                                 "location: center는 쓰이지 않는다")
-                )
             if node.kind == "manualTask" and approval.assignees:
-                # 확인은 화면 앞 사람이 답한다 — 담당자를 적어도 아무도 쓰지 않는다 (ADR-0080).
+                # 확인은 그 실행을 보는 사람이 답한다 — 담당자를 적어도 아무도 쓰지 않는다 (ADR-0080).
                 out.append(_warn("B12", f"{node.id}는 확인(수동 작업)이라 담당자가 없다 — assignees는 쓰이지 않는다"))
             for field_ in approval.fields:
                 if field_.type not in KNOWN_FIELD_TYPES:
@@ -1551,14 +1511,6 @@ def _check_b13(process: BpmnProcess) -> list[Violation]:
         webhook: Webhook | None = node.prop("webhook")
         if webhook is not None and webhook.body == WEBHOOK_BODY_ALL:
             out.append(_warn("B13", f"{node.id}의 웹훅이 변수를 전부 보낸다 (비밀이 섞일 수 있다)"))
-        approval: Approval | None = node.prop("approval")
-        if approval is not None and approval.location == "field" and approval.expires:
-            hours = duration_hours(approval.expires)
-            if hours is not None and hours > FIELD_APPROVAL_MAX_HOURS:
-                out.append(
-                    _warn("B13", f"{node.id}의 현장 결재 기한이 하루를 넘는다 ({approval.expires}) — "
-                                 "현장 PC가 그동안 자리를 쥔다")
-                )
     return out
 
 
@@ -1618,7 +1570,7 @@ def _check_b14(
         if call is None:
             continue
         if call.delegate is not None:
-            # **PC 위임** (ADR-0062) — 대상이 다른 패키지라 패키지 안에서 찾지 않는다.
+            # **맡기기** (ADR-0082) — 대상이 다른 패키지라 패키지 안에서 찾지 않는다.
             out.extend(_check_delegation(process, node, call.delegate, call, delegated_outputs))
         elif called_processes is not None and node.called_element:
             target = called_processes.get(node.called_element)
@@ -1640,25 +1592,13 @@ def _check_delegation(
     call: Call,
     delegated_outputs: Mapping[str, Sequence[str]] | None,
 ) -> list[Violation]:
-    """PC 위임 호출을 본다 (B14, [ADR-0062](../decisions/0062-pc-delegation.md)).
-
-    **실행 위치가 `server`일 때만** 위임할 수 있다 — PC 실행은 그 PC의 자리를 끝까지 쥐므로
-    (ADR-0014) PC가 다른 PC를 기다리면 둘이 서로를 기다릴 수 있다. C1에도 같은 규칙이 있다
-    (매니페스트를 보는 쪽은 그림을 읽지 않는다).
+    """맡기는 호출을 본다 (B14, ADR-0082).
 
     받을 값은 **그 BPM 프로세스가 선언한 `outputs`**와 맞춰 보는데, 그것은 **남의 패키지 매니페스트**라
     여기서 알 수 없다 — 부르는 쪽이 주면 보고 **주지 않으면 건너뛴다** (`called_processes`와
     같은 규칙). 모르는 것으로 막지 않는다.
     """
     out: list[Violation] = []
-    if process.info.run_location != "server":
-        out.append(
-            _error(
-                "B14",
-                f"{node.id}: PC 위임은 실행 위치가 server인 BPM 프로세스에서만 쓸 수 있다",
-                code="delegation_not_from_pc",
-            )
-        )
     known = None if delegated_outputs is None else delegated_outputs.get(delegate.bpm_process_id)
     if known is not None:
         unknown = [v for v in call.output.values() if v not in known]
@@ -1676,7 +1616,6 @@ def _check_delegation(
 def validate(
     process: BpmnProcess,
     *,
-    task_type_locations: Mapping[str, Sequence[str]] | None = None,
     dmn_decisions: Mapping[str, DecisionIo] | None = None,
     called_processes: Mapping[str, Sequence[str]] | None = None,
     delegated_outputs: Mapping[str, Sequence[str]] | None = None,
@@ -1687,14 +1626,11 @@ def validate(
     Studio 「실행 전 검사」와 Center 업로드가 같은 함수를 쓴다. 인자를 주지 않으면
     **정의 하나만 보고 할 수 있는 검사**만 한다.
 
-    - `task_type_locations`: 확장 태스크 종류 → 실행 위치 (확장 호스트가 C13에서 읽어 준다).
-      없으면 B6에서 확장 태스크를 건너뛴다. **플랫폼은 어느 태스크 종류가 PC 전용인지 스스로
-      모른다** (ADR-0018).
     - `dmn_decisions`: 결정 id → 입력·출력 이름. 없으면 B14의 DMN 대조를 건너뛴다.
     - `called_processes`: `calledElement` → 그 BPM 프로세스의 `outputs`. 없으면 호출 대조를 건너뛴다.
-    - `delegated_outputs`: **PC 위임**으로 부르는 BPM 프로세스의 `bpm_process_id` → 그 패키지가 선언한
+    - `delegated_outputs`: **맡기는** BPM 프로세스의 `bpm_process_id` → 그 패키지가 선언한
       `outputs` (C1). 남의 패키지 매니페스트라 계약이 스스로 알 수 없다 — 없으면 그 대조를
-      건너뛴다 (ADR-0062). **모르는 것으로 막지 않는다.**
+      건너뛴다. **모르는 것으로 막지 않는다.**
 
     여기서 하지 않는 것:
     - **확장 태스크의 속 내용** (`bpm:task`의 JSON). 그 확장의 계약이 검사한다 — 예를 들어 UI
@@ -1706,7 +1642,7 @@ def validate(
         *_check_b1_b2(process),
         *_check_b3(process),
         *_check_b4_b5(process),
-        *_check_b6(process, task_type_locations),
+        *_check_b6(process),
         *_check_b7(process),
         *_check_b8(process),
         *_check_b9_b10(process),
@@ -1717,43 +1653,6 @@ def validate(
         *_check_b16(process),
         *_check_b17(process),
     ]
-
-
-def _check_b17(process: BpmnProcess) -> list[Violation]:
-    """B17. 보상 (C14 §보상, ADR-0135) — 경계·처리기·던지기가 맞물리는가."""
-    out: list[Violation] = []
-    nodes = {n.id: n for n in process.all_nodes()}
-    for scope, scope_nodes, scope_flows in process.scopes():
-        for node in scope_nodes:
-            if node.is_for_compensation and (
-                process.incoming(node.id, scope_flows) or process.outgoing(node.id, scope_flows)
-            ):
-                out.append(_error("B17", f"{node.id}: 보상 처리기는 흐름을 받거나 내지 않는다"))
-            if node.kind == "boundaryEvent" and COMPENSATE_DEFINITION in node.event_definitions:
-                if process.outgoing(node.id, scope_flows):
-                    out.append(_error("B17", f"{node.id}: 보상 경계는 흐름을 내지 않는다 — 연관으로 처리기를 잇는다"))
-                linked = [t for s, t in process.associations if s == node.id]
-                if len(linked) != 1:
-                    out.append(_error("B17", f"{node.id}: 보상 경계에는 연관이 하나여야 한다 (지금 {len(linked)}개)"))
-                elif linked[0] not in nodes or not nodes[linked[0]].is_for_compensation:
-                    out.append(
-                        _error("B17", f"{node.id}: 연관의 대상이 보상 처리기(isForCompensation)가 아니다: {linked[0]}")
-                    )
-            throws = node.kind in ("intermediateThrowEvent", "endEvent")
-            if throws and COMPENSATE_DEFINITION in node.event_definitions and node.activity_ref:
-                ids = {n.id for n in scope_nodes}
-                if node.activity_ref not in ids or process.compensation_boundary(node.activity_ref) is None:
-                    out.append(
-                        _error(
-                            "B17",
-                            f"{node.id}: activityRef {node.activity_ref}는 같은 범위({scope})의"
-                            " 보상 경계 달린 활동이 아니다",
-                        )
-                    )
-    for handler in (n for n in process.all_nodes() if n.is_for_compensation):
-        if not any(t == handler.id for _s, t in process.associations):
-            out.append(_warn("B17", f"{handler.id}: 어느 보상 경계에도 이어지지 않은 보상 처리기다"))
-    return out
 
 
 def _check_b16(process: BpmnProcess) -> list[Violation]:
@@ -1796,6 +1695,43 @@ def _check_b16(process: BpmnProcess) -> list[Violation]:
                 f"{node.id}의 목록을 결재 뒤에 다시 만든다 — 보여 준 것과 다른 것을 기동할 수 있다",
                 items=changed,
             ))
+    return out
+
+
+def _check_b17(process: BpmnProcess) -> list[Violation]:
+    """B17. 보상 (C14 §보상, ADR-0135) — 경계·처리기·던지기가 맞물리는가."""
+    out: list[Violation] = []
+    nodes = {n.id: n for n in process.all_nodes()}
+    for scope, scope_nodes, scope_flows in process.scopes():
+        for node in scope_nodes:
+            if node.is_for_compensation and (
+                process.incoming(node.id, scope_flows) or process.outgoing(node.id, scope_flows)
+            ):
+                out.append(_error("B17", f"{node.id}: 보상 처리기는 흐름을 받거나 내지 않는다"))
+            if node.kind == "boundaryEvent" and COMPENSATE_DEFINITION in node.event_definitions:
+                if process.outgoing(node.id, scope_flows):
+                    out.append(_error("B17", f"{node.id}: 보상 경계는 흐름을 내지 않는다 — 연관으로 처리기를 잇는다"))
+                linked = [t for s, t in process.associations if s == node.id]
+                if len(linked) != 1:
+                    out.append(_error("B17", f"{node.id}: 보상 경계에는 연관이 하나여야 한다 (지금 {len(linked)}개)"))
+                elif linked[0] not in nodes or not nodes[linked[0]].is_for_compensation:
+                    out.append(
+                        _error("B17", f"{node.id}: 연관의 대상이 보상 처리기(isForCompensation)가 아니다: {linked[0]}")
+                    )
+            throws = node.kind in ("intermediateThrowEvent", "endEvent")
+            if throws and COMPENSATE_DEFINITION in node.event_definitions and node.activity_ref:
+                ids = {n.id for n in scope_nodes}
+                if node.activity_ref not in ids or process.compensation_boundary(node.activity_ref) is None:
+                    out.append(
+                        _error(
+                            "B17",
+                            f"{node.id}: activityRef {node.activity_ref}는 같은 범위({scope})의"
+                            " 보상 경계 달린 활동이 아니다",
+                        )
+                    )
+    for handler in (n for n in process.all_nodes() if n.is_for_compensation):
+        if not any(t == handler.id for _s, t in process.associations):
+            out.append(_warn("B17", f"{handler.id}: 어느 보상 경계에도 이어지지 않은 보상 처리기다"))
     return out
 
 

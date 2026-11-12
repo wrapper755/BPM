@@ -831,16 +831,6 @@ def test_a_parallel_loop_on_the_server_hands_over_every_item_at_once() -> None:
     assert states.count("started") == 1 and states.count("completed") == 1, states
 
 
-def test_a_parallel_loop_on_a_pc_still_runs_one_at_a_time() -> None:
-    """PC에서는 그림이 병렬이어도 **차례로** 돈다 — 실행 자리가 하나다 (ADR-0014, C14 §반복)."""
-    port = RecordingDelegator()
-    engine, run = start(
-        batch_process(sequential=False, location="pc"), RunEnv(processes={}, delegate=port)
-    )
-    engine.run_until_blocked(run)
-    assert len(port.calls) == 1
-
-
 def test_one_failed_item_withdraws_the_rest_and_the_boundary_catches_once() -> None:
     """**한 건 실패는 나머지를 거둔다** (ADR-0087 §4) — 맡겨 둔 작업은 포트로 거두고 경계가 한 번 받는다."""
     port = RecordingDelegator()

@@ -485,24 +485,6 @@ def test_on_the_server_a_confirm_trigger_is_escalated_to_the_error_boundary() ->
     assert run.variables["error_message"].endswith("확인 트리거: 캡차")
 
 
-@pytest.mark.parametrize(("decision", "state"), [("approve", State.DONE), ("reject", State.FAILED)])
-def test_on_a_pc_a_confirm_trigger_asks_a_person(decision: str, state: State) -> None:
-    """PC에서는 **사람 확인**으로 멈춘다 (ADR-0106) — 「계속」은 모델을 다시 부르지 않고 결과 없이 넘어간다."""
-    ai = json.dumps({**json.loads(AI), "confirm_triggers": ["로그인 화면"]}, ensure_ascii=False)
-    model = RecordingLlm(replies=[answer(_confirm=1)])
-    engine, run = start(process(ai), RunEnv(llm=model))
-    assert engine.run_until_blocked(run) is State.WAITING
-    (pending,) = run.pendings.values()
-    assert pending.escalation and pending.layer == "confirmation"
-    assert pending.description == "확인 트리거: 로그인 화면"
-    engine.answer(run, pending.request_id, {"decision": decision}, answered_by="현장")
-    assert engine.run_until_blocked(run) is state
-    assert len(model.asked) == 1, "다시 묻지 않는다"
-    assert "공급사" not in run.variables
-    if state is State.FAILED:
-        assert run.error is not None and run.error.code == "ESCALATED"
-
-
 @pytest.mark.parametrize("picked", [0, 7, "2", True])
 def test_an_unknown_trigger_number_still_escalates(picked: Any) -> None:
     with pytest.raises(AgentError, match="모르는 번호") as caught:

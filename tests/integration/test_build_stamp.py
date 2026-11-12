@@ -14,7 +14,6 @@ from pathlib import Path
 
 import pytest
 
-from bpm.contracts.bot_ui import BuildStamp, Versions
 from bpm.core import build_info
 from bpm.core.build_info import STAMP_NAME, Stamp, read_stamp, valid_version
 
@@ -72,7 +71,7 @@ def test_an_unpacked_app_has_no_stamp_and_reports_its_package_version() -> None:
     """묶지 않은 것은 `python` 옆을 뒤지지 않는다 — dist-info가 판이다."""
     assert not getattr(sys, "frozen", False)
     assert build_info.stamp() is None
-    assert build_info.product_version("bpm-bot-ui") == build_info.package_version("bpm-bot-ui")
+    assert build_info.product_version("bpm-studio") == build_info.package_version("bpm-studio")
     assert build_info.package_version("bpm-core") != build_info.UNKNOWN
     assert build_info.package_version("없는-배포판") == build_info.UNKNOWN
 
@@ -84,7 +83,7 @@ def test_a_packed_app_reads_the_stamp_next_to_its_executable(
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(tmp_path / "BPMBot.exe"))
     assert build_info.stamp() == GOOD
-    assert build_info.product_version("bpm-bot-ui") == "0.2.0"
+    assert build_info.product_version("bpm-studio") == "0.2.0"
 
 
 # ───────────────────── 빌드 검사의 `build` 단계 ─────────────────────
@@ -170,24 +169,6 @@ def test_without_a_tag_the_build_says_so_in_the_version() -> None:
 
 
 # ───────────────────── C4 `versions`로 가는 길 ─────────────────────
-
-
-def test_bot_ui_reports_build_only_when_packed(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`versions.build`가 있으면 묶은 것, **없으면 체크아웃**이다 (C4 — 「모른다」가 아니다)."""
-    from bpm.bot_ui import agent as bot_agent  # noqa: PLC0415
-
-    class _Agent:
-        pass
-
-    monkeypatch.setattr(build_info, "stamp", lambda: None)
-    plain = bot_agent.Agent.versions(_Agent())  # type: ignore[arg-type]
-    assert plain.build is None
-
-    monkeypatch.setattr(build_info, "stamp", lambda: GOOD)
-    packed = bot_agent.Agent.versions(_Agent())  # type: ignore[arg-type]
-    assert packed.build == BuildStamp(commit=GOOD.commit, built_at=GOOD.built_at)
-    # 옛 Center도 읽는다 — 선택 칸이고 모양은 계약 그대로다.
-    assert Versions.model_validate(packed.to_json_dict()) == packed
 
 
 def test_server_runner_reports_installed_versions_not_a_written_one() -> None:

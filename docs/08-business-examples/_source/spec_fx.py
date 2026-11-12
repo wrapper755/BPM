@@ -8,15 +8,15 @@ from exdsl import *  # noqa: F401,F403
 EXAMPLES = []
 
 
-def FX(id, file, name, origin, run_location, trigger, background, why, nodes, flows, **kw):
+def FX(id, file, name, origin, trigger, background, why, nodes, flows, **kw):
     EXAMPLES.append(Example(id=id, file=file, name=name, dept="기능 예제", origin=origin,
-                            run_location=run_location, trigger=trigger, background=background,
+                            trigger=trigger, background=background,
                             why_location=why, nodes=nodes, flows=flows, kind="feature", **kw))
 
 
 SRV = "서버 기본 (ADR-0016)."
 
-FX("FX-01", "fx01_api_call", "API AI 태스크", "프로토타입 example_api", "server", "수동 실행",
+FX("FX-01", "fx01_api_call", "API AI 태스크", "프로토타입 example_api", "수동 실행",
    "공개 API 한 번 호출해 값을 꺼낸다. 업무 파라미터로 주소를 두면 재생 때 그대로 쓰인다.", SRV,
    [start("Start"),
     ai("Task_Api", "API 호출", goal("업무 파라미터 `주소`가 JSON API다.", "GET으로 한 번 불러 `rates.KRW`를 꺼낸다.", "값을 지어내지 않는다. 응답에 없으면 실패한다.", "- `원화`: number"),
@@ -27,7 +27,7 @@ FX("FX-01", "fx01_api_call", "API AI 태스크", "프로토타입 example_api", 
    features=["`domain: api`", "업무 파라미터", "결정 수행 재생"],
    lessons=["결과 타입을 적지 않으면 문자열 `\"1380.5\"`가 와서 뒤 비교가 틀렸다 — 결과에 타입을 적는다."])
 
-FX("FX-02", "fx02_business_rule", "규칙 태스크 (DMN)", "프로토타입 example_business_rule + discount_policy.dmn", "server", "수동 실행",
+FX("FX-02", "fx02_business_rule", "규칙 태스크 (DMN)", "프로토타입 example_business_rule + discount_policy.dmn", "수동 실행",
    "금액·등급으로 할인율과 사유를 정한다.", SRV,
    [start("Start"), rule("Task_Rule", "할인 정하기", "discount_policy", {"amount": "금액", "grade": "등급"}, {"할인율": "discount", "사유": "discount_reason"}),
     script("Task_Price", "최종가", "최종가 = round(금액 * (1 - 할인율))"), end("End")],
@@ -41,7 +41,7 @@ FX("FX-02", "fx02_business_rule", "규칙 태스크 (DMN)", "프로토타입 exa
    features=["`businessRuleTask` + `bpm:rule` 입력·출력 매핑", "다중 출력 DMN"],
    lessons=["프로토타입은 DMN 입력 이름(amount)과 변수 이름(금액)이 같아야 했다 — 새 형식은 `input` 매핑으로 잇는다."])
 
-FX("FX-03", "fx03_call_mapping", "BPM 프로세스 호출과 매핑", "프로토타입 example_call_mapping", "server", "수동 실행",
+FX("FX-03", "fx03_call_mapping", "BPM 프로세스 호출과 매핑", "프로토타입 example_call_mapping", "수동 실행",
    "같은 하위 BPM 프로세스(FX-03b)를 다른 입력으로 두 번 부르고 출력 이름을 나눈다.", SRV,
    [start("Start"), script("Task_Prepare", "두 금액", "신청자금액 = 3000000\n보증인금액 = 800000"),
     call("Call_A", "신청자", "Proc_fx03b_amount_branch", {"금액": "신청자금액"}, {"신청자구분": "구분"}),
@@ -52,14 +52,14 @@ FX("FX-03", "fx03_call_mapping", "BPM 프로세스 호출과 매핑", "프로토
    features=["`bpm:call` 입력·출력 매핑", "같은 대상 두 번 호출"],
    lessons=["출력 매핑 없이 두 번 부르면 `구분`이 덮어써진다."])
 
-FX("FX-03b", "fx03b_amount_branch", "금액 분기 (호출 대상)", "프로토타입 example_call_mapping의 하위", "server", "BPM 프로세스 호출",
+FX("FX-03b", "fx03b_amount_branch", "금액 분기 (호출 대상)", "프로토타입 example_call_mapping의 하위", "BPM 프로세스 호출",
    "금액이 100만 원 이상이면 고액.", SRV,
    [start("Start"), xgw("Gw", "100만 이상?"), script("Task_Big", "고액", "구분 = '고액'"), script("Task_Small", "소액", "구분 = '소액'"), end("End")],
    [f("Start", "Gw"), f("Gw", "Task_Big", "금액 >= 1000000", "예"), f("Gw", "Task_Small", default=True, name="아니오"), f("Task_Big", "End"), f("Task_Small", "End")],
    inputs=[("금액", "int", True, "")], outputs=["구분"], cases=[Case("고액", {"금액": 1000000}, {"구분": "고액"}), Case("소액", {"금액": 999999}, {"구분": "소액"})],
    features=["배타 게이트웨이 + 기본 흐름", "경계값"])
 
-FX("FX-04", "fx04_folder_poll", "폴더 감시 (조건 시작 대체)", "프로토타입 example_conditional_start", "server", "타이머 — 5분마다",
+FX("FX-04", "fx04_folder_poll", "폴더 감시 (조건 시작 대체)", "프로토타입 example_conditional_start", "타이머 — 5분마다",
    "받은 폴더에 파일이 있으면 처리한다. 프로토타입은 조건 시작 이벤트를 썼지만 엔진이 조건을 계속 평가하지 못했다 → **타이머 + 게이트웨이**로 바꾼다.", SRV,
    [start("Start", "5분마다", kind="timer", cycle="*/5 * * * *"),
     flist("Task_List", "파일 목록", "{감시폴더}", "파일", count_as="건수"),
@@ -73,7 +73,7 @@ FX("FX-04", "fx04_folder_poll", "폴더 감시 (조건 시작 대체)", "프로�
    lessons=["조건 시작은 「무엇이 바뀌면 다시 평가하나」가 정의되지 않아 프로토타입에서 한 번만 돌았다.", "폴링은 실행이 자주 생긴다 — 「없음」 실행은 이력에서 접어 보이게(CON-04 필터).",
             "폴더를 훑는 것은 식이 아니라 태스크다 — 디스크를 읽고 실행마다 결과가 달라진다 (ADR-0025·ADR-0026)."])
 
-FX("FX-06", "fx06_document_read", "문서 AI 태스크", "프로토타입 example_document", "server", "수동 실행",
+FX("FX-06", "fx06_document_read", "문서 AI 태스크", "프로토타입 example_document", "수동 실행",
    "PDF 한 장에서 정해진 값을 읽는다.", SRV,
    [start("Start"), ai("Task_Read", "PDF 읽기", goal("`파일`은 견적서 PDF다.", "공급자·합계·유효기간을 읽는다.", "값을 계산하지 않는다.", "- `견적`: {공급자, 합계(int), 유효기간(date)}"),
                        "doc", {"견적": "dict"}, tools=["pdf_text_tool"]), end("End")],
@@ -81,7 +81,7 @@ FX("FX-06", "fx06_document_read", "문서 AI 태스크", "프로토타입 exampl
    inputs=[("파일", "string", True, "")], cases=[Case("샘플", {"파일": "samples/docs/quote.pdf"}, {"견적": {"합계": 1320000}})],
    features=["`domain: doc`", "도구 지정"])
 
-FX("FX-07", "fx07_email", "메일 보내기", "프로토타입 example_email", "server", "수동 실행",
+FX("FX-07", "fx07_email", "메일 보내기", "프로토타입 example_email", "수동 실행",
    "변수를 넣은 제목·본문과 첨부 파일로 메일을 보낸다.", SRV,
    [start("Start"), script("Task_Body", "본문", "본문 = '안녕하세요'\n보고 = '# 보고\\n내용'"),
     mail("Task_Mail", "보내기", ["{받는사람}"], "[시험] {오늘}", "{본문}", attachments=["보고경로"], store_as="발송결과"), end("End")],
@@ -91,7 +91,7 @@ FX("FX-07", "fx07_email", "메일 보내기", "프로토타입 example_email", "
    features=["`sendTask` + `bpm:email`", "파일 출력 → 첨부", "`store_as`"],
    lessons=["첨부는 파일 경로 **변수 이름**을 적는다 — 경로 문자열을 직접 쓰지 않는다."])
 
-FX("FX-08", "fx08_error_boundary", "오류 경계와 대체 경로", "프로토타입 example_error_boundary", "server", "수동 실행",
+FX("FX-08", "fx08_error_boundary", "오류 경계와 대체 경로", "프로토타입 example_error_boundary", "수동 실행",
    "API 조회가 실패하면 기본값을 쓰고, 어느 쪽이든 사람이 확인한다.", SRV,
    [start("Start"),
     ai("Task_Fetch", "환율 조회", goal("업무 파라미터 `주소`를 GET.", "`rates.KRW`를 꺼낸다.", "값을 지어내지 않는다. 응답이 없으면 실패한다 (오류 경계가 받는다).", "- `원화`: number"), "api", {"원화": "number"},
@@ -104,7 +104,7 @@ FX("FX-08", "fx08_error_boundary", "오류 경계와 대체 경로", "프로토�
    features=["오류 경계 `TASK_FAILED`", "실패 후 합류"],
    lessons=["프로토타입 오류 코드 `AgentFailed`는 새 형식에서 `TASK_FAILED`로 (C14).", "`error_message` 변수로 원인을 남긴다."])
 
-FX("FX-09", "fx09_sequential_loop", "차례 반복", "프로토타입 example_loop", "server", "수동 실행",
+FX("FX-09", "fx09_sequential_loop", "차례 반복", "프로토타입 example_loop", "수동 실행",
    "경비 신청 여러 건을 한 건씩 판정하고 결과를 모은다.", SRV,
    [start("Start"),
     ai("Task_Judge", "한 건 판정", goal("`신청`은 경비 한 건이다.", "업무 규칙(영수증 있음, 50만 원 이하)에 맞으면 승인.", "다른 건과 비교하지 않는다. 금액을 바꾸지 않는다.", "- `판정`: {id, 승인(bool), 사유}"),
@@ -117,7 +117,7 @@ FX("FX-09", "fx09_sequential_loop", "차례 반복", "프로토타입 example_lo
    features=["`multiInstanceLoopCharacteristics isSequential=true`", "`collect_into` 필수 (C14)", "빈 목록 케이스"],
    lessons=["`collect_into`가 없으면 마지막 결과만 남았다 — 필수로 바꿨다.", "반복 진행은 STU-08에서 `node_instance`별로 보인다."])
 
-FX("FX-10", "fx10_operator_routing", "요청 라우팅 (운영 비서)", "프로토타입 example_operator", "server", "메시지 `work_request`",
+FX("FX-10", "fx10_operator_routing", "요청 라우팅 (운영 비서)", "프로토타입 example_operator", "메시지 `work_request`",
    "요청을 AI가 분류해 세 가지 처리 중 하나로 보낸다. 각 처리에 실패 경계가 있다.", SRV,
    [start("Start", "요청", kind="message", message="work_request"),
     ai("Task_Triage", "분류", goal("`요청`은 직원 메시지다.", "intent를 exchange_rate | answer | web_summary 중 하나로.", "요청을 처리하지 않는다.", "- `intent`: string"), "llm", {"intent": "string"}),
@@ -141,7 +141,7 @@ FX("FX-10", "fx10_operator_routing", "요청 라우팅 (운영 비서)", "프로
    lessons=["프로토타입은 웹 요약을 WEB AI 태스크로 했다 → 서버 BPM 프로세스에서는 B6 오류. 서버용 웹 읽기 확장으로 바꿨다.",
             "기본 흐름을 「답변」으로 두면 분류가 이상한 값을 내도 멈추지 않는다."])
 
-FX("FX-11", "fx11_parallel", "병렬 분기·합류", "프로토타입 example_parallel", "server", "수동 실행",
+FX("FX-11", "fx11_parallel", "병렬 분기·합류", "프로토타입 example_parallel", "수동 실행",
    "세 계산을 동시에 하고 모두 끝나면 합친다.", SRV,
    [start("Start"), pgw("Gw_Split"), script("Task_A", "A", "a = 1"), script("Task_B", "B", "b = 2"), script("Task_C", "C", "c = 3"), pgw("Gw_Join"),
     script("Task_Sum", "합", "합 = a + b + c"), end("End")],
@@ -150,7 +150,7 @@ FX("FX-11", "fx11_parallel", "병렬 분기·합류", "프로토타입 example_p
    cases=[Case("기본", {}, {"합": 6})], features=["병렬 게이트웨이 짝"],
    lessons=["합류 게이트웨이를 빼면 뒤 태스크가 세 번 돈다."])
 
-FX("FX-12", "fx12_daily_report", "타이머 시작 + 파일 출력", "프로토타입 example_schedule", "server", "타이머 — 매일 09:00",
+FX("FX-12", "fx12_daily_report", "타이머 시작 + 파일 출력", "프로토타입 example_schedule", "타이머 — 매일 09:00",
    "매일 요약 파일을 만든다.", SRV,
    [start("Start", "매일 09:00", kind="timer", cycle="0 9 * * *"), script("Task_Summary", "요약", "요약 = f'{오늘} 요약'"), end("End")],
    [f("Start", "Task_Summary"), f("Task_Summary", "End")],
@@ -159,7 +159,7 @@ FX("FX-12", "fx12_daily_report", "타이머 시작 + 파일 출력", "프로토�
    features=["타이머 시작(cron)", "`dataObjectReference` + `bpm:dataOutput`"],
    lessons=["경로에 `outputs/`를 다시 쓰면 `outputs/outputs/`가 된다 — 경로는 출력 루트 기준 상대 경로."])
 
-FX("FX-13", "fx13_signal", "신호 던지기·받기", "프로토타입 example_signal", "server", "수동 실행",
+FX("FX-13", "fx13_signal", "신호 던지기·받기", "프로토타입 example_signal", "수동 실행",
    "가지 A가 준비되면 `ready` 신호를, 검사에서 문제가 나오면 `abort` 신호를 던진다. 가지 B는 `ready`를 기다렸다가 일하고, 일하는 중 `abort`가 오면 정리한다.", SRV,
    [start("Start"), pgw("Gw_Fork"),
     catch("Wait_A", "1초 뒤", "timer", duration="PT1S"),
@@ -183,7 +183,7 @@ FX("FX-13", "fx13_signal", "신호 던지기·받기", "프로토타입 example_
             "받는 쪽이 아직 기다리지 않을 때 던진 신호는 사라진다. 가지 A 앞에 1초 대기를 두어 B가 먼저 `ready 대기`에 서게 한다 — 시험용 순서 잡기이며, 실제 업무에서는 신호에 순서를 기대지 않는다.",
             "`abort` 경계는 바깥 작업 완료를 기다리는 받기 태스크에 붙였다. 경계는 태스크에만 붙는다(이벤트에는 못 붙임). 순간에 끝나는 스크립트에 붙이면 신호가 닿기 전에 끝나 버린다."])
 
-FX("FX-14", "fx14_timers", "중간 타이머와 결재 시간 제한", "프로토타입 example_timer", "server", "수동 실행",
+FX("FX-14", "fx14_timers", "중간 타이머와 결재 시간 제한", "프로토타입 example_timer", "수동 실행",
    "3초 기다린 뒤 결재를 띄우고, 15초 안에 답이 없으면 보류 처리한다.", SRV,
    [start("Start"), catch("Wait", "3초 대기", "timer", duration="PT3S"),
     appr("Approve_Review", "15초 결재", "빠른 결재", ["오늘"], [fld("승인", "승인", "bool", True)], location="center"),
@@ -195,7 +195,7 @@ FX("FX-14", "fx14_timers", "중간 타이머와 결재 시간 제한", "프로�
    features=["중간 받기 타이머", "결재 + 중단 타이머 경계"],
    lessons=["시간 초과로 끝난 결재는 「취소됨」(실패 아님)으로 표시된다."])
 
-FX("FX-17", "fx17_webhook", "웹훅 보내기", "프로토타입 example_webhook", "server", "수동 실행",
+FX("FX-17", "fx17_webhook", "웹훅 보내기", "프로토타입 example_webhook", "수동 실행",
    "변수 일부를 JSON으로 POST하고 응답을 저장한다.", SRV,
    [start("Start"), script("Task_Make", "보낼 값", "건수 = 3\n상태 = '완료'"),
     hook("Task_Hook", "보내기", "{대상주소}", body="fields:[건수, 상태]", store_as="응답"), script("Task_Fail", "실패", "실패 = error_message"), end("End")],
@@ -206,7 +206,7 @@ FX("FX-17", "fx17_webhook", "웹훅 보내기", "프로토타입 example_webhook
    features=["`bpm:webhook` body `fields:[…]`", "`SEND_FAILED`"],
    lessons=["body `all`은 모든 변수를 보낸다 — 비밀이 섞일 수 있어 `fields`를 권장 (실행 전 검사 경고)."])
 
-FX("FX-18", "fx18_parallel_loop", "병렬 반복", "새로 — 프로토타입 공백", "server", "수동 실행",
+FX("FX-18", "fx18_parallel_loop", "병렬 반복", "새로 — 프로토타입 공백", "수동 실행",
    "목록의 URL 다섯 개를 서버에서 동시에 확인한다 (BPM 프로세스당 동시 상한 안에서).", SRV,
    [start("Start"), svc("Task_Check", "상태 확인", "web-reader", "head", {"url": "주소"}, {"상태": "status"},
                         loop=dict(collection="주소목록", item="주소", result="상태", collect_into="상태목록", parallel=True)),
@@ -218,20 +218,21 @@ FX("FX-18", "fx18_parallel_loop", "병렬 반복", "새로 — 프로토타입 �
    features=["`isSequential=false`", "결과 순서 = 입력 순서 (C14)", "PC에서는 차례로 돈다"],
    lessons=["병렬 반복의 결과 목록이 끝난 순서로 쌓이면 시험이 흔들린다 — 입력 순서로 모은다."])
 
-FX("FX-19", "fx19_manual_task_pc", "수동 확인 (PC)", "프로토타입 manualTask 사용 예", "pc", "PC BPM 프로세스 수동 실행",
-   "사람이 PC 앞에서 실제 행동(프린터에 용지 넣기 등)을 한 뒤 확인 버튼을 누른다. 입력 칸이 없는 확인.", "그 PC 앞의 물리적 행동 → PC.",
-   [start("Start"), appr("Manual_Paper", "용지 넣기", "프린터에 용지를 넣어 주세요", ["오늘"], [], location="field", manual=True),
+FX("FX-19", "fx19_manual_task_pc", "수동 확인", "프로토타입 manualTask 사용 예", "수동 실행",
+   "사람이 실제 행동(프린터에 용지 넣기 등)을 한 뒤 확인 단추를 누른다. 입력 칸이 없는 확인.",
+   "확인은 Center 결재함에서 답한다 — 현장 창구가 없다 (ADR-0144).",
+   [start("Start"), appr("Manual_Paper", "용지 넣기", "프린터에 용지를 넣어 주세요", ["오늘"], [], manual=True),
     script("Task_Done", "기록", "확인됨 = True"), end("End")],
    [f("Start", "Manual_Paper"), f("Manual_Paper", "Task_Done"), f("Task_Done", "End")],
    outputs=["확인됨"],
    cases=[Case("확인", {}, {"확인됨": True}, {"Manual_Paper": {"decision": "approve"}})],
-   features=["`manualTask` + `bpm:approval` (칸 없음)", "BX-16이 **PC 위임**으로 부른다 — `확인됨`을 `outputs`로 돌려준다"],
+   features=["`manualTask` + `bpm:approval` (칸 없음)", "확인도 Center 결재함에서 답한다"],
    lessons=["수동 작업은 결재와 같은 창(C6)을 쓰되 칸이 없다 — 화면에는 「확인」 하나만. 프로토타입 시나리오 2도 실물 수령을 이렇게 확인했다.",
             "**칸이 없어도 답은 비어 있지 않다** — 폼이 없는 결재의 답은 `decision`(`approve`/`reject`)이다 (C6). "
             "케이스에 `{}`를 적었더니 Studio 시험 실행이 답을 거절하고 같은 자리를 되풀이했다 (조각 3e-3).",
-            "PC에서 `field`로 둘 때는 몇 분 안에 끝나는 일만. 며칠 걸릴 수 있으면 서버 BPM 프로세스 + Center 결재함 (BX-20)."])
+            "**확인에는 담당자가 없다** (B12 경고) — 그 실행을 보는 사람 누구나 답한다. 며칠 걸릴 수 있는 일은 담당자를 둔 결재로 (BX-20)."])
 
-FX("FX-20", "fx20_external_adapter", "외부 확장 HTTP 어댑터 호출", "새로 — ADR-0018", "server", "수동 실행",
+FX("FX-20", "fx20_external_adapter", "외부 확장 HTTP 어댑터 호출", "새로 — ADR-0018", "수동 실행",
    "우리 계약을 따르지 않는 외부 앱을 C13 HTTP 어댑터 정의로 부른다. 주소·키는 어댑터 일꾼의 설정이고 BPM 프로세스에는 없다 (ADR-0102).", SRV,
    [start("Start"), svc("Task_Lookup", "외부 조회", "ext-credit", "lookup", {"biz_no": "사업자번호"}, {"결과": "result"}),
     end("End")],
@@ -241,7 +242,7 @@ FX("FX-20", "fx20_external_adapter", "외부 확장 HTTP 어댑터 호출", "새
    features=["외부 확장 어댑터", "Admin 서명된 정의만 사용"],
    lessons=["외부 정의의 `allowed_hosts` 밖으로는 어댑터가 부르지 않는다 (C13 §4-3)."])
 
-FX("FX-21", "fx21_hit_policies", "결정표 적중 정책 (UNIQUE·ANY)", "새로 — 커버리지 구멍 (M7 조각 29)", "server", "수동 실행",
+FX("FX-21", "fx21_hit_policies", "결정표 적중 정책 (UNIQUE·ANY)", "새로 — 커버리지 구멍 (M7 조각 29)", "수동 실행",
    "같은 입력을 두 결정표에 넣는다. 하나는 **줄이 하나만 맞아야** 하고(`UNIQUE`), 다른 하나는 "
    "**여러 줄이 맞아도 결과가 같으면** 된다(`ANY`). 맞는 줄이 없는 길도 함께 본다 — 실패가 아니라 "
    "모든 출력이 `None`인 「해당 없음」이고 게이트웨이로 가른다.", SRV,
@@ -279,7 +280,7 @@ FX("FX-21", "fx21_hit_policies", "결정표 적중 정책 (UNIQUE·ANY)", "새�
             "그래서 `ANY` 표에는 **모든 것에 맞는 마지막 줄을 둘 수 없다** — 처음에 `-, - → 지점`을 적었더니 고위험 서울에서 세 줄이 맞고 결과가 갈라져 판정이 멈췄다. 「그 밖」은 **값을 적어** 겹치지 않게 한다.",
             "맞는 줄이 없을 때를 **게이트웨이로 가른다** — `None`을 그대로 뒤에 쓰면 식이 멈춘다."])
 
-FX("FX-22", "fx22_append_output", "파일 출력 — csv 덧붙이기와 txt", "새로 — 커버리지 구멍 (M7 조각 30)", "server", "수동 실행",
+FX("FX-22", "fx22_append_output", "파일 출력 — csv 덧붙이기와 txt", "새로 — 커버리지 구멍 (M7 조각 30)", "수동 실행",
    "일지 한 줄을 **csv에 덧붙이고**(`append: true`) 같은 내용을 txt로도 남긴다. 그다음 **출력 폴더를 훑어** "
    "두 파일이 정말 써졌는지 센다 — 케이스가 볼 수 있는 것은 변수뿐이라, 파일이 생겼다는 것도 **변수로 만들어야** 본다.", SRV,
    [start("Start"),
@@ -307,7 +308,7 @@ FX("FX-22", "fx22_append_output", "파일 출력 — csv 덧붙이기와 txt", "
             "`append`는 `json`·`xlsx`에 쓸 수 없다 (B5 검사 오류) — 이어 붙일 수 있는 것은 글 꼴 셋(`md`·`txt`·`csv`)이다.",
             "`csv`의 `variables`는 **이름 하나**만 받는다. 둘을 적으면 B5가 막는다 — 한 파일에 표 둘을 넣을 수 없다."])
 
-FX("FX-23", "fx23_replay_modes", "재생 모드 셋 (plan·full·none)", "새로 — 커버리지 구멍 (M7 조각 31)", "server", "수동 실행",
+FX("FX-23", "fx23_replay_modes", "재생 모드 셋 (plan·full·none)", "새로 — 커버리지 구멍 (M7 조각 31)", "수동 실행",
    "AI 태스크 셋을 나란히 두고 **결정 수행에서 서로 다르게 돈다**는 것을 보인다 ([ADR-0028](../decisions/0028-replay-memory.md)). "
    "`plan`은 도구 차례를 되밟고 **마지막 값만** 모델에게 묻고, `full`은 답까지 기억에서 써 **모델을 한 번도 부르지 않고**, "
    "`none`은 기억을 쓰지 않고 **매번 묻는다**.", SRV,
@@ -344,7 +345,7 @@ FX("FX-23", "fx23_replay_modes", "재생 모드 셋 (plan·full·none)", "새로
 #: FX-24 케이스의 감독자 — 결재 담당은 BPM 프로세스가 정한다(ADR-0080). 여기서는 부르는 쪽이 준다.
 SUPERVISORS = ["김감독"]
 
-FX("FX-24", "fx24_batch_intake", "일괄 기동 — 접수 BPM 프로세스", "새로 — 일괄 기동 (ADR-0079·0082)", "server", "작업 지시 — 인입 목록을 받는다",
+FX("FX-24", "fx24_batch_intake", "일괄 기동 — 접수 BPM 프로세스", "새로 — 일괄 기동 (ADR-0079·0082)", "작업 지시 — 인입 목록을 받는다",
    "**접수 BPM 프로세스**이다. 인입 N건을 감독자에게 **한 번에** 보이고(결재 하나, 담당자 = 감독자), 승인되면 "
    "**건마다 서버 BPM 프로세스(FX-25) 작업을 하나씩** 낸다 — Call Activity 반복 + 위임이다. 반려하면 아무것도 기동하지 않는다. "
    "일괄은 이 실행 한 번이고 일괄 id는 그 `run_id`다 (ADR-0079).", SRV + " 기동할 것도 서버 BPM 프로세스라 실행 위치를 그림에 적지 않는다 — 대상 패키지가 정한다 (ADR-0082).",
@@ -390,7 +391,7 @@ FX("FX-24", "fx24_batch_intake", "일괄 기동 — 접수 BPM 프로세스", "�
             "**자식은 제 업무 자리로 돈다** — FX-25는 입력 `처리자`의 값 출처를 `staff.name`으로 **선언**했을 뿐이고 FX-24가 넘기지 않는다. FX-25가 직원 자리 업무이면 Center가 그 직원의 이름을 넣고, 아니면 비어 있다 (ADR-0125).",
             "**병렬로 그린다** — 차례로 그리면 한 건이 끝나야 다음 건을 맡겨 N건이 한 건씩 끝까지 돈다. 서버 그림의 병렬 반복은 N건을 한 번에 맡기고, 결과 목록은 끝난 순서와 상관없이 **입력 순서**다 (ADR-0087)."])
 
-FX("FX-25", "fx25_batch_item", "일괄 기동의 한 건", "새로 — FX-24가 맡기는 서버 BPM 프로세스 (ADR-0082)", "server", "작업 지시 — FX-24가 **위임**으로 만든다",
+FX("FX-25", "fx25_batch_item", "일괄 기동의 한 건", "새로 — FX-24가 맡기는 서버 BPM 프로세스 (ADR-0082)", "작업 지시 — FX-24가 **위임**으로 만든다",
    "일괄의 한 건을 처리한다. 금액이 크면 **보류**로 판정하고 그것을 **결과로 돌려준다** — 실패가 아니라 업무 결과다. "
    "`처리결과`를 `outputs`로 선언해 맡긴 쪽(FX-24)에게 돌려준다 (C1 — 선언한 것만 올라간다).", SRV,
    [start("Start"),
@@ -410,7 +411,7 @@ FX("FX-25", "fx25_batch_item", "일괄 기동의 한 건", "새로 — FX-24가 
    features=["위임으로 시작하는 서버 BPM 프로세스", "`outputs` 선언 — 맡긴 쪽이 받을 것"],
    lessons=["건별 업무 결과는 **자식의 그림**에 있다 — 맡긴 쪽이 「실패」로 받으면 한 건 때문에 일괄 전체가 멈춘다 (ADR-0082 §3)."])
 
-FX("FX-26", "fx26_hybrid_compensation", "세 종류 일꾼과 보상", "새로 — 참고 문서 5장 「통합 워커와 보상」 (ADR-0135)", "server", "수동 실행",
+FX("FX-26", "fx26_hybrid_compensation", "세 종류 일꾼과 보상", "새로 — 참고 문서 5장 「통합 워커와 보상」 (ADR-0135)", "수동 실행",
    "한 주문을 **AI 작업**(초안·결정) → **API 작업**(재고 예약) → **RPA 작업**(기간계 화면 입력)으로 처리한다. 셋 모두 같은 서비스 앱 "
    "`order-desk`의 작업이고 일꾼 종류만 다르다(C11 `kind`). 화면 입력이 실패하면 오류 경계가 받아 **보상 종료**로 간다 — "
    "엔진이 끝난 일을 거꾸로 되돌린다: 재고 예약을 놓고(API), 초안을 폐기한다(스크립트).", SRV,

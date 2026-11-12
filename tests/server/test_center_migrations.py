@@ -249,18 +249,13 @@ def test_the_baseline_splits_into_its_tables() -> None:
 
 def _host(conn: sqlite3.Connection, table: str, host_id: str, *, key: str, machine: str, name: str) -> None:
     """등록된 기계 행 하나 — **`host_keys`를 비켜 가서** 넣는다(겹친 옛 DB를 흉내 낸다)."""
-    if table == "bot_uis":
-        conn.execute(
-            "INSERT INTO bot_uis (bot_ui_id, key_id, machine_id, name, os, versions_json, registered_at,"
-            " last_seen_at) VALUES (?, ?, ?, ?, 'Windows 11', '{}', '2026-10-05T00:00:00+00:00', ?)",
-            (host_id, key, machine, name, f"2026-10-0{len(name) % 9 + 1}T00:00:00+00:00"),
-        )
-    else:
-        conn.execute(
-            "INSERT INTO server_runners (server_runner_id, key_id, machine_id, name, os, versions_json,"
-            " max_concurrency, registered_at) VALUES (?, ?, ?, ?, 'Linux', '{}', 10, '2026-10-05T00:00:00+00:00')",
-            (host_id, key, machine, name),
-        )
+    assert table == "server_runners", "실행기 표는 하나다 (ADR-0144)"
+    conn.execute(
+        "INSERT INTO server_runners (server_runner_id, key_id, machine_id, name, os, versions_json,"
+        " max_concurrency, registered_at, last_seen_at)"
+        " VALUES (?, ?, ?, ?, 'Linux', '{}', 10, '2026-10-05T00:00:00+00:00', ?)",
+        (host_id, key, machine, name, f"2026-10-0{len(name) % 9 + 1}T00:00:00+00:00"),
+    )
 
 
 def _database_at_two_with(db: Path, *rows: tuple[str, str, str, str, str]) -> None:
@@ -280,11 +275,11 @@ def test_a_key_or_a_machine_cannot_be_on_two_rows_any_more(tmp_path: Path) -> No
     db = tmp_path / "center.sqlite3"
     Store(db).close()
     with sqlite3.connect(db) as conn:
-        _host(conn, "bot_uis", "bui_00000001", key="ck_a", machine="m" * 64, name="구매 PC")
+        _host(conn, "server_runners", "srv_00000001", key="ck_a", machine="m" * 64, name="구매 PC")
         with pytest.raises(sqlite3.IntegrityError):
-            _host(conn, "bot_uis", "bui_00000002", key="ck_b", machine="m" * 64, name="다른 PC")
+            _host(conn, "server_runners", "srv_00000002", key="ck_b", machine="m" * 64, name="다른 PC")
         with pytest.raises(sqlite3.IntegrityError):
-            _host(conn, "bot_uis", "bui_00000003", key="ck_a", machine="n" * 64, name="다른 PC")
+            _host(conn, "server_runners", "srv_00000003", key="ck_a", machine="n" * 64, name="다른 PC")
 
 
 def test_duplicate_hosts_stop_the_step_and_say_what_to_do(tmp_path: Path) -> None:
@@ -295,14 +290,14 @@ def test_duplicate_hosts_stop_the_step_and_say_what_to_do(tmp_path: Path) -> Non
     db = tmp_path / "center.sqlite3"
     _database_at_two_with(
         db,
-        ("bot_uis", "bui_00000001", "ck_a", "m" * 64, "구매 PC"),
-        ("bot_uis", "bui_00000002", "ck_b", "m" * 64, "구매 PC (옛 키)"),
+        ("server_runners", "srv_00000001", "ck_a", "m" * 64, "구매 PC"),
+        ("server_runners", "srv_00000002", "ck_b", "m" * 64, "구매 PC (옛 키)"),
     )
 
     with pytest.raises(MigrationError) as caught:
         Store(db)
     said = str(caught.value)
-    assert "bui_00000001" in said and "bui_00000002" in said
+    assert "srv_00000001" in said and "srv_00000002" in said
     assert "bpm-center hosts" in said
     assert _versions(db) == [1, 2]
 
@@ -314,25 +309,26 @@ def test_the_person_picks_the_row_and_the_step_goes_through(tmp_path: Path) -> N
     db = tmp_path / "center.sqlite3"
     _database_at_two_with(
         db,
-        ("bot_uis", "bui_00000001", "ck_a", "m" * 64, "구매 PC"),
-        ("bot_uis", "bui_00000002", "ck_b", "m" * 64, "구매 PC (옛 키)"),
-        ("bot_uis", "bui_00000003", "ck_c", "z" * 64, "멀쩡한 PC"),
+        ("server_runners", "srv_00000001", "ck_a", "m" * 64, "구매 PC"),
+        ("server_runners", "srv_00000002", "ck_b", "m" * 64, "구매 PC (옛 키)"),
+        ("server_runners", "srv_00000003", "ck_c", "z" * 64, "멀쩡한 PC"),
     )
     conn = sqlite3.connect(db)
     try:
         found = duplicates(conn)
-        assert {one.host_id for one in found} == {"bui_00000001", "bui_00000002"}
+        assert {one.host_id for one in found} == {"srv_00000001", "srv_00000002"}
         assert all(one.name for one in found), "고를 거리(이름)가 없다"
 
         # **겹친 무리에 없는 행은 은퇴시키지 못한다** — 멀쩡한 PC의 이력이 갈라진다.
         with pytest.raises(RepairError):
-            retire(conn, "bui_00000003")
+            retire(conn, "srv_00000003")
 
-        assert retire(conn, "bui_00000002") == "bot_uis"
+        assert retire(conn, "srv_00000002") == "server_runners"
         row = conn.execute(
-            "SELECT key_id, machine_id, disabled FROM bot_uis WHERE bot_ui_id = 'bui_00000002'"
+            "SELECT key_id, machine_id, paused FROM server_runners"
+            " WHERE server_runner_id = 'srv_00000002'"
         ).fetchone()
-        assert row == (f"{RETIRED}bui_00000002", f"{RETIRED}bui_00000002", 1)
+        assert row == (f"{RETIRED}srv_00000002", f"{RETIRED}srv_00000002", 1)
         assert duplicates(conn) == []
     finally:
         conn.close()
@@ -371,18 +367,18 @@ def test_the_cli_does_not_open_the_store(
     db = tmp_path / "center.sqlite3"
     _database_at_two_with(
         db,
-        ("bot_uis", "bui_00000001", "ck_a", "m" * 64, "구매 PC"),
-        ("bot_uis", "bui_00000002", "ck_b", "m" * 64, "구매 PC (옛 키)"),
+        ("server_runners", "srv_00000001", "ck_a", "m" * 64, "구매 PC"),
+        ("server_runners", "srv_00000002", "ck_b", "m" * 64, "구매 PC (옛 키)"),
     )
     monkeypatch.setenv("BPM_CENTER__DB_PATH", str(db))
 
     assert hosts(["duplicates"]) == 0
     listed = capsys.readouterr().out
-    assert "bui_00000001" in listed and "「구매 PC (옛 키)」" in listed
+    assert "srv_00000001" in listed and "「구매 PC (옛 키)」" in listed
 
-    assert hosts(["retire", "bui_00000002"]) == 0
+    assert hosts(["retire", "srv_00000002"]) == 0
     assert "겹친 행이 없다" in capsys.readouterr().out
-    assert hosts(["retire", "bui_00000001"]) == 2  # 이제 겹치지 않는다 — 은퇴시킬 수 없다
+    assert hosts(["retire", "srv_00000001"]) == 2  # 이제 겹치지 않는다 — 은퇴시킬 수 없다
 
 
 # ─────────────────────────── 22판 — 조직 (ADR-0125 §7) ───────────────────────────
@@ -406,13 +402,12 @@ def _virtual_worker(conn: sqlite3.Connection, worker_id: str, intake: str) -> No
 def test_what_is_there_moves_into_the_default_company(tmp_path: Path) -> None:
     db = tmp_path / "center.sqlite3"
     conn = _database_before_organization(db)
-    _host(conn, "bot_uis", "bui_00000001", key="ck_a", machine="m" * 64, name="구매 PC")
+    _host(conn, "server_runners", "srv_00000001", key="ck_a", machine="m" * 64, name="구매 PC")
     conn.commit()
     migrate(conn, baseline=SCHEMA)
     assert conn.execute("SELECT id, name, state FROM companies").fetchall() == [("default", "기본 회사", "active")]
-    assert conn.execute("SELECT company FROM bot_uis").fetchall() == [("default",)]
     conn.close()
-    for table in ("packages", "bot_uis", "center_keys", "enrollments", "accounts"):
+    for table in ("packages", "center_keys", "enrollments", "accounts"):
         assert "company" in _columns(db, table), table
     assert {"company", "department", "staff"} <= set(_columns(db, "jobs"))
     # 가상 직원 기능은 없어진다 — 표도 작업의 칸도 남지 않는다.

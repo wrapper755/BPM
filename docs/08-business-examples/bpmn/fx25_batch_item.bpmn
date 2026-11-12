@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx25_batch_item" name="일괄 기동의 한 건" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [
     "처리결과"

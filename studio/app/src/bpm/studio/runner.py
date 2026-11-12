@@ -11,7 +11,7 @@
 | `inputs` | 프로세스 입력. `{"$now_plus": "PT20S"}`·`{"$test_receiver": "reply"}`를 푼다 |
 | `approvals` | 결재·확인에 자동으로 답한다. **적지 않은 결재는 답하지 않고 기다린다** (기한 초과 시험) |
 | `messages` | 시작 뒤 `after_s`초에 넣는다. 받는 곳이 없으면 기록만 남는다 |
-| `delegations` | **PC 위임이 돌려주는 값**을 그 자리에서 준다. 적지 않은 위임은 **그 자리에서 실패**다 (ADR-0062) |
+| `delegations` | **맡긴 것이 돌려주는 값**을 그 자리에서 준다. 적지 않은 것은 **그 자리에서 실패**다 (ADR-0082) |
 | `expected` | 끝난 뒤 C14 비교 규칙(`matches`)으로 판정. 비면 **비교하지 않는다** |
 | `manual` | 자동 응답을 쓰지 않는다 — 실제 결재 창은 3e-4다 (지금은 기다리다 시간이 지난다) |
 
@@ -110,18 +110,16 @@ class StudioSender:
 
 
 class CaseDelegator:
-    """PC 위임을 **케이스가 적어 둔 결과로** 끝낸다 (`RunEnv.delegate`, ADR-0062 §2
-    — `docs/decisions/0062-pc-delegation.md`).
+    """맡기기를 **케이스가 적어 둔 결과로** 끝낸다 (`RunEnv.delegate`, ADR-0082).
 
-    **Studio는 남의 패키지를 돌리지 않는다** — 부를 PC BPM 프로세스의 그림은 다른 작업 폴더에 있고,
-    있다 해도 UI 태스크라 설계자 PC에서 화면을 만지게 된다. 그래서 결재 답·메시지와 **같은
-    결**로 케이스가 결과를 적는다 (C14 `delegations`).
+    **Studio는 남의 패키지를 돌리지 않는다** — 맡길 BPM 프로세스의 그림은 다른 작업 폴더에 있다.
+    그래서 결재 답·메시지와 **같은 결**로 케이스가 결과를 적는다 (C14 `delegations`).
 
-    **적어 두지 않은 위임은 맡기는 그 자리에서 실패다** — 결재처럼 기다리게 두면 **끝나지
-    않는다**(현장 PC도, Center도 없다). 그래서 이것이 **그림의 오류 경계를 시험하는 길**이기도
-    하다 (C14) — 그러려면 사유 코드가 그림이 받을 수 있는 것이어야 하므로 **`DELEGATION_FAILED`**
-    를 쓴다(진짜 PC 실행이 실패했을 때와 같은 코드다. 적지 않은 것은 「위임이 실패한 것으로
-    다룬다」는 뜻이고, 그 말을 로그에 그대로 적는다).
+    **적어 두지 않은 것은 맡기는 그 자리에서 실패다** — 결재처럼 기다리게 두면 **끝나지 않는다**.
+    그래서 이것이 **그림의 오류 경계를 시험하는 길**이기도 하다 (C14) — 그러려면 사유 코드가
+    그림이 받을 수 있는 것이어야 하므로 **`DELEGATION_FAILED`**를 쓴다(진짜 실행이 실패했을 때와
+    같은 코드다. 적지 않은 것은 「맡긴 것이 실패한 것으로 다룬다」는 뜻이고, 그 말을 로그에
+    그대로 적는다).
 
     돌려주는 작업 id는 **이 창 안에서만 뜻이 있다** (진짜 Center 작업이 아니다) — 엔진은
     그것으로 기다림을 찾고, `_unblock`이 그것으로 결과를 돌려준다.
@@ -258,7 +256,7 @@ class CaseRun(QObject):
         self.receiver = receiver
         # `sender`는 QObject의 메서드 이름이라 쓰지 않는다.
         self.adapter = StudioSender(receiver)
-        # PC 위임은 **케이스가 적어 둔 결과**로 끝낸다 (ADR-0062 §2).
+        # 맡기기는 **케이스가 적어 둔 결과**로 끝낸다 (ADR-0082).
         self.delegator = CaseDelegator(plan.case)
         self.run: Run | None = None
         self.engine = Engine()
@@ -302,7 +300,7 @@ class CaseRun(QObject):
             workspace=space,
             sender=self.adapter,
             # **맡길 곳이 없으면 그림·설치 오류다** (`NoDelegator`) — 케이스가 적어 둔 결과를
-            # 돌려주는 것이 Studio의 꽂는 쪽이다 (ADR-0062 §2).
+            # 돌려주는 것이 Studio의 꽂는 쪽이다 (ADR-0082).
             delegate=self.delegator,
             decisions=self.plan.process.decisions(),
             processes=self.plan.process.processes(),
@@ -416,14 +414,13 @@ class CaseRun(QObject):
                 self.engine.answer(run, request_id, answer, answered_by=who)
                 return True
 
-        # **위임은 바로 돌려준다** — 여기 오는 것은 케이스에 적혀 있던 것뿐이다(적지 않은 것은
-        # 맡기는 자리에서 이미 실패했다). **`manual`이 막지 않는다**: 결재는 사람이 창에서
-        # 답할 수 있지만 위임은 Studio에 답할 사람이 없어, 막으면 그 케이스가 끝나지 않는다.
+        # **맡긴 것은 바로 돌려준다** — 여기 오는 것은 케이스에 적혀 있던 것뿐이다(적지 않은
+        # 것은 맡기는 자리에서 이미 실패했다). **`manual`이 막지 않는다**.
         found = self.delegator.take()
         if found is not None:
             job_id, outputs = found
             node_id = self.delegator.done(job_id)
-            self.said.emit(f"[케이스] PC 위임 결과: {node_id} (값 {len(outputs)}개)")
+            self.said.emit(f"[케이스] 맡긴 결과: {node_id} (값 {len(outputs)}개)")
             self.engine.delegation_done(run, job_id, state=DELEGATION_FINISHED, outputs=outputs)
             return True
 

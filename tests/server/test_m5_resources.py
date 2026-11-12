@@ -136,7 +136,7 @@ def package_zip(
         "content_hash": "sha256:" + "0" * 64,
     }
     if kind == "bpm_process":
-        manifest |= {"run_location": "pc", "entry": "process/main.bpmn", "process_id": "Proc_main"}
+        manifest |= {"entry": "process/main.bpmn", "process_id": "Proc_main"}
     manifest |= extra or {}
 
     def made(body: str) -> bytes:
@@ -163,29 +163,26 @@ def upload(client: TestClient, raw: bytes) -> dict[str, Any]:
     return dict(answer.json())
 
 
-def register_bot_ui(client: TestClient, *, name: str = "현장 PC 1", seed: str = "pc1") -> str:
+def register_runner(client: TestClient, *, name: str = "서버 1", seed: str = "srv1") -> str:
     made = client.post(
-        "/api/v1/center-keys", json={"name": f"{name} 키", "type": "bot_ui"}, headers=ADMIN
+        "/api/v1/center-keys", json={"name": f"{name} 키", "type": "server_runner"}, headers=ADMIN
     )
     raw = made.json()["key"]
     answer = client.post(
-        "/api/v1/bot-ui/register",
+        "/api/v1/server-runner/register",
         json={
             "schema": 1,
             "machine_id": hashlib.sha256(seed.encode()).hexdigest(),
             "name": name,
-            "os": "windows-11-23H2",
-            "versions": {"bot_ui": "0.1.0", "core": "0.1.0", "worker": "0.3.0"},
-            "runtimes": {
-                "browsers": ["chromium-130"],
-                "desktop_backend": "uia",
-                "extensions": [{"id": "ui-automation", "version": "0.1.0", "enabled": True}],
-            },
+            "os": "ubuntu-24.04",
+            "versions": {"server_runner": "0.1.0", "core": "0.1.0"},
+            "max_concurrency": 5,
+            "extensions": [{"id": "ui-automation", "version": "0.1.0", "enabled": True}],
         },
         headers={"Authorization": f"Bearer {raw}"},
     )
     assert answer.status_code == 200, answer.text
-    return str(answer.json()["bot_ui_id"])
+    return str(answer.json()["server_runner_id"])
 
 
 # ─────────────────────────── 서비스 앱 = 일꾼이 올린 manifest (C7·C15) ───────────────────────────
@@ -295,20 +292,20 @@ def test_used_by_shows_the_packages(client: TestClient, tmp_path: Path) -> None:
 # ─────────────────────────── 모으는 종류 (C7) ───────────────────────────
 
 
-def test_runtimes_come_from_bot_ui_reports(client: TestClient) -> None:
-    """런타임은 C4가 보고한 그대로다."""
-    bot_ui_id = register_bot_ui(client)
+def test_runtimes_come_from_runner_reports(client: TestClient) -> None:
+    """런타임은 실행기가 보고한 그대로다 (C12)."""
+    server_runner_id = register_runner(client)
     found = client.get("/api/v1/resources?type=runtime", headers=READ_AUTH).json()
     [one] = found["items"]
-    assert one["host"] == {"type": "bot_ui", "id": bot_ui_id, "name": "현장 PC 1"}
-    assert one["browsers"] == ["chromium-130"] and one["desktop_backend"] == "uia"
-    assert one["versions"]["worker"] == "0.3.0"
+    assert one["host"] == {"type": "server_runner", "id": server_runner_id, "name": "서버 1"}
+    assert one["versions"]["server_runner"] == "0.1.0"
+    assert [x["id"] for x in one["extensions"]] == ["ui-automation"]
 
 
 def test_extensions_merge_reports_and_manifests(client: TestClient, tmp_path: Path) -> None:
     """확장은 **실행하는 쪽의 보고와 일꾼 manifest를 합친** 것이다 (C7)."""
-    register_bot_ui(client)
-    register_bot_ui(client, name="현장 PC 2", seed="pc2")
+    register_runner(client)
+    register_runner(client, name="서버 2", seed="srv2")
     consumer(client, tmp_path)
 
     found = client.get("/api/v1/resources?type=extension", headers=READ_AUTH).json()
@@ -319,7 +316,7 @@ def test_extensions_merge_reports_and_manifests(client: TestClient, tmp_path: Pa
 
 def test_an_extensions_server_part_status_comes_from_its_consumer(client: TestClient, tmp_path: Path) -> None:
     """manifest가 `extension`을 적으면 그 확장의 서버 부분이다 — 상태·연결 방식이 그 일꾼에서 온다."""
-    register_bot_ui(client)
+    register_runner(client)
     worker = consumer(client, tmp_path, app_id="uia", extension={"id": "ui-automation", "version": "0.1.0"},
                       topics=["uia"])
     fetch(client, worker, topic="uia")
@@ -328,28 +325,33 @@ def test_an_extensions_server_part_status_comes_from_its_consumer(client: TestCl
     assert found["installed_on"]["hosts"] == 1
 
 
-def test_a_pc_is_counted_once_even_if_a_second_key_tries_to_register(client: TestClient) -> None:
-    """PC 하나는 한 번만 세어진다 — 같은 `machine_id`를 다른 키가 등록하면 409다 (C4 「키 묶기」).
+def test_a_host_is_counted_once_even_if_a_second_key_tries_to_register(client: TestClient) -> None:
+    """호스트 하나는 한 번만 세어진다 — 같은 `machine_id`를 다른 키가 등록하면 409다 (C4 「키 묶기」).
 
-    PC 하나에 PC 실행기 행이 둘 생기면 「확장이 깔린 PC 수」와 런타임 수가 함께 부푼다.
+    행이 둘 생기면 「확장이 깔린 수」와 런타임 수가 함께 부푼다.
     """
-    register_bot_ui(client)
-    made = client.post("/api/v1/center-keys", json={"name": "같은 PC 두 번째 키", "type": "bot_ui"}, headers=ADMIN)
+    register_runner(client)
+    made = client.post(
+        "/api/v1/center-keys",
+        json={"name": "같은 호스트 두 번째 키", "type": "server_runner"},
+        headers=ADMIN,
+    )
     second = client.post(
-        "/api/v1/bot-ui/register",
+        "/api/v1/server-runner/register",
         json={
             "schema": 1,
-            "machine_id": hashlib.sha256(b"pc1").hexdigest(),
-            "name": "현장 PC 1",
-            "os": "windows-11-23H2",
-            "versions": {"bot_ui": "0.1.0", "core": "0.1.0", "worker": "0.3.0"},
+            "machine_id": hashlib.sha256(b"srv1").hexdigest(),
+            "name": "서버 1",
+            "os": "ubuntu-24.04",
+            "versions": {"server_runner": "0.1.0", "core": "0.1.0"},
+            "max_concurrency": 5,
         },
         headers={"Authorization": f"Bearer {made.json()['key']}"},
     )
     assert second.status_code == 409 and second.json()["code"] == "machine_already_registered"
 
     runtimes = client.get("/api/v1/resources?type=runtime", headers=READ_AUTH).json()
-    assert len(runtimes["items"]) == 1, "같은 PC가 런타임 두 줄로 세어지면 안 된다"
+    assert len(runtimes["items"]) == 1, "같은 호스트가 런타임 두 줄로 세어지면 안 된다"
     extensions = client.get("/api/v1/resources?type=extension", headers=READ_AUTH).json()
     one = next(x for x in extensions["items"] if x["id"] == "ui-automation")
     assert one["installed_on"] == {"hosts": 1, "by_version": {"0.1.0": 1}}
@@ -366,7 +368,7 @@ def test_an_app_without_an_extension_is_not_an_extension(client: TestClient, tmp
 
 
 def test_the_whole_list_has_every_kind(client: TestClient, tmp_path: Path) -> None:
-    register_bot_ui(client)
+    register_runner(client)
     consumer(client, tmp_path)
 
     found = client.get("/api/v1/resources", headers=READ_AUTH).json()
@@ -389,10 +391,10 @@ def test_contributed_is_empty_until_a_consumer_uploads_a_catalog(client: TestCli
     assert client.get("/api/v1/resources?type=contributed", headers=READ_AUTH).json()["items"] == []
 
 
-def test_a_bot_ui_key_can_read_resources(client: TestClient) -> None:
-    """실행하는 쪽도 리소스를 읽는다 (C7 §전송 — 권한에 PC 실행기 키가 있다)."""
+def test_a_server_runner_key_can_read_resources(client: TestClient) -> None:
+    """실행하는 쪽도 리소스를 읽는다 (C7 §전송 — 권한에 서버 실행기 키가 있다)."""
     made = client.post(
-        "/api/v1/center-keys", json={"name": "PC 키", "type": "bot_ui"}, headers=ADMIN
+        "/api/v1/center-keys", json={"name": "PC 키", "type": "server_runner"}, headers=ADMIN
     )
     raw = made.json()["key"]
     answer = client.get("/api/v1/resources", headers={"Authorization": f"Bearer {raw}"})

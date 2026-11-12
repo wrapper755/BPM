@@ -165,7 +165,7 @@ def test_external_code_contributions_are_refused(client: TestClient) -> None:
         contributes={
             "task_types": [
                 {"id": "ocr_task", "label": "OCR", "bpmn": "serviceTask",
-                 "executor": {"entry": "x:Y"}, "run_locations": ["pc"]}
+                 "executor": {"entry": "x:Y"}}
             ]
         }
     )
@@ -240,7 +240,7 @@ def test_conflicting_contributions_cannot_even_be_declared(client: TestClient) -
     본다 (Center가 아니라).
     """
     found = definition(
-        contributes={"task_types": [{"id": "ocr_task", "label": "OCR", "run_locations": ["pc"]}]}
+        contributes={"task_types": [{"id": "ocr_task", "label": "OCR"}]}
     )
     answer = register(client, found)
     assert answer.status_code == 422
@@ -285,17 +285,18 @@ def test_a_registered_definition_wins_over_reports(client: TestClient) -> None:
     register(client, found)
 
     raw = client.post(
-        "/api/v1/center-keys", json={"name": "PC 키", "type": "bot_ui"}, headers=ADMIN
+        "/api/v1/center-keys", json={"name": "서버 1 키", "type": "server_runner"}, headers=ADMIN
     ).json()["key"]
     client.post(
-        "/api/v1/bot-ui/register",
+        "/api/v1/server-runner/register",
         json={
             "schema": 1,
-            "machine_id": hashlib.sha256(b"pc1").hexdigest(),
-            "name": "현장 PC 1",
-            "os": "windows-11-23H2",
-            "versions": {"bot_ui": "0.1.0", "core": "0.1.0"},
-            "runtimes": {"extensions": [{"id": "ext-ocr", "version": "1.0.0", "enabled": True}]},
+            "machine_id": hashlib.sha256(b"srv1").hexdigest(),
+            "name": "서버 1",
+            "os": "ubuntu-24.04",
+            "versions": {"server_runner": "0.1.0", "core": "0.1.0"},
+            "max_concurrency": 5,
+            "extensions": [{"id": "ext-ocr", "version": "1.0.0", "enabled": True}],
         },
         headers={"Authorization": f"Bearer {raw}"},
     )

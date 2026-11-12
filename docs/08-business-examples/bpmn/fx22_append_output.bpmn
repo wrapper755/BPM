@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx22_append_output" name="파일 출력 — csv 덧붙이기와 txt" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

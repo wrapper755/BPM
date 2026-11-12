@@ -68,7 +68,7 @@ def hosts(argv: list[str]) -> int:
     from bpm.center.settings import Settings
 
     if not argv or argv[0] not in ("duplicates", "retire") or (argv[0] == "retire" and len(argv) < 2):
-        print("쓰는 법: bpm-center hosts duplicates | bpm-center hosts retire <bot_ui_id|server_runner_id>")
+        print("쓰는 법: bpm-center hosts duplicates | bpm-center hosts retire <server_runner_id>")
         return 2
     path = Settings.from_env().db_path
     if not Path(path).is_file():

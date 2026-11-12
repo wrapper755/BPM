@@ -84,7 +84,6 @@ def builtin(**over: Any) -> dict[str, Any]:
                     "icon": "scan",
                     "editor": {"kind": "builtin", "entry": "doc_ocr.client:OcrEditor"},
                     "executor": {"entry": "doc_ocr.client:OcrExecutor"},
-                    "run_locations": ["pc", "server"],
                 }
             ],
             "studio.resource_views": [
@@ -260,7 +259,6 @@ def test_detail_shows_the_five_contribution_points() -> None:
     assert titles == ["확장", "태스크 종류", "속성 편집기", "리소스 탐색기 뿌리", "서비스 앱 작업", "필요한 키"]
     shown = window.detail.toPlainText()
     assert "문서 인식 (ocr_task)" in shown
-    assert "실행 위치 pc, server" in shown
     assert "아이콘 scan" in shown
     assert "서식 (ocr_form) → 캔버스에 추가하면 ocr_task" in shown
 
@@ -562,7 +560,7 @@ def test_each_state_gets_its_own_colour() -> None:
 
 def drawing(*needs: dict[str, Any]) -> ProcessInfo:
     """진입 정의의 `bpm:process` — 쓰는 확장을 적어 둔 그림."""
-    return ProcessInfo.model_validate({"run_location": "server", "extensions": list(needs)})
+    return ProcessInfo.model_validate({"extensions": list(needs)})
 
 
 def external_window(info: Any = None) -> StudioExtensionsDialog:
@@ -595,7 +593,7 @@ def test_pinning_writes_the_hash_the_window_is_showing() -> None:
     assert info is not None
     patched = ProcessInfo.model_validate(json.loads(pin_patch(info, window.pins)))
     assert patched.extensions[0].definition_hash == found.definition_hash
-    assert patched.run_location == "server", "창이 모르는 칸도 그대로 남는다"
+    assert patched.inputs == info.inputs, "창이 모르는 칸도 그대로 남는다"
 
     # 고정한 뒤에는 「해제」만 켜진다 (U3 — 할 수 있는 쪽만).
     assert not window.pin_button.isEnabled() and window.unpin_button.isEnabled()

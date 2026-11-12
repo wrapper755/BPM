@@ -61,8 +61,7 @@ def package(*, requires: dict[str, Any] | None = None) -> bytes:
         "id": BOT,
         "version": VERSION,
         "name": "청구서 처리",
-        "run_location": "pc",
-        "entry": "process/main.bpmn",
+                "entry": "process/main.bpmn",
         "process_id": "Proc_invoice",
         "requires": requires or {},
         "human": {},
@@ -122,8 +121,7 @@ def send_run(
             "run_started",
             bpm_process_id=BOT,
             version=VERSION,
-            run_location="pc",
-            executor="bot_ui",
+            executor="server_runner",
             mode="deterministic",
             source="job",
         )
@@ -151,10 +149,10 @@ def send_run(
 
 
 def deploy_row(client: TestClient, *, deployment_id: str, bot_ui: str) -> None:
-    """살아 있는 PC 배포 한 줄.
+    """살아 있는 배포 한 줄.
 
     **서명을 거치지 않고 행을 직접 넣는다** — 이 묶음이 보는 것은 「재료가 콘솔에 오는가」이고,
-    서명 관문(`*` 거절까지)은 `tests/integration/test_m5_deploy.py`가 진짜 배포 API로 본다.
+    서명 관문은 Center의 배포 시험이 본다.
     """
     store = client.app.state.store  # type: ignore[attr-defined]
     envelope = {
@@ -165,7 +163,7 @@ def deploy_row(client: TestClient, *, deployment_id: str, bot_ui: str) -> None:
         "payload": {
             "kind": "deployment",
             "deployment_id": deployment_id,
-            "target": {"type": "bot_ui", "id": bot_ui},
+            "target": {"type": "server_runner", "id": bot_ui},
             "bpm_process_id": BOT,
             "version": VERSION,
         },
@@ -175,7 +173,7 @@ def deploy_row(client: TestClient, *, deployment_id: str, bot_ui: str) -> None:
         cur.execute(
             "INSERT INTO deployments (deployment_id, target_type, target_id, bpm_process_id,"
             " version, content_hash, envelope_json, revoked_json, at)"
-            " VALUES (?, 'bot_ui', ?, ?, ?, ?, ?, NULL, ?)",
+            " VALUES (?, 'server_runner', ?, ?, ?, ?, ?, NULL, ?)",
             (
                 deployment_id,
                 bot_ui,
@@ -189,28 +187,28 @@ def deploy_row(client: TestClient, *, deployment_id: str, bot_ui: str) -> None:
 
 
 def register(client: TestClient, *, readiness: list[dict[str, Any]]) -> None:
-    """PC 실행기 하나가 등록하고 **준비 상태를 보고한다** (C4 `readiness`)."""
-    made = client.post("/api/v1/center-keys", json={"name": "현장 PC", "type": "bot_ui"}, headers=ADMIN)
+    """서버 실행기 하나가 등록하고 **준비 상태를 보고한다** (C4 `readiness`)."""
+    made = client.post("/api/v1/center-keys", json={"name": "서버 1", "type": "server_runner"}, headers=ADMIN)
     key = made.json()["key"]
-    pc = {"Authorization": f"Bearer {key}"}
+    host = {"Authorization": f"Bearer {key}"}
     body = {
         "schema": 1,
-        "machine_id": hashlib.sha256(b"pc-1").hexdigest(),
-        "name": "재무팀 PC-03",
-        "os": "windows-11-23H2",
-        "versions": {"bot_ui": "0.1.0", "core": "0.1.0"},
+        "machine_id": hashlib.sha256(b"srv-1").hexdigest(),
+        "name": "서버 1",
+        "os": "ubuntu-24.04",
+        "versions": {"server_runner": "0.1.0", "core": "0.1.0"},
+        "max_concurrency": 5,
     }
-    assert client.post("/api/v1/bot-ui/register", json=body, headers=pc).status_code in (200, 201)
+    assert client.post("/api/v1/server-runner/register", json=body, headers=host).status_code in (200, 201)
     beat = client.post(
-        "/api/v1/bot-ui/heartbeat",
+        "/api/v1/server-runner/heartbeat",
         json={
             "schema": 1,
             "status": "idle",
-            "current_run": None,
-            "queue": {"max": 20, "items": []},
+            "capacity": {"max": 5, "running": 0},
             "readiness": readiness,
         },
-        headers=pc,
+        headers=host,
     )
     assert beat.status_code == 200, beat.text
 
@@ -247,9 +245,7 @@ def test_the_version_rows_come_from_the_package_listing(client: TestClient) -> N
         ),
     )
     rows = client.get("/api/v1/packages?kind=bpm_process", headers=READ).json()
-    assert [(one["id"], one["version"], one["run_location"], one["status"]) for one in rows] == [
-        (BOT, VERSION, "pc", "candidate")
-    ]
+    assert [(one["id"], one["version"], one["status"]) for one in rows] == [(BOT, VERSION, "candidate")]
     needs = rows[0]["manifest"]["requires"]["service_apps"]
     assert [needs[0]["key_ref"], *needs[0]["task_key_refs"]] == ["fin-erp", "fin-erp-ro"]
 
@@ -297,7 +293,7 @@ def test_the_confirmation_count_comes_through_for_the_rate(client: TestClient) -
     **`null`과 0을 가른다**.
     """
     send_run(client, "run_20261010_140000_eeeeee", human=3, confirmations=1)
-    send_run(client, "run_20261010_150000_ffffff", human=2)  # 옛 PC 실행기 — 안 보냈다
+    send_run(client, "run_20261010_150000_ffffff", human=2)  # 옛 서버 실행기 — 안 보냈다
     found = client.get(f"/api/v1/runs?bpm_process_id={BOT}&limit=200", headers=READ).json()["runs"]
     by_id = {one["run_id"]: one for one in found}
     assert by_id["run_20261010_140000_eeeeee"]["confirmations"] == 1
@@ -324,18 +320,17 @@ def test_runs_of_another_bot_do_not_leak_into_the_sample(client: TestClient) -> 
 # ─────────────────────────── 보고된 준비 상태 (C4) ───────────────────────────
 
 
-def test_deployment_rows_carry_the_pc_the_version_went_to(client: TestClient) -> None:
-    """「배포된 PC 실행기」의 재료 (C5 `DeploymentInfo.target`) — **PC 하나씩** 온다.
+def test_deployment_rows_carry_the_runner_the_version_went_to(client: TestClient) -> None:
+    """「배포된 실행기」의 재료 (C5 `DeploymentInfo.target`).
 
-    **PC 배포에 전체(`*`) 대상은 없다** (ADR-0046) — 그래서 콘솔은 `target.id`를 겹치지 않게
-    세면 끝이고 Center가 대상을 풀어 줄 필요가 없다. 같은 PC에 배포가 둘이면 **건수는 2,
-    PC 수는 1**이고 화면은 수를 보이고 건수를 툴팁에 둔다.
+    같은 실행기에 배포가 둘이면 **건수는 2, 실행기 수는 1**이고 화면은 수를 보이고 건수를
+    툴팁에 둔다.
     """
     upload(client, package())
     rows = [
-        ("dep_11111111", "bui_aaaa1111"),
-        ("dep_22222222", "bui_bbbb2222"),
-        ("dep_33333333", "bui_bbbb2222"),  # 같은 PC에 또 — 건수는 늘고 PC 수는 그대로다
+        ("dep_11111111", "srv_aaaa1111"),
+        ("dep_22222222", "srv_bbbb2222"),
+        ("dep_33333333", "srv_bbbb2222"),  # 같은 실행기에 또 — 건수는 늘고 실행기 수는 그대로다
     ]
     for deployment_id, bot_ui in rows:
         deploy_row(client, deployment_id=deployment_id, bot_ui=bot_ui)
@@ -344,31 +339,25 @@ def test_deployment_rows_carry_the_pc_the_version_went_to(client: TestClient) ->
     mine = [
         one
         for one in found
-        if one["target"]["type"] == "bot_ui"
+        if one["target"]["type"] == "server_runner"
         and one["bpm_process_id"] == BOT
         and one["version"] == VERSION
     ]
     assert len(mine) == 3, "건수"
-    assert {one["target"]["id"] for one in mine} == {"bui_aaaa1111", "bui_bbbb2222"}, "PC 수는 2"
-    assert "*" not in {one["target"]["id"] for one in mine}
+    assert {one["target"]["id"] for one in mine} == {"srv_aaaa1111", "srv_bbbb2222"}, "실행기 수는 2"
 
 
-def test_the_column_counts_pcs_and_does_not_resolve_a_wildcard(client: TestClient) -> None:
-    """화면이 **수를 센다** — 「배포」(건수)가 아니라 「배포된 Bot」(PC 실행기 — 콘솔 이름, ADR-0121)이다 (ADR-0046).
+def test_the_column_counts_runners(client: TestClient) -> None:
+    """화면이 **수를 센다** — 「배포」(건수)가 아니라 「배포된 실행기」다.
 
-    **셈 자체는 이제 `web`의 vitest가 잰다** (`lib/summary.test.ts`) — 여기서는 파이썬이 볼 수
-    있는 것만 본다: 열 이름이 바뀌었는가, 화면이 그 함수를 쓰는가, `*`를 푸는 코드가 사라졌는가.
+    **셈 자체는 `web`의 vitest가 잰다** (`lib/summary.test.ts`) — 여기서는 파이썬이 볼 수
+    있는 것만 본다: 열 이름이 맞는가, 화면이 그 함수를 쓰는가.
     """
     page = (CONSOLE / "app" / "bots" / "page.tsx").read_text(encoding="utf-8")
     # CON-02는 카드다 — 지표 이름은 `Metric label`이다.
-    assert 'label="배포된 Bot"' in page
+    assert 'label="배포된 실행기"' in page
     assert 'label="배포"' not in page, "건수로 보이던 칸은 없다"
-    assert "deployedPcs" in page
-
-    # CON-05 「새 작업」도 PC 쪽 `*`를 풀지 않는다 — 봉투 하나가 PC 하나를 가리킨다.
-    jobs = (CONSOLE / "app" / "jobs" / "new" / "page.tsx").read_text(encoding="utf-8")
-    assert '=== "*"' not in jobs
-    assert 'target.id === "*"' not in jobs
+    assert "deployedRunners" in page
 
 
 def test_the_run_summary_does_not_overwrite_the_deployment_and_blocked_counts(
@@ -390,7 +379,7 @@ def test_the_run_summary_does_not_overwrite_the_deployment_and_blocked_counts(
 
     # 같은 (BPM 프로세스, 버전)에 대해 셋이 **함께** 온다 — 그래서 한 줄에 다 들어가야 한다.
     assert client.get(f"/api/v1/runs?bpm_process_id={BOT}", headers=READ).json()["runs"]
-    assert client.get("/api/v1/bot-uis", headers=READ).json()[0]["readiness"]
+    assert client.get("/api/v1/server-runners", headers=READ).json()[0]["readiness"]
     assert client.get("/api/v1/deployments?active=true", headers=READ).json()
 
     # 세는 코드는 **화면을 모르는 모듈**에 있다 (§4-9 — vitest가 그 셈을 잰다).
@@ -406,7 +395,7 @@ def test_the_run_summary_does_not_overwrite_the_deployment_and_blocked_counts(
 
 
 def test_readiness_reports_say_which_version_is_blocked(client: TestClient) -> None:
-    """「실행 불가」 열과 경고 띠의 첫째 줄 — **PC가 보고한 것**이다 (Center가 판단하지 않는다)."""
+    """「실행 불가」 열과 경고 띠의 첫째 줄 — **실행기가 보고한 것**이다 (Center가 판단하지 않는다)."""
     register(
         client,
         readiness=[
@@ -420,7 +409,7 @@ def test_readiness_reports_say_which_version_is_blocked(client: TestClient) -> N
             {"bpm_process_id": "ops.scan", "version": "2.0.0", "ready": True},
         ],
     )
-    rows = client.get("/api/v1/bot-uis", headers=READ).json()
+    rows = client.get("/api/v1/server-runners", headers=READ).json()
     reported = rows[0]["readiness"]
     assert [(one["bpm_process_id"], one["ready"]) for one in reported] == [(BOT, False), ("ops.scan", True)]
     assert reported[0]["blocked"] == ["missing_service_app_keys"]

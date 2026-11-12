@@ -154,15 +154,13 @@ def _note(summary: dict[str, Any], event: RunEvent) -> None:
             {
                 "bpm_process_id": event.data.get("bpm_process_id"),
                 "version": event.data.get("version"),
-                "run_location": event.data.get("run_location"),
                 "executor": event.data.get("executor"),
                 "mode": event.data.get("mode"),
                 "source": event.data.get("source"),
+                # **맡긴 실행** — 맡아서 시작된 실행에만 있다 (C3, ADR-0082).
+                "parent_run_id": event.data.get("parent_run_id"),
                 "started_at": event.ts,
                 "status": "running",
-                # **PC 위임으로 시작된 실행이면 맡긴 서버 실행**이 있다 (ADR-0062) —
-                # 보낸 쪽이 적은 값이라 읽어 담아 둔다 (CON-01이 둘을 오간다).
-                "parent_run_id": event.data.get("parent_run_id"),
             }
         )
     elif event.kind == "run_finished":
@@ -233,26 +231,26 @@ def info_of(store: Store, run_id: str) -> RunInfo:
     return _info(found, store)
 
 
-def bot_ui_of(store: Store, owner_key_id: str | None) -> str | None:
-    """그 기록을 보낸 키가 묶인 PC 실행기 (C3 `RunInfo.bot_ui_id`, CON-01).
+def runner_of(store: Store, owner_key_id: str | None) -> str | None:
+    """그 기록을 보낸 키가 묶인 실행기 (C3 `RunInfo.runner_id`, CON-01).
 
     **읽을 때 찾는다** — 요약에 적어 두지 않는다 (`missing_resources`·`dependents`와 같은 결).
     키를 다시 묶으면 적어 둔 값은 낡고, 어느 쪽이 원본인지 흐려진다.
 
-    Studio 키나 관리자·읽기 토큰이 보낸 기록에는 **없다** — 그 키에 묶인 PC가 없다
+    Studio 키나 관리자·읽기 토큰이 보낸 기록에는 **없다** — 그 키에 묶인 실행기가 없다
     (`_owner_key`가 `token:<종류>`로 적어 두므로 찾아도 안 나온다).
     """
     if not owner_key_id:
         return None
-    from bpm.center.api import bot_ui  # noqa: PLC0415 — 순환 import를 피한다
+    from bpm.center.api import server_runner  # noqa: PLC0415 — 순환 import를 피한다
 
-    return bot_ui.id_for_key(store, owner_key_id)
+    return server_runner.id_for_key(store, owner_key_id)
 
 
 def place_of_run(store: Store, run_id: str, bpm_process_id: str | None) -> tuple[str | None, str | None, str | None]:
     """그 실행의 업무 자리 — **작업 행에 적힌 만들 때의 것**, 작업이 없으면 패키지의 회사 (C16).
 
-    `bot_ui_of`와 같은 결이다 — 실행 요약에 적지 않고 **읽을 때** 찾는다(C3에 칸이 없다).
+    `runner_of`와 같은 결이다 — 실행 요약에 적지 않고 **읽을 때** 찾는다(C3에 칸이 없다).
     """
     job = store.row("SELECT company, department, staff FROM jobs WHERE run_id = ? LIMIT 1", (run_id,))
     if job is not None and job["company"] is not None:
@@ -270,16 +268,15 @@ def _info(row: Any, store: Store) -> RunInfo:
     counted = store.row("SELECT COUNT(*) AS n FROM run_events WHERE run_id = ?", (row["run_id"],))
     tallies = {name: summary.get(name) for name in COUNTS}
     return RunInfo(
-        bot_ui_id=bot_ui_of(store, row["owner_key_id"]),
+        runner_id=runner_of(store, row["owner_key_id"]),
         run_id=row["run_id"],
         status=summary.get("status") or "running",
         bpm_process_id=summary.get("bpm_process_id"),
         version=summary.get("version"),
-        run_location=summary.get("run_location"),
         executor=summary.get("executor"),
         mode=summary.get("mode"),
         source=summary.get("source"),
-        # **PC 위임으로 시작된 실행만** 있다 (ADR-0062) — 보낸 쪽이 적은 값이다.
+        # **맡아서 시작된 실행만** 있다 (ADR-0082) — 보낸 쪽이 적은 값이다.
         parent_run_id=summary.get("parent_run_id"),
         started_at=summary.get("started_at") or row["first_seen_at"],
         finished_at=summary.get("finished_at"),
@@ -298,14 +295,13 @@ def listing(
     *,
     status: str | None = None,
     bpm_process_id: str | None = None,
-    run_location: str | None = None,
-    bot_ui_id: str | None = None,
+    runner_id: str | None = None,
     limit: int = DEFAULT_LIMIT,
     company: str | None = None,
 ) -> RunListing:
-    """최근 실행부터 (CON-01 목록). 좁히기는 상태·BPM 프로세스·실행 위치·**PC 실행기**다.
+    """최근 실행부터 (CON-01 목록). 좁히기는 상태·BPM 프로세스·**실행기**다.
 
-    「PC 실행기」는 **보낸 키가 묶인 PC**다 (C3 소유 → C4 키 묶기) — 요약에 적어 둔 값이 아니라
+    「실행기」는 **보낸 키가 묶인 PC**다 (C3 소유 → C4 키 묶기) — 요약에 적어 둔 값이 아니라
     읽을 때 찾는다. Studio가 보낸 기록은 그 좁히기에 걸리지 않는다 (묶인 PC가 없다).
     """
     rows = store.rows(
@@ -317,10 +313,8 @@ def listing(
         found = [one for one in found if one.status == status]
     if bpm_process_id:
         found = [one for one in found if one.bpm_process_id == bpm_process_id]
-    if run_location:
-        found = [one for one in found if one.run_location == run_location]
-    if bot_ui_id:
-        found = [one for one in found if one.bot_ui_id == bot_ui_id]
+    if runner_id:
+        found = [one for one in found if one.runner_id == runner_id]
     if company is not None:
         found = [one for one in found if one.company == company]  # 제 회사 것만 (C16)
     return RunListing(runs=found[: max(1, min(limit, MAX_LIMIT))], total=len(found))
@@ -353,8 +347,7 @@ def get_runs(
     request: Request,
     status: str | None = None,
     bpm_process_id: str | None = None,
-    run_location: str | None = None,
-    bot_ui_id: str | None = None,
+    runner_id: str | None = None,
     limit: int = DEFAULT_LIMIT,
 ) -> Any:
     found = require_read(request.app.state.authenticate(request))
@@ -362,8 +355,7 @@ def get_runs(
         request.app.state.store,
         status=status,
         bpm_process_id=bpm_process_id,
-        run_location=run_location,
-        bot_ui_id=bot_ui_id,
+        runner_id=runner_id,
         limit=limit,
         company=_company_reader(found),
     )

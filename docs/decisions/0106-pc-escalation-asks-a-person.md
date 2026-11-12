@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · **PC 갈래는 걷었다** — 서버 갈래(`ESCALATED` 경계)만 남는다 ([ADR-0144](0144-remove-the-pc-runner.md)) |
 | 날짜 | 2026-10-29 |
 | 관련 | 계약 C10(`escalated`), C13 §4, C14(오류 경계 `ESCALATED`·시험 케이스 `approvals`), C6(확인), C3(`human_requested`), [ADR-0014](0014-one-bot-per-pc.md), [ADR-0031](0031-runner-control-file.md), [ADR-0038](0038-approval-request-channel.md), [ADR-0078](0078-field-approval-shows-what-to-judge.md), [ADR-0105](0105-ai-task-limits-and-instructions.md), 09-gaps §3-18 |
 

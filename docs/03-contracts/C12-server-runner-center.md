@@ -2,26 +2,18 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **구현됨** (2026-10-15) — 등록·하트비트·운영 API·배포 설치·작업 실행·기다리는 실행의 저장·재개·결재·메시지·**PC 위임**이 양쪽에서 돌고 시험이 지킨다. **§등록 요청과 승인·키 회전도 돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) |
+| 상태 | **구현됨** (2026-10-15) — 등록·하트비트·운영 API·배포 설치·작업 실행·기다리는 실행의 저장·재개·결재·메시지·**맡기기**가 양쪽에서 돌고 시험이 지킨다. **§등록 요청과 승인·키 회전도 돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 서버 실행기 ↔ Center, 외부 시스템 → Center (메시지) |
 | 코드 위치 | `shared/contracts/server_runner.py` |
-| 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0014](../decisions/0014-one-bot-per-pc.md), [0015](../decisions/0015-run-location.md), [0016](../decisions/0016-server-first.md), [0038](../decisions/0038-approval-request-channel.md), [0054](../decisions/0054-server-run-state-and-concurrency.md), [0056](../decisions/0056-bounded-seen-maps.md), [0057](../decisions/0058-absorbed-messages-travel-with-the-snapshot.md), [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md), [0117](../decisions/0117-bundled-server-runner-joins-by-shared-secret.md) |
+| 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0016](../decisions/0016-server-first.md), [0038](../decisions/0038-approval-request-channel.md), [0054](../decisions/0054-server-run-state-and-concurrency.md), [0056](../decisions/0056-bounded-seen-maps.md), [0057](../decisions/0058-absorbed-messages-travel-with-the-snapshot.md), [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md), [0117](../decisions/0117-bundled-server-runner-joins-by-shared-secret.md) |
 | 관련 화면 | CON-12 서버 실행, CON-05, CON-04, CON-11 |
 
 ## 목적
 
-서버 실행기가 C4와 같은 틀로 Center에 등록하고 하트비트를 보낸다. 서버 BPM 프로세스를 **여러 건 동시에** 실행하고, 결재·메시지를 기다리는 실행은 상태를 저장한 채 쉬게 한다 (ADR-0015).
+서버 실행기가 C4(실행기 ↔ Center 공통)의 틀로 Center에 등록하고 하트비트를 보낸다. BPM 프로세스를 **여러 건 동시에** 실행하고, 결재·메시지를 기다리는 실행은 상태를 저장한 채 쉬게 한다.
 
-**C4(PC 실행기)와 다른 점:**
-
-| | C4 PC 실행기 | C12 서버 실행기 |
-| --- | --- | --- |
-| 동시 실행 | 1건 | 상한까지 여러 건 |
-| 대기열 | PC 실행기가 가짐 | **Center가 가짐.** 실행기는 빈자리만큼만 받는다 |
-| 기다리는 실행 | 실행 자리를 쥠 | 상태 저장, 상한에 세지 않음 (`waiting[]`) |
-| 결재 창구 | 현장 창 또는 Center | Center만 |
-| 메시지 시작·이어 가기 | PC 실행기 메시지 수신(8790) | Center 메시지 API → 하트비트 응답 |
+**BPM 프로세스를 돌리는 쪽은 이제 이것 하나다** ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)) — PC 실행기를 걷었으므로 실행 위치라는 칸이 없고, 모든 BPM 프로세스가 여기서 돈다.
 
 ## 전송
 
@@ -29,25 +21,23 @@
   - `POST /api/v1/server-runner/enroll`, `GET /api/v1/server-runner/enroll/{enrollment_id}` — 키가 없을 때 **등록 요청**과 그 답 (§등록 요청과 승인, 인증 없음)
   - `POST /api/v1/server-runner/register`
   - `POST /api/v1/server-runner/heartbeat` — 기본 10초 (응답의 `next_heartbeat_s`를 따른다)
-  - `POST /api/v1/server-runner/delegations` — **PC 위임을 맡긴다** (§PC 위임)
-  - `POST /api/v1/server-runner/delegations/{job_id}/cancel` — **맡긴 것을 거둔다** (§PC 위임)
+  - `POST /api/v1/server-runner/delegations` — **다른 BPM 프로세스에 맡긴다** (§맡기기)
+  - `POST /api/v1/server-runner/delegations/{job_id}/cancel` — **맡긴 것을 거둔다** (§맡기기)
 - 인증: Center API 키 (종류 「서버 실행기용」 — 승인이 만든 키, 또는 자동화·시험용으로 관리자 토큰이 발급한 키). 다른 종류의 키는 403 `wrong_key_type`. **등록 요청 두 경로만 인증이 없다.**
-- 키 묶기는 C4와 같다 — 키 하나 ↔ 서버 하나 ↔ 실행기 행 하나이고, 같은 `machine_id`를 다른 키가 등록하면 409 `machine_already_registered`다 (C4 「키 묶기」). **규칙은 코드로도 한 자리다** (`center/host_keys.py`) — C4와 C12가 같은 함수를 쓴다. `machine_id`를 만드는 쪽도 하나다 (`core.machine`).
+- 키 묶기는 C4와 같다 — 키 하나 ↔ 서버 하나 ↔ 실행기 행 하나이고, 같은 `machine_id`를 다른 키가 등록하면 409 `machine_already_registered`다 (C4 「키 묶기」). 규칙은 `center/host_keys.py` 한 자리이고, `machine_id`를 만드는 쪽도 하나다 (`core.machine`).
 - 등록은 **멱등**이고, 등록·하트비트가 오면 운영자가 해 둔 「유실 처리」를 지운다 — 돌아온 실행기를 오프라인으로 보이게 두지 않는다 (CON-12).
-- 이벤트(C3)와 결재(C6)는 PC 실행기와 같은 API를 쓴다.
+- 이벤트는 C3, 결재는 C6을 쓴다.
 
-**지금 도는 것**: 등록·하트비트·운영 API 셋, **배포 설치**(C2 V1~V7 — PC 실행기와 `core.deploy`를
-같이 쓴다), `deployment_results`·`readiness` 보고, 그리고 **작업 실행** — 받은 작업을 스레드
-하나로 돌려(ADR-0054 §5) 실행 기록을 하트비트 **뒤에** 보낸다 (C3 §전송). 서버 대상 배포·작업을
-막던 스위치(`SERVER_RUNNER_AVAILABLE`)는 **켰다**. **PC 위임도 양쪽이 돈다** (§PC 위임) —
+**지금 도는 것**: 등록·하트비트·운영 API 셋, **배포 설치**(C2 V1~V7, `core.deploy`),
+`deployment_results`·`readiness` 보고, 그리고 **작업 실행** — 받은 작업을 스레드
+하나로 돌려(ADR-0054 §5) 실행 기록을 하트비트 **뒤에** 보낸다 (C3 §전송). **맡기기도 양쪽이 돈다** (§맡기기) —
 맡기는 것은 엔진의 `RunEnv.delegate` 포트이고, 끝난 결과는 `delegations[]`로 내려와 기다리던
 실행이 이어 간다.
 
 **도는 실행은 작업 취소로 멈춘다** ([ADR-0063](../decisions/0063-stopping-a-running-server-run.md)) —
 C5의 `DELETE /jobs/{id}`가 서버 대상 `accepted`를 202로 받아 `cancel_jobs`로 내려 주고, 실행기가
 그 실행을 닫는다(**기다리는 실행도** — 스레드를 놓았으므로 깃발만 세워 두면 볼 사람이 없다).
-이미 끝나 가던 것은 `cancel_refused`다. 맡긴 PC 위임도 **함께 거둔다** (§PC 위임). **PC는
-그대로 거절이다** — 현장 사람이 보며 하는 일일 수 있어 현장 사람만 멈춘다 (C4·ADR-0014).
+이미 끝나 가던 것은 `cancel_refused`다. 맡긴 것도 **함께 거둔다** (§맡기기).
 
 **기다리는 실행은 담아 두고 자리를 놓는다** (ADR-0054 §3) — 결재를 Center 결재함에 올리고
 (C6 — 서버의 창구는 Center만이다) 하트비트로 내려온 답으로 **되살려 이어 간다**. **재시작도
@@ -59,8 +49,7 @@ C5의 `DELETE /jobs/{id}`가 서버 대상 `accepted`를 202로 받아 `cancel_j
 **받는 곳을 Center가 고르지만 실행기가 다시 찾는다** — 둘 사이에 하트비트 한 주기가 있어
 그동안 그 실행이 타이머로 지나갔을 수 있다 (그때는 `no_receiver`로 돌려보낸다).
 
-**설치는 PC 실행기와 같은 코드다** (`core.deploy`·`core.packages`) — 다른 것은 `host_kind`뿐이고,
-그래서 서버는 `"*"` 대상 배포도 받는다 (ADR-0046). **믿는 서명 키(C2 — Center 서명 키)가 아직 없으면 설치하지
+**설치는 `core.deploy`·`core.packages`다** — `"*"` 대상 배포도 받는다. **믿는 서명 키(C2 — Center 서명 키)가 아직 없으면 설치하지
 않고 기다린다** — 서명을 볼 수 없는데 설치하면 관문이 없는 것과 같고, 거부로 보고하면 멀쩡한
 배포가 영원히 닫힌다 (공개키는 하트비트가 준다). **목록과 설치를 맞추는 것도 같다** (C2 §검증 규칙,
 ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 설치는 「실행 불가」(`readiness`의
@@ -82,35 +71,34 @@ ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 
 
 > 상태: **돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) — `server_runner/enroll.py`(요청·묻기·받기, 보낸 요청은 데이터 폴더의 `enrollment.json` — 키도 봉함도 담지 않는다)와 Center의 C4와 같은 코드다. 시험: `tests/server/test_server_runner_agent.py`·`tests/server/test_center_enrollment.py`.
 
-**C4 §등록 요청과 승인과 같다** — 같은 요청 코드·같은 봉함·같은 24시간·같은 막기이고, 다른 것은 아래뿐이다. 규칙은 코드로도 한 자리에 둔다(키 묶기의 `center/host_keys.py`와 같은 결).
+**C4 §등록 요청과 승인 그대로다** — 요청 코드·봉함·24시간·막기가 같고, 이 실행기의 자리만 아래에 적는다. 규칙은 코드로도 한 자리에 둔다(키 묶기의 `center/host_keys.py`와 같은 결).
 
-| | PC 실행기 (C4) | 서버 실행기 |
-| --- | --- | --- |
-| 요청 본문 | C4 `RegisterRequest` + `public_key` | 이 문서의 `RegisterRequest` + `public_key` |
-| 요청 코드를 보이는 곳 | BUI-03·트레이 | **시작할 때 로그 한 줄**: 「Center에 등록 요청을 보냈습니다. 요청 코드 ABCD-EFGH — Center 콘솔 「서버 실행」에서 승인하세요」. `--once`는 한 걸음만 하고 아직 승인되지 않았으면 끝 코드 1로 끝난다(「사람이 고쳐야 한다」 — 승인이 그 일이다) |
-| 승인하는 곳 | CON-03 「승인 대기」 | CON-12 「승인 대기」 |
-| 만드는 키 | 「PC 실행기용」 | 「서버 실행기용」 |
-| 받은 키를 두는 곳 | OS 비밀 저장소 | OS 비밀 저장소(`bpm-server-runner`, 이름 `center_api_key`). **운영자가 비밀 폴더 `BPM_SERVER_RUNNER__SECRETS_DIR`를 적으면 그 폴더의 `secrets.json`**(컨테이너 — [ADR-0100](../decisions/0100-server-runner-secrets-dir.md)) |
+| | 값 |
+| --- | --- |
+| 요청 본문 | 이 문서의 `RegisterRequest` + `public_key` |
+| 요청 코드를 보이는 곳 | **시작할 때 로그 한 줄**: 「Center에 등록 요청을 보냈습니다. 요청 코드 ABCD-EFGH — Center 콘솔 「서버 실행」에서 승인하세요」. `--once`는 한 걸음만 하고 아직 승인되지 않았으면 끝 코드 1로 끝난다(「사람이 고쳐야 한다」 — 승인이 그 일이다) |
+| 승인하는 곳 | CON-12 「승인 대기」 |
+| 만드는 키 | 「서버 실행기용」 |
+| 받은 키를 두는 곳 | OS 비밀 저장소(`bpm-server-runner`, 이름 `center_api_key`). **운영자가 비밀 폴더 `BPM_SERVER_RUNNER__SECRETS_DIR`를 적으면 그 폴더의 `secrets.json`**(컨테이너 — [ADR-0100](../decisions/0100-server-runner-secrets-dir.md)) |
 
 - **함께 배포된 실행기는 들이기 비밀로 바로 승인된다** ([ADR-0117](../decisions/0117-bundled-server-runner-joins-by-shared-secret.md)). 운영자가 같은 값을 Center(`BPM_CENTER__SERVER_RUNNER_JOIN_TOKEN`)와 실행기(`BPM_SERVER_RUNNER__JOIN_TOKEN`)에 주면 실행기가 등록 요청에 헤더 `X-BPM-Join-Token`을 싣고, Center는 값이 맞으면 그 요청을 **받는 자리에서 승인**해 응답에 봉한 키(`state: approved`, `sealed_key`)를 바로 싣는다. 승인한 사람은 `decided_by: "join_token"`이다. 비밀은 요청 본문·저장된 요청에 들어가지 않는다(헤더다). **헤더가 있는데 Center에 값이 없거나 다르면 403 `join_token_invalid`**이고 대기 줄을 만들지 않는다 — 틀린 설정이 조용히 「승인 대기」로 떨어지면 운영자가 왜 안 들어오는지 모른다. 비밀은 길고 무작위여야 한다(틀린 시도는 줄을 남기지 않아 막기 수에 들지 않는다). 헤더가 없으면 지금처럼 승인을 기다린다(다른 호스트에 따로 띄운 실행기). `server/deploy/compose.yaml`의 실행기는 이 길이다.
 - **열린 모드에서는 비밀이 없어도 그 자리에서 승인된다** ([ADR-0142](../decisions/0142-open-mode.md) — 승인한 사람은 `open_mode`다). 비밀을 실었는데 맞지 않으면 **열린 모드에서도 403**이다.
 - **환경변수로 키가 오면** 등록 요청을 보내지 않는다 (CI·자동화의 길이다).
 - **비밀 폴더를 적으면 그것이 비밀 저장소다** (ADR-0100) — 폴더 0700·파일 0600, 깨진 파일은 덮지 않는다. 적었으면 OS 비밀 저장소가 있어도 그 폴더가 이긴다. `server/deploy/compose.yaml`의 실행기는 이 길이다(볼륨 `server-runner-secrets`).
 - **비밀 폴더도 OS 비밀 저장소도 없으면 등록 요청을 보내지 않는다.** 받은 키를 둘 곳이 없어서다 — 사람이 자리를 정해 주지 않은 평문 파일로 흘리지 않는다 (CLAUDE.md §5). 로그에 그 둘(`BPM_SERVER_RUNNER__SECRETS_DIR`·`BPM_SERVER_RUNNER__CENTER_API_KEY`)을 적은 한 줄을 찍고 끝 코드 2다.
-- 키 회전도 C4 §키 회전과 같다 — 하트비트 답의 `rotated_key`. 환경변수로 받은 키는 회전하지 않는다.
+- 키 회전도 C4 §키 회전 그대로다 — 하트비트 답의 `rotated_key`. 환경변수로 받은 키는 회전하지 않는다.
 
 ### RegisterRequest
 
-`{schema, machine_id, name, os, versions{core, server_runner}, max_concurrency, extensions: [{id, version, definition_hash, enabled}], public_key?}`. `public_key`는 C4와 같다 — 보내면 키를 회전해 준다.
+`{schema, machine_id, name, os, versions{core, server_runner}, max_concurrency, extensions: [{id, version, definition_hash, enabled}], public_key?}`. `public_key`를 보내면 키를 회전해 준다.
 
-`versions`는 설치된 패키지의 판이다 — **서버 실행기는 묶지 않으므로**(소스에서 돈다) C4의 `build` 칸이 없다 ([ADR-0067](../decisions/0067-build-stamp.md)).
+`versions`는 설치된 패키지의 판이다 — **서버 실행기는 묶지 않으므로**(소스에서 돈다) `build` 칸이 없다.
 
 `max_concurrency`는 설정값 `BPM_SERVER_RUNNER__MAX_CONCURRENCY`이고 기본 10이다.
 
-`extensions[]`는 **이 서버에 깔린 확장**이다 (C4와 같은 모양). Center는 그것으로 C7 확장 자원의
-`installed_on`을 세므로, 싣지 않으면 **서버에만 깔린 확장을 요구하는 BPM 프로세스의 배포가 막힌다**
-(「확장 누락」이 배포를 막는 셋 중 하나다). **서버에는 현장이 없으므로**
-`run_locations`에 `server`를 적은 태스크 종류만 여기서 돈다 ([ADR-0064](../decisions/0064-extension-tasks-on-the-server.md), C13 `run_locations`).
+`extensions[]`는 **이 서버에 깔린 확장**이다 (C4 모양). Center는 그것으로 C7 확장 자원의
+`installed_on`을 세므로, 싣지 않으면 **그 확장을 요구하는 BPM 프로세스의 배포가 막힌다**
+(「확장 누락」이 배포를 막는 셋 중 하나다).
 
 → `{server_runner_id: "srv_<hex8>", admin_keys, heartbeat_interval_s: 10, server_time}`
 
@@ -126,17 +114,17 @@ ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 
 | `capacity` | `{max, running}`. `running`은 기다리는 실행을 뺀 수 |
 | `running[]` | `{run_id, bpm_process_id, version, node_id, started_at, job_id?}` |
 | `waiting[]` | `{run_id, bpm_process_id, version, waiting_for: "approval" \| "message" \| "timer" \| "delegation" \| "external_task", request_id?, message_name?, correlation?, until?, job_id?, task_id?, since}` |
-| `job_acks[]` | C4와 같은 모양. `result`: `started`, `rejected`, `expired`, `cancelled`, `cancel_refused` |
-| `approval_acks[]`, `deployment_results[]` | C4와 같다 |
-| `readiness[]` | 배포된 서버 BPM 프로세스별 준비 상태 (C4 Readiness와 같은 모양: 확장). 바뀌었을 때만 |
+| `job_acks[]` | C4 모양. `result`: `started`, `rejected`, `expired`, `cancelled`, `cancel_refused` |
+| `approval_acks[]`, `deployment_results[]` | C4 모양 |
+| `readiness[]` | 배포된 BPM 프로세스별 준비 상태 (C4 `Readiness`: 확장). 바뀌었을 때만 |
 | `message_acks[]` | `{message_id, accepted, run_id?, reason?}` |
-| `delegation_acks[]` | `{job_id, accepted}` — **위임 결과를 받았다** (§PC 위임). 받으면 Center가 그 값을 지운다 |
-| `extensions[]` | 바뀌었을 때만 (C4와 같은 모양) |
+| `delegation_acks[]` | `{job_id, accepted}` — **맡긴 것의 결과를 받았다** (§맡기기). 받으면 Center가 그 값을 지운다 |
+| `extensions[]` | 바뀌었을 때만 (C4 모양) |
 | `restored[]` | 재시작 직후 저장소에서 되살려 **정말 이어 가는** 실행 `run_id` (첫 하트비트에만). 되살리지 못한 것은 여기 넣지 않고 C5 `run_status`에 사유와 함께 적는다 |
 | `unsent_events` | |
 
 **`waiting[]`의 짝 칸은 비울 수 없다** — `approval`이면 `request_id`, `message`면
-`message_name`, `timer`면 `until`, **`delegation`이면 `job_id`**다 (§PC 위임), **`external_task`면 `task_id`**다 (§긴 외부 작업). 같은 실행이 `running[]`과 `waiting[]`에 함께 있을 수도
+`message_name`, `timer`면 `until`, **`delegation`이면 `job_id`**다 (§맡기기), **`external_task`면 `task_id`**다 (§긴 외부 작업). 같은 실행이 `running[]`과 `waiting[]`에 함께 있을 수도
 없다(쥐면서 놓을 수는 없다 — 자리 셈이 틀어진다). `capacity.running`은 `running[]`의 길이와
 같아야 한다. 보내는 쪽과 받는 쪽이 **같은 함수**로 본다 (`validate_heartbeat()`).
 
@@ -147,13 +135,13 @@ ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 
 | `server_time`, `next_heartbeat_s` | |
 | `deployments[]` | `target.type=server_runner`이고 `id`가 이 실행기 또는 `"*"`인 활성 배포 봉투 (C2) |
 | `admin_keys` | 바뀌었을 때만 |
-| `jobs[]` | **빈자리만큼만** 싣는다. C4 JobDispatch와 같은 모양. 작업의 주인(업무 자리)은 `place`(`{company, department?, staff?}` — 각 `{id, name}`)로 싣는다 — Center가 내려줄 때 읽어 붙이고 값은 저장하지 않는다. 실행기는 엔진에 넘겨 그림이 값 출처로 선언한 입력에 넣는다 (C14·C16, [ADR-0125](../decisions/0125-organization-and-work-placement.md)). **Center는 아직 붙이지 않는다**(C16 「합의」) |
+| `jobs[]` | **빈자리만큼만** 싣는다. C4 `JobDispatch`. 작업의 주인(업무 자리)은 `place`(`{company, department?, staff?}` — 각 `{id, name}`)로 싣는다 — Center가 내려줄 때 읽어 붙이고 값은 저장하지 않는다. 실행기는 엔진에 넘겨 그림이 값 출처로 선언한 입력에 넣는다 (C14·C16, [ADR-0125](../decisions/0125-organization-and-work-placement.md)). **Center는 아직 붙이지 않는다**(C16 「합의」) |
 | `cancel_jobs[]` | |
 | `approvals[]` | 답이 정해진 결재. 기다리던 실행이 이어 간다 |
 | `messages[]` | `{message_id, name, correlation?, payload, received_at}` — **기다리는 실행에 넣을 것만** 내려온다. 메시지 시작은 Center가 작업으로 바꿔 `jobs[]`로 보낸다 (§메시지) |
-| `delegations[]` | **끝난 PC 위임의 결과** — `{job_id, run_id, state, outputs?, reason?}` (§PC 위임). ack가 올 때까지 다시 싣는다 |
+| `delegations[]` | **맡긴 것의 끝난 결과** — `{job_id, run_id, state, outputs?, reason?}` (§맡기기). ack가 올 때까지 다시 싣는다 |
 | `paused` | true면 새 작업을 받지 않는다 (CON-12 「일시 중지」). 실행 중인 것은 끝까지 간다 |
-| `rotated_key`? | 만료 14일 전부터 새 키 (C4 §키 회전과 같다) |
+| `rotated_key`? | 만료 14일 전부터 새 키 (C4 §키 회전) |
 | `restart` | true면 **재시작** (CON-02 「재시작」, ADR-0117). 실행기는 새 작업을 받지 않고(`status: draining`) 자리를 쥔 실행이 끝나고 올릴 ack가 없으면 **끝 코드 0으로 스스로 끝난다** — 다시 띄우는 것은 감독하는 쪽(compose `restart: unless-stopped`·systemd)이다. 기다리는 실행은 저장소에 있어 다시 뜨면 이어 간다(ADR-0054). Center는 실행기가 다시 등록할 때 지운다 |
 
 #### 서비스 앱 키 — 없다
@@ -224,12 +212,11 @@ Center는 메시지를 이렇게 처리한다.
 - 받을 실행기가 **유실 처리**되면 그 실행기로 가던 메시지는 `host_lost`로 닫는다 (결재가
   회수되는 것과 같은 자리다 — C6 `host_lost`).
 
-### PC 위임 (서버 BPM 프로세스 → PC BPM 프로세스·서버 BPM 프로세스)
+### 맡기기 (BPM 프로세스 → 다른 패키지의 BPM 프로세스)
 
+BPM 프로세스가 **따로 배포된 다른 패키지의 BPM 프로세스**에 한 부분을 맡긴다 ([ADR-0082](../decisions/0082-batch-start.md)). 그림은 C14 `bpm:call.delegate`, 매니페스트는 C1 `requires.delegations`다.
 
-서버 BPM 프로세스가 현장 확인·PC 전용 자원이 필요한 한 부분을 **따로 배포된 PC BPM 프로세스**에 맡긴다 ([ADR-0062](../decisions/0062-pc-delegation.md)). 그림은 C14 `bpm:call.delegate`, 매니페스트는 C1 `requires.delegations`다.
-
-**대상이 서버 BPM 프로세스이어도 같은 길이다** ([ADR-0082](../decisions/0082-batch-start.md)) — Center가 그 판의 **매니페스트 `run_location`**을 읽어 `pc`면 아래대로 PC를 고르고, `server`면 **서버 실행기 대상 작업**(`{type: server_runner}`, 실행기는 Center가 고른다 — §Center가 작업을 나누는 규칙)을 만든다. 멱등·`requested_by`·결과 보관·거두기는 같은 함수다. 반복 위임(일괄 기동)이 이 길로 N건을 낸다.
+**`callActivity`는 같은 패키지 안의 정의만 부르므로, 패키지를 건너 실행을 띄우는 길은 이것뿐이다.** Center가 **서버 실행기 대상 작업**(`{type: server_runner}`, 실행기는 Center가 고른다 — §Center가 작업을 나누는 규칙)을 만든다. 반복 맡기기(일괄 기동)가 이 길로 N건을 낸다.
 
 **`POST /api/v1/server-runner/delegations`** (실행기 키만)
 
@@ -238,36 +225,34 @@ Center는 메시지를 이렇게 처리한다.
 | `run_id` | 맡기는 **서버 실행**. **보낸 키의 실행이어야 한다** (C3 소유와 같은 대조) — 남의 실행 이름으로 작업을 만들 수 없다 |
 | `node_id`, `node_instance` | 그 실행 안의 호출 자리. 멱등 키를 여기서 짓는다 |
 | `loop_index?` | **반복 차례**(0부터) — 반복이 붙은 호출일 때만. 멱등 키에 들어간다 (C14 §반복) |
-| `bpm_process_id`, `version?` | 부를 PC BPM 프로세스. 판을 비우면 **배포된 판**(둘 이상이면 422 `version_ambiguous`) |
-| `bot_ui?` | **그 PC로만** 보낸다 (그림의 `bot_ui` 식을 실행기가 값으로 풀어 보낸다). 비우면 Center가 고른다. **대상이 서버 BPM 프로세스이면 422 `bot_ui_for_server`** |
+| `bpm_process_id`, `version?` | 맡길 BPM 프로세스. 판을 비우면 **배포된 판**(둘 이상이면 422 `version_ambiguous`) |
 | `inputs` | 그 BPM 프로세스에 줄 입력 (C14 `bpm:call.input`을 실행기가 값으로 푼 것) |
 
-- 응답은 `{job_id, target_type, bot_ui_id?, state}`다 (`target_type`은 `bot_ui`\|`server_runner`, 서버 대상이면 `bot_ui_id`가 없다). **201이 새 작업, 200이 이미 만든 것**이다.
+- 응답은 `{job_id, target_type, state}`다 (`target_type`은 `server_runner` 하나다 — PC 실행기를 걷었다, [ADR-0144](../decisions/0144-remove-the-pc-runner.md)). **201이 새 작업, 200이 이미 만든 것**이다.
 - **멱등 키는 Center가 짓는다** — `dlg_<run_id>_<node_id>_<node_instance>`, 반복이면 뒤에 `_<loop_index>`가 붙는다(반복이 아니면 지금 키 그대로라 이미 맡겨 둔 위임과 같다). 본문에서 받지 않는다(`requested_by`와 같은 결) — 부르는 쪽마다 짓는 규칙이 갈라지면 되살린 실행이 **작업을 두 번 만든다**. 그래서 ADR-0054의 「마지막 기다림 이후를 다시 한다」가 그대로 성립한다: 다시 요청하면 **같은 작업이 돌아온다**.
 - **`requested_by`는 Center가 적는다** — `server_bot:<run_id>`(C5 예약값). 본문에서 받지 않으므로 그 이름을 지어낼 수 없다.
 - **고른 뒤에는 `POST /jobs`와 같은 함수로 작업이 된다** — 배포 검사·대상 검사·대기열이 한 자리에 남는다 (메시지 시작이 이미 그렇다, §메시지).
 
-**어느 PC인가 — Center가 고른다** (그림에 PC id를 적지 않는다: 「PC에서 무엇을 돌려도 되는가」를 정하는 것은 배포다, [ADR-0049](../decisions/0049-deployment-target-must-exist.md))
+**어느 실행기인가 — Center가 고른다** (그림에 실행기 id를 적지 않는다: 「무엇을 돌려도 되는가」를 정하는 것은 배포다, [ADR-0049](../decisions/0049-deployment-target-must-exist.md))
 
-1. 그 `<id>@<version>`이 **살아 있는 배포로 걸린 PC** 중에서 고른다 (PC 배포는 대상이 `bot_ui_id` 하나씩이다 — [ADR-0046](../decisions/0046-no-wildcard-pc-deployment.md)).
-2. **활성인 PC만**, 그중 **대기열이 가장 짧은 곳**. 같으면 `bot_ui_id` 순서다.
-3. 고를 곳이 없으면 **거부**다 (404 `no_deployment`). **기다리지 않는다** — 배포되지 않은 것을 기다리는 것은 업무가 아니라 설정 잘못이고, 오류 경계가 받아야 사람이 안다.
-4. `bot_ui`를 적었으면 **그 PC만** 본다 (배포되지 않았거나 없으면 역시 `no_deployment`).
+1. 그 `<id>@<version>`이 **살아 있는 배포로 걸려** 있어야 한다.
+2. 고를 곳이 없으면 **거부**다 (404 `no_deployment`). **기다리지 않는다** — 배포되지 않은 것을 기다리는 것은 업무가 아니라 설정 잘못이고, 오류 경계가 받아야 사람이 안다.
+3. 그다음은 §Center가 작업을 나누는 규칙 그대로다 — 작업은 빈자리가 있는 실행기로 내려간다.
 
 **결과가 돌아오는 길** (원칙 6의 명시한 예외 — C6 `review`·`answer`와 같은 모양)
 
 | 항목 | 정한 것 |
 | --- | --- |
-| 올라오는 쪽 | PC PC 실행기의 작업 ack에 **그 BPM 프로세스가 선언한 `outputs`만** 싣는다 (C4·C1). **서버 대상이면 그 실행을 돌린 서버 실행기가 같은 칸(`job_acks[].outputs`)에 싣는다** — 맡겨진 작업(`requested_by`가 `server_bot:`)이 **성공했을 때만**이고, 그 실행의 `run_started`에 `source: delegation`·`parent_run_id`를 붙인다(PC 실행기와 같다). 맡긴 쪽은 실행기 저장소에 스냅샷과 따로 남아 재시작을 건넌다 |
+| 올라오는 쪽 | 그 실행을 돌린 실행기가 작업 ack에 **그 BPM 프로세스가 선언한 `outputs`만** 싣는다 (C4 `JobAck.outputs`·C1) — 맡겨진 작업(`requested_by`가 `server_bot:`)이 **성공했을 때만**이고, 그 실행의 `run_started`에 `source: delegation`·`parent_run_id`를 붙인다. 맡긴 쪽은 실행기 저장소에 스냅샷과 따로 남아 재시작을 건넌다 |
 | 내려가는 쪽 | 하트비트 응답 `delegations[]`. **그 작업을 낸 실행기에게만** 내려간다 |
 | 다시 싣기 | **ack(`delegation_acks[]`)가 올 때까지 매번 다시 싣는다** (작업·메시지와 같다) |
 | 지우기 | **ack가 오면 값을 바로 지운다.** 못 받은 것은 **작업 멱등 기간(7일)**에 지운다 — 기간을 새로 만들지 않고, 하트비트가 그 청소를 함께 돌린다 (C6 결재의 값 지우기와 같은 자리). 누가·언제·성패는 남고 **「받아 갔다」로 적지는 않는다** |
 | 화면 | **값을 보이지 않는다** (CON-05가 작업 입력을 키만 보이는 것과 같다) |
 
 - `state`는 **열린 문자열**이고 알려진 값은 작업 ack와 같다: `finished`·`failed`·`cancelled`·`expired`·`rejected`. 실행기는 `finished`가 아니면 **오류 경계로 넘긴다** (C14 — 업무 실패다).
-- 기다리는 동안 그 실행은 **자리를 쥐지 않는다** (`waiting[]`의 `delegation` 갈래, 짝 칸은 `job_id`). **PC 쪽은 ADR-0014 그대로** — 하나씩, 끝날 때까지.
-- 서버 실행이 취소되면 **그 위임 작업도 거둔다** — `POST …/delegations/{job_id}/cancel`(실행기 키). **C5 취소 경로를 쓰지 않는다**: 그 길의 관문은 관리자·연동용 키인데 거두려는 쪽은 실행기 키다. 위임 요청과 같은 결로 **제 관문**(실행기 키·등록·**그 위임의 임자**)을 여기서 지나고 Center 안에서 작업 취소 함수를 부른다 — 권한표를 넓히면 실행기 키로 **남의 작업**까지 취소할 수 있게 된다. 남의 위임은 **404**다(있다는 것조차 알리지 않는다). 이미 시작된 PC 실행은 끝까지 가고(C5 — 「시작된 작업의 취소는 거절」, 409 `already_started`) 그 결과는 받는 쪽이 없으므로 **버린다**. **서버 대상 위임은 시작됐어도 거둔다** — 작업 취소가 대상 종류로 가르므로(C5, ADR-0063) 그 실행은 `cancelled`로 닫힌다. 그래서 **일괄 취소는 접수 실행의 작업을 취소하는 것**이다 ([ADR-0084](../decisions/0084-cancelling-a-batch.md) — 끝난 건은 그대로, 아직 맡기지 않은 건은 맡겨지지 않는다).
-- **배포 때 한 가지를 더 본다** — `requires.delegations`의 BPM 프로세스가 **승인된 패키지로 Center에 있어야** 한다 (422 `delegation_not_approved`. C1 R8처럼 배포 시점에 본다 — 매니페스트만으로는 알 수 없다). 판을 비운 위임은 **승인된 판이 하나라도 있으면** 통과다. **PC에 배포됐는가는 묻지 않는다**: 서버 BPM 프로세스를 먼저 배포하는 순서를 막으면 안 되고, 실제 관문은 위임을 요청할 때다.
+- 기다리는 동안 그 실행은 **자리를 쥐지 않는다** (`waiting[]`의 `delegation` 갈래, 짝 칸은 `job_id`).
+- 맡긴 실행이 취소되면 **맡긴 작업도 거둔다** — `POST …/delegations/{job_id}/cancel`(실행기 키). **C5 취소 경로를 쓰지 않는다**: 그 길의 관문은 관리자·연동용 키인데 거두려는 쪽은 실행기 키다. 맡기기 요청과 같은 결로 **제 관문**(실행기 키·등록·**그 맡기기의 임자**)을 여기서 지나고 Center 안에서 작업 취소 함수를 부른다 — 권한표를 넓히면 실행기 키로 **남의 작업**까지 취소할 수 있게 된다. 남의 것은 **404**다(있다는 것조차 알리지 않는다). **시작됐어도 거둔다** — 작업 취소가 서버 대상을 202로 받으므로(C5, ADR-0063) 그 실행은 `cancelled`로 닫힌다. 그래서 **일괄 취소는 접수 실행의 작업을 취소하는 것**이다 ([ADR-0084](../decisions/0084-cancelling-a-batch.md) — 끝난 건은 그대로, 아직 맡기지 않은 건은 맡겨지지 않는다).
+- **배포 때 한 가지를 더 본다** — `requires.delegations`의 BPM 프로세스가 **승인된 패키지로 Center에 있어야** 한다 (422 `delegation_not_approved`. C1 R8처럼 배포 시점에 본다 — 매니페스트만으로는 알 수 없다). 판을 비운 것은 **승인된 판이 하나라도 있으면** 통과다. **배포됐는가는 묻지 않는다**: 맡기는 쪽을 먼저 배포하는 순서를 막으면 안 되고, 실제 관문은 맡길 때다.
 
 ### 긴 외부 작업 (서버 BPM 프로세스 → 일꾼)
 
@@ -309,7 +294,7 @@ Center는 메시지를 이렇게 처리한다.
     지난 시각으로 올라가 CON-12에 보인다.
 - **맞추기 규칙은 C4와 같고 사유만 다르다** — 두 주기 연속 `running[]`·`waiting[]`에 보이지
   않고 ack도 없는 작업은 `rejected`이고, 그 `state_reason`은 **`runner_lost`**다 (C4의
-  `bot_ui_lost`가 아니다 — 뭉개면 CON-12가 서버에 「bot_ui_lost」라고 적는다). 그 실행의
+  `runner_lost`가 아니다 — 뭉개면 CON-12가 서버에 「runner_lost」라고 적는다). 그 실행의
   결재는 회수된다 (C6 `host_lost`).
 - 하트비트가 3분 동안 없으면 Center는 그 실행기를 「오프라인」으로 표시한다. 실행은 유실로 보지 않고 기다린다. 운영자가 CON-12에서 「유실 처리」를 하면 그때 그 실행기의 실행을 `failed`(`runner_lost`)로 닫고, 결재를 회수한다 (C6 `host_lost`).
 - **「이미 봤다」를 들고 있는 동안은 정해져 있다** ([ADR-0056](../decisions/0056-bounded-seen-maps.md)) —
@@ -375,6 +360,7 @@ C4와 같다 (401, 403 `key_revoked`·`wrong_key_type`, 409 `machine_mismatch`·
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-12 | 1 | **PC 실행기를 걷었다** — 「C4와 다른 점」 표와 PC 갈래를 걷고 §PC 위임을 **§맡기기**로 다시 적었다. 맡기기 요청에서 `bot_ui?`를, 응답에서 `bot_ui_id?`를 걷고 `target_type`은 `server_runner` 하나다(422 `bot_ui_for_server`도 걷었다). 대상을 고르는 규칙은 §Center가 작업을 나누는 규칙 하나로 모았다. **맡기기 자체는 남는다** (ADR-0082) | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-11-11 | 1 | **열린 모드**에서는 들이기 비밀이 없어도 받는 자리에서 승인된다(틀린 비밀은 여전히 403) | [0142](../decisions/0142-open-mode.md) |
 | 2026-11-01 | 1 | **가상 직원을 없앴다** — 하트비트 `jobs[].virtual_worker`·`MessageRequest.virtual_worker`를 걷고 `jobs[].place?`를 더했다(C16) | [0125](../decisions/0125-organization-and-work-placement.md) |
 | 2026-10-31 | 1 | **함께 배포된 실행기는 들이기 비밀로 바로 승인**(헤더 `X-BPM-Join-Token`, 403 `join_token_invalid`)과 **재시작**(`POST …/server-runners/{id}/restart`, `HeartbeatResponse.restart`, `ServerRunnerInfo.restart_requested_at?`). 선택 칸이라 옛 실행기는 그대로 돈다(재시작 지시를 모를 뿐이다) | [0117](../decisions/0117-bundled-server-runner-joins-by-shared-secret.md) |

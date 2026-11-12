@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_bx12_shipping_fee" name="배송비 계산" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [
     "배송비",

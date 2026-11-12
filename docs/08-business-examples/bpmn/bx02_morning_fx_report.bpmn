@@ -10,7 +10,6 @@
   <bpmn:process id="Proc_bx02_morning_fx_report" name="매일 아침 환율 점검 보고" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

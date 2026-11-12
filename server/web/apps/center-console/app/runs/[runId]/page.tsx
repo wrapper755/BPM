@@ -9,7 +9,7 @@ import { FINISHED, TASK_KIND, TASK_STATE, type ResumeRow, duration, resumes, tas
 import { type NodeBar, type NodeRow, bars, llmSteps, timeline } from "@/lib/timeline";
 import { Shell } from "@/components/Shell";
 import { Diagram, type DiagramState } from "./diagram";
-import { LABEL, loadOrgNames, seconds, time, where } from "../page";
+import { LABEL, loadOrgNames, seconds, time } from "../page";
 import { orgName } from "@/lib/organization";
 
 /**
@@ -398,8 +398,6 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
                 {info.bpm_process_id ?? "—"}
                 {info.version ? ` @${info.version}` : ""}
               </dd>
-              <dt className="text-text-muted">실행 위치</dt>
-              <dd>{where(info.run_location)}</dd>
               <dt className="text-text-muted">회사 · 부서 · 직원</dt>
               <dd>
                 {orgName(info.company, org.company)} · {orgName(info.department, org.department)} ·{" "}

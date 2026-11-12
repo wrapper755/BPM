@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
 import type { ApprovalInfo } from "@bpm/api-types/c6-approval-info";
-import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
+import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 
@@ -74,7 +74,7 @@ export default async function ApprovalsPage({
   const assignee = (asked.assignee ?? "").trim();
 
   let rows: ApprovalInfo[] = [];
-  let hosts: BotUiInfo[] = [];
+  let hosts: ServerRunnerInfo[] = [];
   let failure: string | null = null;
   try {
     rows = await center.approvals({
@@ -82,7 +82,7 @@ export default async function ApprovalsPage({
       host: host || undefined,
       assignee: assignee || undefined,
     });
-    hosts = await center.botUis();
+    hosts = await center.serverRunners();
   } catch (cause) {
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
   }
@@ -159,7 +159,7 @@ export default async function ApprovalsPage({
           >
             <option value="">(전체)</option>
             {hosts.map((one) => (
-              <option key={one.bot_ui_id} value={one.bot_ui_id}>
+              <option key={one.server_runner_id} value={one.server_runner_id}>
                 {one.name}
               </option>
             ))}

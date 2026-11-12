@@ -4,14 +4,14 @@
 | --- | --- |
 | 상태 | **구현됨** (2026-10-10, [09-gaps](../09-gaps.md) §1 대조 — `Provides`를 Studio가 짓고 CON-06이 읽는다) |
 | schema | 1 |
-| 보내는 쪽 → 받는 쪽 | Studio(빌드) → Center(업로드·검사·보관) → PC 실행기·서버 실행기(설치·사전 점검) |
+| 보내는 쪽 → 받는 쪽 | Studio(빌드) → Center(업로드·검사·보관) → 서버 실행기(설치·사전 점검) |
 | 코드 위치 | `shared/contracts/src/bpm/contracts/manifest.py` (import `bpm.contracts.manifest`, [ADR-0019](../decisions/0019-package-names.md)) |
 | JSON Schema | [`c1-manifest.json`](../../shared/contracts/schemas/c1-manifest.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
 | 관련 ADR | [0006](../decisions/0006-single-contracts-package.md), [0013](../decisions/0013-api-keys.md), [0015](../decisions/0015-run-location.md), [0016](../decisions/0016-server-first.md), [0110](../decisions/0110-center-keeps-the-schedule.md) |
 
 ## 목적
 
-패키지(zip) 안의 `manifest.json`이 "이 패키지가 무엇이고, 어디서 돌며, 실행하려면 무엇이 있어야 하는가"를 말한다. Center는 이것으로 업로드를 검사하고, PC 실행기·서버 실행기는 이것으로 설치 전 사전 점검을 한다. **키 값도 키 참조도 들어가지 않는다** — 바깥 기능은 Center의 외부 작업으로 부른다 (C15, ADR-0102).
+패키지(zip) 안의 `manifest.json`이 "이 패키지가 무엇이고, 실행하려면 무엇이 있어야 하는가"를 말한다. Center는 이것으로 업로드를 검사하고, 서버 실행기는 이것으로 설치 전 사전 점검을 한다. **키 값도 키 참조도 들어가지 않는다** — 바깥 기능은 Center의 외부 작업으로 부른다 (C15, ADR-0102).
 
 ## 전송
 
@@ -46,7 +46,6 @@
 | `version` | str | ✓ | SemVer (`1.2.0`, `1.2.0-rc.1`) | 1 |
 | `name` | str | | 화면 표시 이름 | 1 |
 | `description` | str | | | 1 |
-| `run_location` | `"server"` \| `"pc"` | `bpm_process`만 ✓ | **실행 위치.** 생략하면 `server` (서버 우선). 다른 kind에는 두지 않는다 | 1 |
 | `place` | object? | `bpm_process`만 | **업무 자리** — 이 BPM 프로세스가 누구의 일인가 (C16 `Place`: `{scope: company\|department\|staff, department?, staff?}`). **Studio가 「Center로 올리기」에서 고른다**. 비우면 회사 공통이고, 회사는 올린 Studio의 회사다. Center가 올릴 때 그 회사 안의 부서·직원인지 본다 ([ADR-0127](../decisions/0127-studio-picks-the-work-place.md)) | 1 |
 | `entry` | str | `bpm_process`만 ✓ | 진입 정의 경로 (예: `process/main.bpmn`) | 1 |
 | `process_id` | str | `bpm_process`만 ✓ | 진입 정의의 BPMN process id | 1 |
@@ -67,7 +66,7 @@
 | `type` | str | 값 타입 (C14 `VALUE_TYPES`) |
 | `required` | bool | 주지 않으면 실행이 시작되지 않는다. 기본 `false` |
 | `description` | str? | 화면 안내 |
-| `default` | any? | 주지 않았을 때의 값. **업무 값을 넣지 않는다** (패키지는 서명되어 여러 PC로 간다) |
+| `default` | any? | 주지 않았을 때의 값. **업무 값을 넣지 않는다** (패키지는 서명되어 여러 곳으로 간다) |
 
 ### Requires
 
@@ -80,9 +79,9 @@
 | `service_apps` | ServiceAppNeed[] | 부르는 서비스 앱(= C15 토픽)과 작업 (아래). 제 앱을 부르는 확장(C13 `requires_keys[].purpose: run`)의 태스크가 있으면 그 확장 id가 들어간다 |
 | `resources` | `{type, id}`[] | 확장이 기여한 자원 중 쓰는 것 (예: `{type: "seal_specimen", id: "hq.corporate-seal"}`). Center 리소스 목록(C7 확장 기여 자원)과 대조 |
 | `extensions` | `{id, version, definition_hash?}`[] | 쓰는 확장과 버전 범위 (C13). 외부 확장이면 `definition_hash`로 정의를 고정한다. Studio가 채운다 |
-| `task_types` | `{id, extension, run_locations?}`[] | 쓰는 태스크 종류 중 **확장이 기여한 것**과, 그 확장 정의에 적힌 실행 위치. Studio가 빌드할 때 확장 정의에서 옮겨 적는다. Center는 이것으로 R2를 판정하고, 실행하는 쪽은 자기 확장 정의로 다시 확인한다. **`run_locations`는 아는 쪽이 준다 — 모르면 넣지 않는다**: 빌드하는 PC에 그 확장이 깔려 있지 않거나 꺼져 있으면(ADR-0043) 적을 값이 없다 |
+| `task_types` | `{id, extension}`[] | 쓰는 태스크 종류 중 **확장이 기여한 것**. Studio가 빌드할 때 그림에서 모은다. Center는 배포 때 그 확장이 깔려 있나를 본다 (C7) |
 | `libs` | str[] | 복사해 넣은 공유 BPM 프로세스 `<id>@<version>` |
-| `delegations` | str[] | **PC 위임**으로 부르는 PC BPM 프로세스 `<id>@<version>` 또는 `<id>`(판을 비우면 배포된 판). 복사해 넣는 것이 **아니다** — 따로 올리고 따로 배포한 BPM 프로세스라 `libs/`에 들어가지 않는다 ([ADR-0062](../decisions/0062-pc-delegation.md)). Studio가 그림(`bpm:call.delegate`)에서 모은다 |
+| `delegations` | str[] | **맡기는** BPM 프로세스 `<id>@<version>` 또는 `<id>`(판을 비우면 배포된 판). 복사해 넣는 것이 **아니다** — 따로 올리고 따로 배포한 BPM 프로세스라 `libs/`에 들어가지 않는다 ([ADR-0082](../decisions/0082-batch-start.md)). Studio가 그림(`bpm:call.delegate`)에서 모은다 |
 | `runtimes` | str[] | 예: `node>=20`, `chromium` |
 | `os` | str[] | `windows` `linux`. 비면 제한 없음 |
 
@@ -102,7 +101,6 @@
 | 필드 | 타입 | 뜻 |
 | --- | --- | --- |
 | `approval_center` | bool | Center 결재함으로 가는 결재가 있다 |
-| `approval_field` | bool | 「현장」 결재 위치(현장 PC 창)가 있다 |
 | `confirmation` | bool | 실행 중 확인(막힘)이 생길 수 있다 (AI 태스크 확인 트리거, 확장 태스크의 전환) |
 
 ### Trigger, Provides, Built
@@ -110,7 +108,7 @@
 | 모델 | 필드 |
 | --- | --- |
 | Trigger | `kind`: `none` \| `message` \| `timer` \| `conditional` \| `signal`, `name`(이벤트 이름 — 메시지·신호), `expression`(타이머 식) |
-| Provides | `processes`: `{process_id, file, name, description, reads[], writes[], run_location, ai_tasks, human}`[] |
+| Provides | `processes`: `{process_id, file, name, description, reads[], writes[], ai_tasks, human}`[] |
 | Built | `by`: `studio` \| `cli`, `at`(ISO 8601), `core`(버전), `spec_version`(재생 명세 버전) |
 
 **`triggers`는 진입 정의의 시작 이벤트를 그대로 옮긴 것이다** — `kind`는 BPMN 시작 이벤트의
@@ -135,40 +133,28 @@
 - **타이머 일정은 Center가 `triggers`로 쓴다** ([ADR-0110](../decisions/0110-center-keeps-the-schedule.md),
   C5 §일정) — Center는 그림을 읽지 않으므로 Studio가 `timeCycle` 본문을 `expression`에 옮겨 둔 것이
   일정의 원본이다. 읽는 문법은 `contracts.schedule` 하나이고 **R13이 올릴 때 같은 함수로 본다**.
-  실행하는 쪽(PC 실행기·서버 실행기)은 일정을 잡지 않는다 — 일정이 만든 것은 평범한 작업이다.
+  실행하는 쪽(서버 실행기)은 일정을 잡지 않는다 — 일정이 만든 것은 평범한 작업이다.
   메시지 시작도 Center가 `triggers`의 이름으로 고른다(C12 — 상관 키는 Center가 기다리는 실행과 맞춘다).
 
 ## 검사 규칙
 
-Studio(빌드 때), Center(업로드 때), PC 실행기·서버 실행기(설치 때)가 **같은 함수**(`contracts.manifest.validate`)로 검사한다.
+Studio(빌드 때), Center(업로드 때), 서버 실행기(설치 때)가 **같은 함수**(`contracts.manifest.validate`)로 검사한다.
 
 | # | 규칙 | 위반 시 |
 | --- | --- | --- |
-| R1 | `kind=bpm_process`면 `run_location`, `entry`, `process_id`가 있다 (`run_location`은 생략 시 `server`로 채움) | 422 |
-| R2 | `run_location=server`면: `requires.domains`에 `web`·`desktop` 없음, `requires.task_types[]`가 **`run_locations`를 적었으면** 거기에 `server`가 있음 (`pc`만 적은 종류는 불가), `human.approval_field=false`, `human.confirmation=false` | 422 `server_incompatible` + 걸린 항목 목록 |
-| R3 | `run_location=server`인 BPM 프로세스가 `run_location=pc`인 **공유 BPM 프로세스**를 부르면 **거부**다. PC 위임의 길이 아니다 — 패키지에 복사해 넣은 정의는 **PC에서 돌릴 길이 없다**(작업은 배포된 패키지를 가리키고 공유 BPM 프로세스에는 진입이 없다, R1). 위임은 `requires.delegations`로 적는다 ([ADR-0062](../decisions/0062-pc-delegation.md)) | 422 `delegation_not_supported` |
-| R8 | (Center, 배포 때) `run_location=server`면 `requires.service_apps[].operations`가 모두 C11 manifest에서 `server_ok=true`이고 결정 수행을 지원한다 (리소스 목록 C7과 대조). 업로드 때는 경고만 | 배포 422 `operation_not_server_ok` / `operation_not_deterministic` |
+| R1 | `kind=bpm_process`면 `entry`·`process_id`가 있다 | 422 |
+| R2 | `requires.domains`에 `web`·`desktop`이 없다 — 그 판은 아직 돌릴 수 없다 ([ADR-0114](../decisions/0114-remove-ui-automation.md)) | 422 `server_incompatible` + 걸린 항목 목록 |
+| R8 | (Center, 배포 때) `requires.service_apps[].operations`가 모두 C11 manifest에서 `server_ok=true`이고 결정 수행을 지원한다 (리소스 목록 C7과 대조). 업로드 때는 경고만 | 배포 422 `operation_not_server_ok` / `operation_not_deterministic` |
 | R4 | (없앴다 — 키 참조 칸이 없다, ADR-0102. 번호는 다시 쓰지 않는다) | — |
 | R5 | `manifest.json`·BPMN 어디에도 키 값·비밀 값이 없다 (Studio 빌드가 보장한다) | — |
 | R6 | `content_hash`가 실제 내용과 같다 (C2) | 422 `hash_mismatch` |
 
 **R7은 없어졌다** — 툴팩 해시를 검사하던 규칙이고 툴팩 갈래가 사라졌다 ([ADR-0050](../decisions/0050-no-toolpack-kind.md)). **번호는 다시 쓰지 않는다** (오류 코드는 사람이 기억한다).
 | R9 | `triggers[].kind`가 위 다섯 중 하나다 | 422 `unknown_trigger_kind` + 걸린 값 목록 |
-| R10 | `requires.delegations`가 있으면 `run_location=server`다 — **PC 위임은 서버 BPM 프로세스만 한다** (PC 실행은 그 PC의 자리를 끝까지 쥐므로 PC가 PC를 기다리면 서로를 기다린다, [ADR-0014](../decisions/0014-one-bot-per-pc.md)). C14 B14가 그림에서 같은 것을 보지만 **매니페스트를 보는 쪽은 그림을 읽지 않는다** | 422 `delegation_not_from_pc` + 걸린 BPM 프로세스 목록 |
 | R11 | `requires.settings`가 아는 값 중 하나다 (`llm`·`vlm`·`smtp`) — **R9와 같은 까닭**이다: 그림에서 기계가 옮기는 값이고(`bpm:email` → `smtp`) 읽는 쪽은 그 이름으로 「이 호스트가 갖췄나」를 본다(`core.preflight`). 모르는 이름은 그 점검을 **아무 말 없이 지나가** 준비되지 않은 BPM 프로세스가 실행된다 | 422 `unknown_setting` + 걸린 값 목록 |
-| R12 | `requires.delegations`에 **자기 `id`가 없다** — 자기 자신에게 위임하지 않는다 (끝나지 않는 되부름이다, [ADR-0082](../decisions/0082-batch-start.md)). 그림은 자기 패키지 id를 모르므로 매니페스트가 본다 | 422 `delegation_to_self` + 그 항목 |
+| R12 | `requires.delegations`에 **자기 `id`가 없다** — 자기 자신에게 맡기지 않는다 (끝나지 않는 되부름이다, [ADR-0082](../decisions/0082-batch-start.md)). 그림은 자기 패키지 id를 모르므로 매니페스트가 본다 | 422 `delegation_to_self` + 그 항목 |
 | R13 | `triggers[kind=timer].expression`을 **Center가 읽을 수 있다** — 5필드 cron(`*`·수·`a-b`·`/n`·쉼표, 일 칸 `L`, 요일 0~7) 또는 ISO `R[n]/<시작>/<기간>`·`R[n]/<기간>`(1분 이상). **R9와 같은 까닭**이다: 일정은 Center가 이 식으로 쓰므로(C5 §일정) 읽지 못하는 식은 그 BPM 프로세스를 **아무 말 없이 영영 돌지 않게** 한다. 읽는 함수는 `contracts.schedule` 하나다 ([ADR-0110](../decisions/0110-center-keeps-the-schedule.md)) | 422 `timer_expression_invalid` + 걸린 식과 까닭 |
 | R14 | `place`는 `kind=bpm_process`에만 있고, `scope`가 아는 값(`company`·`department`·`staff`)이며 그에 맞는 칸만 있다(`department`는 부서 자리에, `staff`는 직원 자리에) — 부서·직원이 **올린 회사 안에** 있는지는 Center가 올릴 때 본다(C16 `place_outside_company`, ADR-0127) | 422 |
-
-**R2는 모르는 것을 막지 않는다.** 태스크 종류의 실행 위치는 **확장 정의만** 안다 (C13
-`task_types[].run_locations`, ADR-0018) — 빌드하는 PC에 그 확장이 없거나 꺼져 있으면 Studio가
-적을 값이 없다. 그래서 `run_locations`가 **없거나 비어 있으면 「모른다」**로 읽고 R2는
-**선언된 것이 `server`를 빼놓았을 때만** 막는다. 모르는 것까지 막으면 확장을 깔지 않은
-PC(빌드 기계도 그렇다)에서 만든 **올바른 패키지가 업로드에서 거부된다**. 확장이 **정말 없는**
-경우는 따로 막힌다 — 배포 때 그 확장이 Center에 없으면 거부하고 (C7 `blocking_at_deploy`),
-실행하는 쪽의 사전 점검도 `task_types_unsupported`로 시작 전에 말한다. C13은 확장이
-`run_locations`를 비워 두는 것을 이미 금지하므로(`run_locations_missing`) 빈 목록이 선언에서
-올 일은 없다.
 
 **R9는 막는다 — 「모르는 것」이 아니라 빌드한 쪽의 흠이다.** 시작 방법은 그림에서 기계가
 옮기는 값이라 사람이 적어 틀릴 자리가 없다. 모르는 값이 들어왔다면 **옮기는 쪽이 계약에 없는
@@ -178,7 +164,6 @@ PC(빌드 기계도 그렇다)에서 만든 **올바른 패키지가 업로드�
 
 ## 예시
 
-서버 BPM 프로세스 (기본):
 
 ```json
 {
@@ -187,7 +172,6 @@ PC(빌드 기계도 그렇다)에서 만든 **올바른 패키지가 업로드�
   "id": "finance.invoice-issue",
   "version": "1.0.0",
   "name": "세금계산서 발행",
-  "run_location": "server",
   "entry": "process/main.bpmn",
   "process_id": "invoice_issue",
   "triggers": [{"kind": "message", "name": "invoice.requested"}],
@@ -207,39 +191,11 @@ PC(빌드 기계도 그렇다)에서 만든 **올바른 패키지가 업로드�
     "runtimes": [],
     "os": []
   },
-  "human": {"approval_center": true, "approval_field": false, "confirmation": false},
+  "human": {"approval_center": true, "confirmation": false},
   "inputs": [{"name": "대상월", "type": "string", "required": false, "description": "비우면 지난달"}],
   "outputs": ["invoice_no"],
   "built": {"by": "studio", "at": "2026-10-01T10:00:00+09:00", "core": "0.3.0", "spec_version": 1},
   "content_hash": "sha256:9f2c…"
-}
-```
-
-PC BPM 프로세스 (현장 확인과 사내 확장 태스크가 있음 — 확장은 C13 예시의 가상 확장):
-
-```json
-{
-  "schema": 1,
-  "kind": "bpm_process",
-  "id": "legal.contract-seal",
-  "version": "2.1.0",
-  "run_location": "pc",
-  "entry": "process/main.bpmn",
-  "process_id": "contract_seal",
-  "triggers": [{"kind": "timer", "expression": "0 9 1 * *"}],
-  "requires": {
-    "domains": ["llm", "doc"],
-    "service_apps": [
-      {"app_id": "seal-check", "operations": ["compare"]}
-    ],
-    "resources": [{"type": "seal_specimen", "id": "hq.corporate-seal"}],
-    "task_types": [{"id": "seal_check", "extension": "seal-check", "run_locations": ["pc", "server"]}],
-    "extensions": [{"id": "seal-check", "version": ">=1.2,<1.3"}],
-    "os": ["windows"]
-  },
-  "human": {"approval_center": false, "approval_field": true, "confirmation": true},
-  "built": {"by": "studio", "at": "2026-10-01T10:00:00+09:00", "core": "0.3.0", "spec_version": 1},
-  "content_hash": "sha256:41ab…"
 }
 ```
 
@@ -256,22 +212,20 @@ PC BPM 프로세스 (현장 확인과 사내 확장 태스크가 있음 — 확�
 
 - 받는 쪽이 모르는 **선택 필드**를 받으면: 보관하고 무시한다 (패키지 해시는 원문 그대로 유지).
 - 받는 쪽보다 **높은 `schema`** 를 받으면: 거부한다 (아는 필드의 뜻이 바뀌었을 수 있다).
-- `run_location`이 없는 매니페스트는 `server`로 읽는다. 단, Studio는 빌드할 때 **항상 명시**한다.
-- M6까지 Center는 `run_location=server` 패키지의 **업로드는 받고 서버 배포는 거부**한다 (「서버 실행은 M7부터」, C5).
 
 ## 프로토타입과 달라진 것
 
 | 프로토타입 | 여기 |
 | --- | --- |
 | `kind`: `employee` / `process-lib` / `toolpack` / `template` | `bpm_process` / `process_lib` (`toolpack`·`template` 없음 — 도구는 확장이 기여한다, [ADR-0050](../decisions/0050-no-toolpack-kind.md)) |
-| 실행 위치 없음 (전부 PC) | `run_location` (기본 `server`) |
-| `hitl.business` / `hitl.execution` | `human.approval_center` / `approval_field` / `confirmation` (서버 검사에 필요) |
+| `hitl.business` / `hitl.execution` | `human.approval_center` / `confirmation` |
 | 서비스 앱·화면 의존 없음 | `requires.service_apps`, `requires.extensions`·`task_types`·`resources` |
 
 ## 변경 이력
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-12 | 1 | **PC 실행기를 걷었다** — `run_location` 칸과 **R10**(위임은 서버만)·**R2의 실행 위치 갈래**를 걷었다. `requires.delegations`와 **R12**(자기 자신을 맡기지 않는다)는 **남는다** — 맡기기는 패키지를 건너 실행을 띄우는 길이다 (ADR-0082) | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-11-01 | 1 | `place?`(업무 자리, C16) — Studio가 올릴 때 고른다. 선택 칸이라 옛 패키지는 회사 공통이다 | [0127](../decisions/0127-studio-picks-the-work-place.md) |
 | 2026-10-31 | 1 | 칸은 그대로다. PC 예시를 UI 태스크 대신 사내 확장 태스크로 바꿨고, `domains`의 `web`·`desktop`은 낱말로만 남아 사전 점검이 막는다고 적었다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-30 | 1 | **타이머 일정을 Center가 `triggers`로 쓴다** — 「실행하는 쪽은 `triggers`로 일정을 잡지 않는다」를 그대로 두되 일정을 쥐는 자리가 Center임을 적었고, **R13**(타이머 식을 읽을 수 있다)을 더했다. 칸은 그대로다. 예제의 식은 모두 지난다(`0 18 L * *` 포함) | [0110](../decisions/0110-center-keeps-the-schedule.md) |

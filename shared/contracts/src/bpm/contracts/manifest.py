@@ -1,21 +1,19 @@
 """C1. 패키지 매니페스트 — 패키지 zip 루트의 `manifest.json`.
 
 단일 원본: `docs/03-contracts/C1-package-manifest.md`. 검사 규칙은 `validate()`에 있고,
-Studio(빌드)·Center(업로드)·PC 실행기·서버 실행기(설치)가 **같은 함수**를 쓴다.
+Studio(빌드)·Center(업로드)·서버 실행기(설치)가 **같은 함수**를 쓴다.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from bpm.contracts._base import ContractModel, SchemaVersioned, Sha256, Timestamp, Violation
 from bpm.contracts.organization import KNOWN_PLACE_SCOPES, Place
 
 PackageKind = Literal["bpm_process", "process_lib"]
-RunLocation = Literal["server", "pc"]
 
 KNOWN_TRIGGER_KINDS = frozenset({"none", "message", "timer", "conditional", "signal"})
 #: 실행하는 쪽이 갖춰야 할 설정 이름 (C1 `requires.settings`).
@@ -95,15 +93,10 @@ class ExtensionNeed(ContractModel):
 
 
 class TaskTypeNeed(ContractModel):
-    """확장이 기여한 태스크 종류와, 그 확장 정의에 적힌 실행 위치. R2 판정에 쓴다."""
+    """확장이 기여한 태스크 종류 (C13). 배포 때 그 확장이 깔려 있나를 Center가 본다."""
 
     id: str
     extension: str
-    #: **아는 쪽이 준다 — 모르면 넣지 않는다** (C3 `queued_s`·C4 `key_expires_at`과 같은 결).
-    #: 실행 위치는 **확장 정의만** 안다 (C13 `task_types[].run_locations`, ADR-0018). 패키지를
-    #: 만드는 PC에 그 확장이 깔려 있지 않거나 꺼져 있으면(ADR-0043) 적을 것이 없다 — 그때 빈
-    #: 목록을 적으면 R2가 「서버에서 안 된다」로 읽어 **올바른 패키지를 거부한다**.
-    run_locations: list[str] | None = None
 
 
 class Requires(ContractModel):
@@ -118,19 +111,21 @@ class Requires(ContractModel):
     extensions: list[ExtensionNeed] = Field(default_factory=list)
     task_types: list[TaskTypeNeed] = Field(default_factory=list)
     libs: list[str] = Field(default_factory=list)
+    #: **맡기는** BPM 프로세스 (`<id>@<version>` 또는 `<id>` — 판을 비우면 배포된 판,
+    #: ADR-0082). `libs`와 다르다: 복사해 넣는 것이 아니라 **따로 올리고 따로 배포한
+    #: BPM 프로세스**이다.
+    delegations: list[str] = Field(default_factory=list)
     #: **PC 위임**으로 부르는 PC BPM 프로세스 (`<id>@<version>` 또는 `<id>` — 판을 비우면 배포된 판,
     #: [ADR-0062](../decisions/0062-pc-delegation.md)). `libs`와 다르다: 복사해 넣는 것이
     #: 아니라 **따로 올리고 따로 배포한 BPM 프로세스**이다.
-    delegations: list[str] = Field(default_factory=list)
     runtimes: list[str] = Field(default_factory=list)
     os: list[str] = Field(default_factory=list)
 
 
 class HumanNeeds(ContractModel):
-    """사람 개입 종류. 서버 실행 가능 여부(R2) 판정에 쓴다."""
+    """사람 개입 종류 — 결재와 확인 (C6). 둘 다 Center 결재함에서 답한다 (ADR-0144)."""
 
     approval_center: bool = False
-    approval_field: bool = False
     confirmation: bool = False
 
 
@@ -152,7 +147,6 @@ class ProvidedProcess(ContractModel):
     description: str | None = None
     reads: list[str] = Field(default_factory=list)
     writes: list[str] = Field(default_factory=list)
-    run_location: RunLocation | None = None
     ai_tasks: int | None = None
     human: HumanNeeds | None = None
 
@@ -162,17 +156,13 @@ class Provides(ContractModel):
 
 
 class Manifest(SchemaVersioned):
-    """패키지 매니페스트 (C1 최상위).
-
-    `kind="bpm_process"`이고 `run_location`이 없으면 **`server`로 채운다** (서버 우선, 호환 규칙).
-    """
+    """패키지 매니페스트 (C1 최상위)."""
 
     kind: PackageKind
     id: PackageId
     version: SemVer
     name: str | None = None
     description: str | None = None
-    run_location: RunLocation | None = None
     #: **업무 자리** (C16, ADR-0127) — Studio가 올릴 때 고른다. 비우면 회사 공통이다. 회사는 올린 Studio의 것이다.
     place: Place | None = None
     entry: str | None = None
@@ -186,12 +176,6 @@ class Manifest(SchemaVersioned):
     built: Built
     content_hash: Sha256
 
-    @model_validator(mode="after")
-    def _default_run_location(self) -> Manifest:
-        if self.kind == "bpm_process" and self.run_location is None:
-            self.run_location = "server"
-        return self
-
 
 def _check_r1(m: Manifest) -> list[Violation]:
     out = []
@@ -199,84 +183,28 @@ def _check_r1(m: Manifest) -> list[Violation]:
         missing = [f for f in ("entry", "process_id") if getattr(m, f) is None]
         if missing:
             out.append(Violation(rule="R1", message="bpm_process에 필수 필드가 없다", items=missing))
-    elif m.run_location is not None:
-        out.append(Violation(rule="R1", message=f"kind={m.kind}에는 run_location을 두지 않는다"))
     return out
 
 
 def _check_r2(m: Manifest) -> list[Violation]:
-    if m.run_location != "server":
-        return []
-    items = []
-    items += [f"domains:{d}" for d in m.requires.domains if d in PC_ONLY_DOMAINS]
-    # **선언된 것이 `server`를 빼놓았을 때만** 막는다. 비어 있거나 없는 것은 「모른다」는 뜻이고
-    # (`TaskTypeNeed.run_locations`), 모르는 것을 막으면 확장을 깔지 않은 PC에서 만든 올바른
-    # 패키지가 거부된다. 그 확장이 **정말 없는** 경우는 배포 때 확장 누락이 막는다 (C7).
-    items += [
-        f"task_types:{t.id}"
-        for t in m.requires.task_types
-        if t.run_locations and "server" not in t.run_locations
-    ]
-    if m.human.approval_field:
-        items.append("human.approval_field")
-    if m.human.confirmation:
-        items.append("human.confirmation")
+    """서버에서 할 수 없는 것 (C1 R2). 실행 자리가 서버 하나가 되면서 **웹·데스크톱 AI
+    태스크만** 남았다 — 그 판은 아직 돌릴 수 없다 (ADR-0114·ADR-0144).
+    """
+    items = [f"domains:{d}" for d in m.requires.domains if d in PC_ONLY_DOMAINS]
     if not items:
         return []
     return [
         Violation(
             rule="R2",
             code="server_incompatible",
-            message="실행 위치가 server인데 서버에서 할 수 없는 것이 있다",
+            message="서버에서 할 수 없는 것이 있다",
             items=items,
         )
     ]
 
 
-def _check_r3(m: Manifest, lib_locations: Mapping[str, str]) -> list[Violation]:
-    """서버 BPM 프로세스가 **PC 공유 BPM 프로세스**를 부르면 거부 (C1 R3).
-
-    **PC 위임의 길이 아니다** ([ADR-0062](../decisions/0062-pc-delegation.md)) — 패키지에 복사해
-    넣은 정의(`libs/`)는 PC에서 돌릴 길이 없다: 작업은 **배포된 패키지**를 가리키고 공유 BPM
-    프로세스에는 **진입이 없다**(R1). 위임은 `requires.delegations`로 적는다.
-    """
-    if m.run_location != "server":
-        return []
-    pc_libs = [lib for lib in m.requires.libs if lib_locations.get(lib) == "pc"]
-    if not pc_libs:
-        return []
-    return [
-        Violation(
-            rule="R3",
-            code="delegation_not_supported",
-            message="서버 BPM 프로세스가 PC 공유 BPM 프로세스를 부른다 "
-                    "(PC 위임은 requires.delegations로 적는다 — 복사해 넣은 정의는 PC에서 돌릴 길이 없다)",
-            items=pc_libs,
-        )
-    ]
-
-
-def _check_r10(m: Manifest) -> list[Violation]:
-    """PC 위임은 **서버 BPM 프로세스만** 한다 (C1 R10, [ADR-0062](../decisions/0062-pc-delegation.md)).
-
-    PC 실행은 그 PC의 자리를 끝까지 쥐므로(ADR-0014) PC가 다른 PC를 기다리면 둘이 서로를
-    기다릴 수 있다. C14 B14가 그림에서 같은 것을 보지만 **매니페스트를 보는 쪽은 그림을 읽지
-    않는다** — 둘 다 있어야 올리는 길과 설치하는 길이 함께 막힌다.
-    """
-    if not m.requires.delegations or m.run_location == "server":
-        return []
-    return [
-        Violation(
-            rule="R10",
-            code="delegation_not_from_pc",
-            message="PC 위임은 실행 위치가 server인 BPM 프로세스만 할 수 있다",
-            items=sorted(m.requires.delegations),
-        )
-    ]
-
-
 def _check_r12(m: Manifest) -> list[Violation]:
-    """**자기 자신에게 위임하지 않는다** (C1 R12, [ADR-0082](../decisions/0082-batch-start.md)).
+    """**자기 자신에게 위임하지 않는다** (C1 R12, ADR-0082).
 
     끝나지 않는 되부름이다 — 위임은 결과를 기다리므로 한 건이 같은 BPM 프로세스를 또 기동하고 그것이
     또 기동한다. 그림은 자기 패키지 id를 모르므로 **매니페스트가 본다** (`id`와
@@ -397,14 +325,12 @@ def _check_r6(m: Manifest, computed_hash: str | None) -> list[Violation]:
 def validate(
     m: Manifest,
     *,
-    lib_locations: Mapping[str, str] | None = None,
     computed_hash: str | None = None,
 ) -> list[Violation]:
     """C1 검사 규칙. 위반 목록을 돌려준다 (비어 있으면 통과).
 
     인자를 주지 않으면 **매니페스트 하나만 보고 할 수 있는 검사**만 한다.
 
-    - `lib_locations`: `<id>@<version>` → `"server"`\\|`"pc"`. 없으면 R3을 건너뛴다.
     - `computed_hash`: 패키지 실물에서 계산한 해시. 없으면 R6을 건너뛴다.
       폴더면 `bpm.contracts.hashing.content_hash_dir(root)`, zip이면 `content_hash_zip(path)`.
 
@@ -416,10 +342,8 @@ def validate(
     return [
         *_check_r1(m),
         *_check_r2(m),
-        *_check_r3(m, lib_locations or {}),
         *_check_r6(m, computed_hash),
         *_check_r9(m),
-        *_check_r10(m),
         *_check_r11(m),
         *_check_r12(m),
         *_check_r13(m),

@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_bx24_leave_balance" name="잔여 휴가 조회 (공유)" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "hris",

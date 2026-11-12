@@ -76,15 +76,13 @@ CENTER_URL_SETTING = "center.url"
 CALL_TOKEN_SECRET = "call_token"
 
 #: `configuration[].scope`, `requires_keys[].purpose`.
-SCOPE_BOT_UI = "bot_ui"
 SCOPE_STUDIO = "studio"
 SCOPE_SERVER_RUNNER = "server_runner"
-CONFIG_SCOPES = frozenset({SCOPE_BOT_UI, SCOPE_STUDIO, SCOPE_SERVER_RUNNER})
+CONFIG_SCOPES = frozenset({SCOPE_STUDIO, SCOPE_SERVER_RUNNER})
 PURPOSE_RUN = "run"
 KNOWN_PURPOSES = frozenset({PURPOSE_RUN})
 
 #: 실행 위치 (C1과 같은 값).
-KNOWN_RUN_LOCATIONS = frozenset({"pc", "server"})
 
 #: HTTP 어댑터 (§4).
 ADAPTER_METHODS = frozenset({"GET", "POST", "PUT", "PATCH", "DELETE"})
@@ -136,8 +134,6 @@ class TaskTypeContribution(ContractModel):
     bpmn: str = "serviceTask"
     editor: Editor | None = None
     executor: Executor | None = None
-    #: 이 태스크 종류를 쓸 수 있는 실행 위치 (C1 R2 판정에 쓰인다). `ui_task`는 `["pc"]`.
-    run_locations: list[str] = Field(default_factory=list)
 
 
 class StudioEditorContribution(ContractModel):
@@ -636,13 +632,6 @@ def _check_shape(m: ExtensionManifest) -> list[Violation]:
         if t.editor is not None and t.editor.kind == EDITOR_BUILTIN and not t.editor.entry:
             out.append(Violation(rule="C13", code="editor_entry_missing",
                                  message=f"태스크 종류 {t.id}의 편집기가 builtin인데 entry가 없다"))
-        bad = [loc for loc in t.run_locations if loc not in KNOWN_RUN_LOCATIONS]
-        if bad:
-            out.append(Violation(rule="C13", code="unknown_run_location",
-                                 message=f"태스크 종류 {t.id}의 실행 위치를 모른다", items=bad))
-        if not t.run_locations:
-            out.append(Violation(rule="C13", code="run_locations_missing",
-                                 message=f"태스크 종류 {t.id}에 실행 위치가 없다"))
     for item in c.configuration:
         if item.key.startswith(RESERVED_CONFIG_PREFIXES):
             # E7. 호스트가 Center 주소·저장 폴더를 이 이름으로 알려 준다 (C13) — 가려지면 안 된다.

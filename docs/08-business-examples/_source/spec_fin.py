@@ -8,7 +8,7 @@ EXAMPLES = []
 EXAMPLES.append(Example(
     id="BX-01", file="bx01_invoice_reconciliation", name="월별 청구서 대사", dept="재무·회계",
     origin="프로토타입 업무 A (실제로 만들어 돌림)", 
-    run_location="server", trigger="타이머 — 매월 1일 09:00 (`0 9 1 * *`), 또는 작업 지시(대상월 지정)",
+    trigger="타이머 — 매월 1일 09:00 (`0 9 1 * *`), 또는 작업 지시(대상월 지정)",
     background="""
 공급사가 보낸 청구서 PDF(양식 3가지, 7건)를 발주 대장(xlsx)과 맞춰 본다. 문제없는 건은 지급 대상으로, 문제 있는 건은 보류로 나누고 대사표를 만든다. 보류가 있으면 담당자가 확인한 뒤 결과를 재무팀에 메일로 보낸다.
 
@@ -106,7 +106,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-02", file="bx02_morning_fx_report", name="매일 아침 환율 점검 보고", dept="재무·회계",
     origin="프로토타입 업무 B (실제로 만들어 돌림)", 
-    run_location="server", trigger="타이머 — 평일 09:00 (`0 9 * * 1-5`)",
+    trigger="타이머 — 평일 09:00 (`0 9 * * 1-5`)",
     background="""
 평일 아침마다 외부 환율 API에서 USD 기준 KRW·EUR·JPY 환율을 받아 통화별 상한·하한과 비교한다. 경고가 있을 때만 담당자에게 확인을 받고, 보고서를 만들어 메일로 보낸다. 메일이 실패해도 실행 전체가 실패하지 않게 오류 경계로 기록만 남긴다.
 """,
@@ -167,7 +167,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-03", file="bx03_expense_approval", name="지출 결재", dept="재무·회계",
     origin="프로토타입 업무 C (실제로 만들어 돌림)", 
-    run_location="server", trigger="메시지 `expense_request` — 경비 시스템이 Center 메시지 API로 보냄 (C12)",
+    trigger="메시지 `expense_request` — 경비 시스템이 Center 메시지 API로 보냄 (C12)",
     background="""
 경비 시스템에서 지출 신청이 오면 정책으로 먼저 거른다: 영수증이 없으면 바로 반려, 10만 원 이하면 자동 승인, 그 밖에는 결재자에게 보낸다. 결재는 며칠 걸릴 수 있다. 3일이 지나면 리마인드(결재는 계속 기다림), 7일이 지나면 기한 초과로 반려한다. 어떤 길로 끝나든 신청자에게 회신하고 처리 기록을 남긴다.
 """,
@@ -228,7 +228,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-05", file="bx05_month_end_close", name="월말 마감 체크리스트", dept="재무·회계",
     origin="프로토타입 시나리오 9 (제안만 됨) → 새로 설계",
-    run_location="server", trigger="타이머 — 매월 말일 18:00 (`0 18 L * *`)",
+    trigger="타이머 — 매월 말일 18:00 (`0 18 L * *`)",
     background="""
 월말 마감은 여러 부서의 완료 통보를 기다린다: 매출 확정(영업), 매입 확정(구매), 재고 실사(물류). 세 통보가 모두 오면 결산 분개를 만들고 재무팀장 결재 후 마감한다. 매출 통보가 하루를 넘기면 영업에 독촉한다. 진행 단계마다 이정표를 남겨 콘솔에서 어디까지 왔는지 보이게 한다. 팀장이 마감을 보류하면 재무팀에 알리고 끝낸다 (다음 조치는 사람이 새 실행으로).
 """,
@@ -291,7 +291,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-06", file="bx06_bulk_credit_check", name="다건 거래처 신용 조회", dept="재무·회계",
     origin="프로토타입 시나리오 10 (제안만 됨) → 외부 확장으로 새로 설계", 
-    run_location="server", trigger="작업 지시 — 거래처 목록(최대 50곳)을 입력으로",
+    trigger="작업 지시 — 거래처 목록(최대 50곳)을 입력으로",
     background="""
 분기마다 주요 거래처 50곳의 신용등급을 외부 신용정보 서비스에서 조회한다. 결과를 규칙으로 「정상/주의/위험」 3단계로 나누고, 위험 거래처는 영업·재무에 알린다. 외부 신용정보 서비스는 우리 계약(C11)을 따르지 않는 외부 앱이므로 **외부 확장의 HTTP 어댑터**로 붙인다.
 """,
@@ -331,7 +331,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-07", file="bx07_corporate_card_review", name="법인카드 사용 내역 정리", dept="재무·회계",
     origin="새로 설계", 
-    run_location="server", trigger="타이머 — 매주 월요일 08:30 (`30 8 * * 1`)",
+    trigger="타이머 — 매주 월요일 08:30 (`30 8 * * 1`)",
     background="""
 지난주 법인카드 사용 내역(카드사 CSV)을 읽어 건마다 계정과목을 붙이고, 사용 정책(주말·심야·업종 제한·1회 한도)을 규칙으로 점검한다. 정책 위반 건만 모아 사용자 소속 팀장에게 소명 확인을 받고, 결과를 회계 전표 업로드용 xlsx로 만든다.
 """,
@@ -387,7 +387,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-08", file="bx08_receivable_dunning", name="매출채권 연체 독촉", dept="재무·회계",
     origin="새로 설계", 
-    run_location="server", trigger="타이머 — 평일 10:00 (`0 10 * * 1-5`)",
+    trigger="타이머 — 평일 10:00 (`0 10 * * 1-5`)",
     background="""
 ERP에서 만기가 지난 매출채권을 가져와 거래처마다 연체 단계(1차 안내 / 2차 독촉 / 법무 이관 검토)를 규칙으로 정한다. 1·2차는 AI가 거래처별 독촉 메일 초안을 쓰고 보낸다. 법무 이관 검토 대상(연체 90일 이상 또는 1억 원 이상)은 재무팀장 결재를 받는다.
 """,

@@ -136,7 +136,6 @@ def package_zip() -> bytes:
         "id": BOT,
         "version": VERSION,
         "name": "입찰 접수와 마감",
-        "run_location": "server",
         "entry": "process/main.bpmn",
         "process_id": "Proc_bx11_bid_collection",
         "requires": {},

@@ -4,7 +4,7 @@
 | --- | --- |
 | 상태 | **구현됨** (2026-10-10, [09-gaps](../09-gaps.md) §1 대조 — 지원 종료·참조·삭제까지) — **§등록 승인도 돈다** (2026-10-25, [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)). **§Studio 등록 요청도 돈다** (2026-10-25, [0093](../decisions/0093-studio-is-let-in-by-approval.md)) |
 | schema | 1 |
-| 보내는 쪽 → 받는 쪽 | Studio·Center 콘솔·외부 시스템·PC 실행기·서버 실행기 ↔ Center |
+| 보내는 쪽 → 받는 쪽 | Studio·Center 콘솔·외부 시스템·서버 실행기 ↔ Center |
 | 코드 위치 | `shared/contracts/src/bpm/contracts/center_api.py`, `…/accounts.py` (import `bpm.contracts.center_api`·`bpm.contracts.accounts`, [ADR-0019](../decisions/0019-package-names.md)) |
 | JSON Schema | [`c5-package-info.json`](../../shared/contracts/schemas/c5-package-info.json) · [`c5-dependent-info.json`](../../shared/contracts/schemas/c5-dependent-info.json) · [`c5-deployment-info.json`](../../shared/contracts/schemas/c5-deployment-info.json) · [`c5-job-create-request.json`](../../shared/contracts/schemas/c5-job-create-request.json) · [`c5-job-info.json`](../../shared/contracts/schemas/c5-job-info.json) · [`c5-schedule-info.json`](../../shared/contracts/schemas/c5-schedule-info.json) · [`c5-deployment-request.json`](../../shared/contracts/schemas/c5-deployment-request.json) · [`c5-login-request.json`](../../shared/contracts/schemas/c5-login-request.json) · [`c5-session-info.json`](../../shared/contracts/schemas/c5-session-info.json) · [`c5-account-info.json`](../../shared/contracts/schemas/c5-account-info.json) · [`c5-error-body.json`](../../shared/contracts/schemas/c5-error-body.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
 | 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0013](../decisions/0013-api-keys.md), [0014](../decisions/0014-one-bot-per-pc.md), [0015](../decisions/0015-run-location.md), [0016](../decisions/0016-server-first.md), [0017](../decisions/0017-web-nextjs-design-system.md), [0046](../decisions/0046-no-wildcard-pc-deployment.md), [0047](../decisions/0047-one-deployment-gate.md), [0049](../decisions/0049-deployment-target-must-exist.md), [0090](../decisions/0090-center-admin-accounts.md), [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md), [0110](../decisions/0110-center-keeps-the-schedule.md), [0114](../decisions/0114-remove-ui-automation.md) |
@@ -19,9 +19,9 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 3. 관리자가 실행할 대상에 배포한다 — Center가 배포 봉투에 서명한다.
 4. 작업 지시로 실행시킨다.
 
-실행하는 쪽(PC 실행기·서버 실행기)은 이 API로 패키지를 내려받는다. 배포와 작업은 하트비트 응답으로 받는다 (C4·C12).
+실행하는 쪽(서버 실행기)은 이 API로 패키지를 내려받는다. 배포와 작업은 하트비트 응답으로 받는다 (C12).
 
-> 상태: **돈다 — 남은 기능이 없다.** **관리자 계정·로그인 세션**(ADR-0090), 패키지 승인·철회·지원 종료(`PUT …/status`), 배포(`POST/DELETE/GET /deployments`)가 돈다 — 승인·배포 봉투는 Center가 서명하고, 하트비트가 활성 배포 봉투와 믿는 키(`admin_keys`)를 내려 주고 PC 실행기가 설치한다 (C2 V1~V7). **작업 지시(`/jobs`)도 돈다** — 만들기·목록·하나·취소와 하트비트의 `jobs`·`cancel_jobs`·`job_acks`, 맞추기 규칙(`bot_ui_lost`)까지. **참조·삭제(`GET …/dependents`·`DELETE /packages/…`)도 돈다** — CON-06이 읽고 지운다. 콘솔 화면(CON-05·CON-06)도 돈다. 서버 실행기 대상은 422 `server_runner_not_available`이다 (M7).
+> 상태: **돈다 — 남은 기능이 없다.** **관리자 계정·로그인 세션**(ADR-0090), 패키지 승인·철회·지원 종료(`PUT …/status`), 배포(`POST/DELETE/GET /deployments`)가 돈다 — 승인·배포 봉투는 Center가 서명하고, 하트비트가 활성 배포 봉투와 믿는 키(`admin_keys`)를 내려 주고 실행기가 설치한다 (C2 V1~V7). **작업 지시(`/jobs`)도 돈다** — 만들기·목록·하나·취소와 하트비트의 `jobs`·`cancel_jobs`·`job_acks`, 맞추기 규칙(`runner_lost`)까지. **참조·삭제(`GET …/dependents`·`DELETE /packages/…`)도 돈다** — CON-06이 읽고 지운다. 콘솔 화면(CON-05·CON-06)도 돈다.
 
 ## 전송 공통
 
@@ -29,7 +29,7 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 - 목록 요청은 `limit`(기본 100, 최대 1000)과 `offset`을 쓴다. 시각은 시간대를 포함한 ISO 8601이다.
 - 오류 본문: `{"code": "...", "message": "...", "detail": {...}}` (C11과 같은 형식).
 - **행위자:** `requested_by`, `answered_by`, `uploaded_by`, `approved_by`, `deployed_by`, `revoked_by`는 본문에서 받지 않는다. **세션으로 부르면 계정 아이디**다(로그인이 정한 신원이라 `X-BPM-Actor`를 듣지 않는다, ADR-0090). 키로 부르면 키 이름이다(Studio 키는 **승인할 때 붙인 이름** — §Studio 등록 요청과 승인). 관리자·읽기 토큰(자동화)으로 부르면 `X-BPM-Actor` 헤더의 이름이고, 없으면 「관리자 토큰」·「보기 전용」이다 — 이 헤더는 **토큰으로 부를 때만** 믿는다.
-  - **사람 대신 부르는 키는 `X-BPM-On-Behalf-Of`를 싣는다** ([ADR-0081](../decisions/0081-answering-on-behalf.md)). 대리 답용 키는 결재에 **반드시**(C6), 연동용 키는 `POST /jobs`·`POST /messages`에 **실어도 된다**. 작업에서는 **`on_behalf_of`로 적기만** 하고 `requested_by`는 그대로 키 이름이다 — `requested_by`는 권한의 주인이고 PC 실행기가 그 앞머리 `server_bot:`로 위임 작업을 가르므로, 바깥에서 온 글을 그 칸에 넣지 않는다. 대조할 담당자가 없으니 **주장일 뿐**이고 권한을 바꾸지 않는다. 비었거나 200자를 넘거나 예약 앞머리로 시작하면 422 `on_behalf_invalid`.
+  - **사람 대신 부르는 키는 `X-BPM-On-Behalf-Of`를 싣는다** ([ADR-0081](../decisions/0081-answering-on-behalf.md)). 대리 답용 키는 결재에 **반드시**(C6), 연동용 키는 `POST /jobs`·`POST /messages`에 **실어도 된다**. 작업에서는 **`on_behalf_of`로 적기만** 하고 `requested_by`는 그대로 키 이름이다 — `requested_by`는 권한의 주인이고 실행기가 그 앞머리 `server_bot:`로 맡은 작업을 가르므로, 바깥에서 온 글을 그 칸에 넣지 않는다. 대조할 담당자가 없으니 **주장일 뿐**이고 권한을 바꾸지 않는다. 비었거나 200자를 넘거나 예약 앞머리로 시작하면 422 `on_behalf_invalid`.
   - **값은 UTF-8을 퍼센트 인코딩해서** 넣는다 (`운영자 김` → `%EC%9A%B4%EC%98%81%EC%9E%90%20%EA%B9%80`). HTTP 헤더 값에는 ASCII 밖의 글자를 넣을 수 없어서(보내는 쪽 HTTP 라이브러리가 거부한다), 한글 이름을 그대로 실으면 요청 자체가 나가지 않는다. 받는 쪽은 디코딩하고, 디코딩이 실패하면 받은 문자열을 그대로 쓴다.
 
 ### 인증
@@ -40,10 +40,10 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 | 세션 토큰 — 관리자 계정 | 콘솔 | 쓰기 전부. 승인·배포·외부 확장은 Center가 서명한다 (C2) |
 | 읽기 토큰 | 자동화 (선택 — 비우면 닫힌다) | 보기 전용 계정과 같다 |
 | 관리자 토큰 | 자동화 (선택 — 비우면 닫힌다) | 관리자 계정과 같다. 자기 비밀번호 바꾸기만 없다 (계정이 없다) |
-| 인증 없음 | 키가 아직 없는 PC 실행기·서버 실행기 | **등록 요청을 보내고 그 답을 묻는 것뿐** (C4·C12 §등록 요청과 승인 — 내려 주는 키는 요청의 공개키로 봉해 있다) |
+| 인증 없음 | 키가 아직 없는 실행기 | **등록 요청을 보내고 그 답을 묻는 것뿐** (C4·C12 §등록 요청과 승인 — 내려 주는 키는 요청의 공개키로 봉해 있다) |
 | 인증 없음 — **열린 모드** | 개발·시험, 그리고 망에서 막는 운영 ([ADR-0142](../decisions/0142-open-mode.md)) | `BPM_CENTER__OPEN_MODE`가 켜져 있으면 **관리자 토큰과 같다**. 행위자는 `X-BPM-Actor`(없으면 「열린 모드」). **모르는 토큰은 그대로 401이다** — 일꾼 들이기(C15) 한 자리만 예외다 |
 | Center API 키 — Studio용 | Studio (등록 요청을 관리자가 승인해 받은 키, 자동화용은 관리자 토큰으로 발급) | 패키지 업로드, 패키지·리소스 읽기 |
-| Center API 키 — PC 실행기용 / 서버 실행기용 | 실행하는 쪽 | **자기에게 배포된** BPM 프로세스 패키지만 내려받기 (공유 BPM 프로세스는 그 안 `libs/`에 들어 있다) |
+| Center API 키 — 서버 실행기용 | 실행하는 쪽 | **자기에게 배포된** BPM 프로세스 패키지만 내려받기 (공유 BPM 프로세스는 그 안 `libs/`에 들어 있다) |
 | Center API 키 — 연동용 (신규, CON-11) | 외부 시스템 | 작업 만들기(`POST /jobs`)와 자기가 만든 작업 읽기·취소, 메시지 넣기(`POST /messages` — C12 §메시지) |
 | Center API 키 — 대리 답용 (`relay`) | 사람 대신 결재하는 연동 (대화 창구) | **결재 읽기·답뿐**이고 담당인 것만 (C6). 이 표의 엔드포인트는 하나도 부르지 못한다 |
 
@@ -53,7 +53,7 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 
 아래 표의 「읽기」는 보기 전용 계정·읽기 토큰, 「관리자」는 관리자 계정·관리자 토큰이다.
 
-| 엔드포인트 | 읽기 | 관리자 | Studio 키 | PC 실행기·서버 실행기 키 | 연동용 키 |
+| 엔드포인트 | 읽기 | 관리자 | Studio 키 | 서버 실행기 키 | 연동용 키 |
 | --- | --- | --- | --- | --- | --- |
 | `GET /packages…` (목록·정보·참조·노드 이름·다이어그램) | ✓ | ✓ | ✓ | — | — |
 | `GET /packages/{id}/{v}` (내려받기) | — | ✓ | ✓ | 자기 배포분만 | — |
@@ -70,15 +70,14 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 | `POST·PUT·DELETE /resources/extensions…`, `…/test-calls…` (C7 §콘솔에서 고치는 외부 확장, CON-18 — ADR-0141) | — | Center 관리자만 | — | — | — |
 | `GET /server-runners` | ✓ | ✓ | — | — | — |
 | `POST /server-runners/{id}/pause·resume·mark-lost` (C12) | — | ✓ | — | — | — |
-| `GET /bot-uis…` (CON-03), `POST /bot-uis/{id}/disable·enable` | GET만 ✓ | ✓ | — | — | — |
-| `POST /call-tokens` (C15 호출 토큰) | — | — | ✓ | PC 실행기 키만 | — |
+| `POST /call-tokens` (C15 호출 토큰 — Studio가 확장에게 줄 것) | — | — | ✓ | — | — |
 | `POST /external-tasks`, `GET·POST /external-tasks/{id}…` (C15 — 부르는 쪽) | — | — | 호출 토큰·Studio 키 | 서버 실행기 키·호출 토큰 | — |
 | `/consumers/fetch·tasks…·self…` (C15 — 일꾼) | 일꾼 토큰만 | | | | |
 | `POST /consumers`, `PUT·DELETE /consumers/{id}`, `POST /consumers/{id}/token` (C15 §일꾼 관리, CON-17 — ADR-0137) | — | Center 관리자만 | — | — | — |
 | `GET /consumers` (CON-17), `GET /external-topics`, `…/{topic}/operations` (CON-18), `GET /external-tasks?run_id=` (CON-01) | ✓ | ✓ | — | — | — |
 | `GET /schedules` (§일정, CON-02) | ✓ | ✓ | — | — | — |
 | `GET /signing-keys` (C7) | 인증 없음 | | | | |
-| `POST /bot-ui/enroll`, `POST /server-runner/enroll`, `GET …/enroll/{id}` (C4·C12) | 인증 없음 | | | | |
+| `POST /server-runner/enroll`, `GET …/enroll/{id}` (C4·C12) | 인증 없음 | | | | |
 | `GET /enrollments` (§등록 승인) | ✓ | ✓ | — | — | — |
 | `POST /enrollments/{id}/approve·reject` | — | ✓ | — | — | — |
 | `POST /jobs` | — | ✓ | — | — | ✓ |
@@ -132,14 +131,13 @@ AccountInfo 필드: `username`, `role`, `state`(`active` / `disabled`), `created
 - **받는 값은 `deprecated` 하나뿐이다.** 되돌리는 것은 「다시 허용」이고 그 길은 승인(`PUT …/signature`)이다. 다른 값을 주면 422 `input_invalid`.
 - **`revoked`는 끝이다** — 철회된 것은 되살아나지 않고 더 막을 것도 없다 (409 `package_revoked`).
 - 어느 상태에서든 지원 종료로 갈 수 있고(`candidate`도 — 새 배포를 막는 뜻이다), **두 번 해도 같은 답**이다.
-- **이미 배포된 것은 그대로 돈다** — 내려받기도 그대로 된다 (철회면 410이다). 돌고 있는 것을 세우는 것은 배포 철회다. 하트비트 봉투·작업의 판·PC 위임·일정·메시지 시작·내려받기가 활성 배포를 고르는 조건은 **하나**다 — 철회되지 않았고 패키지가 `approved`·`deprecated` ([ADR-0113](../decisions/0113-field-follows-withdrawn-deployments.md) §8).
+- **이미 배포된 것은 그대로 돈다** — 내려받기도 그대로 된다 (철회면 410이다). 돌고 있는 것을 세우는 것은 배포 철회다. 하트비트 봉투·작업의 판·맡기기·일정·메시지 시작·내려받기가 활성 배포를 고르는 조건은 **하나**다 — 철회되지 않았고 패키지가 `approved`·`deprecated` ([ADR-0113](../decisions/0113-field-follows-withdrawn-deployments.md) §8).
 
 PackageInfo 필드:
 
 | 필드 | 뜻 |
 | --- | --- |
 | `id`, `version`, `kind`, `name` | |
-| `run_location` | `bpm_process`에만 있다 |
 | `status` | `candidate` / `approved` / `deprecated` / `revoked` (열린 문자열) |
 | `content_hash` | |
 | `uploaded_by`, `uploaded_at` | |
@@ -219,16 +217,12 @@ NodeLabel 필드:
 | 패키지가 `approved`다 | `not_approved` | 409 |
 | 지원 종료가 아니다 — **따로 알린다**, 승인은 되어 있고 새 배포만 막힌 것이다 | `deprecated` | 409 |
 | 봉투의 해시가 패키지와 같다 | `hash_mismatch` | 409 |
-| `target.type`이 패키지의 `run_location`과 맞다 | `wrong_target` | 409 |
-| **PC 배포의 `target.id`가 `"*"`가 아니다** ([ADR-0046](../decisions/0046-no-wildcard-pc-deployment.md)). `"*"`는 서버 실행기 배포만 쓴다 (C2 §배포 대상 규칙) | `wrong_target` | 409 |
-| **대상 PC가 등록되어 있다** ([ADR-0049](../decisions/0049-deployment-target-must-exist.md)) — `bot_uis`를 **Center가 읽어** 계약에 넘긴다 | `target_not_found` | 404 |
-| 서버 실행기 대상이 아니다 (M7까지, ADR-0016) | `server_runner_not_available` | 422 |
+| **대상 실행기가 등록되어 있다** ([ADR-0049](../decisions/0049-deployment-target-must-exist.md)) — `server_runners`를 **Center가 읽어** 계약에 넘긴다. `"*"`는 이 검사를 지나간다 | `target_not_found` | 404 |
 
-- **대상이 틀린 두 가지는 코드가 하나다** (`wrong_target`) — C2 V6이 같은 조건에 쓰는 이름이고, 둘 다 받아 두면 **모든 PC가 V6으로 거부할** 봉투라 운영자가 할 일도 같다(대상을 하나 제대로 적는다). `target_mismatch`는 **작업 지시 쪽 코드**다 (모르는 대상 종류, 422).
-- **「대상이 틀렸다」가 「대상이 없다」를 이긴다** — PC 배포에 `"*"`가 오면 그 id도 등록되어 있지 않지만 답은 `wrong_target`이다 (운영자가 할 일은 「대상을 하나 적는다」이고, 「`*`라는 PC가 없다」는 엉뚱한 말이다). 그래서 등록 검사는 **대상 검사 뒤에** 온다.
-- **`target_not_found`는 `not_found`와 다른 코드다** — 한 요청에서 없을 수 있는 것이 둘(패키지·PC)이라 뭉치면 운영자가 어느 쪽을 고칠지 모른다. **작업 지시도 같은 코드로 답한다** — 같은 조건에 두 이름을 두는 것이 ADR-0047이 고친 흠이다.
+- **모르는 대상 종류는 `wrong_target`이다** — C2 V6이 같은 조건에 쓰는 이름이고, 받아 두면 **모든 실행기가 V6으로 거부할** 봉투라 운영자가 할 일도 같다(대상을 제대로 적는다). `target_mismatch`는 **작업 지시 쪽 코드**다 (모르는 대상 종류, 422).
+- **`target_not_found`는 `not_found`와 다른 코드다** — 한 요청에서 없을 수 있는 것이 둘(패키지·실행기)이라 뭉치면 운영자가 어느 쪽을 고칠지 모른다. **작업 지시도 같은 코드로 답한다** — 같은 조건에 두 이름을 두는 것이 ADR-0047이 고친 흠이다.
 - Center가 자기 저장소를 봐야 하는 **읽기**는 계약이 하지 않는다. 읽어서 **넘기는** 것은 계약이 판정한다 (지금 `package`와 대상 등록 여부가 그렇다, [ADR-0047](../decisions/0047-one-deployment-gate.md) §다시 볼 조건 ②). 계약이 판정하지 않고 Center에 남은 것: 그 패키지가 있나(404 `not_found`), 그리고 배포를 막는 리소스 누락과 C1 R8(422, C7 §누락 검사).
-- **등록되지 않은 PC에 미리 배포해 두는 길은 없다** — `bot_ui_id`는 Center가 **첫 등록에서 만든다**(C4 「키 묶기」). 등록 전에는 대상에 적을 id가 없으므로, 등록되지 않은 id가 오면 오타이거나 낡은 id다. 행은 지워지지 않으니(「PC 묶음 풀기」는 키만 푼다) **한번 통과한 배포의 대상은 사라지지 않는다**.
+- **등록되지 않은 실행기에 미리 배포해 두는 길은 없다** — `server_runner_id`는 Center가 **첫 등록에서 만든다**(C4 「키 묶기」). 등록 전에는 대상에 적을 id가 없으므로, 등록되지 않은 id가 오면 오타이거나 낡은 id다. 행은 지워지지 않으니(「묶음 풀기」는 키만 푼다) **한번 통과한 배포의 대상은 사라지지 않는다**.
 
 DeploymentInfo 필드: `deployment_id`, `target{type,id}`, `bpm_process_id`, `version`, `content_hash`, `max_concurrency`?, `signed_by`, `signed_at`, `not_before`?, `expires_at`?, `revoked_at`?, `last_result`?, `deployed_by`?, `revoked_by`?. `last_result`는 C4 `deployment_results`의 마지막 값이다. `deployed_by`·`revoked_by`는 **누른 계정**이다 (ADR-0090 — 사람이 서명하던 때의 배포에는 없다).
 
@@ -254,7 +248,7 @@ JobCreateRequest:
 | --- | --- | --- | --- |
 | `bpm_process_id` | str | ✓ | |
 | `version` | str | | 비우면 대상에 배포된 버전. 같은 대상에 그 BPM 프로세스의 활성 배포가 둘 이상이면 422 `version_ambiguous` |
-| `target` | object | ✓ | `{type: "bot_ui", id}` 또는 `{type: "server_runner", id?}`. 서버 실행기 `id`를 비우거나 `"*"`면 Center가 고른다 |
+| `target` | object | ✓ | `{type: "server_runner", id?}`. `id`를 비우거나 `"*"`면 Center가 고른다 |
 | `inputs` | object | ✓ | 진입 정의가 기대하는 입력. JSON 객체가 아니면 422. **값 출처(`source`)가 있는 입력은 넣을 수 없다** — 422 `input_not_from_caller` (C1 매니페스트 `inputs[].source`로 본다, [ADR-0099](../decisions/0099-input-value-source.md)) |
 | `expires_at` | str | | 이 시각까지 시작하지 못하면 `expired` |
 | `note` | str | | 500자 이내 |
@@ -265,13 +259,13 @@ JobInfo는 위 필드에 다음을 더한다.
 | 필드 | 뜻 |
 | --- | --- |
 | `job_id` | `job_<hex8>` |
-| `requested_by` | 사람 이름, 키 이름, 또는 예약값 `server_bot:<run_id>` (PC 위임)·`timer:<식>` (일정 — 아래 §일정) |
+| `requested_by` | 사람 이름, 키 이름, 또는 예약값 `server_bot:<run_id>` (맡기기)·`timer:<식>` (일정 — 아래 §일정) |
 | `on_behalf_of`? | 연동용 키가 `X-BPM-On-Behalf-Of`로 실어 보낸 사람 이름 (**주장** — Center가 대조하지 않는다). 메시지 시작으로 만든 작업에는 그 메시지의 것을 옮긴다 (ADR-0081) |
 | `requested_at` | |
 | `state`, `state_reason`? | 아래 상태 표 |
 | `cancel_requested` | bool |
 | `cancel_result`? | `cancelled` 또는 `refused_already_started` |
-| `queue_position`? | PC 대기열 순번 (C4) |
+| `queue_position`? | 대기열 순번 (C4) |
 | `dispatched_at`?, `run_id`?, `run_status`? | |
 
 ### 작업 상태 (열린 문자열, 알려진 값)
@@ -280,32 +274,29 @@ JobInfo는 위 필드에 다음을 더한다.
 | --- | --- | --- |
 | `pending` | 대기 | Center가 아직 전달하지 않음 |
 | `dispatched` | 전달됨 | 하트비트 응답에 실었고 ack 전 |
-| `queued` | 대기열 | PC: PC 실행기 대기열에 들어감. 서버: 동시 실행 상한 때문에 Center 대기열에서 기다림 |
+| `queued` | 대기열 | 동시 실행 상한 때문에 Center 대기열에서 기다림 |
 | `accepted` | 수락 | 실행 시작 (`run_id` 있음) |
 | `rejected` | 거절 | 이유는 `state_reason` (아래) |
 | `expired` | 만료 | `expires_at`까지 시작하지 못함 |
 | `cancelled` | 취소됨 | 취소 완료 |
 
-`rejected`의 `state_reason`: `queue_full`, `no_deployment`, `not_ready`, `bot_ui_shutdown`, `bot_ui_lost`, `server_location`, `cancelled_on_pc`(현장 PC 실행기에서 취소), **`runner_lost`**(서버 실행기를 잃음 — 맞추기 규칙이나 CON-12 「유실 처리」, C12).
+`rejected`의 `state_reason`: `queue_full`, `no_deployment`, `not_ready`, **`runner_lost`**(실행기를 잃음 — 맞추기 규칙이나 CON-12 「유실 처리」, C12).
 
 `queued`(서버)의 `state_reason`: `global_limit`(서버 실행기 빈자리 없음), `per_bot_limit`(BPM 프로세스별 상한), `paused` (C12).
-
-**맞추기 규칙의 사유는 호스트마다 다르다** — PC는 `bot_ui_lost`, 서버 실행기는 `runner_lost`다. 뭉개면 CON-12가 서버에 「bot_ui_lost」라고 적어 운영자가 PC를 찾아 헤맨다.
 
 ### 취소
 
 | 지금 상태 | 응답 | 결과 |
 | --- | --- | --- |
 | `pending` | 200 | 바로 `cancelled` |
-| `dispatched` / `queued` | **202** `cancel_requested: true` | 다음 하트비트에 PC 실행기가 빼내고 `cancelled`로 ack하면 `cancelled`. 그사이 실행을 시작했으면 PC 실행기가 `cancel_refused`로 ack하고, 작업은 **`accepted` 그대로**, `cancel_result: refused_already_started` |
-| `accepted` + 대상 **서버 실행기** | **202** `cancel_requested: true` | 실행기가 다음 하트비트에 **그 실행을 닫고**(기다리는 실행도) `cancelled`로 ack한다. 이미 끝나 가던 것은 `cancel_refused`다 — 현장이 옳다 ([ADR-0063](../decisions/0063-stopping-a-running-server-run.md)) |
-| `accepted` + 대상 **PC** | 409 `already_started` | **PC 실행은 Center에서 멈추지 않는다** — 자리를 끝까지 쥐고(ADR-0014) 현장 사람이 보며 하는 일(현장 확인·파일)일 수 있어, 도중에 끊으면 반쯤 된 채 남는다. 현장 사람이 BUI-04 「중지」로 멈춘다 (그 사람은 화면을 보고 있다) |
+| `dispatched` / `queued` | **202** `cancel_requested: true` | 다음 하트비트에 실행기가 빼내고 `cancelled`로 ack하면 `cancelled`. 그사이 실행을 시작했으면 실행기가 `cancel_refused`로 ack하고, 작업은 **`accepted` 그대로**, `cancel_result: refused_already_started` |
+| `accepted` | **202** `cancel_requested: true` | 실행기가 다음 하트비트에 **그 실행을 닫고**(기다리는 실행도) `cancelled`로 ack한다. 이미 끝나 가던 것은 `cancel_refused`다 — 현장이 옳다 ([ADR-0063](../decisions/0063-stopping-a-running-server-run.md)) |
 | 그 밖 | 409 `not_cancellable` | |
 
 - 실행의 성공·실패는 작업 상태가 아니다. C3 `run_finished`로 정해지고 `run_status`에 보인다.
-- **가르는 것은 대상 종류 하나다** — 판정은 계약이 쥔다 (`cancel_outcome(state, target_type)`). 서버 실행은 **현장을 만지지 않으므로**(C1 R2가 `web`·`desktop`·현장 결재·확인을 막는다) 엔진 취소가 곧 `cancelled` 기록이다.
-- **Center가 혼자 `cancelled`로 적지 않는다** (`dispatched`와 같은 결) — 정말 멈췄는지는 현장만 안다. 실행기가 오프라인이면 취소 요청은 남고 **돌아오면 반영된다**; 돌아오지 않으면 CON-12 「유실 처리」가 닫는다 (C12).
-- 서버 실행이 취소되면 **그 실행이 맡긴 PC 위임도 거둬진다** ([ADR-0062](../decisions/0062-pc-delegation.md) §5).
+- 판정은 계약이 쥔다 (`cancel_outcome(state, target_type)`). 엔진 취소가 곧 `cancelled` 기록이다.
+- **Center가 혼자 `cancelled`로 적지 않는다** (`dispatched`와 같은 결) — 정말 멈췄는지는 실행기만 안다. 실행기가 오프라인이면 취소 요청은 남고 **돌아오면 반영된다**; 돌아오지 않으면 CON-12 「유실 처리」가 닫는다 (C12).
+- 실행이 취소되면 **그 실행이 맡긴 것도 거둬진다** (C12 §맡기기).
 
 ### 일정 (타이머 시작)
 
@@ -337,17 +328,17 @@ JobInfo는 위 필드에 다음을 더한다.
 | `next_at`? | 다음 차례. 더 오지 않으면(`R3/…`을 다 썼다) 없음 |
 | `last_slot`?, `last_job_id`?, `last_missed`, `last_error`? | 마지막으로 쏜 차례·그 작업·그때 건너뛴 차례 수·작업을 만들지 못한 코드 |
 
-## 등록 승인 (CON-03·CON-12·CON-11)
+## 등록 승인 (CON-12·CON-11)
 
-> 상태: **돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) — `center/enrollments.py`. 콘솔은 CON-03·CON-12 「승인 대기」(`components/Enrollments.tsx`).
+> 상태: **돈다** (2026-10-25, [ADR-0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)) — `center/enrollments.py`. 콘솔은 CON-12 「승인 대기」(`components/Enrollments.tsx`).
 
-PC(PC 실행기)·서버 실행기·**Studio**가 보낸 **등록 요청**(C4·C12 §등록 요청과 승인, 아래 §Studio 등록 요청과 승인)을 관리자가 보고 들인다. 사람은 키를 보지 않는다 — 승인하면 Center가 키를 만들어 그 요청의 공개키로 봉해 둔다.
+서버 실행기·**Studio**가 보낸 **등록 요청**(C4·C12 §등록 요청과 승인, 아래 §Studio 등록 요청과 승인)을 관리자가 보고 들인다. 사람은 키를 보지 않는다 — 승인하면 Center가 키를 만들어 그 요청의 공개키로 봉해 둔다.
 
-> **열린 모드에서는 받는 자리에서 승인된다** ([ADR-0142](../decisions/0142-open-mode.md)) — `POST …/enroll`이 그 자리에서 `approve()`를 불러 봉한 키를 바로 싣는다. 「누가 승인했나」는 `open_mode`다. **PC 실행기·Studio는 회사가 하나뿐일 때만** 자동이고(그 회사로), 둘 이상이면 **승인 대기로 남는다** — 누구의 장비인지 짐작하지 않는다(C16). 서버 실행기는 Center 공용이라 늘 자동이다. 들이기 비밀(C12, ADR-0117)은 그대로 살고 **틀린 비밀은 여전히 403**이다.
+> **열린 모드에서는 받는 자리에서 승인된다** ([ADR-0142](../decisions/0142-open-mode.md)) — `POST …/enroll`이 그 자리에서 `approve()`를 불러 봉한 키를 바로 싣는다. 「누가 승인했나」는 `open_mode`다. **Studio는 회사가 하나뿐일 때만** 자동이고(그 회사로), 둘 이상이면 **승인 대기로 남는다** — 누구의 장비인지 짐작하지 않는다(C16). 서버 실행기는 Center 공용이라 늘 자동이다. 들이기 비밀(C12, ADR-0117)은 그대로 살고 **틀린 비밀은 여전히 403**이다.
 
 | 메서드·경로 | 뜻 |
 | --- | --- |
-| `GET /enrollments?type=bot_ui\|server_runner\|studio&state=pending` | 요청 목록 (`state`는 쉼표로 여럿, 기본 `pending`) |
+| `GET /enrollments?type=server_runner\|studio&state=pending` | 요청 목록 (`state`는 쉼표로 여럿, 기본 `pending`) |
 | `POST /enrollments/{enrollment_id}/approve` `{name?}` | 승인. `name`을 비우면 요청의 `name`을 쓴다. 일꾼(C15)은 여기 오지 않는다 — 콘솔 CON-17에서 만든다 (ADR-0137) |
 | `POST /enrollments/{enrollment_id}/reject` `{reason?}` | 거절. 사유는 요청한 쪽에 그대로 보인다 (200자까지) |
 
@@ -355,7 +346,7 @@ EnrollmentInfo 필드:
 
 | 필드 | 뜻 |
 | --- | --- |
-| `enrollment_id`, `type` | `type`은 `bot_ui` / `server_runner` |
+| `enrollment_id`, `type` | `type`은 `server_runner` / `studio` |
 | `code` | 요청 코드 `XXXX-XXXX` — 현장 화면(서버는 로그)과 맞춰 보는 값 |
 | `name`, `os`, `versions` | 요청이 보낸 그대로 |
 | `machine_id_prefix` | `machine_id` 앞 12자 (같은 PC인지 알아볼 만큼만) |
@@ -366,16 +357,16 @@ EnrollmentInfo 필드:
 | `decided_by`?, `decided_at`?, `reason`? | 승인·거절한 계정과 때, 거절 사유 |
 | `key_id`? | 승인이 만든 키 (C7 `CenterKeyInfo`) |
 
-- 승인 응답은 `{key_id, host_id, replaced_key_id?}`다 (`host_id`는 이어받았으면 그 `bot_ui_id`·`server_runner_id`, 새 자리면 첫 `register`가 만든다 — 그때까지 `null`).
+- 승인 응답은 `{key_id, host_id, replaced_key_id?}`다 (`host_id`는 이어받았으면 그 `server_runner_id`, 새 자리면 첫 `register`가 만든다 — 그때까지 `null`).
 - **이미 결정된·만료된 요청은 다시 결정하지 못한다** (409 `enrollment_closed`).
 - 승인은 **행위자를 남긴다** (`decided_by` — 세션이면 계정, 토큰이면 `X-BPM-Actor`).
-- 승인·거절은 되돌리지 않는다. 잘못 들였으면 CON-03 「비활성화」 또는 그 키를 폐기한다 (C7).
+- 승인·거절은 되돌리지 않는다. 잘못 들였으면 그 키를 폐기한다 (C7).
 
 ### Studio 등록 요청과 승인 ([ADR-0093](../decisions/0093-studio-is-let-in-by-approval.md))
 
 > 상태: **돈다** (2026-10-25) — Center `center/enrollments.py`(종류 `studio`, 받았다는 표시는 `auth.caller`가 첫 사용에서 봉함을 지운다), Studio `studio/center_enroll.py`, 콘솔 CON-11 「승인 대기」. 계정 로그인(`POST /auth/studio-login`)과 계정 권한은 걷어 냈다. 시험: `tests/server/test_center_enrollment.py`·`tests/integration/test_studio_settings_dialog.py`.
 
-Studio도 PC 실행기와 **같은 길**로 들어온다 (C4 §등록 요청과 승인 — 요청 코드·봉함·24시간 대기·막기·같은 PC의 옛 요청 닫기가 같은 규칙, 같은 코드다). 아이디·비밀번호로 들어오는 길은 없다.
+Studio도 실행기와 **같은 길**로 들어온다 (C4 §등록 요청과 승인 — 요청 코드·봉함·24시간 대기·막기·같은 PC의 옛 요청 닫기가 같은 규칙, 같은 코드다). 아이디·비밀번호로 들어오는 길은 없다.
 
 | 메서드·경로 | 인증 | 뜻 |
 | --- | --- | --- |
@@ -384,34 +375,14 @@ Studio도 PC 실행기와 **같은 길**로 들어온다 (C4 §등록 요청과 
 
 - 승인하면 Center가 종류 `studio`의 키를 만든다. **이름은 승인할 때 정하고**(기본은 요청의 `name` — PC 이름) **그 키의 이름이 「누가」다**(`uploaded_by` 등). 그 PC(`machine_id`)에 묶어 두고, **같은 PC를 다시 승인하면 옛 Studio 키를 폐기한다**(`EnrollmentInfo.existing`에 그 키가 보인다).
 - **만료는 1년이고 회전하지 않는다** — Studio에는 하트비트가 없다. 만료 14일 전부터 Studio가 알리고, 만료·폐기되면 새로 요청해 승인받는다.
-- 봉함을 받았다는 표시는 **그 키로 처음 부른 것**이다 (PC 실행기의 `register` 자리) — 그때 Center가 봉해 둔 것을 지운다. 24시간 안에 부르지 않으면 키를 폐기한다 (C4와 같다).
+- 봉함을 받았다는 표시는 **그 키로 처음 부른 것**이다 (실행기의 `register` 자리) — 그때 Center가 봉해 둔 것을 지운다. 24시간 안에 부르지 않으면 키를 폐기한다 (C4와 같다).
 - 자동화·CI가 쓰는 Studio용 키는 관리자 토큰으로 발급한다(C7 `POST /center-keys`) — 화면에는 없다.
 
-## PC 실행기 현황 (CON-03)
+## 실행기 현황
 
-콘솔이 PC마다 하나인 PC 실행기의 상태를 본다. 값은 **PC 실행기가 하트비트로 보고한 그대로**이고 (C4),
-Center는 온라인 판정과 키 정보만 더한다. 보기 전용이다 — 대기열 항목을 취소하는 것은 작업
-쪽(CON-05)이다.
+실행기 목록·상세는 **C12 §운영 API**에 있다 (CON-12). PC마다 하나였던 `GET /bot-uis` 셋은 PC 실행기와 함께 걷었다 ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)).
 
-| 메서드·경로 | 인증 | 뜻 |
-| --- | --- | --- |
-| `GET /bot-uis` | 읽기·관리자 토큰 | 목록 (BotUiInfo[]) |
-| `POST /bot-uis/{bot_ui_id}/disable` | 관리자 토큰 | 새 작업·배포를 보내지 않는다. **하트비트는 계속 받는다** (C4 `disabled`) |
-| `POST /bot-uis/{bot_ui_id}/enable` | 관리자 토큰 | 되돌리기 |
-
-BotUiInfo 필드:
-
-| 필드 | 뜻 |
-| --- | --- |
-| `bot_ui_id` | `bui_<hex8>` |
-| `name`, `os`, `machine_id` | 등록할 때 받은 것 (C4 `register`) |
-| `versions` | C4와 같은 모양 (등록할 때 반드시 받으므로 늘 있다). `runtimes`는 선택 |
-| `registered_at`, `last_seen_at` | 처음 등록·마지막 하트비트 |
-| `online` | 마지막 하트비트가 **90초 이내**인가 (C4 「온라인 판정」). 오프라인이면 화면이 「마지막 보고 <시각> 기준」을 붙인다 (U8) |
-| `disabled` | 비활성화됨 |
-| `status`, `current_run`, `queue`, `readiness`, `extensions` | 마지막 하트비트의 내용 (C4). 아직 하트비트가 없으면 비어 있다 |
-| `deployment_results` | 그 PC 실행기가 보고한 **최근 배치 결정** (C4 `DeploymentResult`, 최신순 최대 20건). CON-03 「최근 배치 결정」. 마지막 하트비트만이 아니라 **Center가 쌓아 둔 것**이다 — 한 주기 뒤면 사라지는 값을 운영자가 보지 못하면 「왜 설치가 안 됐나」를 영영 알 수 없다 |
-| `key` | 그 PC 실행기가 쓰는 Center API 키 `{prefix, expires_at, state}` — **원문·해시는 주지 않는다** (C7) |
+**배치 결정은 Center가 쌓아 둔다** (C4 `DeploymentResult`, 최신순 최대 20건) — 하트비트 **한 주기만** 올라오는 값이라 흘려보내면 「왜 설치가 안 됐나」가 영영 안 남는다. 멱등은 `(deployment_id, at)`이다.
 
 ## 오류
 
@@ -422,13 +393,13 @@ BotUiInfo 필드:
 | 429 | `login_locked` | 같은 아이디로 5번 연달아 틀림 — 5분 뒤 |
 | 422 | `username_invalid` / `password_weak` / `role_unknown` | 계정 규칙 |
 | 409 | `account_exists` / `last_admin` | 같은 아이디 / 마지막 관리자를 멈추거나 내리려 함 |
-| 401 / 403 | `key_invalid` / `forbidden` | 인증 실패, 권한 밖 (예: PC 실행기가 자기에게 배포되지 않은 패키지를 요청) |
+| 401 / 403 | `key_invalid` / `forbidden` | 인증 실패, 권한 밖 (예: 실행기가 자기에게 배포되지 않은 패키지를 요청) |
 | 404 | `not_found` | |
 | 404 | `target_not_found` | 배포·작업 지시의 대상 PC가 **등록되어 있지 않다** (ADR-0049). `not_found`(패키지가 없다)와 **가른다** — 한 요청에서 없을 수 있는 것이 둘이라 뭉치면 어느 쪽을 고칠지 모른다 |
 | 409 | `version_conflict` | 같은 버전인데 내용이 다름 |
 | 409 | `in_use` | 참조 중인 패키지 삭제 |
 | 409 | `already_started` / `not_cancellable` | 취소할 수 없는 작업 |
-| 409 | `not_approved` / `deprecated` / `hash_mismatch` / `wrong_target` | 배포가 가리키는 **패키지의 상태**가 요청과 어긋난다. 「본문이 잘못됐다」가 아니라 **상태 충돌**이라 409다 (`deployment_conflict`과 같은 결). 지원 종료는 `not_approved`로 뭉개지 않는다 — 승인은 되어 있고 새 배포만 막힌 것이다. `wrong_target`은 **대상이 틀린 것 전부**다 — `target.type` ↔ `run_location` 어긋남과 **PC 배포의 `"*"`** (ADR-0046·0047) |
+| 409 | `not_approved` / `deprecated` / `hash_mismatch` / `wrong_target` | 배포가 가리키는 **패키지의 상태**가 요청과 어긋난다. 「본문이 잘못됐다」가 아니라 **상태 충돌**이라 409다 (`deployment_conflict`과 같은 결). 지원 종료는 `not_approved`로 뭉개지 않는다 — 승인은 되어 있고 새 배포만 막힌 것이다. `wrong_target`은 **대상 종류가 틀린 것**이다 (ADR-0047) |
 | 409 | `package_revoked` | 철회된 패키지를 승인하거나 지원 종료로 바꾸려 함 (끝난 일이다) |
 | 409 | `idempotency_conflict` | 같은 `idempotency_key`에 다른 본문 |
 | 409 | `enrollment_closed` | 이미 승인·거절됐거나 만료된 등록 요청을 다시 결정하려 함 |
@@ -448,6 +419,7 @@ BotUiInfo 필드:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-12 | 1 | **PC 실행기를 걷었다** — `PackageInfo.run_location`, 배포 대상 `{type: "bot_ui"}`와 그 검사 둘(`run_location` 대조·PC의 `"*"` 금지), §PC 실행기 현황(`GET /bot-uis` 셋·`BotUiInfo`), `POST /call-tokens`의 실행기 쪽, 작업 사유 `bot_ui_shutdown`·`server_location`·`cancelled_on_pc`, `accepted` + PC 대상의 409 `already_started`, 422 `server_runner_not_available`을 걷었다. 등록 요청의 `type`은 `server_runner`·`studio` 둘이다 | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-11-11 | 1 | **열린 모드** — §인증에 「인증 없음 — 열린 모드」(관리자와 같다, 모르는 토큰은 그대로 401), §등록 승인에 받는 자리 승인(회사가 하나뿐일 때). 권한표·모델은 그대로다 | [0142](../decisions/0142-open-mode.md) |
 | 2026-11-09 | 1 | 권한표에 **콘솔에서 고치는 외부 확장**(`POST·PUT·DELETE /resources/extensions…`·`…/test-calls…`, Center 관리자만) 줄을 더했다 | [0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md) |
 | 2026-11-08 | 1 | 권한표에 **일꾼 관리**(`POST /consumers`·`PUT·DELETE /consumers/{id}`·`POST …/token`, Center 관리자만) 줄을 더했다 | [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |

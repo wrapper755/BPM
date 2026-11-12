@@ -47,7 +47,7 @@ export interface Capacity {
   [k: string]: unknown;
 }
 /**
- * 위임 결과 하나를 **받았다** (C12 §PC 위임, ADR-0062).
+ * 맡긴 결과 하나를 **받았다** (C12 §맡기기, ADR-0082).
  *
  * 받으면 Center가 그 값을 지운다 — 업무 값이 Center에 남는 시간을 줄인다 (원칙 6의 예외는
  * **좁게** 쓴다). ack가 오기 전에는 매번 다시 내려온다 (작업·메시지와 같다).
@@ -58,7 +58,7 @@ export interface DelegationAck {
   [k: string]: unknown;
 }
 /**
- * 배포 적용 결정 (CON-03 「최근 배치 결정」). 실행이 아니므로 C3로 보내지 않는다.
+ * 배포 적용 결정 (CON-12 「최근 배치 결정」). 실행이 아니므로 C3로 보내지 않는다.
  */
 export interface DeploymentResult {
   at: string;
@@ -74,8 +74,7 @@ export interface DeploymentResult {
  *
  * **`enabled`와 `off`는 다른 것을 말한다** ([ADR-0043](../../../../../docs/decisions/0043-turned-off-extensions.md)):
  * `off`는 **사람이 껐다**(멀쩡한데 일부러 안 쓴다), `enabled=false`인데 `off`가 아니면 **흠이
- * 있다**(정의·판이 맞지 않는다). 화면이 「꺼짐」과 「호환 안 됨」을 가르는 자리다. 뜻을 바꾸지
- * 않고 칸을 더한 것이라 옛 PC 실행기가 보낸 값(`off` 없음)도 그대로 읽힌다.
+ * 있다**(정의·판이 맞지 않는다). 화면이 「꺼짐」과 「호환 안 됨」을 가르는 자리다.
  */
 export interface ExtensionState {
   definition_hash?: string | null;

@@ -146,24 +146,6 @@ def test_a_company_admin_needs_a_company_and_a_center_admin_has_none(client: Tes
     assert wrong.status_code == 422
 
 
-def test_a_pc_deployment_stays_inside_the_company(client: TestClient) -> None:
-    """PC 배포는 그 회사의 PC에만 — 422 `company_mismatch` (C16, ADR-0125 §2)."""
-    organize(client)
-    store: Store = client.app.state.store  # type: ignore[attr-defined]
-    with store.tx() as cur:
-        cur.execute(
-            "INSERT INTO bot_uis (bot_ui_id, key_id, machine_id, name, os, versions_json, registered_at, company)"
-            " VALUES ('bui_c2', 'ck_c2', ?, '회사2 PC', 'Windows 11', '{}', '2026-11-01T00:00:00+00:00', 'company2')",
-            ("m" * 64,),
-        )
-    raw = build_package(package_id="pc-job", run_location="pc")
-    made(upload(client, raw, company="default"))
-    approve(client, "pc-job", "1.0.0")
-    refused = client.post(f"{API}/deployments", json={"target": {"type": "bot_ui", "id": "bui_c2"},
-                                                      "bpm_process_id": "pc-job", "version": "1.0.0"}, headers=ADMIN)
-    assert refused.status_code == 422 and refused.json()["code"] == "company_mismatch", refused.text
-
-
 def test_the_owner_goes_down_with_names(client: TestClient) -> None:
     """작업 행에는 id만 — 이름은 내려줄 때 읽는다 (C12 `JobDispatch.place`)."""
     from bpm.center import organization
@@ -177,15 +159,15 @@ def test_the_owner_goes_down_with_names(client: TestClient) -> None:
     assert organization.identity(store, None, None, None) is None
 
 
-def test_a_company_admin_approves_devices_into_its_own_company_only(client: TestClient) -> None:
+def test_a_company_admin_approves_studios_into_its_own_company_only(client: TestClient) -> None:
     from bpm.contracts.enrollment import new_keypair
 
     organize(client)
     mine = login_as(client, "admin2", "company_admin", "company2")
     _, public = new_keypair()
-    body = {"schema": 1, "machine_id": "ab" * 32, "name": "현장 PC", "os": "windows-11-23H2",
-            "versions": {"bot_ui": "0.1.0", "core": "0.1.0"}, "public_key": public}
-    pending = made(client.post(f"{API}/bot-ui/enroll", json=body))
+    body = {"schema": 1, "machine_id": "ab" * 32, "name": "설계 PC", "os": "ubuntu-24.04",
+            "versions": {"studio": "0.1.0", "core": "0.1.0"}, "public_key": public}
+    pending = made(client.post(f"{API}/studio/enroll", json=body))
     # 대기 중인 요청은 회사가 없어 보인다 — 제 회사로 승인할 수 있다.
     assert [one["enrollment_id"] for one in made(client.get(f"{API}/enrollments", headers=mine), 200)] == [
         pending["enrollment_id"]]

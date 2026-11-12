@@ -114,7 +114,6 @@ def package_zip(*, bot: str, path: Path, process_id: str, triggers: list[dict[st
         "id": bot,
         "version": VERSION,
         "name": bot,
-        "run_location": "server",
         "entry": "process/main.bpmn",
         "process_id": process_id,
         "triggers": triggers,

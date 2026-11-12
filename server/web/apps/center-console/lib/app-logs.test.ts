@@ -3,7 +3,7 @@ import { buildAppLog } from "./app-logs";
 
 const enrollment = (over: Record<string, unknown> = {}) => ({
   enrollment_id: "enr_1",
-  type: "bot_ui",
+  type: "server_runner",
   code: "ABCD-EFGH",
   name: "현장 PC 1",
   os: "windows",
@@ -21,8 +21,8 @@ describe("buildAppLog", () => {
       keys: [
         {
           key_id: "k1",
-          type: "bot_ui",
-          name: "현장 PC 1",
+          type: "server_runner",
+          name: "서버 1",
           prefix: "bpm_ctr_ab",
           created_at: "2026-10-31T02:00:00+00:00",
           revoked_at: "2026-10-31T05:00:00+00:00",
@@ -31,8 +31,8 @@ describe("buildAppLog", () => {
       ],
       hosts: [
         {
-          kind: "bot_ui",
-          name: "현장 PC 1",
+          kind: "server_runner",
+          name: "서버 1",
           results: [
             {
               at: "2026-10-31T03:00:00+00:00",

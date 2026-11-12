@@ -37,7 +37,7 @@ KINDS = frozenset({KIND_AI, KIND_API, KIND_RPA})
 OPERATION_PATTERN = r"^[a-z][a-z0-9_]{0,63}$"
 
 #: `console` — Center가 콘솔의 시험 호출(CON-18)을 스스로 올릴 때 (C7, ADR-0141).
-KNOWN_CALLER_TYPES = frozenset({"bot_ui", "server_runner", "studio", "console"})
+KNOWN_CALLER_TYPES = frozenset({"server_runner", "studio", "console"})
 KNOWN_CATEGORIES = frozenset({"business", "system"})
 KNOWN_HEALTH_STATUSES = frozenset({"ok", "degraded"})
 

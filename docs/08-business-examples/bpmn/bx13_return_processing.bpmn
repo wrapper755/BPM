@@ -11,7 +11,6 @@
   <bpmn:process id="Proc_bx13_return_processing" name="반품 처리" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "shop",

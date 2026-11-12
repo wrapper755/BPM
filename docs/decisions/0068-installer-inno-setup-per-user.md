@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 (2026-10-17) |
+| 상태 | 대체됨([ADR-0143](0143-design-happens-in-the-console.md)) — 원래 수락 (2026-10-17). 설치할 데스크톱 앱이 없다 |
 | 날짜 | 2026-10-17 |
 | 관련 | [ADR-0024](0024-desktop-packaging-extensions.md)(묶기 — 「설치 프로그램 종류는 미정」을 여기서 닫는다), [ADR-0023](0023-bot-ui-process-supervision.md)(자동 시작·로그인 세션), [ADR-0067](0067-build-stamp.md)(판), 스파이크 S4(MSIX 가상화) |
 

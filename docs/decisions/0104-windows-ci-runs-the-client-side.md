@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 대체됨([ADR-0144](0144-remove-the-pc-runner.md)) — 원래 수락. 볼 클라이언트가 없다 |
 | 날짜 | 2026-10-29 |
 | 관련 | [ADR-0102](0102-calling-outside-is-pull.md)(바깥 호출은 모두 Pull), [ADR-0016](0016-server-first.md), `.github/workflows/ci.yml`, `tests/ci_scope.py`, `docs/04-setup.md` §7 |
 

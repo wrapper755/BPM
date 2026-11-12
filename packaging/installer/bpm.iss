@@ -1,17 +1,16 @@
-﻿; BPM 설치 스크립트 — Studio·PC 실행기가 함께 쓴다 (ADR-0068).
+﻿; BPM 설치 스크립트 — Studio (ADR-0068).
 ;
 ; **직접 iscc로 부르지 않는다** — `packaging/build.py --installer`가 앱마다 다른 값을 /D로 넘긴다:
-;   AppKey      bot-ui | studio
+;   AppKey      studio
 ;   AppId       고정 GUID (바꾸면 덮어쓰기가 아니라 두 번째 설치가 된다)
 ;   AppName     표시 이름 (한글일 수 있다 — 바로가기·제거 목록)
 ;   AppFileName 설치 파일 이름의 앞부분 (ASCII — `BPMBot`)
 ;   AppExe      실행 파일 이름 (예: BPMBot.exe)
-;   AppDirName  설치 폴더 이름 (예: BotUI)
+;   AppDirName  설치 폴더 이름 (예: Studio)
 ;   AppVersion  찍힌 판 (ADR-0067 — 0.2.0 또는 0.1.0+g<커밋>)
 ;   NumericVersion  파일 속성용 숫자 판 (0.2.0.0)
 ;   SourceDir   묶은 onedir 폴더
 ;   OutputDir   설치 파일을 둘 곳
-;   AutostartTask  (PC 실행기만) 제거할 때 지울 작업 스케줄러 이름 — `autostart.TASK_NAME`
 ;
 ; 사용자별 설치다 — 관리자 권한을 묻지 않는다. 자리는 %LOCALAPPDATA%\Programs\BPM\<앱>.
 ; 서명이 없다 — 처음 설치할 때 SmartScreen이 경고한다 (docs/04-setup.md).
@@ -62,12 +61,11 @@ Name: "desktopicon"; Description: "바탕 화면에 바로 가기 만들기"; Gr
 ; 모듈·dist-info가 남아 섞인다.
 Type: filesandordirs; Name: "{app}\_internal"
 ; 옛 이름(Chaeksas) 판에서 올라올 때 남는 것 (ADR-0130). AppId가 같아 설치 폴더는 옛 자리를 그대로 쓴다 —
-; 옛 실행 파일·빌드 기록·바로 가기를 지운다. 옛 자동 시작 작업은 PC 실행기가 처음 뜰 때 옮긴다(`autostart.take_old`).
+; 옛 실행 파일·빌드 기록·바로 가기를 지운다.
 Type: files; Name: "{app}\ChaeksasBotUI.exe"
 Type: files; Name: "{app}\ChaeksasStudio.exe"
 Type: files; Name: "{app}\chaeksas-build.json"
 Type: filesandordirs; Name: "{autoprograms}\Chaeksas"
-Type: files; Name: "{autodesktop}\Chaeksas PC 실행기.lnk"
 Type: files; Name: "{autodesktop}\Chaeksas Studio.lnk"
 
 [Files]

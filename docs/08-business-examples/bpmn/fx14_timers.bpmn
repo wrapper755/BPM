@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx14_timers" name="중간 타이머와 결재 시간 제한" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": []

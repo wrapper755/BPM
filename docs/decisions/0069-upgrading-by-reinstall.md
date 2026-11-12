@@ -40,7 +40,7 @@ ADR-0068로 조용한 설치·같은 `AppId` 덮어쓰기·옛 `_internal` 지�
 ### 2. 언제 깔지는 사람이 본다 — 플랫폼은 볼 거리를 준다
 
 설치 파일은 실행 중인 Bot UI를 **닫고** 깐다(Restart Manager). Bot UI가 닫히면 실행기도 함께 끝나
-(Job Object, ADR-0023) **도는 Bot과 대기열을 잃는다**(C4 `bot_ui_lost`). 그래서 **도는 Bot도 대기열도 없을
+(Job Object, ADR-0023) **도는 Bot과 대기열을 잃는다**(C4 `runner_lost`). 그래서 **도는 Bot도 대기열도 없을
 때** 깐다 — 그 판단은 사람이 하고, 볼 자리는 이미 있다:
 
 - **CON-03** — PC마다 판(`versions`)·「실행 중」·「대기열」을 보인다.

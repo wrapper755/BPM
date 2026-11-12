@@ -8,7 +8,6 @@
  */
 export interface RunInfo {
   ai_tasks?: number | null;
-  bot_ui_id?: string | null;
   bpm_process_id?: string | null;
   company?: string | null;
   confirmations?: number | null;
@@ -23,7 +22,7 @@ export interface RunInfo {
   parent_run_id?: string | null;
   replayed_tasks?: number | null;
   run_id: string;
-  run_location?: string | null;
+  runner_id?: string | null;
   service_calls?: number | null;
   source?: string | null;
   staff?: string | null;

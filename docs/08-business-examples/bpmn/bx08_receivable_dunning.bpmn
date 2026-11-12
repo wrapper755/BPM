@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_bx08_receivable_dunning" name="매출채권 연체 독촉" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "erp",

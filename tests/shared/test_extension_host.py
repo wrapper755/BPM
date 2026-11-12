@@ -73,20 +73,6 @@ def test_a_builtin_is_read_and_enabled(host: ExtensionHost) -> None:
     assert host.failures == []
     task_types = {c.value.id: c for c in host.task_types()}
     assert task_types["fake_task"].extension_id == BUILTIN_ID
-    assert task_types["fake_task"].value.run_locations == ["pc"]
-
-
-def test_the_run_location_table_only_holds_task_types_that_are_turned_on(host: ExtensionHost) -> None:
-    """C14 B6·C1 R2가 묻는 표다. **꺼 둔 확장의 종류는 없다** (ADR-0043 — 기여를 내지 않는다).
-
-    그래서 받는 쪽은 **표에 없는 종류를 막지 않는다** — 막으면 그 확장을 끈 PC에서 올바른
-    그림이 「서버에서 안 된다」가 된다.
-    """
-    assert host.task_type_locations() == {"fake_task": ["pc"]}
-
-    off = ExtensionHost(off=[BUILTIN_ID])
-    off.add_installed(fake_extension.definition_bytes(), origin="test", root=BUILTIN_ROOT)
-    assert off.task_type_locations() == {}, "꺼 둔 확장의 태스크 종류가 표에 남았다"
 
 
 def test_other_contribution_points(host: ExtensionHost) -> None:
@@ -299,7 +285,7 @@ def test_duplicate_task_type_loses(host: ExtensionHost) -> None:
         definition(
             contributes={
                 "task_types": [
-                    {"id": "fake_task", "label": "내 시험 태스크", "run_locations": ["pc"],
+                    {"id": "fake_task", "label": "내 시험 태스크",
                      "executor": {"entry": "doc_ocr.client:X"}}
                 ]
             }
@@ -332,7 +318,7 @@ def test_entry_cannot_point_outside_the_extension(host: ExtensionHost) -> None:
         definition(
             contributes={
                 "task_types": [
-                    {"id": "ocr_task", "label": "OCR", "run_locations": ["pc"],
+                    {"id": "ocr_task", "label": "OCR",
                      "executor": {"entry": "os:getcwd"}}
                 ]
             }
@@ -349,7 +335,7 @@ def test_entry_pointing_at_the_wrong_shape_is_refused(host: ExtensionHost) -> No
         definition(
             contributes={
                 "task_types": [
-                    {"id": "ocr_task", "label": "OCR", "run_locations": ["pc"],
+                    {"id": "ocr_task", "label": "OCR",
                      # 편집기를 수행기 자리에 적었다 — execute()가 없다.
                      "executor": {"entry": "fake_extension:FakeTaskEditor"}}
                 ]
@@ -368,7 +354,7 @@ def test_schema_kind_editor_means_no_widget(host: ExtensionHost) -> None:
         definition(
             contributes={
                 "task_types": [
-                    {"id": "ocr_task", "label": "OCR", "run_locations": ["pc"], "editor": {"kind": "schema"}}
+                    {"id": "ocr_task", "label": "OCR", "editor": {"kind": "schema"}}
                 ]
             }
         ),
@@ -379,7 +365,7 @@ def test_schema_kind_editor_means_no_widget(host: ExtensionHost) -> None:
 def test_task_type_without_executor_raises(host: ExtensionHost) -> None:
     install(
         host,
-        definition(contributes={"task_types": [{"id": "ocr_task", "label": "OCR", "run_locations": ["pc"]}]}),
+        definition(contributes={"task_types": [{"id": "ocr_task", "label": "OCR"}]}),
     )
     with pytest.raises(LookupError, match="수행기가 없다"):
         host.executor("ocr_task")
@@ -508,7 +494,6 @@ def test_builtin_tier_from_center_is_not_enabled() -> None:
     assert "id_conflict" in [p.code for p in loaded.problems]
 
 
-
 # ─────────────────────────── 사람이 껐다 (ADR-0043) ───────────────────────────
 
 
@@ -526,7 +511,7 @@ def test_a_turned_off_extension_contributes_nothing() -> None:
     """기여가 **한꺼번에** 빠진다 — 늦게(실행할 때) 죽지 않는다."""
     contributes = {
         "task_types": [
-            {"id": "ocr_task", "label": "OCR", "executor": {"entry": "x:Y"}, "run_locations": ["pc"]}
+            {"id": "ocr_task", "label": "OCR", "executor": {"entry": "x:Y"}}
         ],
         "studio.resource_views": [{"id": "v", "label": "서식", "resource_type": "ocr_form"}],
         "configuration": [{"key": "k", "label": "k", "scope": "studio"}],
@@ -545,26 +530,10 @@ def test_a_turned_off_extension_contributes_nothing() -> None:
 #: 양쪽에서 돈다고 적은 종류와 PC 전용 하나 (ADR-0064).
 BOTH_AND_PC: dict[str, Any] = {
     "task_types": [
-        {"id": "ocr_task", "label": "OCR", "executor": {"entry": "x:Y"}, "run_locations": ["pc"]},
-        {"id": "sum_task", "label": "요약", "executor": {"entry": "x:Y"}, "run_locations": ["pc", "server"]},
+        {"id": "ocr_task", "label": "OCR", "executor": {"entry": "x:Y"}},
+        {"id": "sum_task", "label": "요약", "executor": {"entry": "x:Y"}},
     ]
 }
-
-
-def test_a_host_that_holds_a_run_location_only_contributes_what_runs_there() -> None:
-    """**거르는 자리가 하나다** (ADR-0064) — 수행기·사전 점검·위치 표가 같은 것을 본다.
-
-    서버 실행기는 로컬 런타임을 띄우지 않으므로(런타임은 PC 실행기의 것이다) PC 전용 종류는
-    서버에서 **없는 것**이 된다. 「깔려 있는데 못 돈다」는 사전 점검이 따로 말한다.
-    """
-    server = ExtensionHost(run_location="server")
-    install(server, definition(contributes=BOTH_AND_PC))
-
-    assert [c.value.id for c in server.task_types()] == ["sum_task"]
-    assert server.task_type("ocr_task") is None
-    assert server.task_type_locations() == {"sum_task": ["pc", "server"]}
-    with pytest.raises(LookupError):
-        server.executor("ocr_task")
 
 
 def test_a_host_without_a_run_location_contributes_everything() -> None:
@@ -574,20 +543,11 @@ def test_a_host_without_a_run_location_contributes_everything() -> None:
     assert [c.value.id for c in both.task_types()] == ["ocr_task", "sum_task"]
 
 
-def test_the_provider_is_still_found_for_a_filtered_task_type() -> None:
-    """걸러진 종류의 **주인은 보인다** — 사전 점검이 「이 위치에서 못 돈다」를 그것으로 말한다."""
-    server = ExtensionHost(run_location="server")
-    install(server, definition(contributes=BOTH_AND_PC))
-
-    owner = server.provider_of("ocr_task")
-    assert owner is not None and owner.id == "doc-ocr" and not owner.off
-
-
 def test_a_turned_off_extension_does_not_hold_the_task_type_name() -> None:
     """겹침(E4)은 **꺼지지 않은 것들 사이에서만** 본다 — 꺼진 것은 이름을 쥐고 있지 않다."""
     task = {
         "task_types": [
-            {"id": "ocr_task", "label": "OCR", "executor": {"entry": "x:Y"}, "run_locations": ["pc"]}
+            {"id": "ocr_task", "label": "OCR", "executor": {"entry": "x:Y"}}
         ]
     }
     clashing = ExtensionHost()
@@ -602,7 +562,7 @@ def test_a_turned_off_extension_does_not_hold_the_task_type_name() -> None:
 
 
 def test_the_report_tells_center_which_of_the_two_it_is() -> None:
-    """C4 `ExtensionState` — `off`가 있어야 CON-03이 「꺼짐」과 「호환 안 됨」을 가른다."""
+    """C4 `ExtensionState` — `off`가 있어야 콘솔이 「꺼짐」과 「호환 안 됨」을 가른다."""
     host = ExtensionHost(api_version="1.0.0", off=["doc-ocr"])
     install(host, definition())
     install(host, definition(id="doc-ocr-2", api=">=9,<10"))

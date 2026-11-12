@@ -1,6 +1,6 @@
 """키 묶기 — Center API 키 ↔ 기계 ↔ 행, **양방향으로 하나씩** (C4·C12 「키 묶기」).
 
-PC 실행기(C4)와 서버 실행기(C12)가 **같은 규칙**을 쓴다. C12가 「키 묶기는 C4와 같다」고 적어
+실행기 등록(C4·C12)이 쓰는 규칙이다. C12가 「키 묶기는 C4와 같다」고 적어
 두었으므로 규칙이 두 군데 있으면 한쪽만 고쳐져 갈라진다 — 그래서 표 이름만 다르게 받고
 판정은 여기 하나다.
 
@@ -41,12 +41,10 @@ class HostTable:
     name: str
     id_column: str
     label: str
-    #: 운영자가 묶음을 푸는 단추의 이름 (화면 글과 같아야 한다 — CON-11).
+    #: 운영자가 묶음을 푸는 단추의 이름 (화면 글과 같아야 한다 — CON-12).
     unbind_label: str = "묶음 풀기"
 
 
-#: C4 PC 실행기 (`bot_uis`) — 키 종류 `bot_ui`.
-BOT_UI = HostTable(name="bot_uis", id_column="bot_ui_id", label="PC", unbind_label="PC 묶음 풀기")
 #: C12 서버 실행기 (`server_runners`) — 키 종류 `server_runner`.
 SERVER_RUNNER = HostTable(
     name="server_runners", id_column="server_runner_id", label="서버", unbind_label="묶음 풀기"
@@ -154,7 +152,6 @@ def claim(
 
 
 __all__ = [
-    "BOT_UI",
     "SERVER_RUNNER",
     "HostTable",
     "claim",

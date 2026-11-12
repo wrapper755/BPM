@@ -19,7 +19,6 @@ from fastapi.responses import FileResponse, Response
 from bpm.center import accounts, consumer_folder, consumers, keys, signer
 from bpm.center.api import (
     approvals,
-    bot_ui,
     console_extensions,
     delegations,
     deployments,
@@ -122,7 +121,6 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
     app.state.authenticate = authenticate
     app.state.external_waiters = external_tasks.Waiters(settings.external_task_max_waiters)
     app.add_exception_handler(ApiError, handle)
-    app.include_router(bot_ui.router)
     app.include_router(enrollments.router)
     app.include_router(server_runner.router)
     app.include_router(delegations.router)
@@ -135,14 +133,6 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
         """회사가 정해진 쪽은 **제 회사의 패키지만** 다룬다 (C16). Center 전체를 보는 쪽은 원래 길이 답한다."""
         if found.company is not None:
             packages.info_of(app.state.store, package_id, version, company=found.company)
-
-    def _own_bot_ui(found: Caller, bot_ui_id: str) -> None:
-        """회사가 정해진 쪽은 **제 회사의 PC만** 다룬다 — 남의 것은 같은 404 (C16)."""
-        if found.company is None:
-            return
-        row = app.state.store.row("SELECT company FROM bot_uis WHERE bot_ui_id = ?", (bot_ui_id,))
-        if row is None or row["company"] != found.company:
-            raise ApiError(404, "not_found", f"PC 실행기 {bot_ui_id}가 없다")
 
     @app.get("/healthz")
     def healthz() -> dict[str, Any]:
@@ -316,30 +306,6 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
         if not keys.unbind(app.state.store, key_id):
             raise ApiError(409, "not_bound", "묶여 있지 않다")
         return keys.get(app.state.store, key_id).info(now=now_iso())  # type: ignore[union-attr]
-
-    # ─────────────────── PC 실행기 현황 (C5·CON-03) ───────────────────
-
-    @app.get(f"{API}/bot-uis")
-    def list_bot_uis(request: Request) -> Any:
-        # **콘솔 토큰만** (C5 권한표) — 현장 키로 남의 PC 현황을 읽지 못한다.
-        found = require_console(authenticate(request))
-        return bot_ui.bot_ui_listing(app.state.store, company=company_scope(found))
-
-    @app.post(f"{API}/bot-uis/{{bot_ui_id}}/disable")
-    def disable_bot_ui(request: Request, bot_ui_id: str) -> Any:
-        found = require_admin(authenticate(request))
-        _own_bot_ui(found, bot_ui_id)
-        if not bot_ui.set_disabled(app.state.store, bot_ui_id, disabled=True):
-            raise ApiError(404, "not_found", f"PC 실행기 {bot_ui_id}가 없다")
-        return {"bot_ui_id": bot_ui_id, "disabled": True}
-
-    @app.post(f"{API}/bot-uis/{{bot_ui_id}}/enable")
-    def enable_bot_ui(request: Request, bot_ui_id: str) -> Any:
-        found = require_admin(authenticate(request))
-        _own_bot_ui(found, bot_ui_id)
-        if not bot_ui.set_disabled(app.state.store, bot_ui_id, disabled=False):
-            raise ApiError(404, "not_found", f"PC 실행기 {bot_ui_id}가 없다")
-        return {"bot_ui_id": bot_ui_id, "disabled": False}
 
     # ─────────────────── 서버 실행기 (C12·CON-12) ───────────────────
 
@@ -529,10 +495,10 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
         return made
 
     @app.get(f"{API}/deployments")
-    def list_deployments(request: Request, bot_ui: str | None = None, active: bool = False) -> Any:
+    def list_deployments(request: Request, runner: str | None = None, active: bool = False) -> Any:
         found = require_read(authenticate(request))
         return deployments.listing(
-            app.state.store, target_id=bot_ui, active_only=active, company=company_scope(found)
+            app.state.store, target_id=runner, active_only=active, company=company_scope(found)
         )
 
     # ─────────────────── 리소스 (C7·CON-07) ───────────────────
@@ -541,7 +507,7 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
     def list_resources(
         request: Request, type: str | None = None, resource_type: str | None = None
     ) -> Any:
-        """리소스 목록. 읽기·관리자 토큰과 Studio·PC 실행기·서버 실행기 키가 읽는다 (C7)."""
+        """리소스 목록. 읽기·관리자 토큰과 Studio·서버 실행기 키가 읽는다 (C7)."""
         require_read(authenticate(request))
         return resources.listing(app.state.store, type=type, resource_type=resource_type)
 
