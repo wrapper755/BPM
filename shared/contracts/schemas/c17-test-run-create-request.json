@@ -1,0 +1,34 @@
+{
+  "$id": "urn:bpm:contracts:c17-test-run-create-request",
+  "additionalProperties": true,
+  "description": "`POST /api/v1/workspaces/{id}/test-runs`.\n\n**이름에 `Test`를 넣지 않는다** (`Trial…`) — pytest가 시험 클래스로 알고 모으려다 경고한다\n(`core.testrun.RunSettings`와 같은 덫이다). 계약 문서의 길과 글은 「시험 실행」 그대로다.\n\n**케이스를 비우면 비교하지 않는다** (`비교 안 함`) — 그림을 그냥 돌려 보는 자리다.",
+  "properties": {
+    "case": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Case"
+    },
+    "mode": {
+      "default": "autonomous",
+      "title": "Mode",
+      "type": "string"
+    },
+    "schema": {
+      "description": "이 계약의 schema 번호",
+      "title": "Schema",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema"
+  ],
+  "title": "TrialCreateRequest",
+  "type": "object"
+}

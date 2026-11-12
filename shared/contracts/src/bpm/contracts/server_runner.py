@@ -39,6 +39,13 @@ from bpm.contracts.runner import (
     Readiness,
 )
 from bpm.contracts.signing import AdminKey
+from bpm.contracts.workspace import (
+    TEST_RUN_PREFIX,
+    BuildDispatch,
+    BuildResult,
+    CheckDispatch,
+    CheckResult,
+)
 
 #: 하트비트 기본 간격과 오프라인 판정 (C12 §재시작과 유실 — PC보다 촘촘하다).
 DEFAULT_HEARTBEAT_S = 10
@@ -130,10 +137,18 @@ class Capacity(ContractModel):
     """자리 셈. **`running`은 기다리는 실행을 뺀 수**다 (ADR-0054 §5).
 
     Center가 빈자리를 `max - running`으로 계산한다 (C12 §Center가 작업을 나누는 규칙).
+
+    **시험 자리는 따로 센다** ([ADR-0146](../../../../../docs/decisions/0146-design-work-has-its-own-lane.md)) —
+    운영과 **서로 빌려주지 않는다**. 빌려주면 「설계자가 돌려 보는 동안 운영 작업이 밀리지 않는다」가
+    그 자리에서 깨진다. 보고하지 않으면 0이고, 0이면 **그 실행기는 시험을 받지 않는다**.
     """
 
     max: int = Field(ge=1)
     running: int = Field(ge=0)
+    #: 시험 실행에 내줄 자리 (C17). 기본 0 — 보고하지 않는 실행기는 시험을 받지 않는다.
+    test_max: int = Field(default=0, ge=0)
+    #: 지금 도는 시험 실행 수. `running`에 **들어가지 않는다**.
+    test_running: int = Field(default=0, ge=0)
 
 
 class RunningRun(ContractModel):
@@ -228,6 +243,10 @@ class ServerRunnerHeartbeatRequest(SchemaVersioned):
     message_acks: list[MessageAck] = Field(default_factory=list)
     delegation_acks: list[DelegationAck] = Field(default_factory=list)
     deployment_results: list[DeploymentResult] = Field(default_factory=list)
+    #: 실행 전 검사와 배포 후보 짓기의 결과 (C17) — **실행을 만들지 않으니 작업이 아니다**
+    #: (ADR-0146, `deployment_results`와 같은 결). 지은 zip은 여기 싣지 않고 C17의 올리기 길로 간다.
+    check_results: list[CheckResult] = Field(default_factory=list)
+    build_results: list[BuildResult] = Field(default_factory=list)
     extensions: list[ExtensionState] = Field(default_factory=list)  # 바뀌었을 때만
     restored: list[str] = Field(default_factory=list)
     unsent_events: int | None = None
@@ -258,6 +277,10 @@ class ServerRunnerHeartbeatResponse(ContractModel):
     admin_keys: list[AdminKey] | None = None  # 생략 = 그대로
     jobs: list[JobDispatch] = Field(default_factory=list)
     cancel_jobs: list[str] = Field(default_factory=list)
+    #: 작업공간의 실행 전 검사·배포 후보 짓기 지시 (C17·ADR-0146). 묶음은 C17 `GET …/bundle`로
+    #: 집어 간다. 결과는 `check_results`·`build_results`로 올라온다.
+    checks: list[CheckDispatch] = Field(default_factory=list)
+    builds: list[BuildDispatch] = Field(default_factory=list)
     approvals: list[ApprovalDispatch] = Field(default_factory=list)
     messages: list[MessageDispatch] = Field(default_factory=list)
     #: 끝난 **맡기기**의 결과. ack가 올 때까지 다시 싣는다 (ADR-0082).
@@ -375,13 +398,18 @@ WAITING_REQUIRES = {
 }
 
 
-def free_slots(capacity: Capacity, *, paused: bool = False) -> int:
-    """이 실행기에 실어 보낼 수 있는 작업 수 (C12 §Center가 작업을 나누는 규칙 2).
+def free_slots(capacity: Capacity, *, paused: bool = False, test: bool = False) -> int:
+    """이 실행기에 실어 보낼 수 있는 작업 수 (C12 §Center가 작업을 나누는 규칙 2·5).
 
     **기다리는 실행은 세지 않는다** — `capacity.running`이 이미 그것을 뺀 수다 (ADR-0054 §5).
+
+    `test=True`면 **시험 자리**를 센다 (ADR-0146). 두 자리는 **서로 빌려주지 않으므로** 한 함수가
+    둘을 세고 부르는 쪽이 어느 자리인지 말한다 — 운영 빈자리가 남아도 시험은 거기로 가지 않는다.
     """
     if paused:
         return 0
+    if test:
+        return max(0, capacity.test_max - capacity.test_running)
     return max(0, capacity.max - capacity.running)
 
 
@@ -397,10 +425,22 @@ def validate_heartbeat(request: ServerRunnerHeartbeatRequest) -> list[str]:
         problems.append(
             f"capacity.running({request.capacity.running})이 max({request.capacity.max})보다 크다"
         )
-    if len(request.running) != request.capacity.running:
+    if request.capacity.test_running > request.capacity.test_max:
         problems.append(
-            f"capacity.running({request.capacity.running})과 running[] 길이"
-            f"({len(request.running)})가 다르다"
+            f"capacity.test_running({request.capacity.test_running})이 "
+            f"test_max({request.capacity.test_max})보다 크다"
+        )
+    # **시험 실행은 실행 id 앞자리로 가른다** (ADR-0146) — 칸을 따로 두면 두 값이 갈라진다.
+    tests = sum(1 for one in request.running if one.run_id.startswith(TEST_RUN_PREFIX))
+    if len(request.running) - tests != request.capacity.running:
+        problems.append(
+            f"capacity.running({request.capacity.running})과 running[]의 운영 실행 수"
+            f"({len(request.running) - tests})가 다르다"
+        )
+    if tests != request.capacity.test_running:
+        problems.append(
+            f"capacity.test_running({request.capacity.test_running})과 running[]의 시험 실행 수"
+            f"({tests})가 다르다"
         )
 
     running_ids = [r.run_id for r in request.running]

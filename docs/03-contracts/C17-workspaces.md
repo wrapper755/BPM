@@ -103,8 +103,9 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | --- | --- | --- |
 | `POST /workspaces/{id}/test-runs` | 관리자 | 시험 실행을 만든다. 본문 `{case?, mode}` (`mode`: `autonomous`\|`deterministic`). 케이스를 비우면 **비교하지 않는다** |
 | `GET /workspaces/{id}/test-runs` | 읽기 | 목록 (최근 것부터) |
-| `GET /workspaces/{id}/test-runs/{run_id}` | 읽기 | `TestRunInfo` — 상태·판정·로그 줄·노드 색·변수 |
+| `GET /workspaces/{id}/test-runs/{run_id}` | 읽기 | `TrialInfo` — 상태·판정·로그 줄·노드 색·변수 |
 | `DELETE /workspaces/{id}/test-runs/{run_id}` | 관리자 | 멈춘다 (「중지」 — 판정하지 않는다) |
+| `PUT /workspaces/{id}/test-runs/{run_id}` | 서버 실행기 키 | **진행과 끝을 올린다** (`TrialReport`). **하트비트에 싣지 않는다** — 로그가 수백 줄이고 하트비트는 작은 JSON이다. 도는 중에도 올리므로 콘솔이 로그와 노드 색을 따라간다 |
 
 ### 내려보내기
 
@@ -121,8 +122,10 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 ### 자리는 따로 센다
 
 시험 작업은 **C12 `jobs[]`로 내려간다** ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)) —
-대기열·멱등·ack·취소·유실 처리가 운영과 **한 자리**에 남는다. 작업에 `source` 한 칸이 있고
-(`production`\|`test`) 실행기는 그것을 보고 위의 시험 모드 규칙을 켠다.
+대기열·멱등·ack·취소·유실 처리가 운영과 **한 자리**에 남는다. 작업에 **`test` 칸**(C4
+`JobDispatch.test` — `TrialTarget{workspace_id, revision, case?, mode}`)이 **있으면 시험 작업**이고
+실행기는 그것을 보고 위의 시험 모드 규칙을 켠다. **깃발을 따로 두지 않는다** — 두 값이 갈라지면
+한쪽은 시험인데 다른 쪽은 운영이 된다.
 
 **자리만 둘이다** — `capacity`가 `{max, running, test_max, test_running}`이고 운영 작업은 운영 빈자리에서,
 시험 작업은 시험 빈자리에서만 고른다. **서로 빌려주지 않는다** (빌려주면 「운영을 밀지 않는다」가 그 자리에서
@@ -143,13 +146,15 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 올라오고 Center가 작업공간의 `memory/specs.json`에 적는다**. 엔진은 파일을 쓰지 않고, 실행기의 디스크는
 그 실행이 끝나면 사라진다. **끝까지 간 실행만** 적는다.
 
-### TestRunInfo
+### TrialInfo
+
+**모델 이름에 `Test`를 넣지 않는다** (`Trial…`) — pytest가 시험 클래스로 알고 모으려다 경고한다 (`core.testrun.RunSettings`와 같은 덫). 길과 글은 「시험 실행」 그대로다.
 
 | 필드 | 타입 | 뜻 |
 | --- | --- | --- |
-| `run_id` | str | `test_`로 시작한다 |
+| `run_id` | str | `test_`로 시작한다. **자리 셈도 이 앞자리로 운영과 가른다** (`validate_heartbeat`) |
 | `state` | str | `queued`·`running`·`waiting`·`done`·`failed`·`cancelled` |
-| `verdict` | str | `통과`·`실패`·`비교 안 함`·`중지`·`오류` (C14 비교 규칙 그대로) |
+| `verdict` | str | `통과`·`실패`·`비교 안 함`·`중지`·`오류` (C14 비교 규칙 그대로). **도는 중에는 `null`**이다 — 끝난 줄로 읽히지 않게. 글의 자리는 계약 하나이고 엔진이 가져다 쓴다 (`contracts.workspace.VERDICT_*` ← `core.testrun.runner`) |
 | `detail` | str | 한 줄 |
 | `case` | str | 케이스 이름 (없으면 빈 글) |
 | `mode` | str | `autonomous`\|`deterministic` |

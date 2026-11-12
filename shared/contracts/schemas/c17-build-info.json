@@ -1,0 +1,89 @@
+{
+  "$id": "urn:bpm:contracts:c17-build-info",
+  "additionalProperties": true,
+  "description": "짓기 하나 — 콘솔이 「배포 후보로 만들기」의 진행과 끝을 본다.",
+  "properties": {
+    "build_id": {
+      "title": "Build Id",
+      "type": "string"
+    },
+    "kind": {
+      "default": "bpm_process",
+      "title": "Kind",
+      "type": "string"
+    },
+    "package_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Package Id"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    },
+    "requested_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Requested At"
+    },
+    "requested_by": {
+      "default": "",
+      "title": "Requested By",
+      "type": "string"
+    },
+    "revision": {
+      "default": "",
+      "title": "Revision",
+      "type": "string"
+    },
+    "state": {
+      "title": "State",
+      "type": "string"
+    },
+    "version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Version"
+    },
+    "workspace_id": {
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "build_id",
+    "workspace_id",
+    "state"
+  ],
+  "title": "BuildInfo",
+  "type": "object"
+}

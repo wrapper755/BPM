@@ -1,0 +1,139 @@
+{
+  "$defs": {
+    "OrgRef": {
+      "additionalProperties": true,
+      "description": "조직 하나를 가리키는 id와 이름 — 실행하는 쪽이 값 출처로 푼다.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "OrgRef",
+      "type": "object"
+    },
+    "PlaceIdentity": {
+      "additionalProperties": true,
+      "description": "**작업의 주인** — Center가 서버 작업을 내려줄 때 붙인다 (C12 `JobDispatch.place`). 저장하지 않는다.\n\n실행하는 쪽이 출처가 `company.*`·`department.*`·`staff.*`인 입력의 값으로 푼다\n(`core.engine.sourced_inputs`). 그 자리에 없는 것(회사 자리 업무의 직원)은 비어 있다.",
+      "properties": {
+        "company": {
+          "$ref": "#/$defs/OrgRef"
+        },
+        "department": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OrgRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "staff": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OrgRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "company"
+      ],
+      "title": "PlaceIdentity",
+      "type": "object"
+    }
+  },
+  "$id": "urn:bpm:contracts:c17-workspace-info",
+  "additionalProperties": true,
+  "description": "작업공간 하나 — `process.json`을 읽어 보인 것이다.\n\n**원본은 파일이다.** 담당자·태그처럼 매니페스트에 칸이 없는 값도 파일에는 그대로 남는다.",
+  "properties": {
+    "company": {
+      "title": "Company",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "entry": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Entry"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "place": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PlaceIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "revision": {
+      "title": "Revision",
+      "type": "string"
+    },
+    "updated_at": {
+      "title": "Updated At",
+      "type": "string"
+    },
+    "updated_by": {
+      "title": "Updated By",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "version",
+    "company",
+    "updated_at",
+    "updated_by",
+    "revision"
+  ],
+  "title": "WorkspaceInfo",
+  "type": "object"
+}

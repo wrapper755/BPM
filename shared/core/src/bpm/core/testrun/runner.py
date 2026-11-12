@@ -35,6 +35,13 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
 from bpm.contracts.bpmn_ext import CASE_ANSWERER, Case, CaseFile, CaseMessage, duration_hours, matches
+from bpm.contracts.workspace import (
+    VERDICT_ERROR,
+    VERDICT_FAIL,
+    VERDICT_NO_EXPECT,
+    VERDICT_PASS,
+    VERDICT_STOPPED,
+)
 from bpm.core.delegation import DelegationCall, DelegationError
 from bpm.core.engine import (
     DECISION_KEY,
@@ -63,11 +70,13 @@ log = logging.getLogger(__name__)
 #: `pump()` 한 번에 밟을 노드 수. 화면이 있는 쪽이 이것을 타이머에 걸어도 멎지 않을 만큼만.
 STEPS_PER_TICK = 25
 
-PASS = "통과"
-FAIL = "실패"
-NO_EXPECT = "비교 안 함"
-STOPPED = "중지"
-ERROR = "오류"
+# **판정 글은 계약이 갖는다** (C17 — 화면·Center·실행기가 같은 글자를 쓴다). 여기서는 짧은
+# 이름으로 받아 쓴다 — 두 벌을 두면 콘솔이 「통과」를 모르는 글자로 받는다.
+PASS = VERDICT_PASS
+FAIL = VERDICT_FAIL
+NO_EXPECT = VERDICT_NO_EXPECT
+STOPPED = VERDICT_STOPPED
+ERROR = VERDICT_ERROR
 
 NO_CASE = "[케이스] 선택 없음 — 기대 결과를 비교하지 않습니다"
 

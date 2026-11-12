@@ -111,13 +111,13 @@ ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 
 | 필드 | 뜻 |
 | --- | --- |
 | `schema`, `status` | `status`는 열린 문자열. 알려진 값: `running`, `paused`, `draining`(재시작을 받아 도는 실행이 끝나기를 기다린다), `error` |
-| `capacity` | `{max, running, test_max?, test_running?}`. `running`은 기다리는 실행을 뺀 수. **시험 자리는 따로 센다** — 운영과 서로 빌려주지 않는다 ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md), C17). 선택 칸이고 없으면 0이다. **아직 없다** (C17 「초안」) |
+| `capacity` | `{max, running, test_max?, test_running?}`. `running`은 기다리는 실행을 뺀 수. **시험 자리는 따로 센다** — 운영과 서로 빌려주지 않는다 ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md), C17). 선택 칸이고 **없으면 0** — 보고하지 않는 실행기는 시험을 받지 않는다. **모델은 있고 보고하는 쪽이 아직 없다** (C17 「초안」) |
 | `running[]` | `{run_id, bpm_process_id, version, node_id, started_at, job_id?}` |
 | `waiting[]` | `{run_id, bpm_process_id, version, waiting_for: "approval" \| "message" \| "timer" \| "delegation" \| "external_task", request_id?, message_name?, correlation?, until?, job_id?, task_id?, since}` |
 | `job_acks[]` | C4 모양. `result`: `started`, `rejected`, `expired`, `cancelled`, `cancel_refused` |
 | `approval_acks[]`, `deployment_results[]` | C4 모양 |
 | `readiness[]` | 배포된 BPM 프로세스별 준비 상태 (C4 `Readiness`: 확장). 바뀌었을 때만 |
-| `check_results[]`, `build_results[]` | 실행 전 검사와 배포 후보 짓기의 결과 — `{check_id, violations[]}` / `{build_id, ok, reason?}` (C17). **실행을 만들지 않으니 작업이 아니다** — `deployment_results[]`와 같은 결이다. 지은 zip은 하트비트에 싣지 않고 C17의 올리기 길로 간다 ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)). **아직 없다** |
+| `check_results[]`, `build_results[]` | 실행 전 검사와 배포 후보 짓기의 결과 — `{check_id, violations[], reason?}` / `{build_id, ok, reason?}` (C17). **실행을 만들지 않으니 작업이 아니다** — `deployment_results[]`와 같은 결이다. 지은 zip은 하트비트에 싣지 않고 C17의 올리기 길로 간다 ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)). **모델은 있고 내려주는 쪽이 아직 없다** |
 | `message_acks[]` | `{message_id, accepted, run_id?, reason?}` |
 | `delegation_acks[]` | `{job_id, accepted}` — **맡긴 것의 결과를 받았다** (§맡기기). 받으면 Center가 그 값을 지운다 |
 | `extensions[]` | 바뀌었을 때만 (C4 모양) |
@@ -136,7 +136,7 @@ ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 
 | `server_time`, `next_heartbeat_s` | |
 | `deployments[]` | `target.type=server_runner`이고 `id`가 이 실행기 또는 `"*"`인 활성 배포 봉투 (C2) |
 | `admin_keys` | 바뀌었을 때만 |
-| `jobs[]` | **빈자리만큼만** 싣는다. C4 `JobDispatch`. `source`(`production`\|`test`, 기본 `production`)로 시험 실행이 함께 온다 — **자리만 따로 세고** 대기열·멱등·ack·취소는 한 자리다 ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md), C17. 시험 쪽은 **아직 없다**). 작업의 주인(업무 자리)은 `place`(`{company, department?, staff?}` — 각 `{id, name}`)로 싣는다 — Center가 내려줄 때 읽어 붙이고 값은 저장하지 않는다. 실행기는 엔진에 넘겨 그림이 값 출처로 선언한 입력에 넣는다 (C14·C16, [ADR-0125](../decisions/0125-organization-and-work-placement.md)). **Center는 아직 붙이지 않는다**(C16 「합의」) |
+| `jobs[]` | **빈자리만큼만** 싣는다. C4 `JobDispatch`. **`test` 칸이 있으면 시험 작업이다** (C4 `JobDispatch.test` — C17 `TrialTarget`) — **자리만 따로 세고** 대기열·멱등·ack·취소는 한 자리다 ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)). 시험 실행의 진행·끝은 **하트비트가 아니라** C17 `PUT …/test-runs/{run_id}`로 올라간다(로그가 길다). **내려주는 쪽은 아직 없다**. 작업의 주인(업무 자리)은 `place`(`{company, department?, staff?}` — 각 `{id, name}`)로 싣는다 — Center가 내려줄 때 읽어 붙이고 값은 저장하지 않는다. 실행기는 엔진에 넘겨 그림이 값 출처로 선언한 입력에 넣는다 (C14·C16, [ADR-0125](../decisions/0125-organization-and-work-placement.md)). **Center는 아직 붙이지 않는다**(C16 「합의」) |
 | `cancel_jobs[]` | |
 | `checks[]`, `builds[]` | 작업공간의 실행 전 검사·배포 후보 짓기 지시 — `{check_id, workspace_id, revision}` / `{build_id, workspace_id, revision, kind}` (C17). 묶음은 C17 `GET …/bundle`로 집어 간다. **아직 없다** |
 | `approvals[]` | 답이 정해진 결재. 기다리던 실행이 이어 간다 |
@@ -157,10 +157,10 @@ ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 
 3. 대기열 앞에서부터 실어 보내되, **BPM 프로세스별 상한**(배포의 `max_concurrency`, 기본 5)을 넘는 작업은 건너뛰고 다음 것을 본다. 건너뛴 작업의 `state_reason`은 `per_bot_limit`으로 표시한다 (CON-12 「대기 이유」).
 4. 실행기가 여럿이면 빈자리가 많은 쪽부터 준다. **한 실행은 시작한 실행기에 끝까지 머문다** (상태가 그 실행기 저장소에 있으므로).
 
-5. **시험 작업(`source: test`)은 시험 빈자리에서만** 고른다 — `capacity.test_max - test_running`,
+5. **시험 작업(`test` 칸이 있는 것)은 시험 빈자리에서만** 고른다 — `capacity.test_max - test_running`,
    `paused`·재시작이면 역시 0이다. 운영과 **서로 빌려주지 않고** BPM 프로세스별 상한은 보지 않는다
    (배포가 없다). 그래서 설계자가 돌려 보는 동안 운영 작업이 밀리지 않는다
-   ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md) — **아직 없다**, C17이 구현한다).
+   ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md) — 자리 셈 `free_slots(test=True)`는 있고 **고르는 쪽이 아직 없다**, C17이 구현한다).
 
 빈자리는 `free_slots()`가, 고르는 것은 `pick_jobs()`가 센다 — **건너뛰고 다음 것을 본다**
 (막아 세우면 상한에 걸린 BPM 프로세스 하나가 대기열 전체를 멈춘다). CON-12의 「대기 이유」에서
@@ -368,7 +368,7 @@ C4와 같다 (401, 403 `key_revoked`·`wrong_key_type`, 409 `machine_mismatch`·
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
 | 2026-11-12 | 1 | **PC 실행기를 걷었다** — 「C4와 다른 점」 표와 PC 갈래를 걷고 §PC 위임을 **§맡기기**로 다시 적었다. 맡기기 요청에서 `bot_ui?`를, 응답에서 `bot_ui_id?`를 걷고 `target_type`은 `server_runner` 하나다(422 `bot_ui_for_server`도 걷었다). 대상을 고르는 규칙은 §Center가 작업을 나누는 규칙 하나로 모았다. **맡기기 자체는 남는다** (ADR-0082) | [0144](../decisions/0144-remove-the-pc-runner.md) |
-| 2026-11-13 | 1 | **설계가 시키는 일 셋의 자리를 적었다** (C17 — 아직 없다): 시험 실행은 `jobs[]`의 `source: test`로 가고 `capacity.test_max`·`test_running`으로 **자리만 따로** 센다(서로 빌려주지 않는다), 검사와 짓기는 **작업이 아니라** `checks[]`·`builds[]` ↔ `check_results[]`·`build_results[]`다 | [0146](../decisions/0146-design-work-has-its-own-lane.md) |
+| 2026-11-13 | 1 | **설계가 시키는 일 셋의 자리를 적었다** (C17 — 아직 없다): 시험 실행은 `jobs[]`의 **`test` 칸**으로 가고 `capacity.test_max`·`test_running`으로 **자리만 따로** 센다(서로 빌려주지 않고 **실행 id `test_` 앞자리로** 가른다 — 깃발을 따로 두면 두 값이 갈라진다), 검사와 짓기는 **작업이 아니라** `checks[]`·`builds[]` ↔ `check_results[]`·`build_results[]`다 | [0146](../decisions/0146-design-work-has-its-own-lane.md) |
 | 2026-11-11 | 1 | **열린 모드**에서는 들이기 비밀이 없어도 받는 자리에서 승인된다(틀린 비밀은 여전히 403) | [0142](../decisions/0142-open-mode.md) |
 | 2026-11-01 | 1 | **가상 직원을 없앴다** — 하트비트 `jobs[].virtual_worker`·`MessageRequest.virtual_worker`를 걷고 `jobs[].place?`를 더했다(C16) | [0125](../decisions/0125-organization-and-work-placement.md) |
 | 2026-10-31 | 1 | **함께 배포된 실행기는 들이기 비밀로 바로 승인**(헤더 `X-BPM-Join-Token`, 403 `join_token_invalid`)과 **재시작**(`POST …/server-runners/{id}/restart`, `HeartbeatResponse.restart`, `ServerRunnerInfo.restart_requested_at?`). 선택 칸이라 옛 실행기는 그대로 돈다(재시작 지시를 모를 뿐이다) | [0117](../decisions/0117-bundled-server-runner-joins-by-shared-secret.md) |

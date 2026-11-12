@@ -35,10 +35,16 @@ export interface ServerRunnerInfo {
  * 자리 셈. **`running`은 기다리는 실행을 뺀 수**다 (ADR-0054 §5).
  *
  * Center가 빈자리를 `max - running`으로 계산한다 (C12 §Center가 작업을 나누는 규칙).
+ *
+ * **시험 자리는 따로 센다** ([ADR-0146](../../../../../docs/decisions/0146-design-work-has-its-own-lane.md)) —
+ * 운영과 **서로 빌려주지 않는다**. 빌려주면 「설계자가 돌려 보는 동안 운영 작업이 밀리지 않는다」가
+ * 그 자리에서 깨진다. 보고하지 않으면 0이고, 0이면 **그 실행기는 시험을 받지 않는다**.
  */
 export interface Capacity {
   max: number;
   running: number;
+  test_max?: number;
+  test_running?: number;
   [k: string]: unknown;
 }
 /**

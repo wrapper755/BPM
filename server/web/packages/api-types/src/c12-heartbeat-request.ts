@@ -11,7 +11,9 @@
  */
 export interface ServerRunnerHeartbeatRequest {
   approval_acks?: ApprovalAck[];
+  build_results?: BuildResult[];
   capacity: Capacity;
+  check_results?: CheckResult[];
   delegation_acks?: DelegationAck[];
   deployment_results?: DeploymentResult[];
   extensions?: ExtensionState[];
@@ -37,13 +39,53 @@ export interface ApprovalAck {
   [k: string]: unknown;
 }
 /**
+ * 짓기 하나의 결과 (C12 `build_results[]`).
+ *
+ * **zip은 여기 싣지 않는다** — 하트비트는 작은 JSON이다. 다 지은 것은 C17의 올리기 길로 간다
+ * (`POST /workspaces/{id}/builds/{build_id}/artifact`, ADR-0146).
+ */
+export interface BuildResult {
+  build_id: string;
+  ok: boolean;
+  reason?: string | null;
+  [k: string]: unknown;
+}
+/**
  * 자리 셈. **`running`은 기다리는 실행을 뺀 수**다 (ADR-0054 §5).
  *
  * Center가 빈자리를 `max - running`으로 계산한다 (C12 §Center가 작업을 나누는 규칙).
+ *
+ * **시험 자리는 따로 센다** ([ADR-0146](../../../../../docs/decisions/0146-design-work-has-its-own-lane.md)) —
+ * 운영과 **서로 빌려주지 않는다**. 빌려주면 「설계자가 돌려 보는 동안 운영 작업이 밀리지 않는다」가
+ * 그 자리에서 깨진다. 보고하지 않으면 0이고, 0이면 **그 실행기는 시험을 받지 않는다**.
  */
 export interface Capacity {
   max: number;
   running: number;
+  test_max?: number;
+  test_running?: number;
+  [k: string]: unknown;
+}
+/**
+ * 검사 하나의 결과 (C12 `check_results[]`).
+ */
+export interface CheckResult {
+  check_id: string;
+  reason?: string | null;
+  violations?: Violation[];
+  [k: string]: unknown;
+}
+/**
+ * 검사·검증 규칙 위반 하나. 응답 `detail[]`의 한 줄이 된다.
+ *
+ * C1의 검사 규칙(R1~R8), C2의 검증 규칙(V1~V8), C13의 E1~E6, C14의 B1~B14가 같은 모양을 쓴다.
+ */
+export interface Violation {
+  code?: string | null;
+  items?: string[];
+  message: string;
+  rule: string;
+  severity?: string;
   [k: string]: unknown;
 }
 /**

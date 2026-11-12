@@ -109,7 +109,57 @@ def test_running_count_must_match_the_list() -> None:
     found = validate_runner_heartbeat(
         heartbeat(capacity=Capacity(max=10, running=3), running=[running("run_a")])
     )
-    assert any("running[] 길이" in p for p in found)
+    assert any("운영 실행 수" in p for p in found)
+
+
+# ─────────────────────────── 시험 자리 (ADR-0146) ───────────────────────────
+
+
+def test_test_slots_are_counted_apart() -> None:
+    """운영과 **서로 빌려주지 않는다** — 운영 빈자리가 남아도 시험은 거기로 가지 않는다."""
+    capacity = Capacity(max=10, running=1, test_max=2, test_running=2)
+    assert free_slots(capacity) == 9
+    assert free_slots(capacity, test=True) == 0
+
+
+def test_a_runner_that_says_nothing_takes_no_tests() -> None:
+    """보고하지 않으면 0이다 — 옛 실행기에 시험 작업이 내려가면 **시험 모드를 모른다**."""
+    assert free_slots(Capacity(max=10, running=0), test=True) == 0
+
+
+def test_pausing_closes_both_lanes() -> None:
+    capacity = Capacity(max=10, running=0, test_max=2, test_running=0)
+    assert free_slots(capacity, paused=True) == 0
+    assert free_slots(capacity, paused=True, test=True) == 0
+
+
+def test_test_runs_are_told_apart_by_the_run_id() -> None:
+    """깃발을 따로 두지 않는다 — 두 값이 갈라지면 **자리 셈이 틀어진다** (C3 `test_` 앞자리)."""
+    found = validate_runner_heartbeat(
+        heartbeat(
+            capacity=Capacity(max=10, running=1, test_max=2, test_running=1),
+            running=[running("run_a"), running("test_b")],
+        )
+    )
+    assert found == []
+
+
+def test_a_test_run_does_not_count_as_a_production_run() -> None:
+    found = validate_runner_heartbeat(
+        heartbeat(
+            capacity=Capacity(max=10, running=2, test_max=2, test_running=0),
+            running=[running("run_a"), running("test_b")],
+        )
+    )
+    assert any("운영 실행 수" in p for p in found)
+    assert any("시험 실행 수" in p for p in found)
+
+
+def test_tests_cannot_exceed_their_limit() -> None:
+    found = validate_runner_heartbeat(
+        heartbeat(capacity=Capacity(max=10, running=0, test_max=1, test_running=2))
+    )
+    assert any("test_max(1)보다 크다" in p for p in found)
 
 
 def test_running_cannot_exceed_the_limit() -> None:

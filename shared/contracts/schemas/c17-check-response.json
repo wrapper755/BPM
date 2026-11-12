@@ -1,0 +1,79 @@
+{
+  "$defs": {
+    "Violation": {
+      "additionalProperties": true,
+      "description": "검사·검증 규칙 위반 하나. 응답 `detail[]`의 한 줄이 된다.\n\nC1의 검사 규칙(R1~R8), C2의 검증 규칙(V1~V8), C13의 E1~E6, C14의 B1~B14가 같은 모양을 쓴다.",
+      "properties": {
+        "code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Code"
+        },
+        "items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "rule": {
+          "title": "Rule",
+          "type": "string"
+        },
+        "severity": {
+          "default": "error",
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule",
+        "message"
+      ],
+      "title": "Violation",
+      "type": "object"
+    }
+  },
+  "$id": "urn:bpm:contracts:c17-check-response",
+  "additionalProperties": true,
+  "description": "`POST /api/v1/workspaces/{id}/check`의 답.\n\n**오류만 돌리기를 막는다** — 경고는 보이고 사람이 판단한다 (C14 §검사 규칙).\n`cached`면 실행기에 다시 묻지 않고 담아 둔 것을 준 것이다 (ADR-0146 — 저장할 때마다 묻지 않는다).",
+  "properties": {
+    "cached": {
+      "default": false,
+      "title": "Cached",
+      "type": "boolean"
+    },
+    "checked_at": {
+      "title": "Checked At",
+      "type": "string"
+    },
+    "checked_revision": {
+      "title": "Checked Revision",
+      "type": "string"
+    },
+    "violations": {
+      "items": {
+        "$ref": "#/$defs/Violation"
+      },
+      "title": "Violations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "checked_revision",
+    "checked_at"
+  ],
+  "title": "CheckResponse",
+  "type": "object"
+}

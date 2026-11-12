@@ -21,6 +21,7 @@ from pydantic import Field
 
 from bpm.contracts._base import ContractModel, Timestamp
 from bpm.contracts.organization import PlaceIdentity
+from bpm.contracts.workspace import TrialTarget
 
 #: 하트비트 기본 간격과 온라인 판정 (CON-12).
 DEFAULT_HEARTBEAT_S = 30
@@ -121,6 +122,12 @@ class JobDispatch(ContractModel):
     #: **작업의 주인** — 그 BPM 프로세스의 업무 자리를 Center가 내려줄 때 붙인다 (C12·C16, ADR-0125 §4).
     #: 저장하지 않는다. 출처가 `company.*`·`department.*`·`staff.*`인 입력의 값이 된다.
     place: PlaceIdentity | None = None
+    #: **이 칸이 있으면 시험 작업이다** (C17,
+    #: [ADR-0146](../../../../../docs/decisions/0146-design-work-has-its-own-lane.md)) —
+    #: 배포가 없고 승인 봉투·서명도 없다. 실행기는 `revision`으로 작업공간 묶음을 집어 와 **시험
+    #: 모드**로 돌린다(케이스가 답하고, 바깥으로 웹훅을 쏘지 않고, 메일은 담아 둔다). 자리도 따로
+    #: 센다 — 깃발을 따로 두지 않는 까닭은 **둘이 갈라지지 않게** 하려는 것이다.
+    test: TrialTarget | None = None
 
 
 class ApprovalDispatch(ContractModel):

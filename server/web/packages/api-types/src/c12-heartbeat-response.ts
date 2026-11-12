@@ -13,7 +13,9 @@
 export interface ServerRunnerHeartbeatResponse {
   admin_keys?: AdminKey[] | null;
   approvals?: ApprovalDispatch[];
+  builds?: BuildDispatch[];
   cancel_jobs?: string[];
+  checks?: CheckDispatch[];
   delegations?: DelegationResult[];
   deployments?: {
     [k: string]: unknown;
@@ -53,6 +55,25 @@ export interface ApprovalDispatch {
   [k: string]: unknown;
 }
 /**
+ * 내려온 짓기 지시 하나 (C12 `builds[]`). 검사와 같은 결 — **작업이 아니다**.
+ */
+export interface BuildDispatch {
+  build_id: string;
+  kind?: string;
+  revision: string;
+  workspace_id: string;
+  [k: string]: unknown;
+}
+/**
+ * 내려온 검사 지시 하나 (C12 `checks[]`). **작업이 아니다** — 실행 id도 C3 사건도 없다.
+ */
+export interface CheckDispatch {
+  check_id: string;
+  revision: string;
+  workspace_id: string;
+  [k: string]: unknown;
+}
+/**
  * 끝난 맡기기 하나 (C12 §맡기기) — 하트비트 응답으로 내려간다.
  *
  * **`outputs`가 업무 값이다** — 원칙 6의 명시한 예외이고, 올라오는 것은 그 BPM 프로세스가 **선언한
@@ -83,6 +104,7 @@ export interface JobDispatch {
   place?: PlaceIdentity | null;
   requested_at: string;
   requested_by: string;
+  test?: TrialTarget | null;
   version?: string | null;
   [k: string]: unknown;
 }
@@ -104,6 +126,19 @@ export interface PlaceIdentity {
 export interface OrgRef {
   id: string;
   name: string;
+  [k: string]: unknown;
+}
+/**
+ * 시험 작업이 돌릴 것 — C4 `JobDispatch.test`에 실려 내려간다.
+ *
+ * **이 칸이 있으면 시험 작업이다** (ADR-0146). 배포가 없으므로 `bpm_process_id`·`version`은
+ * 작업공간이 말해 주는 값이고, 실행기는 `revision`으로 묶음을 집어 간다.
+ */
+export interface TrialTarget {
+  case?: string | null;
+  mode?: string;
+  revision: string;
+  workspace_id: string;
   [k: string]: unknown;
 }
 /**
