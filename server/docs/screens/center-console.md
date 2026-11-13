@@ -529,3 +529,8 @@ BPM 프로세스의 실행 상황. 서버 실행기는 Center가 관리한다.
 ## CON-17 일꾼 · CON-18 연결 앱
 
 [center-console-connections.md](center-console-connections.md)에 있다.
+
+## CON-20 작업공간
+
+[center-console-workspace.md](center-console-workspace.md)에 있다 — 설계가 콘솔 안으로 들어온 자리다
+([ADR-0143](../../../docs/decisions/0143-design-happens-in-the-console.md), C17). **아직 없다** (M11 조각 4).

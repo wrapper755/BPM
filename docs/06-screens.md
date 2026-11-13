@@ -13,8 +13,9 @@
 | 파일 | 앱 | 화면 ID |
 | --- | --- | --- |
 | [studio/docs/screens.md](../studio/docs/screens.md) | Studio (Windows 데스크톱, BPM 프로세스 설계) | STU-01 ~ STU-16 |
-| [server/docs/screens/center-console.md](../server/docs/screens/center-console.md) | Center 콘솔 (웹) — 관리자 계정으로 승인·배포까지 ([ADR-0090](decisions/0090-center-admin-accounts.md)) | CON-00 ~ CON-18 (CON-07~11 폐기) |
+| [server/docs/screens/center-console.md](../server/docs/screens/center-console.md) | Center 콘솔 (웹) — 관리자 계정으로 승인·배포까지 ([ADR-0090](decisions/0090-center-admin-accounts.md)) | CON-00 ~ CON-18 (CON-07~11 폐기) · CON-20은 아래 파일 |
 | [server/docs/screens/center-console-connections.md](../server/docs/screens/center-console-connections.md) | Center 콘솔 — 일꾼·연결 앱 (위 파일을 나눈 것) | CON-17 · CON-18 |
+| [server/docs/screens/center-console-workspace.md](../server/docs/screens/center-console-workspace.md) | Center 콘솔 — 작업공간 (설계가 콘솔 안으로, [ADR-0143](decisions/0143-design-happens-in-the-console.md)) | CON-20 |
 | [server/docs/screens/service-app-console.md](../server/docs/screens/service-app-console.md) | 서비스 앱 관리 콘솔 (웹, 앱마다) | SVC-00 ~ SVC-03 |
 
 
