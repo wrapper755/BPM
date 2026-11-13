@@ -18,6 +18,19 @@ import type {
 
 export const TIMER_KINDS: TimerKind[] = ["timeDate", "timeDuration", "timeCycle"];
 
+/**
+ * `EventInfo.definition`에 담기는 값 — **짧은 이름**이다 (`bpmn:TimerEventDefinition` → `Timer`).
+ *
+ * 쓰는 쪽이 글자를 적지 않게 여기 둔다 — 속성 패널이 `"bpmn:TimerEventDefinition"`과 견주다가
+ * 타이머 칸을 하나도 그리지 못했다. 짧게 만드는 자리(`eventOf`)와 **같은 파일**이다.
+ */
+export const EVENT_KINDS = {
+  timer: "Timer",
+  message: "Message",
+  signal: "Signal",
+  error: "Error",
+} as const;
+
 /** 반복 표시 — 엔진(`is_sequential`)과 같은 읽기. */
 export const multiInstanceOf = (bo: BusinessObject): MultiInstance => {
   const found = bo.loopCharacteristics;

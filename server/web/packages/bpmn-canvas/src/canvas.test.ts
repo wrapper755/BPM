@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { laidOut, needsLayout } from "./auto-layout";
 import { BPM_MODDLE } from "./moddle";
 import { readApprovals } from "./approvals";
-import { eventOf, gatewayOf, multiInstanceOf, propertiesOf } from "./read";
+import { EVENT_KINDS, eventOf, gatewayOf, multiInstanceOf, propertiesOf } from "./read";
 import type { BusinessObject, ExtensionElement, ExtensionElements, Flow } from "./types";
 
 /** 그림 좌표(DI)가 없는 정의 — 「자리를 지어 줘야 하는 것」의 본보기다. */
@@ -161,7 +161,8 @@ describe("노드 읽기", () => {
         ],
       }),
     );
-    expect(found?.definition).toBe("Timer");
+    // **쓰는 쪽이 견주는 그 값이다** — 속성 패널이 이것으로 타이머 칸을 그린다.
+    expect(found?.definition).toBe(EVENT_KINDS.timer);
     expect(found?.timer).toEqual({ kind: "timeDuration", value: "PT1H" });
   });
 
@@ -173,7 +174,7 @@ describe("노드 읽기", () => {
         messageRef: { $type: "bpmn:Message", id: "m", name: "승인됨" },
       }),
     );
-    expect(found?.definition).toBe("Message");
+    expect(found?.definition).toBe(EVENT_KINDS.message);
     expect(found?.message).toBe("승인됨");
   });
 });

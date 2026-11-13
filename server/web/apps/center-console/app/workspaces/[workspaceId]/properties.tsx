@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@bpm/ui";
-import { ELEMENT_FORMS } from "@bpm/bpmn-canvas";
+import { ELEMENT_FORMS, EVENT_KINDS } from "@bpm/bpmn-canvas";
 import type { ElementField, NodeProperties, PropertyPatch } from "@bpm/bpmn-canvas";
 import {
   eventFields,
@@ -386,6 +386,8 @@ function EventFields({
   canWrite: boolean;
   onChange: (made: Partial<EventFieldValues>) => void;
 }) {
+  // **짧은 이름이다** — `eventOf`가 `bpmn:TimerEventDefinition`에서 `Timer`만 남긴다. 글자를
+  // 적지 않고 `EVENT_KINDS`를 쓴다 (`"bpmn:…"`과 견주다가 칸을 하나도 그리지 못했다).
   const kind = event.definition;
   return (
     <section className="flex flex-col gap-2 border-t border-border-default pt-3">
@@ -395,7 +397,7 @@ function EventFields({
         {event.attachedTo ? <Row label="붙은 곳" value={event.attachedTo} /> : null}
       </dl>
 
-      {kind === "bpmn:TimerEventDefinition" ? (
+      {kind === EVENT_KINDS.timer ? (
         <>
           <Labelled label="타이머">
             <select
@@ -420,7 +422,7 @@ function EventFields({
         </>
       ) : null}
 
-      {kind === "bpmn:MessageEventDefinition" || event.message ? (
+      {kind === EVENT_KINDS.message || event.message ? (
         <Labelled label="메시지 이름" help="Center 메시지 API가 이 이름으로 찾습니다 (C12).">
           <input
             className={INPUT}
@@ -431,7 +433,7 @@ function EventFields({
         </Labelled>
       ) : null}
 
-      {kind === "bpmn:SignalEventDefinition" ? (
+      {kind === EVENT_KINDS.signal ? (
         <Labelled label="신호 이름">
           <input
             className={INPUT}
@@ -442,7 +444,7 @@ function EventFields({
         </Labelled>
       ) : null}
 
-      {kind === "bpmn:ErrorEventDefinition" ? (
+      {kind === EVENT_KINDS.error ? (
         <Labelled label="오류 코드" help="비우면 **코드 없는 경계**입니다 — 모든 업무 실패를 받습니다 (C14).">
           <input
             className={INPUT}
