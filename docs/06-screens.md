@@ -91,33 +91,18 @@
 
 결재·확인 창(`shared/qt`)은 **PC 실행기와 함께 걷었다** ([ADR-0144](decisions/0144-remove-the-pc-runner.md)).
 결재와 확인은 둘 다 **Center 결재함**([CON-04](../server/docs/screens/center-console.md#con-04-결재함))에서
-답하고, Studio 시험 실행은 시험 케이스가 답한다 (C14 `approvals`).
+답하고, **시험 실행은 시험 케이스가 답한다** (C14 `approvals`).
 
 ## 6. 화면 목록 총괄
 
 | ID | 화면 | 앱 | 주 사용자 | 마일스톤 | 출처 |
 | --- | --- | --- | --- | --- | --- |
-| STU-01 | 메인 창 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-02 | BPM 프로세스 탐색기 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-03 | 리소스 탐색기 | Studio | 설계자 | M4 | 프로토타입 확장 |
-| STU-04 | 속성 패널 | Studio | 설계자 | M3 | 프로토타입 확장 |
-| STU-05 | 새 BPM 프로세스 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-06 | BPM 프로세스 정보 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-07 | 시험 케이스 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-08 | 실행 대화상자 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-09 | 실행 표시와 결과 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-10 | 설정 | Studio | 설계자 | M3 | 프로토타입 확장 |
-| STU-11 | Center 공유 자원 | Studio | 설계자 | M5 | 프로토타입 |
-| STU-12 | 공유 BPM 프로세스 내보내기·올리기 | Studio | 설계자 | M5 | 프로토타입 |
-| STU-13 | (폐기 — UI 태스크 편집기, [ADR-0114](decisions/0114-remove-ui-automation.md)) | — | — | — | — |
-| STU-14 | 서비스 앱 태스크 편집기 | Studio | 설계자 | M5 | 신규 |
-| STU-15 | 확장 | Studio | 설계자 | M4 | 신규 (ADR-0018) |
-| STU-16 | Center에 연결 | Studio | 설계자 | — | 신규 (ADR-0093) |
+| STU-01 ~ STU-16 | (폐기 — 데스크톱 Studio 화면. **CON-20이 대신한다**, [ADR-0143](decisions/0143-design-happens-in-the-console.md)) | — | — | — | — |
 | BUI-01 ~ BUI-11 | (폐기 — PC 실행기 화면, [ADR-0144](decisions/0144-remove-the-pc-runner.md)) | — | — | — | — |
 | CON-00 | 공통 틀 | Center 콘솔 | 모두 | M2 | 프로토타입 |
 | CON-01 | 프로세스 로그 | Center 콘솔 | 운영자 | M3 | 프로토타입 |
 | CON-02 | 프로세스 | Center 콘솔 | 운영자 | M3 | 프로토타입 |
-| CON-03 | 앱 (Studio) | Center 콘솔 | 운영자 | M2 | 프로토타입 확장 |
+| CON-03 | 앱 | Center 콘솔 | 운영자 | M2 | 프로토타입 확장 (쓰는 키 종류가 남았다 — `docs/09-gaps.md` §3-35) |
 | CON-04 | 결재함 | Center 콘솔 | 결재자 | M5 | 프로토타입 |
 | CON-05 | 작업 지시 | Center 콘솔 | 운영자 | M5 | 프로토타입 확장 (만들기 추가) |
 | CON-06 | 공통 패키지 | Center 콘솔 | 운영자 | M5 | 프로토타입 |
@@ -130,6 +115,7 @@
 | CON-16 | 앱 로그 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0121](decisions/0121-center-console-says-process.md)) |
 | CON-17 | 일꾼 | Center 콘솔 | Center 관리자 | — | 신규 ([ADR-0137](decisions/0137-consumers-are-managed-in-the-console.md)) |
 | CON-18 | 연결 앱 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0138](decisions/0138-console-app-catalog.md) — 보기만) |
+| CON-20 | 작업공간 (설계) | Center 콘솔 | 설계자 | M11 | 신규 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)·[ADR-0147](decisions/0147-workspace-has-three-tabs.md) — STU-01·02·04·05·06·07·08·09·12를 대신한다) |
 | SVC-00 | 공통 틀 | 서비스 앱 관리 콘솔 | 서비스 앱 관리자 | M2 | 신규 (`service_kit`) |
 | SVC-01 | 상태 | 서비스 앱 관리 콘솔 | 서비스 앱 관리자 | M2 | 신규 |
 | SVC-02 | API 키 — **없어졌다** (ADR-0102, 서비스 앱 키가 없다) | 서비스 앱 관리 콘솔 | — | M2 | 폐기 |

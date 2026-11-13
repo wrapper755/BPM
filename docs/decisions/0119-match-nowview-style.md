@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · **틀의 배치는 대체됨**([ADR-0145](0145-console-is-workspace-shaped.md) — 아이콘 레일 + 펼침 패널 두 층). 색·토큰·글꼴(남보라 `primary`, `chrome.*`, Geist → Pretendard)은 그대로 산다 |
 | 날짜 | 2026-10-31 |
 | 관련 | [07-style-guide](../07-style-guide.md) §2-1·§2-3·§4-1, `design/tokens.json`, 화면 CON-00·SVC-00, [ADR-0017](0017-web-nextjs-design-system.md), [ADR-0118](0118-no-product-name-on-screens.md) |
 
@@ -29,7 +29,7 @@ Center 콘솔은 바깥 시연 앱 NowView와 나란히 보인다 — NowView가
   그대로다(상태 표기는 우리 것이다).
 - **남색 틀은 새 토큰 `chrome.*`**이다(NowView의 `--ink` + `.chrome-ink`). 틀 안에서는 `.chrome`이 `bg.surface`·`text.*`·
   `border.*`를 틀 색으로 바꿔 끼워 Button 같은 구성요소를 고치지 않고 쓴다 — NowView가 쓰는 방법과 같다.
-- 틀은 화면 폭 전체의 위 막대(48) + 그 아래 왼쪽 탐색(224)이고 둘 다 고정이다. 고른 탐색 줄은 `primary` 바탕이다.
+- 틀은 화면 폭 전체의 위 막대(48) + 그 아래 왼쪽 탐색(224)이고 둘 다 고정이다. 고른 탐색 줄은 `primary` 바탕이다. **(이 배치는 [ADR-0145](0145-console-is-workspace-shaped.md)가 대체했다 — 짙은 색이 레일·위 막대에만 남는다.)**
 - 글꼴은 **Geist(라틴) → Pretendard(한글)**이다. Geist는 OFL이고 라틴 부분 집합 가변 woff2 하나를 자체 호스팅한다(외부 CDN
   금지 그대로). 데스크톱은 Geist를 등록하지 않아 지금처럼 Pretendard로 그린다. 고정폭은 JetBrains Mono 그대로다.
 

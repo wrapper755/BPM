@@ -10,16 +10,16 @@
 | --- | --- | --- |
 | **BPM 프로세스** | 업무 흐름 (BPMN으로 그린 것). 설계 화면과 운영 화면이 **같은 이름**을 쓴다 (예전 운영 화면의 「Bot」, [ADR-0111](decisions/0111-bpm-process-and-pc-runner-names.md)) | 세금계산서 발행 BPM 프로세스 |
 | **<이름> 프로세스** | 프로그램이 도는 단위 (OS 프로세스, 화면 없음) | 실행 프로세스 |
-| **<이름> UI**, 앱 이름 | 사람이 보는 프로그램 (화면 있음) | Studio, Center 콘솔 |
+| **<이름> UI**, 앱 이름 | 사람이 보는 프로그램 (화면 있음) | Center 콘솔, 서비스 앱 콘솔 |
 
-"프로세스"를 단독으로 쓰지 않는다. **예외 둘 — Center 콘솔의 화면 글**은 「프로세스」라고만 쓴다 ([ADR-0121](decisions/0121-center-console-says-process.md)). 그 화면에서 프로세스는 BPM 프로세스뿐이라 모호하지 않다. **Studio 메뉴 막대의 항목 글**도 「프로세스」라고만 쓴다(「새 프로세스...」·「프로세스 열기...」 — 프로그램 이름이 BPM Studio다, [ADR-0133](decisions/0133-studio-menus-say-process.md)). 문서와 그 밖의 Studio 화면 글(창 제목·탭·문맥 메뉴·알림)은 그대로 「BPM 프로세스」다.
+"프로세스"를 단독으로 쓰지 않는다. **예외 하나 — Center 콘솔의 화면 글**은 「프로세스」라고만 쓴다 ([ADR-0121](decisions/0121-center-console-says-process.md)). 그 화면에서 프로세스는 BPM 프로세스뿐이라 모호하지 않고, **작업공간 안에서도 같다**. 문서는 그대로 「BPM 프로세스」다.
 
 ## 1. 구성요소
 
 | 화면 표기 | 코드 | 종류 | 뜻 |
 | --- | --- | --- | --- |
-| Studio | `studio` | 화면 | 설계자가 BPM 프로세스를 그리고, 시험 실행(자율 수행·재생)·학습·패키지 빌드를 하는 데스크톱 앱 |
-| **데스크톱 앱** | — (묶는 말) | 화면 표기 | **사람이 PC에 깔아 쓰는 BPM 프로그램** — 지금은 Studio 하나다 (PC 실행기는 걷었다, [ADR-0144](decisions/0144-remove-the-pc-runner.md)). Center 콘솔에서는 줄여 「앱」이라 한다(CON-03 「앱」 — 등록 승인도 거기서 한다, [ADR-0121](decisions/0121-center-console-says-process.md)) |
+| 작업공간 | `workspace` | 폴더·화면 | **BPM 프로세스 한 벌**(정의 여럿·결정표·케이스·받아 둔 공유 프로세스). Center에 살고 콘솔의 CON-20에서 그리고 돌려 본다 (C17, [ADR-0143](decisions/0143-design-happens-in-the-console.md)) |
+| **데스크톱 앱** | — (묶는 말) | 화면 표기 | **지금은 없다** — Studio는 콘솔로 옮겼고([ADR-0143](decisions/0143-design-happens-in-the-console.md)) PC 실행기는 걷었다([ADR-0144](decisions/0144-remove-the-pc-runner.md)). RPA 데스크톱 일꾼이 오면 그것이 첫 데스크톱 앱이다 |
 | (배포된) BPM 프로세스 | `bot` | 업무 | **Center에서 서버 실행기로 전달되어 실행되는 BPM 프로세스.** 실행 중인 BPM 프로세스가 서비스 앱·Center를 부른다. 코드 식별자 `bot`은 옛 화면 이름(「Bot」)에서 왔고 **그대로 둔다** — 계약 칸·API 경로라 바꾸면 현장과 Center가 서로 못 알아본다 ([ADR-0111](decisions/0111-bpm-process-and-pc-runner-names.md)) |
 | 서버 실행기 | `server_runner` | 프로세스 (서버, 화면 없음) | BPM 프로세스를 **여러 건 동시에** 실행한다. **BPM 프로세스를 돌리는 쪽은 이것 하나다** ([ADR-0144](decisions/0144-remove-the-pc-runner.md)). Center가 배포·작업·관리를 하고, 실행기는 Center API 키로 Center에 접속한다 |
 | 실행 자리 | `run_slot` | 개념 | 실행기 한 대에서 BPM 프로세스가 실행될 수 있는 자리. 동시 실행 상한까지 있고, **결재·확인을 기다리면 자리를 놓는다** ([ADR-0054](decisions/0054-server-run-state-and-concurrency.md)) |
@@ -28,14 +28,14 @@
 | Center 콘솔 | `console` | 화면 (웹) | Center의 웹 화면. 운영자·결재자가 쓴다 |
 | 관리자 계정 | `account` | Center | Center 콘솔에 들어오는 아이디·비밀번호. 역할은 「관리자」(승인·배포까지 쓰기 전부)·「보기 전용」. 지우지 않고 멈춘다 [ADR-0090](decisions/0090-center-admin-accounts.md) |
 | Center 서명 키 | `signing key` | Center | 승인·배포·외부 확장 봉투에 Center가 대신 서명하는 키. DB에 있고 공개키는 믿는 키 목록(`admin_keys`)으로 현장에 내려간다 [ADR-0090](decisions/0090-center-admin-accounts.md) |
-| **확장** | `extension` | 묶음 | **BPM 프로세스에 공통 기능을 더하는 묶음.** 확장 정의(C13 `extension.json`)로 태스크 종류·작업·Studio 편집기 등을 **기여**한다. 등급: 내장 / 사내 / 외부. **지금 깔린 내장 확장은 없다** ([ADR-0018](decisions/0018-extensions.md), [ADR-0114](decisions/0114-remove-ui-automation.md)) |
+| **확장** | `extension` | 묶음 | **BPM 프로세스에 공통 기능을 더하는 묶음.** 확장 정의(C13 `extension.json`)로 태스크 종류·작업 등을 **기여**한다. 등급: 내장 / 사내 / 외부. **지금 깔린 내장 확장은 없다** ([ADR-0018](decisions/0018-extensions.md), [ADR-0114](decisions/0114-remove-ui-automation.md)) |
 | 확장 정의 | `extension.json` | 파일 | 확장이 무엇을 더하는지 선언 (C13) |
 | 일꾼 폴더 | `consumers_dir` | Center | Center가 **뜰 때** 읽는 폴더. `<이름>.consumer.json`(이름·토픽·토큰 해시, C15 `FolderConsumer`)으로 일꾼을 들인다 — **일꾼이 들어오는 유일한 길**이고 요청 코드·승인이 없다. `BPM_CENTER__CONSUMERS_DIR`(기본 `<데이터>/consumers`). **폴더가 원본이다** — 빼면 거둔다 ([ADR-0122](decisions/0122-consumer-folder.md)). 같은 폴더의 `<이름>.key.json`(C7 `FolderKey`)은 연동용·대리 답용 키다 ([ADR-0123](decisions/0123-folder-keys.md)) |
 | 기여 / 기여 지점 | `contributes` | 개념 | 확장이 플랫폼에 끼워 넣는 것 / 끼워 넣을 수 있는 자리 (VS Code의 contribution point와 같은 뜻) |
 | 내장 확장 / 사내 확장 / 외부 확장 | `builtin` / `internal` / `external` | 등급 | 이 저장소에 있음 / 다른 사내 저장소 / 정의 파일만 (외부 앱). 외부 확장은 코드를 기여할 수 없다 |
 | 외부 앱 | `external app` | 서버 | 이 저장소·C11 밖의 서버 앱 (흔히 "외부 LLM 앱"이라 부르는 것). 외부 확장의 서버 부분으로, 관리자가 등록한(Center가 서명한) 확장 정의의 HTTP 어댑터로만 붙는다 |
 | HTTP 어댑터 | `http-adapter` | 개념 | C11을 따르지 않는 외부 앱을 템플릿만으로 부르는 방법 (C13 §4) |
-| 확장 호스트 | `extension_host` | 코드 | Studio·서버 실행기·어댑터 일꾼 안에서 확장을 찾아 기여를 등록하는 부분 (`core`) |
+| 확장 호스트 | `extension_host` | 코드 | 서버 실행기·어댑터 일꾼 안에서 확장을 찾아 기여를 등록하는 부분 (`core`) |
 | 서비스 앱 | `service_app` | 서버 | **확장의 서버 부분. BPM 프로세스가 Center의 외부 작업으로 부르는 서버 앱** (대부분 LLM 앱). 자율·결정 수행 모드를 가진다. 앱마다 **관리 콘솔**이 있다. [ADR-0010](decisions/0010-service-apps.md), [ADR-0013](decisions/0013-api-keys.md) |
 | 서비스 앱 관리 콘솔 | `svc_console` | 화면 (웹) | 서비스 앱마다 하나. 상태, API 키 발급·폐기, 사용 기록 (+ 앱 고유 화면) |
 | 공통 계약 | `contracts` | 패키지 | 모든 구성요소가 주고받는 데이터 모델의 단일 원본 |
@@ -47,7 +47,7 @@
 | --- | --- | --- |
 | 지도 | BPMN (BPM 프로세스 정의) | 순서·분기·결재를 정한다 |
 | 운전사 | AI | 목표에 도달하는 방법을 찾는다 |
-| 실행 | 서버 실행기가 BPM 프로세스를 실행 (개발 중에는 Studio) | 태스크를 차례로 수행하며 운전사·손·서비스 앱을 부른다 |
+| 실행 | 서버 실행기가 BPM 프로세스를 실행 (설계 중의 시험 실행도 같은 실행기다) | 태스크를 차례로 수행하며 운전사·손·서비스 앱을 부른다 |
 | 손 | 확장이 주는 결정적 수행기 (지금 없음) | 요청받은 일을 정해진 대로만 한다 |
 
 ```
@@ -79,19 +79,19 @@ Center ─(하트비트 응답: 배포·작업·결재 답)─▶ 서버 실행�
 | 실행 이벤트 | `run_event` | 실행 중 일어난 일 하나. `(run_id, seq)`가 멱등 키 |
 | 이정표 | `milestone` | 이벤트 정의가 없는 중간 던지기 이벤트. 「어디까지 왔는지」를 실행 기록에 남긴다 (C14 §이벤트) |
 | 출력 폴더 | `output_dir` | 실행 하나가 파일을 쓰는 곳이자 BPM 프로세스가 적는 **상대 경로의 기준**. 쓰기는 이 안만 된다 ([ADR-0026](decisions/0026-file-paths-and-file-list-task.md)) |
-| 읽기 허용 폴더 | `readable` | 파일 목록이 들여다볼 수 있는 폴더. 실행하는 쪽(서버 실행기 설정·Studio)이 정한다 ([ADR-0026](decisions/0026-file-paths-and-file-list-task.md)) |
-| 시험 케이스 | `case` | 입력 + 기대 결과 + 결재 자동 응답. Studio 시험 실행의 판정 기준 |
+| 읽기 허용 폴더 | `readable` | 파일 목록이 들여다볼 수 있는 폴더. 실행하는 쪽(서버 실행기 설정)이 정한다 ([ADR-0026](decisions/0026-file-paths-and-file-list-task.md)) |
+| 시험 케이스 | `case` | 입력 + 기대 결과 + 결재 자동 응답. 시험 실행의 판정 기준 (C14) |
 | 사전 점검 | `preflight` | 실행 전에 각 노드를 ok / warning / blocked로 판정 (확장 태스크 종류·갖춰야 할 설정·AI 환경) |
 | 재생 | `replay` | 성공한 AI 태스크의 **도구 차례**를 다시 밟는 것 (결정 수행의 한 형태). 태스크마다 `plan`(마지막 추출만 모델) / `full`(모델 0회) / `none`을 고른다 ([ADR-0028](decisions/0028-replay-memory.md)) |
 | 재생 명세 | `replay_spec` | 자율 수행이 남긴 도구 차례와 마지막 답. 패키지 안 `memory/specs.json`에 들어가고 도구 인자는 `{변수}` 템플릿이다 |
-| 자율 수행 | `autonomous` | 수행 모드. AI가 방법을 찾아 수행하고 결과를 학습 자료로 남긴다. **Studio에서 개발 목적으로 실행할 때** |
-| 결정 수행 | `deterministic` | 수행 모드. 학습·등록된 대로 LLM 없이(또는 최소로) 수행한다. **운영 실행할 때**, Studio의 재생 실행 |
+| 자율 수행 | `autonomous` | 수행 모드. AI가 방법을 찾아 수행하고 결과를 학습 자료로 남긴다. **설계 중 시험 실행할 때** |
+| 결정 수행 | `deterministic` | 수행 모드. 학습·등록된 대로 LLM 없이(또는 최소로) 수행한다. **운영 실행할 때**, 시험 실행의 재생 |
 
 ### 2-1. 조직과 일괄 ([ADR-0125](decisions/0125-organization-and-work-placement.md), [ADR-0079](decisions/0079-virtual-worker-is-an-intake-bot.md))
 
 | 화면 표기 | 코드 | 뜻 |
 | --- | --- | --- |
-| 회사 | `company` | Center 안의 회사. Studio·패키지는 회사 소유다. 서버 실행기·일꾼은 Center 공용이다 (C16) |
+| 회사 | `company` | Center 안의 회사. 작업공간·패키지는 회사 소유다. 서버 실행기·일꾼은 Center 공용이다 (C16) |
 | 부서 | `department` | 회사 안의 부서. 한 단계다 |
 | 직원 | `staff` | **업무의 주체.** 회사(와 부서)에 속하고 **사람인지 가상인지 가르지 않는다.** 로그인하지 않는다 — 콘솔에 들어오는 것은 관리자 계정(`account`)이다. 주체 이름은 `staff:<id>`. 배포 단위가 아니다(§6) |
 | 업무 자리 | `place` | BPM 프로세스가 누구의 일인가 — 회사 공통 / 부서 공통 / 개인(직원). **승인할 때 관리자가 고르고** 서명하지 않는다 |
@@ -147,11 +147,11 @@ BPM 프로세스가 네트워크 건너의 기능을 부를 때 Center에 **일�
 | 일꾼 | `consumer` | 토픽을 지켜보다 일감을 가져가(잠금) 수행하고 끝냈다고 알리는 **상시 프로세스**. 서비스 앱이 일꾼이 되고, 외부 앱은 어댑터 일꾼이 맡는다. Center가 승인해 들인다 |
 | 어댑터 일꾼 | `adapter_consumer` | BPM가 주는 범용 일꾼. 외부 확장 정의의 HTTP 어댑터를 읽어 외부 앱을 부른다. **외부 앱의 주소·키는 이 일꾼만 든다** — 외부 앱이 있는 망 안에 띄워도 된다 |
 | 잠금 | `lock` | 일꾼이 일감을 가져가면 그 일꾼만 끝낼 수 있는 시간. 지나면 다른 일꾼에게 다시 나간다 (그래서 **최소 한 번 실행**이다) |
-| 호출 토큰 | `call_token` | 확장 클라이언트가 외부 작업을 **올리고 결과를 기다리는 데만** 쓰는 Center 토큰. **Studio가** 제 Center API 키로 청해(24시간) 확장에게 준다 |
+| 호출 토큰 | `call_token` | 확장 클라이언트가 외부 작업을 **올리고 결과를 기다리는 데만** 쓰는 Center 토큰. **부르는 쪽이** 제 Center API 키로 청해(24시간) 확장에게 준다 |
 | 일꾼 종류 | `kind` | 작업이 어떤 일꾼의 일인가 — `ai`(AI 작업)·`api`(외부 시스템 API 호출)·`rpa`(화면 조작, **자리만 있다**). 작업(C11 `Operation`·C13)이 정하고 Center가 일감에 붙인다. 토픽은 그대로 앱 id다 ([ADR-0135](decisions/0135-agentic-automation-and-unified-consumer.md)). **일꾼의 종류**(여럿)는 Center 관리자가 CON-17에서 정하고 일꾼은 그 종류의 일감만 가져간다 ([ADR-0139](decisions/0139-consumer-kinds-are-set-in-the-console.md)) |
 | AI 작업 | `ai_operation` | `kind: ai`인 작업. 서비스 태스크가 부르고 일꾼 쪽에서 지식 검색 → 모델 추론 → **검증**(스키마·근거 id·숫자 대조) → 결과·결정을 돌려준다. 엔진 안의 **AI 태스크**와 다르다 — 재생 명세가 없고 매번 검증한다 (ADR-0135) |
 | 통합 일꾼 | `unified_consumer` | 일꾼 프로세스 하나가 여러 토픽과 일꾼 종류 셋을 함께 맡는 것 (`bpm-unified-consumer`). 흐름은 쥐지 않는다 — 흐름은 엔진과 Center다 (ADR-0135) |
-| 업무 처리기 | `handler_package` | 통합 일꾼에 얹는, 토픽 몇 개와 작업마다의 처리 함수를 주는 패키지 (엔트리 포인트 `bpm.consumer_handlers`). 일꾼 안에서만 돈다 — 그림·Studio에 기여하는 **확장**과 다르다. **회사의 업무 규칙이라 그 회사 저장소에 둔다**(첫째는 Company1) — 이 저장소에는 시험용만 있다 (ADR-0135) |
+| 업무 처리기 | `handler_package` | 통합 일꾼에 얹는, 토픽 몇 개와 작업마다의 처리 함수를 주는 패키지 (엔트리 포인트 `bpm.consumer_handlers`). 일꾼 안에서만 돈다 — 그림에 기여하는 **확장**과 다르다. **회사의 업무 규칙이라 그 회사 저장소에 둔다**(첫째는 Company1) — 이 저장소에는 시험용만 있다 (ADR-0135) |
 | 일꾼 콘솔 | `consumer_console` | 통합 일꾼을 보는 화면 — **서비스 앱 콘솔(SVC-00~03) 그대로**이고 통합 일꾼이 같은 관리 API를 낸다. 맡은 토픽·작업별 종류·최근 호출·오류율·사용 기록. **어느 회사든 같은 것만** — 회사별 업무 지표는 그 회사 화면이 보인다 (ADR-0135) |
 
 ## 5. 키와 설정 ([ADR-0013](decisions/0013-api-keys.md))
@@ -160,7 +160,7 @@ BPM 프로세스가 네트워크 건너의 기능을 부를 때 Center에 **일�
 | --- | --- | --- |
 | 연동용 키 | `integration_key` | Center API 키의 한 종류. 외부 시스템이 작업을 만들 때 쓴다 (C5) |
 | 대리 답용 키 | `relay_key` | Center API 키의 한 종류 (`type: relay`). 연동하는 쪽이 **사람 대신 결재에 답할 때만** 쓴다 — 결재 읽기·답뿐이고, 그 사람(`X-BPM-On-Behalf-Of`)이 결재 담당자일 때만 받는다 ([ADR-0081](decisions/0081-answering-on-behalf.md)) |
-| Center API 키 | `center_api_key` | 등록 승인으로 받는다. **서버 실행기가** Center 등록·하트비트·다운로드에 쓴다 (Studio용도 따로 발급). 키가 곧 그 실행기의 신원 |
+| Center API 키 | `center_api_key` | 등록 승인으로 받는다. **서버 실행기가** Center 등록·하트비트·다운로드에 쓴다. 키가 곧 그 실행기의 신원 — **설계자의 키는 없다**(콘솔 로그인이다, ADR-0143 §4) |
 | 서비스 앱 API 키 | `service_api_key` | **각 서비스 앱의 관리 콘솔에서 발급.** 허용 작업·허용 수행 모드·만료를 가진다. Center는 발급·저장하지 않는다 |
 | 키 참조 | `key_ref` | BPM 프로세스 속성에 적던 키의 이름. **없어졌다** — 서비스 앱 키가 없다 ([ADR-0102](decisions/0102-calling-outside-is-pull.md)). 옛 그림·패키지에 적혀 있으면 모르는 칸으로 읽고 보지 않는다 (C14 B7이 경고한다). C3 `service_call.key_ref`는 늘 빈 글이다 |
 | 환경변수 접두사 | — | `BPM_` 하나. 중첩은 `__` (예: `BPM_CENTER__PORT`) |

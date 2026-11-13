@@ -60,3 +60,16 @@ def test_the_known_gone_links_are_still_gone() -> None:
         path = ROOT / name
         assert target in path.read_text(encoding="utf-8"), f"{name}에 그 링크가 없다 — GONE에서 지운다"
         assert not (path.parent / target).exists(), f"{target}이 다시 있다 — GONE에서 지운다"
+
+
+def test_every_adr_is_in_the_index() -> None:
+    """ADR 목록이 **빠짐없이** 있는가 (`docs/decisions/README.md`).
+
+    목록은 「지금까지 내린 결정」을 한눈에 보는 자리인데, 새 ADR을 쓰면서 줄 더하기를 잊으면
+    **조용히 빠진다** — 셋이 그렇게 빠져 있었다 (ADR-0125·0126·0127). 파일과 목록을 대조한다.
+    """
+    index = (ROOT / "docs" / "decisions" / "README.md").read_text(encoding="utf-8")
+    listed = set(re.findall(r"^\| \[(\d{4})\]", index, re.M))
+    files = {path.name[:4] for path in (ROOT / "docs" / "decisions").glob("[0-9]*.md")}
+    assert files - listed == set(), f"목록에 없는 ADR: {sorted(files - listed)}"
+    assert listed - files == set(), f"파일이 없는 줄: {sorted(listed - files)}"

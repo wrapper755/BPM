@@ -35,7 +35,6 @@ Python은 따로 깔지 않는다 — uv가 3.12를 내려받는다 ([ADR-0005](
 | 구성요소 | 주 환경 | 선택 환경 |
 | --- | --- | --- |
 | 서버 (Center, 서비스 앱) | Linux | Windows |
-| 클라이언트 (Studio) | Windows | Linux |
 
 근거: [ADR-0003](docs/decisions/0003-target-platforms.md)
 
