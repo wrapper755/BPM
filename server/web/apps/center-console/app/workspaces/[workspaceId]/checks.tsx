@@ -2,7 +2,7 @@
 
 import { Button, StatusBadge } from "@bpm/ui";
 import type { CheckResponse } from "@bpm/api-types/c17-check-response";
-import { blocks, counts, sorted, summary } from "@/lib/checks";
+import { blocks, checking, counts, sorted, summary } from "@/lib/checks";
 import { fullTime } from "@/lib/time";
 
 /**
@@ -45,7 +45,8 @@ export function Checks({
           variant="secondary"
           className="ml-auto"
           onClick={() => onCheck(Boolean(check?.cached))}
-          disabled={busy}
+          // 도는 동안 막는다 — 누르면 `again`이라 **도는 검사를 버리고 다시** 묻게 된다.
+          disabled={busy || checking(check)}
         >
           {check?.cached ? "다시 검사" : "실행 전 검사"}
         </Button>

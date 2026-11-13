@@ -32,7 +32,8 @@ export class CanvasViewer {
   async importXML(xml: string): Promise<ImportResult> {
     const laid = await laidOut(xml);
     const found = await this.viewer.importXML(laid.xml);
-    this.viewer.get("canvas").zoom("fit-viewport");
+    // **자리가 없으면 맞추지 않는다** — 0으로 나눈 scale이 `SVGMatrix`에서 죽는다 (`shared.ts`).
+    this.fit();
     return {
       warnings: (found.warnings ?? []).map((one) => String(one.message ?? one)),
       laidOut: laid.laidOut,
@@ -60,6 +61,14 @@ export class CanvasViewer {
   /** 담은 자리의 크기를 다시 잰다 — 숨겼다 다시 보일 때 (모델러 쪽과 같은 이름이다). */
   resized(): void {
     this.viewer.get("canvas").resized();
+    this.fit();
+  }
+
+  /** 담은 자리가 있을 때만 맞춘다. */
+  private fit(): void {
+    const canvas = this.viewer.get("canvas");
+    const { outer } = canvas.viewbox();
+    if (outer.width > 0 && outer.height > 0) canvas.zoom("fit-viewport");
   }
 
   /** 시험이 「정말 그 그림이 떴나」를 보는 자리 (모델러 쪽과 같은 이름이다). */

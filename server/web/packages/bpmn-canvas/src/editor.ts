@@ -43,6 +43,8 @@ export class CanvasEditor {
   private readonly modeler: BpmnModeler;
   private readonly container: HTMLElement;
   private changed = false;
+  /** 열 때의 자리를 맞췄나 — 담은 자리가 0×0이면 못 맞춘다 (`resized()`가 다시 해 본다). */
+  private centered = false;
 
   constructor(container: HTMLElement, handlers: EditorHandlers = {}) {
     this.container = container;
@@ -75,7 +77,7 @@ export class CanvasEditor {
   async importXML(xml: string): Promise<ImportResult> {
     const laid = await laidOut(xml);
     const found = await this.modeler.importXML(laid.xml);
-    centerAtNormalZoom(this.modeler.get("canvas"));
+    this.centered = centerAtNormalZoom(this.modeler.get("canvas"));
     // 배치했으면 디스크와 다르다 — 「저장 안 한 변경」으로 둔다.
     this.changed = laid.laidOut;
     return {
@@ -150,7 +152,11 @@ export class CanvasEditor {
    * 이것을 부르지 않으면 그림이 구석에 작게 붙어 있다.
    */
   resized(): void {
-    this.modeler.get("canvas").resized();
+    const canvas = this.modeler.get("canvas");
+    canvas.resized();
+    // 자리가 없어 못 맞췄으면 **이제 맞춘다** — 숨겨 둔 채 들인 그림이 구석에 붙어 있지 않게.
+    // 한 번 맞춘 뒤로는 건드리지 않는다 (사람이 옮겨 둔 자리를 빼앗지 않는다).
+    if (!this.centered) this.centered = centerAtNormalZoom(canvas);
   }
 
   /**

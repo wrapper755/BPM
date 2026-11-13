@@ -26,8 +26,14 @@ type CanvasApi = BpmnServices["canvas"];
 /**
  * 열 때의 자리 — **보통 크기(100%)**, 그림이 화면 가운데에 온다. 그림이 화면보다 넓으면 가로는
  * 시작 쪽(왼쪽, 팔레트 옆)을 맞춘다 — 가운데를 맞추면 시작 이벤트가 밖에 있다.
+ *
+ * **담은 자리가 없으면 아무것도 하지 않고 거짓을 준다** — 숨겨 둔 패널(0×0)이나 아주 좁은 창에서
+ * 자리를 맞추면 bpmn-js가 0으로 나누어 `SVGMatrix`에서 죽고, 화면은 「다이어그램을 읽지
+ * 못했습니다」라고 거짓말을 한다. 부르는 쪽은 자리가 생겼을 때 다시 부른다 (`resized()`).
  */
-export const centerAtNormalZoom = (canvas: CanvasApi): void => {
+export const centerAtNormalZoom = (canvas: CanvasApi): boolean => {
+  const before = canvas.viewbox();
+  if (before.outer.width <= 0 || before.outer.height <= 0) return false;
   canvas.zoom(1);
   const { inner, outer } = canvas.viewbox();
   const fits = inner.width + 2 * PALETTE_GAP <= outer.width;
@@ -37,6 +43,7 @@ export const centerAtNormalZoom = (canvas: CanvasApi): void => {
     width: outer.width,
     height: outer.height,
   });
+  return true;
 };
 
 /**
