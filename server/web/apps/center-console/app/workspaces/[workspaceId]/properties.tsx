@@ -411,7 +411,11 @@ function EventFields({
               <option value="timeCycle">되풀이 (timeCycle)</option>
             </select>
           </Labelled>
-          <Labelled label="값" help="ISO-8601 — 2026-11-13T09:00:00+09:00 · PT30M · R/PT1H">
+          {/* 되풀이는 **cron도 받는다** (`contracts.schedule`) — 업무 예제가 그것으로 적혀 있다. */}
+          <Labelled
+            label="값"
+            help="그 시각: 2026-11-13T09:00:00+09:00 · 그만큼 뒤: PT30M · 되풀이: 0 9 1 * * 또는 R/PT1H"
+          >
             <input
               className={INPUT}
               value={fields.timerValue}
