@@ -57,6 +57,11 @@ export class CanvasViewer {
     }
   }
 
+  /** 담은 자리의 크기를 다시 잰다 — 숨겼다 다시 보일 때 (모델러 쪽과 같은 이름이다). */
+  resized(): void {
+    this.viewer.get("canvas").resized();
+  }
+
   /** 시험이 「정말 그 그림이 떴나」를 보는 자리 (모델러 쪽과 같은 이름이다). */
   stats(): { elements: number; dirty: boolean } {
     return { elements: this.viewer.get("elementRegistry").getAll().length, dirty: false };

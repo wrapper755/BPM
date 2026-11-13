@@ -22,6 +22,7 @@ import {
   type Violation,
 } from "@/lib/adapter-editor";
 import type { DecisionTableInfo } from "@bpm/api-types/c17-decisions-response";
+import type { TrialInfo } from "@bpm/api-types/c17-test-run-info";
 import type { ExtensionDependent } from "@bpm/api-types/c7-extension-dependent";
 import type { ExtensionTestResult } from "@bpm/api-types/c7-extension-test-result";
 import type { ExtensionVersionInfo } from "@bpm/api-types/c7-extension-version-info";
@@ -961,5 +962,61 @@ export async function saveDecision(
   } catch (cause) {
     const stale = cause instanceof CenterError && cause.status === 409;
     return { error: message(cause), ...(stale ? { stale: true } : {}) };
+  }
+}
+
+// ─────────────────────────── 시험 실행 (C17 §시험 실행, CON-20) ───────────────────────────
+
+/**
+ * 돌려 본다 — **내려보내는 것은 하트비트**라 돌아온 실행은 아직 `queued`다 (ADR-0007·0146).
+ * 케이스를 비우면 비교하지 않는다(판정 「비교 안 함」).
+ */
+export async function startTrial(
+  workspaceId: string,
+  caseName: string,
+  mode: string,
+): Promise<{ trial?: TrialInfo; error?: string }> {
+  try {
+    const made = await center.createTestRun(workspaceId, {
+      schema: 1,
+      mode,
+      ...(caseName ? { case: caseName } : {}),
+    });
+    return { trial: made };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 목록 — 최근 것부터 (C17). */
+export async function loadTrials(workspaceId: string): Promise<{ trials?: TrialInfo[]; error?: string }> {
+  try {
+    return { trials: await center.testRuns(workspaceId) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 하나 — 도는 동안 콘솔이 이것을 되묻는다 (실행기가 콘솔로 미는 길이 없다). */
+export async function loadTrial(
+  workspaceId: string,
+  runId: string,
+): Promise<{ trial?: TrialInfo; error?: string }> {
+  try {
+    return { trial: await center.testRun(workspaceId, runId) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 「중지」 — 내려간 것은 작업 취소로 실행기가 닫는다 (ADR-0063과 같은 길). */
+export async function stopTrial(
+  workspaceId: string,
+  runId: string,
+): Promise<{ trial?: TrialInfo; error?: string }> {
+  try {
+    return { trial: await center.stopTestRun(workspaceId, runId) };
+  } catch (cause) {
+    return { error: message(cause) };
   }
 }

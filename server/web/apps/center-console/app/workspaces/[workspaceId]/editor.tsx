@@ -3,23 +3,29 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, ErrorBanner } from "@bpm/ui";
-import type { BpmnCanvasHandle, NodeProperties, PropertyPatch } from "@bpm/bpmn-canvas";
+import type { BpmnCanvasHandle, NodeProperties, NodeState, PropertyPatch } from "@bpm/bpmn-canvas";
 import type { FileInfo } from "@bpm/api-types/c17-file-info";
+import type { TrialInfo } from "@bpm/api-types/c17-test-run-info";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
-import { loadWorkspaceFile, saveWorkspaceFile } from "@/app/actions";
+import { loadTrial, loadTrials, loadWorkspaceFile, saveWorkspaceFile, stopTrial } from "@/app/actions";
 import { fileLabel, groupFiles, isEditable, opensWith } from "@/lib/workspaces";
+import { isLive } from "@/lib/trials";
 import { CaseEditor } from "./cases";
 import { DecisionGrid } from "./decisions";
+import { StartTrial, TrialLog, TrialRuns } from "./trials";
 import { Variables } from "./variables";
 import { Properties } from "./properties";
 import "@bpm/bpmn-canvas/canvas.css";
 
 /**
- * CON-20b 「설계」 탭 — 탐색기 + 가운데 + 상세 패널 + 아래 탭.
+ * CON-20b 작업공간 — 탭 셋과 그 안의 자리들 ([ADR-0147](../../../../../../docs/decisions/0147-workspace-has-three-tabs.md)).
  *
- * **가운데에 무엇이 뜰지는 고른 파일이 정한다** ([ADR-0147](../../../../../../docs/decisions/0147-workspace-has-three-tabs.md)).
- * 지금 있는 것은 그림(캔버스)과 받아 둔 것(뷰어)이고, 결정표·케이스 편집기는 조각 4d다 —
+ * 「설계」는 탐색기 + 가운데 + 상세 패널 + 아래 탭이고, **가운데에 무엇이 뜰지는 고른 파일이
+ * 정한다**(그림·결정표·케이스). 「시험 실행」은 돌려 본 것들이다. 「정보」는 아직 비어 있다 —
  * **끄고 까닭을 그 자리에 적는다** (U3).
+ *
+ * **시험 실행의 결과는 탭에 갇히지 않는다** — 로그는 아래 탭 「로그」, 노드 색은 캔버스에 그대로
+ * 간다. 돌려 본 사람이 곧바로 그 자리를 고치기 때문이다. 그래서 그 상태를 여기서 쥔다.
  *
  * 캔버스는 **브라우저에서만** 산다. bpmn-js는 DOM 위의 것이라 서버 그리기로는 뜨지 않는다.
  */
@@ -38,9 +44,27 @@ interface Opened {
 const TABS = ["설계", "시험 실행", "정보"] as const;
 type Tab = (typeof TABS)[number];
 
-/** 아래 탭 (STU-01 [L]) — 「검사」·「로그」는 조각 4e·4f에서 찬다. */
+/** 아래 탭 (STU-01 [L]) — 「검사」는 조각 4f에서 찬다. */
 const BOTTOM = ["변수", "검사", "로그"] as const;
 type Bottom = (typeof BOTTOM)[number];
+
+/**
+ * 도는 시험 실행을 되묻는 주기. **미는 길이 없다** — 실행기는 Center에만 올리고(C17
+ * `PUT …/test-runs/{id}`) 콘솔까지 오는 길은 없다. 너무 자주 물으면 Center를 때리고, 너무
+ * 뜸하면 로그가 뭉텅이로 나타난다.
+ */
+const ASK_EVERY_MS = 1500;
+
+/** 캔버스가 아는 노드 색만 넘긴다 — 계약은 더 많은 값을 허용한다 (C17 KNOWN_NODE_STATES). */
+const CANVAS_STATES = new Set<NodeState>(["running", "done", "failed", "waiting"]);
+
+function canvasMarks(states: Record<string, string> | undefined): Record<string, NodeState> {
+  const made: Record<string, NodeState> = {};
+  for (const [id, state] of Object.entries(states ?? {})) {
+    if (CANVAS_STATES.has(state as NodeState)) made[id] = state as NodeState;
+  }
+  return made;
+}
 
 export function Workspace({
   info,
@@ -66,6 +90,9 @@ export function Workspace({
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [bottom, setBottom] = useState<Bottom | null>(null);
+  const [trials, setTrials] = useState<TrialInfo[]>([]);
+  const [trial, setTrial] = useState<TrialInfo | null>(null);
+  const [trialBusy, setTrialBusy] = useState(false);
   const canvas = useRef<BpmnCanvasHandle>(null);
 
   const editing = file !== null && canWrite && isEditable(file.path);
@@ -130,6 +157,69 @@ export function Workspace({
     return () => window.removeEventListener("keydown", key);
   }, [editing, save]);
 
+  const refreshTrials = useCallback(async () => {
+    const found = await loadTrials(info.id);
+    if (found.trials) setTrials(found.trials);
+    if (found.error) setFailure(found.error);
+  }, [info.id]);
+
+  // 탭을 열 때 목록을 읽는다 — 늘 읽으면 설계만 하는 동안에도 Center를 두드린다.
+  useEffect(() => {
+    if (tab === "시험 실행") void refreshTrials();
+  }, [tab, refreshTrials]);
+
+  /**
+   * 도는 동안 되묻는다 — **미는 길이 없다** (C17: 실행기는 Center에만 올린다).
+   * 끝나면 멈추고 목록도 한 번 더 읽는다(판정·소요가 그때 자리를 잡는다).
+   */
+  useEffect(() => {
+    if (!trial || !isLive(trial.state)) return;
+    let alive = true;
+    const timer = setInterval(() => {
+      void (async () => {
+        const found = await loadTrial(info.id, trial.run_id);
+        if (!alive || !found.trial) return;
+        setTrial(found.trial);
+        setTrials((before) => before.map((one) => (one.run_id === found.trial!.run_id ? found.trial! : one)));
+        if (!isLive(found.trial.state)) void refreshTrials();
+      })();
+    }, ASK_EVERY_MS);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [trial, info.id, refreshTrials]);
+
+  /**
+   * 노드 색을 캔버스에 입힌다 — **「설계」 탭에서도 보인다** (돌려 보고 그 자리에서 고친다).
+   * 그림을 **다시 들이면 표식이 지워지므로** `onImported`에서도 같은 것을 입힌다.
+   */
+  const marks = useRef<Record<string, NodeState>>({});
+  marks.current = canvasMarks(trial?.node_states);
+  useEffect(() => {
+    canvas.current?.editor?.mark(marks.current);
+  }, [trial]);
+
+  /** 탭을 옮겼다 돌아오면 캔버스가 제 자리를 다시 재야 한다 (숨어 있는 동안은 0×0이다). */
+  useEffect(() => {
+    if (tab === "설계") canvas.current?.editor?.resized();
+  }, [tab]);
+
+  const stop = useCallback(async () => {
+    if (!trial) return;
+    setTrialBusy(true);
+    const made = await stopTrial(info.id, trial.run_id);
+    setTrialBusy(false);
+    if (made.error) {
+      setFailure(made.error);
+      return;
+    }
+    if (made.trial) {
+      setTrial(made.trial);
+      void refreshTrials();
+    }
+  }, [trial, info.id, refreshTrials]);
+
   /** 「적용」 — 캔버스의 `modeling`으로 고친다. 한 번이 **실행 취소 한 걸음**이다. */
   const applyProperties = useCallback(
     (patch: PropertyPatch) => {
@@ -171,6 +261,25 @@ export function Workspace({
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {/* 돌리는 중에는 「시험 실행...」 자리가 「중지」가 된다 (U5) — 단추를 둘 두지 않는다. */}
+          {canWrite ? (
+            trial && isLive(trial.state) ? (
+              <Button variant="secondary" size="sm" onClick={() => void stop()} disabled={trialBusy}>
+                중지
+              </Button>
+            ) : (
+              <StartTrial
+                workspaceId={info.id}
+                entry={info.entry}
+                onStarted={(made) => {
+                  setTrial(made);
+                  setTrials((before) => [made, ...before]);
+                  setTab("시험 실행");
+                  setBottom("로그");
+                }}
+              />
+            )
+          ) : null}
           {editing && shows === "canvas" ? (
             <Button variant="primary" size="sm" onClick={() => void save()} disabled={!dirty || busy}>
               저장
@@ -185,168 +294,176 @@ export function Workspace({
         </div>
       ) : null}
 
-      {tab === "설계" ? (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex min-h-0 flex-1">
-          {/* [E] 탐색기 */}
-          <aside
-            aria-label="파일"
-            className="w-64 shrink-0 overflow-y-auto border-r border-border-default bg-bg-surface p-3"
-          >
-            {groups.map((group) => (
-              <section key={group.label} className="mb-4">
-                <h2 className="mb-1 text-caption font-semibold text-text-muted">{group.label}</h2>
-                {group.files.length === 0 ? (
-                  <p className="text-caption text-text-muted">없습니다.</p>
-                ) : (
-                  <ul>
-                    {group.files.map((one) => (
-                      <li key={one.path}>
-                        <button
-                          onClick={() => void open(one.path)}
-                          title={one.path}
-                          aria-current={file?.path === one.path ? "true" : undefined}
-                          className={
-                            file?.path === one.path
-                              ? "w-full rounded-md bg-primary-subtle px-2 py-1 text-left text-body-sm font-semibold"
-                              : "w-full rounded-md px-2 py-1 text-left text-body-sm hover:bg-bg-subtle"
-                          }
-                        >
-                          {fileLabel(one.path)}
-                          {one.path === info.entry ? <span className="text-text-muted"> · 진입</span> : null}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            ))}
-          </aside>
-
-          {/* [C] 가운데 — 고른 파일이 정한다 (ADR-0147 §2) */}
-          <div className="min-w-0 flex-1 bg-bg-canvas">
-            {file && (shows === "canvas" || shows === "viewer") ? (
-              <BpmnCanvas
-                key={file.path}
-                ref={canvas}
-                mode={shows === "canvas" && canWrite ? "edit" : "view"}
-                xml={file.text}
-                className="bpm-canvas"
-                // 인자를 그대로 쓴다 — 캔버스는 **들인 뒤에 「아니다」라고도 말한다**(연 적밖에 없는
-                // 그림이 「저장 안 한 변경」이 되지 않게). 늘 `true`로 적으면 그 말을 못 듣는다.
-                onChanged={setDirty}
-                onPicked={(id) => setPicked(id ? (canvas.current?.editor?.properties(id) ?? null) : null)}
-                onFailed={(cause) => setFailure(`다이어그램을 읽지 못했습니다 — ${cause.message}`)}
-              />
-            ) : file && shows === "table" ? (
-              <DecisionGrid
-                key={file.path}
-                workspaceId={info.id}
-                path={file.path}
-                canWrite={editing}
-                onDirty={setDirty}
-              />
-            ) : file && shows === "cases" ? (
-              <CaseEditor
-                key={file.path}
-                workspaceId={info.id}
-                path={file.path}
-                canWrite={editing}
-                onDirty={setDirty}
-              />
-            ) : (
-              <p className="p-6 text-body-sm text-text-muted">
-                {!file
-                  ? "열린 정의가 없습니다. 왼쪽에서 정의를 고르거나 「파일에서 가져오기」로 그림을 들이세요."
-                  : "이 파일은 편집기에서 열지 않습니다."}
-              </p>
-            )}
-          </div>
-
-          {/* [P] 상세 패널 — 고른 것 하나만 (STU-04). */}
-          <aside
-            aria-label="속성"
-            className="w-72 shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-3"
-          >
-            {picked ? (
-              <Properties
-                key={picked.id}
-                node={picked}
-                canWrite={editing}
-                flows={(picked.gateway?.outgoing ?? []).map((one) => ({
-                  id: one.id,
-                  label: one.name || one.to || one.id,
-                }))}
-                onApply={applyProperties}
-              />
-            ) : (
-              <>
-                <dl className="flex flex-col gap-2 text-body-sm">
-                  <Row label="이름" value={info.name} />
-                  <Row label="판" value={info.version} />
-                  <Row label="진입 정의" value={info.entry ?? "—"} mono />
-                  {info.description ? <Row label="설명" value={info.description} /> : null}
-                </dl>
-                <p className="mt-3 text-caption text-text-muted">요소를 고르면 그 속성이 여기 보입니다.</p>
-              </>
-            )}
-          </aside>
-          </div>
-
-          {/* [L] 아래 탭 — 접힌다. 「변수」는 그림의 `bpm:process`라 캔버스 쪽에 있다 (STU-01 [L]). */}
-          <div className="shrink-0 border-t border-border-default bg-bg-surface">
-            <div role="tablist" aria-label="아래 탭" className="flex gap-1 px-3">
-              {BOTTOM.map((one) => (
-                <button
-                  key={one}
-                  role="tab"
-                  aria-selected={bottom === one}
-                  onClick={() => setBottom(bottom === one ? null : one)}
-                  className={
-                    bottom === one
-                      ? "border-b-2 border-primary px-3 py-1 text-body-sm font-semibold"
-                      : "border-b-2 border-transparent px-3 py-1 text-body-sm text-text-muted hover:text-text-primary"
-                  }
-                >
-                  {one}
-                </button>
-              ))}
-            </div>
-            {bottom === "변수" ? (
-              shows === "canvas" ? (
-                <div className="max-h-72 overflow-y-auto border-t border-border-default">
-                  <Variables
-                    key={file?.path}
-                    canvas={canvas}
-                    canWrite={editing}
-                    onApplied={() => setDirty(true)}
-                  />
-                </div>
+      {/*
+        탭을 옮겨도 **「설계」는 지우지 않고 숨긴다** — 지우면 캔버스가 함께 사라져 **저장하지 않은
+        그림을 잃는다**. 「시험 실행」을 보고 와서 고치는 것이 이 화면의 쓰임이라 더욱 그렇다.
+      */}
+      <div className={tab === "설계" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+        <div className="flex min-h-0 flex-1">
+        {/* [E] 탐색기 */}
+        <aside
+          aria-label="파일"
+          className="w-64 shrink-0 overflow-y-auto border-r border-border-default bg-bg-surface p-3"
+        >
+          {groups.map((group) => (
+            <section key={group.label} className="mb-4">
+              <h2 className="mb-1 text-caption font-semibold text-text-muted">{group.label}</h2>
+              {group.files.length === 0 ? (
+                <p className="text-caption text-text-muted">없습니다.</p>
               ) : (
-                <p className="border-t border-border-default p-3 text-body-sm text-text-muted">
-                  정의(`.bpmn`)를 열면 그 BPM 프로세스의 입력·출력이 여기 보입니다.
-                </p>
-              )
-            ) : null}
-            {bottom === "검사" ? (
-              <p className="border-t border-border-default p-3 text-body-sm text-text-muted">
-                실행 전 검사는 아직입니다 (M11 조각 4f) — 전송은 돕니다 (C17).
-              </p>
-            ) : null}
-            {bottom === "로그" ? (
-              <p className="border-t border-border-default p-3 text-body-sm text-text-muted">
-                시험 실행 로그는 아직입니다 (M11 조각 4e).
-              </p>
-            ) : null}
+                <ul>
+                  {group.files.map((one) => (
+                    <li key={one.path}>
+                      <button
+                        onClick={() => void open(one.path)}
+                        title={one.path}
+                        aria-current={file?.path === one.path ? "true" : undefined}
+                        className={
+                          file?.path === one.path
+                            ? "w-full rounded-md bg-primary-subtle px-2 py-1 text-left text-body-sm font-semibold"
+                            : "w-full rounded-md px-2 py-1 text-left text-body-sm hover:bg-bg-subtle"
+                        }
+                      >
+                        {fileLabel(one.path)}
+                        {one.path === info.entry ? <span className="text-text-muted"> · 진입</span> : null}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          ))}
+        </aside>
+
+        {/* [C] 가운데 — 고른 파일이 정한다 (ADR-0147 §2) */}
+        <div className="min-w-0 flex-1 bg-bg-canvas">
+          {file && (shows === "canvas" || shows === "viewer") ? (
+            <BpmnCanvas
+              key={file.path}
+              ref={canvas}
+              mode={shows === "canvas" && canWrite ? "edit" : "view"}
+              xml={file.text}
+              className="bpm-canvas"
+              // 인자를 그대로 쓴다 — 캔버스는 **들인 뒤에 「아니다」라고도 말한다**(연 적밖에 없는
+              // 그림이 「저장 안 한 변경」이 되지 않게). 늘 `true`로 적으면 그 말을 못 듣는다.
+              onChanged={setDirty}
+              onPicked={(id) => setPicked(id ? (canvas.current?.editor?.properties(id) ?? null) : null)}
+              onImported={() => canvas.current?.editor?.mark(marks.current)}
+              onFailed={(cause) => setFailure(`다이어그램을 읽지 못했습니다 — ${cause.message}`)}
+            />
+          ) : file && shows === "table" ? (
+            <DecisionGrid
+              key={file.path}
+              workspaceId={info.id}
+              path={file.path}
+              canWrite={editing}
+              onDirty={setDirty}
+            />
+          ) : file && shows === "cases" ? (
+            <CaseEditor
+              key={file.path}
+              workspaceId={info.id}
+              path={file.path}
+              canWrite={editing}
+              onDirty={setDirty}
+            />
+          ) : (
+            <p className="p-6 text-body-sm text-text-muted">
+              {!file
+                ? "열린 정의가 없습니다. 왼쪽에서 정의를 고르거나 「파일에서 가져오기」로 그림을 들이세요."
+                : "이 파일은 편집기에서 열지 않습니다."}
+            </p>
+          )}
+        </div>
+
+        {/* [P] 상세 패널 — 고른 것 하나만 (STU-04). */}
+        <aside
+          aria-label="속성"
+          className="w-72 shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-3"
+        >
+          {picked ? (
+            <Properties
+              key={picked.id}
+              node={picked}
+              canWrite={editing}
+              flows={(picked.gateway?.outgoing ?? []).map((one) => ({
+                id: one.id,
+                label: one.name || one.to || one.id,
+              }))}
+              onApply={applyProperties}
+            />
+          ) : (
+            <>
+              <dl className="flex flex-col gap-2 text-body-sm">
+                <Row label="이름" value={info.name} />
+                <Row label="판" value={info.version} />
+                <Row label="진입 정의" value={info.entry ?? "—"} mono />
+                {info.description ? <Row label="설명" value={info.description} /> : null}
+              </dl>
+              <p className="mt-3 text-caption text-text-muted">요소를 고르면 그 속성이 여기 보입니다.</p>
+            </>
+          )}
+        </aside>
+        </div>
+
+        {/* [L] 아래 탭 — 접힌다. 「변수」는 그림의 `bpm:process`라 캔버스 쪽에 있다 (STU-01 [L]). */}
+        <div className="shrink-0 border-t border-border-default bg-bg-surface">
+          <div role="tablist" aria-label="아래 탭" className="flex gap-1 px-3">
+            {BOTTOM.map((one) => (
+              <button
+                key={one}
+                role="tab"
+                aria-selected={bottom === one}
+                onClick={() => setBottom(bottom === one ? null : one)}
+                className={
+                  bottom === one
+                    ? "border-b-2 border-primary px-3 py-1 text-body-sm font-semibold"
+                    : "border-b-2 border-transparent px-3 py-1 text-body-sm text-text-muted hover:text-text-primary"
+                }
+              >
+                {one}
+              </button>
+            ))}
           </div>
+          {bottom === "변수" ? (
+            shows === "canvas" ? (
+              <div className="max-h-72 overflow-y-auto border-t border-border-default">
+                <Variables
+                  key={file?.path}
+                  canvas={canvas}
+                  canWrite={editing}
+                  onApplied={() => setDirty(true)}
+                />
+              </div>
+            ) : (
+              <p className="border-t border-border-default p-3 text-body-sm text-text-muted">
+                정의(`.bpmn`)를 열면 그 BPM 프로세스의 입력·출력이 여기 보입니다.
+              </p>
+            )
+          ) : null}
+          {bottom === "검사" ? (
+            <p className="border-t border-border-default p-3 text-body-sm text-text-muted">
+              실행 전 검사는 아직입니다 (M11 조각 4f) — 전송은 돕니다 (C17).
+            </p>
+          ) : null}
+          {bottom === "로그" ? (
+            <div className="border-t border-border-default p-3">
+              {trial ? (
+                <TrialLog lines={trial.log ?? []} />
+              ) : (
+                <p className="text-body-sm text-text-muted">
+                  「시험 실행...」으로 돌려 보면 그 줄이 여기 쌓입니다.
+                </p>
+              )}
+            </div>
+          ) : null}
         </div>
-      ) : (
-        <div className="p-6 text-body-sm text-text-muted">
-          {tab === "시험 실행"
-            ? "시험 실행 화면은 아직입니다 (M11 조각 4e) — 전송은 돕니다 (C17)."
-            : "작업공간 정보 화면은 아직입니다 (M11 조각 4f)."}
-        </div>
-      )}
+      </div>
+
+      {tab === "시험 실행" ? <TrialRuns trials={trials} picked={trial} onPick={setTrial} /> : null}
+      {tab === "정보" ? (
+        <div className="p-6 text-body-sm text-text-muted">작업공간 정보 화면은 아직입니다 (M11 조각 4f).</div>
+      ) : null}
     </div>
   );
 }

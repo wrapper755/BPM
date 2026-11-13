@@ -36,6 +36,8 @@ interface BpmnServices {
       outer: { width: number; height: number };
     };
     getRootElement(): import("./types").Shape;
+    /** 담은 자리의 크기를 다시 잰다 — 숨겼다 다시 보인 캔버스가 이것을 불러야 한다. */
+    resized(): void;
     addMarker(id: string, marker: string): void;
     removeMarker(id: string, marker: string): void;
   };

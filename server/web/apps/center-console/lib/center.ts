@@ -33,6 +33,8 @@ import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import type { RunEventsResponse } from "@bpm/api-types/c3-run-events-response";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import type { WorkspaceCreateRequest } from "@bpm/api-types/c17-workspace-create-request";
+import type { TrialInfo } from "@bpm/api-types/c17-test-run-info";
+import type { TrialCreateRequest } from "@bpm/api-types/c17-test-run-create-request";
 import type { WorkspaceUpdateRequest } from "@bpm/api-types/c17-workspace-update-request";
 import type { FileInfo } from "@bpm/api-types/c17-file-info";
 import type { DecisionsResponse } from "@bpm/api-types/c17-decisions-response";
@@ -208,6 +210,19 @@ export const center = {
       body: JSON.stringify(body),
       headers: revision ? { "If-Match": revision } : {},
     }),
+  /**
+   * 시험 실행 (C17 §시험 실행) — **돌리는 것은 서버 실행기다**. 여기서는 줄에 세우고 묻는다.
+   * 진행은 실행기가 `PUT …/test-runs/{run_id}`로 올리므로 **콘솔은 되묻는다** (미는 길이 없다).
+   */
+  testRuns: (workspaceId: string) => call<TrialInfo[]>(`${ws(workspaceId)}/test-runs`),
+  testRun: (workspaceId: string, runId: string) =>
+    call<TrialInfo>(`${ws(workspaceId)}/test-runs/${encodeURIComponent(runId)}`),
+  createTestRun: (workspaceId: string, body: TrialCreateRequest) =>
+    call<TrialInfo>(`${ws(workspaceId)}/test-runs`, { method: "POST", body: JSON.stringify(body) }),
+  /** 「중지」 — **판정하지 않는다** (판정이 「중지」다, C17). */
+  stopTestRun: (workspaceId: string, runId: string) =>
+    call<TrialInfo>(`${ws(workspaceId)}/test-runs/${encodeURIComponent(runId)}`, { method: "DELETE" }),
+
   deleteWorkspaceFile: (workspaceId: string, path: string) =>
     call<void>(`${ws(workspaceId)}/files/${filePath(path)}`, { method: "DELETE" }),
   /**
