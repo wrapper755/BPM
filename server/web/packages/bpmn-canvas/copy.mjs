@@ -1,12 +1,16 @@
-// bpmn-js 배포본 → `studio/app/.../web/vendor/` (ADR-0029).
-// 그리고 **자동 배치 도우미 하나를 묶는다** (`src/auto-layout.mjs` → `bpmn-auto-layout.min.js`,
-// ADR-0088) — ESM 패키지라 그대로 복사할 배포본이 없다. 모델러·뷰어는 묶지 않는다.
+// bpmn-js 배포본 → `studio/app/.../web/vendor/` — **Qt Studio만 쓴다.**
+//
+// 콘솔 웹 편집기는 이 폴더의 `src/`를 **pnpm 의존으로 그대로 import한다** (ADR-0143) — 웹에는
+// Node가 있어 복사본이 필요 없다. 이 스크립트는 **Node 없이 돌아야 하는 Qt 쪽**(시험·PyInstaller)
+// 하나를 위해 남아 있고, Qt Studio를 걷을 때 함께 걷는다 (M11 조각 5).
+//
+// 자동 배치 도우미도 함께 묶는다 (`src/auto-layout.ts` → `bpmn-auto-layout.min.js`, ADR-0088) —
+// ESM 패키지라 그대로 복사할 배포본이 없다. 모델러·뷰어는 묶지 않는다.
 //
 //   node copy.mjs            복사한다
 //   node copy.mjs --check    쓰지 않고 검사만 (어긋나면 1로 끝난다 — CI가 쓴다)
 //
-// **복사본은 커밋한다.** 파이썬 쪽(시험·PyInstaller)이 Node 없이 돌아야 하기 때문이다.
-// 버전은 이 패키지의 package.json 한 곳에만 있다.
+// **복사본은 커밋한다** (Qt 쪽이 Node 없이 돌기 때문이다). 버전은 이 패키지의 package.json 한 곳에만 있다.
 
 import { readFile, writeFile, mkdir, readdir, rm, stat } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
@@ -14,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(HERE, "../..");
+const ROOT = resolve(HERE, "../../../..");
 const OUT = join(ROOT, "studio/app/src/bpm/studio/web/vendor");
 const require = createRequire(import.meta.url);
 const DIST = join(dirname(require.resolve("bpmn-js/package.json")), "dist");
@@ -45,7 +49,7 @@ async function listFonts() {
 async function autoLayout() {
   const { build } = await import("esbuild");
   const done = await build({
-    entryPoints: [join(HERE, "src/auto-layout.mjs")],
+    entryPoints: [join(HERE, "src/auto-layout.ts")],
     absWorkingDir: HERE,
     bundle: true,
     format: "iife",
@@ -76,9 +80,10 @@ async function outputs() {
     "VERSION.txt",
     Buffer.from(
       `bpmn-js ${version}\n` +
-        `bpmn-auto-layout ${layoutVersion} (src/auto-layout.mjs를 esbuild로 묶었다, ADR-0088)\n` +
-        "이 폴더는 생성물이다 (ADR-0029). 직접 고치지 말고 studio/canvas의\n" +
-        "package.json에서 판을 올린 뒤 `pnpm --filter @bpm/bpmn-canvas build`.\n",
+        `bpmn-auto-layout ${layoutVersion} (src/auto-layout.ts를 esbuild로 묶었다, ADR-0088)\n` +
+        "이 폴더는 Qt Studio만 쓰는 생성물이다. 직접 고치지 말고\n" +
+        "server/web/packages/bpmn-canvas의 package.json에서 판을 올린 뒤\n" +
+        "`pnpm --filter @bpm/bpmn-canvas build`.\n",
       "utf8",
     ),
   );

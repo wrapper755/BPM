@@ -118,7 +118,7 @@ BPM/
 ├─ pyproject.toml          # uv workspace 루트 (패키지 아님) + ruff·pytest·mypy 설정
 ├─ .python-version         # 3.12 (ADR-0005)
 ├─ uv.lock                 # 워크스페이스 전체 하나
-├─ package.json            # pnpm 워크스페이스 뿌리 (server/web/*, studio/canvas — ADR-0017·ADR-0129)
+├─ package.json            # pnpm 워크스페이스 뿌리 (server/web/* — ADR-0017·ADR-0129)
 ├─ pnpm-workspace.yaml, pnpm-lock.yaml
 ├─ shared/                 # 둘 이상의 제품이 쓰는 것
 │  ├─ contracts/           # 공통 계약
@@ -134,11 +134,11 @@ BPM/
 │  ├─ web/                 # 웹 화면 (Next.js, ADR-0017)
 │  │  ├─ apps/center-console/ # Center 콘솔
 │  │  ├─ apps/svc-console/    # 서비스 앱 관리 콘솔 (앱마다 하나씩 띄움)
-│  │  └─ packages/         # ui(구성요소+토큰 CSS), api-types(계약에서 생성), config
+│  │  └─ packages/         # ui(구성요소+토큰 CSS), api-types(계약에서 생성), config,
+│  │                       #   bpmn-canvas(BPMN 캔버스 — bpmn-js를 pnpm 의존으로, ADR-0143)
 │  └─ deploy/              # docker compose, Dockerfile
 ├─ studio/
-│  ├─ app/                 # Studio
-│  └─ canvas/              # bpmn-js 배포본을 고정해 Studio 안으로 복사한다 (ADR-0029)
+│  └─ app/                 # Studio (Qt — M11 조각 5에서 걷는다)
 ├─ packaging/              # Studio 묶기와 설치 파일 (ADR-0024·0068)
 ├─ design/                 # tokens.json (디자인 토큰 원본), preview.html
 ├─ samples/                # 제품이 아니다 — 업무 예제가 부르는 모의 앱 (워크스페이스 멤버)

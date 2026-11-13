@@ -2,4 +2,3 @@
 packages:
   - server/web/apps/*
   - server/web/packages/*
-  - studio/canvas

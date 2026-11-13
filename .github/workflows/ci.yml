@@ -75,7 +75,7 @@ jobs:
       - name: 계약 JSON Schema 최신 여부
         run: uv run python scripts/gen_schemas.py --check
 
-      # Studio 캔버스가 `bpm:*`를 타입으로 다루는 설명 (ADR-0022·0029 §3).
+      # 캔버스가 `bpm:*`를 타입으로 다루는 설명 (ADR-0022) — 웹 편집기와 Qt Studio 두 자리.
       - name: bpmn-moddle 설명 최신 여부
         run: uv run python scripts/gen_moddle.py --check
 
@@ -99,7 +99,7 @@ jobs:
     name: 웹
     runs-on: ubuntu-latest
 
-    # pnpm 워크스페이스의 뿌리는 저장소 맨 위다 (ADR-0129 — server/web와 studio/canvas를 함께 묶는다).
+    # pnpm 워크스페이스의 뿌리는 저장소 맨 위다 (ADR-0129).
     steps:
       - uses: actions/checkout@v7
 
@@ -125,7 +125,7 @@ jobs:
         run: pnpm check:api-types
 
       # Studio 안으로 복사해 둔 bpmn-js 배포본이 고정한 판과 같은가 (ADR-0029).
-      # 파이썬 쪽에는 Node가 없으므로 **여기서** 본다.
+      # Qt Studio가 쓰는 배포본 복사다 (파이썬 쪽에 Node가 없다) — Qt를 걷을 때 함께 걷는다.
       - name: bpmn-js 배포본 최신 여부
         run: pnpm check:bpmn-canvas
 

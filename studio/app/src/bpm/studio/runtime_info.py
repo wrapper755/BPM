@@ -23,7 +23,7 @@ OURS = re.compile(r"^bpm[-_]", re.IGNORECASE)
 UNKNOWN_LICENSE = "패키지 안의 라이선스 파일"
 #: 표 아래 한 줄.
 FULL_TEXT = "라이선스 전문은 각 패키지와 함께 설치되어 있습니다."
-#: 캔버스 배포본의 판 (ADR-0029 — `studio/canvas`가 복사하며 적는다).
+#: 캔버스 배포본의 판 (`server/web/packages/bpmn-canvas`가 복사하며 적는다).
 CANVAS_VERSIONS = Path(__file__).resolve().parent / "web" / "vendor" / "VERSION.txt"
 #: 캔버스 배포본 중 고지할 것 — 라이선스는 bpmn.io가 정한 것이다.
 CANVAS_LICENSES = {"bpmn-js": "bpmn.io License", "bpmn-auto-layout": "MIT"}

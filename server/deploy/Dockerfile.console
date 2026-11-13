@@ -15,10 +15,9 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY server/web/packages/api-types/package.json server/web/packages/api-types/
 COPY server/web/packages/config/package.json server/web/packages/config/
 COPY server/web/packages/ui/package.json server/web/packages/ui/
+COPY server/web/packages/bpmn-canvas/package.json server/web/packages/bpmn-canvas/
 COPY server/web/apps/center-console/package.json server/web/apps/center-console/
 COPY server/web/apps/svc-console/package.json server/web/apps/svc-console/
-# 콘솔은 캔버스를 쓰지 않지만 같은 워크스페이스라 잠금 파일이 그 자리를 요구한다 (--frozen-lockfile).
-COPY studio/canvas/package.json studio/canvas/
 RUN corepack enable && pnpm install --frozen-lockfile
 
 FROM node:${NODE_VERSION} AS build
