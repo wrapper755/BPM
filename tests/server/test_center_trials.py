@@ -291,10 +291,10 @@ def test_a_late_report_cannot_revive_a_stopped_run(client: TestClient) -> None:
     assert info["verdict"] == "중지"
 
 
-def test_a_refused_test_job_ends_the_run(client: TestClient) -> None:
+def test_a_refused_test_job_ends_the_run(client: TestClient, store: Store) -> None:
     """안 적으면 콘솔이 영원히 「도는 중」이다 — 실행기가 받지 않은 것을 사람은 알 수 없다."""
     key, run_id = dispatch(client)
-    job_id = _job_of(client, run_id)
+    job_id = _job_of(store, run_id)
     body = {
         "schema": 1,
         "status": "running",
@@ -309,11 +309,18 @@ def test_a_refused_test_job_ends_the_run(client: TestClient) -> None:
     assert "not_ready" in info["detail"]
 
 
-def _job_of(client: TestClient, run_id: str) -> str:
+def _job_of(store: Store, run_id: str) -> str:
+    """그 시험 실행의 작업 id — **작업 목록에는 없다** (C17: 시험 작업은 CON-05에 두지 않는다)."""
+    row = store.row("SELECT job_id FROM jobs WHERE run_id = ?", (run_id,))
+    assert row is not None, run_id
+    return str(row["job_id"])
+
+
+def test_a_test_job_is_not_in_the_job_list(client: TestClient) -> None:
+    """설계자가 돌려 보는 것이라 **운영자가 CON-05에서 읽을 것이 없다** (배포도 패키지도 없다)."""
+    key, run_id = dispatch(client)
     listed = made(client.get(f"{API}/jobs", headers=ADMIN), 200)
-    found = [one for one in listed if one.get("run_id") == run_id]
-    assert found, listed
-    return str(found[0]["job_id"])
+    assert [one for one in listed if one.get("run_id") == run_id] == []
 
 
 def test_the_list_shows_the_newest_first(client: TestClient) -> None:

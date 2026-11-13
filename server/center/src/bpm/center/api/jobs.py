@@ -301,7 +301,10 @@ def listing(
     picked = [
         row
         for row in rows
-        if (scope is None or row["owner"] == scope)
+        # **시험 작업은 작업 목록에 두지 않는다** (C17, ADR-0146) — 설계자가 돌려 보는 것이고
+        # 배포도 패키지도 없어 운영자가 CON-05에서 읽을 것이 없다. 그 목록은 C17에 따로 있다.
+        if row["test_json"] is None
+        and (scope is None or row["owner"] == scope)
         and (found.company is None or row["company"] == found.company)
         and (not states or row["state"] in states)
         and (target_type is None or row["target_type"] == target_type)

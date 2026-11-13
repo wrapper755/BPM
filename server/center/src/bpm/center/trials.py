@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,11 @@ from bpm.contracts.workspace import (
     TrialReport,
     TrialTarget,
 )
+
+log = logging.getLogger(__name__)
+
+#: 배운 재생 명세가 가는 자리 (C1 패키지 구성 — ADR-0028).
+MEMORY_PATH = "memory/specs.json"
 
 #: 끝난 상태 — 더 올라오는 것을 받지 않는다.
 DONE_STATES = frozenset({"done", "failed", "cancelled"})
@@ -315,26 +321,38 @@ def _write_memory(
     if not isinstance(specs, list) or not specs:
         return 0
     data = workspaces.record_bytes(learned)
-    before = store.row(
-        "SELECT revision FROM workspace_files WHERE workspace_id = ? AND path = ?",
-        (workspace_id, "memory/specs.json"),
-    )
-    workspaces.write_file(
-        store,
-        workspace_dir=workspace_dir,
-        workspace_id=workspace_id,
-        path="memory/specs.json",
-        data=data,
-        if_match=None if before is None else before["revision"],
-        actor=actor,
-        company=None,
-    )
-    return len(specs)
+    for attempt in (1, 2):
+        before = store.row(
+            "SELECT revision FROM workspace_files WHERE workspace_id = ? AND path = ?",
+            (workspace_id, MEMORY_PATH),
+        )
+        try:
+            workspaces.write_file(
+                store,
+                workspace_dir=workspace_dir,
+                workspace_id=workspace_id,
+                path=MEMORY_PATH,
+                data=data,
+                if_match=None if before is None else before["revision"],
+                actor=actor,
+                company=None,
+            )
+        except ApiError:
+            # **판정을 잃지 않는다** — 둘이 한꺼번에 끝나면 `stale`이 날 수 있고, 그때 보고
+            # 전체를 버리면 그 시험 실행이 영원히 「도는 중」으로 남는다. 한 번 다시 걸고,
+            # 그래도 안 되면 **배운 것만 포기한다**(다시 돌리면 또 배운다).
+            if attempt == 2:
+                log.warning("배운 것을 적지 못했다 (%s) — 판정은 적는다", workspace_id)
+                return 0
+            continue
+        return len(specs)
+    return 0  # pragma: no cover - 위 루프가 늘 돌려준다
 
 
 __all__ = [
     "DONE_STATES",
     "KEEP_PER_WORKSPACE",
+    "MEMORY_PATH",
     "create",
     "get",
     "listing",
