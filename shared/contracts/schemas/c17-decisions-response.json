@@ -1,0 +1,151 @@
+{
+  "$defs": {
+    "DecisionInputInfo": {
+      "additionalProperties": true,
+      "description": "입력 열 하나. **이름은 `expression`**(`inputExpression` 본문)이고 `label`은 사람이 읽는 이름이다.",
+      "properties": {
+        "expression": {
+          "default": "",
+          "title": "Expression",
+          "type": "string"
+        },
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "default": "",
+          "title": "Label",
+          "type": "string"
+        },
+        "type": {
+          "default": "",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "title": "DecisionInputInfo",
+      "type": "object"
+    },
+    "DecisionOutputInfo": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "default": "",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "title": "DecisionOutputInfo",
+      "type": "object"
+    },
+    "DecisionRuleInfo": {
+      "additionalProperties": true,
+      "description": "규칙 줄 하나 — **칸의 원문**이다 (판정용 모델은 칸을 해석해 버린다).",
+      "properties": {
+        "cells": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cells",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "title": "DecisionRuleInfo",
+      "type": "object"
+    },
+    "DecisionTableInfo": {
+      "additionalProperties": true,
+      "description": "결정 하나(`dmn:decision` + `dmn:decisionTable`)를 격자로 (ADR-0148).",
+      "properties": {
+        "hit": {
+          "default": "UNIQUE",
+          "title": "Hit",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "$ref": "#/$defs/DecisionInputInfo"
+          },
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "outputs": {
+          "items": {
+            "$ref": "#/$defs/DecisionOutputInfo"
+          },
+          "title": "Outputs",
+          "type": "array"
+        },
+        "rules": {
+          "items": {
+            "$ref": "#/$defs/DecisionRuleInfo"
+          },
+          "title": "Rules",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "DecisionTableInfo",
+      "type": "object"
+    }
+  },
+  "$id": "urn:bpm:contracts:c17-decisions-response",
+  "additionalProperties": true,
+  "description": "`GET /api/v1/workspaces/{id}/decisions/{path}` — 그 파일의 결정표들.\n\n**결정표가 아닌 결정은 오지 않는다** — 격자로 그릴 것이 없다. 그래도 파일에는 남아 있고\n저장할 때 그대로 간다.",
+  "properties": {
+    "revision": {
+      "default": "",
+      "title": "Revision",
+      "type": "string"
+    },
+    "tables": {
+      "items": {
+        "$ref": "#/$defs/DecisionTableInfo"
+      },
+      "title": "Tables",
+      "type": "array"
+    }
+  },
+  "title": "DecisionsResponse",
+  "type": "object"
+}

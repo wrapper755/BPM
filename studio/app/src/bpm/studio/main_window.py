@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
 
 from bpm.contracts import Violation
 from bpm.contracts.bpmn_ext import BpmnProcess, BpmnReadError, read_process
+from bpm.contracts.dmn_table import decisions_of
 from bpm.qt.theme.tokens import SPACE_2
 from bpm.studio import (
     call_token,
@@ -53,7 +54,6 @@ from bpm.studio.call_editor import local_targets
 from bpm.studio.canvas import Canvas, CanvasError
 from bpm.studio.case_dialog import CaseDialog
 from bpm.studio.connect_dialog import CenterConnectDialog
-from bpm.studio.dmn_table import decisions_of
 from bpm.studio.explorer import Explorer
 from bpm.studio.extension_dialog import StudioExtensionsDialog, pin_patch
 from bpm.studio.extensions import Extensions

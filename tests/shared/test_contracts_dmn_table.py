@@ -1,4 +1,4 @@
-"""STU-04a 결정표 읽고 쓰기 (`studio/dmn_table.py`, ADR-0109) — 화면 없이.
+"""결정표 읽고 쓰기 (`contracts/dmn_table.py`, ADR-0109·0148) — 화면 없이.
 
 보는 것은 넷이다: 업무 예제의 결정표를 **손대지 않고 열어 저장하면 판정이 같은가**(글자가 아니라 판정 결과로),
 고친 것이 **판정에 그대로 나타나는가**, 고치는 결정표 **하나만** 바뀌고 모르는 것은 남는가, 칸 검사가
@@ -23,7 +23,7 @@ from bpm.contracts.dmn import (
     parse_cell,
     read_decisions,
 )
-from bpm.studio.dmn_table import (
+from bpm.contracts.dmn_table import (
     DmnTableError,
     Table,
     blank,

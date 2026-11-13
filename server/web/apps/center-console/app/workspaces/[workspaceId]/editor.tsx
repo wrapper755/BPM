@@ -8,6 +8,7 @@ import type { FileInfo } from "@bpm/api-types/c17-file-info";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import { loadWorkspaceFile, saveWorkspaceFile } from "@/app/actions";
 import { fileLabel, groupFiles, isEditable, opensWith } from "@/lib/workspaces";
+import { DecisionGrid } from "./decisions";
 import { Properties } from "./properties";
 import "@bpm/bpmn-canvas/canvas.css";
 
@@ -163,7 +164,7 @@ export function Workspace({
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {editing ? (
+          {editing && shows === "canvas" ? (
             <Button variant="primary" size="sm" onClick={() => void save()} disabled={!dirty || busy}>
               저장
             </Button>
@@ -229,15 +230,21 @@ export function Workspace({
                 onPicked={(id) => setPicked(id ? (canvas.current?.editor?.properties(id) ?? null) : null)}
                 onFailed={(cause) => setFailure(`다이어그램을 읽지 못했습니다 — ${cause.message}`)}
               />
+            ) : file && shows === "table" ? (
+              <DecisionGrid
+                key={file.path}
+                workspaceId={info.id}
+                path={file.path}
+                canWrite={editing}
+                onDirty={setDirty}
+              />
             ) : (
               <p className="p-6 text-body-sm text-text-muted">
                 {!file
                   ? "열린 정의가 없습니다. 왼쪽에서 정의를 고르거나 「파일에서 가져오기」로 그림을 들이세요."
-                  : shows === "table"
-                    ? "결정표 편집기는 아직입니다 (M11 조각 4d) — 지금은 그림만 고칩니다."
-                    : shows === "cases"
-                      ? "케이스 편집기는 아직입니다 (M11 조각 4d)."
-                      : "이 파일은 편집기에서 열지 않습니다."}
+                  : shows === "cases"
+                    ? "케이스 편집기는 아직입니다 (M11 조각 4d 나머지)."
+                    : "이 파일은 편집기에서 열지 않습니다."}
               </p>
             )}
           </div>

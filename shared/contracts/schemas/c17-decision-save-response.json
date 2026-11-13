@@ -1,0 +1,21 @@
+{
+  "$id": "urn:bpm:contracts:c17-decision-save-response",
+  "additionalProperties": true,
+  "description": "저장한 뒤 — 새 `revision`과 **막지 않은 경고**(겹친 입력 이름·빈 규칙 줄).",
+  "properties": {
+    "revision": {
+      "default": "",
+      "title": "Revision",
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "title": "DecisionSaveResponse",
+  "type": "object"
+}

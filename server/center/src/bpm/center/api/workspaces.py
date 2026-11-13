@@ -19,7 +19,7 @@ from urllib.parse import unquote
 
 from fastapi import APIRouter, Request, Response
 
-from bpm.center import design_work, trials, workspaces
+from bpm.center import decisions, design_work, trials, workspaces
 from bpm.center.api import server_runner
 from bpm.center.api.body import read_json as _json
 from bpm.center.auth import (
@@ -220,6 +220,43 @@ async def import_files(request: Request, workspace_id: str) -> Any:
         company=company_scope(found),
     )
     return Utf8JSONResponse(status_code=201, content=[one.to_json_dict() for one in made])
+
+
+# ─────────────────────────── 결정표 ───────────────────────────
+
+
+@router.get("/workspaces/{workspace_id}/decisions/{path:path}")
+def read_decisions(request: Request, workspace_id: str, path: str) -> Any:
+    """그 `.dmn`의 결정표들을 격자로 (ADR-0148). `ETag`는 **그 파일의 `revision`**이다."""
+    found = _reader(request)
+    answer = decisions.read(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        path=path,
+        company=company_scope(found),
+    )
+    return Utf8JSONResponse(
+        content=answer.to_json_dict(),
+        headers={"ETag": answer.revision, "Cache-Control": "no-store"},
+    )
+
+
+@router.put("/workspaces/{workspace_id}/decisions/{path:path}")
+async def write_decision(request: Request, workspace_id: str, path: str) -> Any:
+    """결정표 **하나**를 바꿔 쓴다. 막는 흠이 있으면 422 `bad_table`이고 아무것도 쓰지 않는다."""
+    found = _writer(request)
+    answer = decisions.save(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        path=path,
+        body=await _json(request),
+        if_match=request.headers.get("if-match"),
+        actor=found.actor,
+        company=company_scope(found),
+    )
+    return Utf8JSONResponse(content=answer.to_json_dict(), headers={"ETag": answer.revision})
 
 
 # ─────────────────────────── 시험 실행 ───────────────────────────

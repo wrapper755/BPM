@@ -35,6 +35,9 @@ import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import type { WorkspaceCreateRequest } from "@bpm/api-types/c17-workspace-create-request";
 import type { WorkspaceUpdateRequest } from "@bpm/api-types/c17-workspace-update-request";
 import type { FileInfo } from "@bpm/api-types/c17-file-info";
+import type { DecisionsResponse } from "@bpm/api-types/c17-decisions-response";
+import type { DecisionSaveRequest } from "@bpm/api-types/c17-decision-save-request";
+import type { DecisionSaveResponse } from "@bpm/api-types/c17-decision-save-response";
 import type { AccountInfo } from "@bpm/api-types/c5-account-info";
 import type { DeploymentRequest } from "@bpm/api-types/c5-deployment-request";
 import type { SessionInfo } from "@bpm/api-types/c5-session-info";
@@ -192,6 +195,18 @@ export const center = {
         "Content-Type": path.endsWith(".json") ? "application/json" : "text/plain; charset=utf-8",
         ...(revision ? { "If-Match": revision } : {}),
       },
+    }),
+  /**
+   * 결정표를 **격자로** 읽고 쓴다 (C17 §결정표, ADR-0148) — 브라우저는 DMN을 해석하지 않는다.
+   * 칸 문법이 두 벌이 되면 편집기가 받아 준 칸을 엔진이 거부한다.
+   */
+  workspaceDecisions: (workspaceId: string, path: string) =>
+    call<DecisionsResponse>(`${ws(workspaceId)}/decisions/${filePath(path)}`),
+  saveWorkspaceDecision: (workspaceId: string, path: string, body: DecisionSaveRequest, revision: string) =>
+    call<DecisionSaveResponse>(`${ws(workspaceId)}/decisions/${filePath(path)}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+      headers: revision ? { "If-Match": revision } : {},
     }),
   deleteWorkspaceFile: (workspaceId: string, path: string) =>
     call<void>(`${ws(workspaceId)}/files/${filePath(path)}`, { method: "DELETE" }),

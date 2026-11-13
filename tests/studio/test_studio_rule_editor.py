@@ -17,7 +17,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from bpm.contracts.bpmn_ext import read_process  # noqa: E402
 from bpm.contracts.dmn import read_decisions  # noqa: E402
-from bpm.studio.dmn_table import Decisions, decisions_of, read_tables  # noqa: E402
+from bpm.contracts.dmn_table import Decisions, decisions_of, read_tables  # noqa: E402
 from bpm.studio.rule_editor import NO_OUTPUT, NOT_IN_PACKAGE, NOT_IN_TABLE, RuleEditor  # noqa: E402
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
@@ -68,7 +68,7 @@ def test_examples_have_rule_tasks() -> None:
 
 
 def _examples_decisions() -> Decisions:
-    from bpm.studio.dmn_table import catalog  # noqa: PLC0415
+    from bpm.contracts.dmn_table import catalog  # noqa: PLC0415
 
     found, broken = catalog([(p, False) for p in sorted(EXAMPLES.glob("*.dmn"))])
     assert not broken

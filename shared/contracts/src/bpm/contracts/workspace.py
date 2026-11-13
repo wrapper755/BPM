@@ -190,6 +190,74 @@ class LibInstallRequest(SchemaVersioned):
     version: str
 
 
+# ─────────────────────────── 결정표 ───────────────────────────
+
+
+class DecisionInputInfo(ContractModel):
+    """입력 열 하나. **이름은 `expression`**(`inputExpression` 본문)이고 `label`은 사람이 읽는 이름이다."""
+
+    id: str = ""
+    expression: str = ""
+    label: str = ""
+    #: `typeRef` — 없으면 맞추지 않는다 (C14: 없으면 `"25" > 20`이 글자 비교가 된다).
+    type: str = ""
+
+
+class DecisionOutputInfo(ContractModel):
+    id: str = ""
+    name: str = ""
+    type: str = ""
+
+
+class DecisionRuleInfo(ContractModel):
+    """규칙 줄 하나 — **칸의 원문**이다 (판정용 모델은 칸을 해석해 버린다)."""
+
+    id: str = ""
+    #: 입력 열 수와 같다.
+    cells: list[str] = Field(default_factory=list)
+    #: 출력 열 수와 같다.
+    values: list[str] = Field(default_factory=list)
+    description: str = ""
+
+
+class DecisionTableInfo(ContractModel):
+    """결정 하나(`dmn:decision` + `dmn:decisionTable`)를 격자로 (ADR-0148)."""
+
+    id: str
+    name: str = ""
+    hit: str = "UNIQUE"
+    inputs: list[DecisionInputInfo] = Field(default_factory=list)
+    outputs: list[DecisionOutputInfo] = Field(default_factory=list)
+    rules: list[DecisionRuleInfo] = Field(default_factory=list)
+
+
+class DecisionsResponse(ContractModel):
+    """`GET /api/v1/workspaces/{id}/decisions/{path}` — 그 파일의 결정표들.
+
+    **결정표가 아닌 결정은 오지 않는다** — 격자로 그릴 것이 없다. 그래도 파일에는 남아 있고
+    저장할 때 그대로 간다.
+    """
+
+    tables: list[DecisionTableInfo] = Field(default_factory=list)
+    #: 그 파일의 `revision` — 저장할 때 `If-Match`에 싣는다 (C17 파일 규칙과 같다).
+    revision: str = ""
+
+
+class DecisionSaveRequest(SchemaVersioned):
+    """`PUT /api/v1/workspaces/{id}/decisions/{path}` — 결정표 **하나**를 바꿔 쓴다."""
+
+    table: DecisionTableInfo
+    #: 결정 id를 바꾸는 경우의 **옛 id**. 없으면 `table.id`를 찾는다.
+    original_id: str | None = None
+
+
+class DecisionSaveResponse(ContractModel):
+    """저장한 뒤 — 새 `revision`과 **막지 않은 경고**(겹친 입력 이름·빈 규칙 줄)."""
+
+    revision: str = ""
+    warnings: list[str] = Field(default_factory=list)
+
+
 # ─────────────────────────── 시험 실행 ───────────────────────────
 
 
@@ -392,6 +460,13 @@ __all__ = [
     "TrialReport",
     "TrialTarget",
     "WorkspaceCreateRequest",
+    "DecisionInputInfo",
+    "DecisionOutputInfo",
+    "DecisionRuleInfo",
+    "DecisionSaveRequest",
+    "DecisionSaveResponse",
+    "DecisionTableInfo",
+    "DecisionsResponse",
     "WorkspaceId",
     "WorkspaceInfo",
     "WorkspaceUpdateRequest",

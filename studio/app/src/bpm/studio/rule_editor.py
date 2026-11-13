@@ -33,10 +33,10 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import is_var_name
+from bpm.contracts.dmn_table import DecisionFile, Decisions, blank, io_names, summary
 from bpm.core.expr import ExprError, parse
 from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_2, SPACE_3
-from bpm.studio.dmn_table import DecisionFile, Decisions, blank, io_names, summary
 from bpm.studio.name_pick import NameDelegate
 
 #: 탭 이름.

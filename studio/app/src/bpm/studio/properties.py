@@ -40,9 +40,9 @@ from PySide6.QtWidgets import (
 )
 
 from bpm.contracts.bpmn_ext import ELEMENT_MODELS
+from bpm.contracts.dmn_table import Decisions
 from bpm.qt.theme import button_icon, set_role
 from bpm.qt.theme.tokens import SPACE_3
-from bpm.studio.dmn_table import Decisions
 from bpm.studio.long_text import LongText
 from bpm.studio.replay_specs import ReplaySpecs
 from bpm.studio.service_catalog import CallTarget, Catalog

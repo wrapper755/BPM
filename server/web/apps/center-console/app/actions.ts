@@ -21,6 +21,7 @@ import {
   type OperationTab,
   type Violation,
 } from "@/lib/adapter-editor";
+import type { DecisionTableInfo } from "@bpm/api-types/c17-decisions-response";
 import type { ExtensionDependent } from "@bpm/api-types/c7-extension-dependent";
 import type { ExtensionTestResult } from "@bpm/api-types/c7-extension-test-result";
 import type { ExtensionVersionInfo } from "@bpm/api-types/c7-extension-version-info";
@@ -919,5 +920,46 @@ export async function loadWorkspaceFile(
     return await center.readWorkspaceFile(workspaceId, path);
   } catch (cause) {
     return { error: message(cause) };
+  }
+}
+
+/** 결정표 격자 (C17 §결정표). 브라우저는 DMN을 해석하지 않는다 — Center가 읽고 쓴다. */
+export async function loadDecisions(
+  workspaceId: string,
+  path: string,
+): Promise<{ tables?: DecisionTableInfo[]; revision?: string; error?: string }> {
+  try {
+    return await center.workspaceDecisions(workspaceId, path);
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+export interface DecisionSaveResult {
+  revision?: string;
+  /** 막지 않은 것 — 겹친 입력 이름·빈 규칙 줄. */
+  warnings?: string[];
+  error?: string;
+  stale?: boolean;
+}
+
+export async function saveDecision(
+  workspaceId: string,
+  path: string,
+  table: DecisionTableInfo,
+  originalId: string,
+  revision: string,
+): Promise<DecisionSaveResult> {
+  try {
+    const made = await center.saveWorkspaceDecision(
+      workspaceId,
+      path,
+      { schema: 1, table, original_id: originalId },
+      revision,
+    );
+    return { revision: made.revision, warnings: made.warnings };
+  } catch (cause) {
+    const stale = cause instanceof CenterError && cause.status === 409;
+    return { error: message(cause), ...(stale ? { stale: true } : {}) };
   }
 }

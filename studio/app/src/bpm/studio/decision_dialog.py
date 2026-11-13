@@ -35,10 +35,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from bpm.qt.messages import ask_unsaved
-from bpm.qt.theme import button_icon, dress_button_box, set_role
-from bpm.qt.theme.tokens import SPACE_3
-from bpm.studio.dmn_table import (
+from bpm.contracts.dmn_table import (
     CELL_HELP,
     HITS,
     TYPES,
@@ -48,6 +45,9 @@ from bpm.studio.dmn_table import (
     problems,
     write_table,
 )
+from bpm.qt.messages import ask_unsaved
+from bpm.qt.theme import button_icon, dress_button_box, set_role
+from bpm.qt.theme.tokens import SPACE_3
 
 TITLE = "결정표"
 READ_ONLY_NOTE = (
