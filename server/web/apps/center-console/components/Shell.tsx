@@ -39,6 +39,11 @@ const LATER_BADGE = "아직";
  */
 const NAV: Array<{ label: string; items: NavItem[] }> = [
   {
+    // 설계가 콘솔 안으로 들어왔다 (ADR-0143) — 작업공간 하나가 BPM 프로세스 한 벌이다 (C17).
+    label: "설계",
+    items: [{ label: "작업공간", href: "/workspaces" }],
+  },
+  {
     label: "운영 현황",
     items: [
       { label: "프로세스", href: "/bots" },
@@ -84,11 +89,17 @@ export async function Shell({
   mode,
   actor,
   current,
+  full,
   children,
 }: {
   mode: Mode;
   actor: string;
   current: string;
+  /**
+   * **본문을 가득 쓴다** — 패딩도 지금 자리 줄도 두지 않는다 (ADR-0145 §3). 작업공간(CON-20)처럼
+   * 캔버스가 본문의 주인인 화면이 쓰고, 그 화면이 **제 머리 띠를 스스로 그린다**.
+   */
+  full?: boolean;
   children: React.ReactNode;
 }) {
   // **회사가 정해진 계정**(회사 관리자·회사 보기 전용)에게는 Center 관리자만의 메뉴를 가린다 (C16).
@@ -174,13 +185,15 @@ export async function Shell({
       </nav>
 
       <main
-        className="page-main min-w-0 p-6"
+        className={full ? "flex min-w-0 flex-col" : "page-main min-w-0 p-6"}
         style={{
           marginTop: "var(--size-topbar-height)",
           marginLeft: "var(--size-nav-width)",
+          // 가득 쓰는 화면은 **남는 높이를 다 가진다** — 캔버스가 제 높이를 알아야 그릴 수 있다.
+          ...(full ? { height: "calc(100vh - var(--size-topbar-height))" } : {}),
         }}
       >
-        <Crumb current={current} />
+        {full ? null : <Crumb current={current} />}
         {children}
       </main>
     </div>

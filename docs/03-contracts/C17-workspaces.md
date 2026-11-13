@@ -75,7 +75,7 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | `GET /workspaces/{id}` | 읽기 | `WorkspaceInfo` |
 | `PATCH /workspaces/{id}` | 관리자 | 이름·판·설명·업무 자리·진입 정의 (STU-06이 하던 일) |
 | `DELETE /workspaces/{id}` | 관리자 | 지운다. **배포된 패키지는 그대로다** (패키지가 원본이고 작업공간은 그것을 짓는 자리다) |
-| `POST /workspaces/{id}/import` | 관리자 | `.bpmn` 하나 또는 **옛 작업 폴더 zip**을 받아 넣는다 (ADR-0143 §2 — 밖에서 그린 그림이 들어오는 자리) |
+| `POST /workspaces/{id}/import` | 관리자 | `.bpmn` 하나 또는 **옛 작업 폴더 zip**을 받아 넣는다 (ADR-0143 §2 — 밖에서 그린 그림이 들어오는 자리). 파일 이름은 `X-BPM-File-Name` 헤더이고 **UTF-8 퍼센트 인코딩**이다 (헤더는 ASCII다 — `X-BPM-Actor`와 같은 규칙, CLAUDE.md §5). 없으면 zip으로 본다 |
 
 ## 파일
 

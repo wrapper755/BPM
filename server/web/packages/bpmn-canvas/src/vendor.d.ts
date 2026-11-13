@@ -81,6 +81,9 @@ interface BpmnServices {
 declare class BpmnBase {
   constructor(options: Record<string, unknown>);
   get<K extends keyof BpmnServices>(name: K): BpmnServices[K];
+  // 표에 없는 서비스는 쓰는 쪽이 제 타입을 적는다 — 이 선언은 **앱 전체에 걸리므로**(전역) 여기서
+  // 막으면 bpmn-js를 제 손으로 쓰던 화면(CON-01의 다이어그램)이 깨진다.
+  get<T>(name: string): T;
   on(
     event: string,
     handler: (payload: { newSelection?: import("./types").Shape[] }) => void,

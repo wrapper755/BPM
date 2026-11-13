@@ -31,6 +31,10 @@ import type { ErrorBody } from "@bpm/api-types/c5-error-body";
 import type { RunListing } from "@bpm/api-types/c3-run-listing";
 import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import type { RunEventsResponse } from "@bpm/api-types/c3-run-events-response";
+import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
+import type { WorkspaceCreateRequest } from "@bpm/api-types/c17-workspace-create-request";
+import type { WorkspaceUpdateRequest } from "@bpm/api-types/c17-workspace-update-request";
+import type { FileInfo } from "@bpm/api-types/c17-file-info";
 import type { AccountInfo } from "@bpm/api-types/c5-account-info";
 import type { DeploymentRequest } from "@bpm/api-types/c5-deployment-request";
 import type { SessionInfo } from "@bpm/api-types/c5-session-info";
@@ -74,7 +78,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
  * Center 한 번. 행위자는 **세션이 정한다** (ADR-0090) — Center가 세션 토큰에서 계정 아이디를
  * 읽으므로 `X-BPM-Actor`를 싣지 않는다.
  */
-async function send<T>(path: string, init: RequestInit | undefined, token: string | null): Promise<T> {
+async function reach(path: string, init: RequestInit | undefined, token: string | null): Promise<Response> {
   const response = await fetch(`${CENTER_URL}${path}`, {
     ...init,
     headers: {
@@ -93,6 +97,11 @@ async function send<T>(path: string, init: RequestInit | undefined, token: strin
     const body = (await response.json().catch(() => null)) as ErrorBody | null;
     throw new CenterError(response.status, body, body?.message ?? `Center가 ${response.status}를 돌려줬습니다`);
   }
+  return response;
+}
+
+async function send<T>(path: string, init: RequestInit | undefined, token: string | null): Promise<T> {
+  const response = await reach(path, init, token);
   if (response.status === 204) return undefined as T;
   // JSON이 아닌 답(C5 `diagram`의 BPMN XML)은 글자 그대로 돌려준다.
   if (!(response.headers.get("content-type") ?? "").includes("json")) return (await response.text()) as T;
@@ -137,7 +146,69 @@ const ORG_PATH: Record<OrgKind, string> = {
 const pkg = (packageId: string, version: string) =>
   `/api/v1/packages/${encodeURIComponent(packageId)}/${encodeURIComponent(version)}`;
 
+/**
+ * 작업공간 파일 하나 — **본문과 `revision`을 함께** 준다 (C17: `ETag`가 `revision`이다).
+ * 고칠 때 그것을 `If-Match`에 되돌려 보내 **남의 저장을 덮어쓰지 않는다**.
+ */
+async function workspaceFile(path: string): Promise<{ text: string; revision: string }> {
+  const found = await session();
+  if (!found) throw new CenterError(401, null, "로그인이 필요합니다");
+  const response = await reach(path, undefined, found.token);
+  return { text: await response.text(), revision: response.headers.get("etag") ?? "" };
+}
+
+const ws = (workspaceId: string) => `/api/v1/workspaces/${encodeURIComponent(workspaceId)}`;
+
+/** 파일 경로는 조각마다 감싼다 — `/`는 그대로 두어야 Center가 자리를 읽는다 (C17 경로 규칙). */
+const filePath = (path: string) => path.split("/").map(encodeURIComponent).join("/");
+
 export const center = {
+  /**
+   * 작업공간 (C17·CON-20). 회사가 정해진 계정은 **제 회사 것만** 본다 — 콘솔이 거르지 않는다 (C16).
+   */
+  workspaces: (query: { q?: string } = {}) =>
+    call<WorkspaceInfo[]>(`/api/v1/workspaces${query.q ? `?q=${encodeURIComponent(query.q)}` : ""}`),
+  workspace: (workspaceId: string) => call<WorkspaceInfo>(ws(workspaceId)),
+  createWorkspace: (body: WorkspaceCreateRequest) =>
+    call<WorkspaceInfo>("/api/v1/workspaces", { method: "POST", body: JSON.stringify(body) }),
+  /** 이름·판·설명·업무 자리·진입 정의 (C17 — STU-06이 하던 일). */
+  updateWorkspace: (workspaceId: string, body: WorkspaceUpdateRequest) =>
+    call<WorkspaceInfo>(ws(workspaceId), { method: "PATCH", body: JSON.stringify(body) }),
+  /** 지운다. **배포된 패키지는 그대로다** — 패키지가 원본이고 작업공간은 그것을 짓는 자리다 (C17). */
+  deleteWorkspace: (workspaceId: string) => call<void>(ws(workspaceId), { method: "DELETE" }),
+
+  workspaceFiles: (workspaceId: string) => call<FileInfo[]>(`${ws(workspaceId)}/files`),
+  readWorkspaceFile: (workspaceId: string, path: string) =>
+    workspaceFile(`${ws(workspaceId)}/files/${filePath(path)}`),
+  /**
+   * 쓰기 — `revision`을 `If-Match`에 싣는다. 다르면 409 `stale`이고 **아무것도 쓰지 않는다** (C17).
+   * 새 파일이면 `revision`을 비운다.
+   */
+  writeWorkspaceFile: (workspaceId: string, path: string, text: string, revision: string) =>
+    call<FileInfo>(`${ws(workspaceId)}/files/${filePath(path)}`, {
+      method: "PUT",
+      body: text,
+      headers: {
+        "Content-Type": path.endsWith(".json") ? "application/json" : "text/plain; charset=utf-8",
+        ...(revision ? { "If-Match": revision } : {}),
+      },
+    }),
+  deleteWorkspaceFile: (workspaceId: string, path: string) =>
+    call<void>(`${ws(workspaceId)}/files/${filePath(path)}`, { method: "DELETE" }),
+  /**
+   * `.bpmn` 하나 또는 옛 작업 폴더 zip (C17 — 밖에서 그린 그림이 들어오는 자리).
+   * 이름은 헤더로 가는데 **헤더는 ASCII다** (CLAUDE.md §5) — 퍼센트 인코딩해 싣는다.
+   */
+  importIntoWorkspace: (workspaceId: string, raw: ArrayBuffer, fileName: string) =>
+    call<FileInfo[]>(`${ws(workspaceId)}/import`, {
+      method: "POST",
+      body: raw,
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "X-BPM-File-Name": encodeURIComponent(fileName),
+      },
+    }),
+
   /**
    * 서버 실행기 목록 (C12·CON-12). **목록 하나가 상세의 재료까지 들고 온다** — 실행 중·기다리는
    * 실행·준비 상태·확장·최근 배치 결정이 모두 한 줄에 있어 상세가 따로 부를 길이 없다.

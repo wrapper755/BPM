@@ -17,6 +17,9 @@ importers:
       '@bpm/api-types':
         specifier: workspace:*
         version: link:../../packages/api-types
+      '@bpm/bpmn-canvas':
+        specifier: workspace:*
+        version: link:../../packages/bpmn-canvas
       '@bpm/ui':
         specifier: workspace:*
         version: link:../../packages/ui

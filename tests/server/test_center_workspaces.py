@@ -17,6 +17,7 @@ import zipfile
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -305,6 +306,18 @@ def test_a_single_drawing_lands_in_process(client: TestClient) -> None:
     assert client.get(
         f"{API}/workspaces/finance.invoice/files/process/main.bpmn", headers=ADMIN
     ).status_code == 200
+
+
+def test_a_korean_file_name_comes_percent_encoded(client: TestClient) -> None:
+    """헤더는 ASCII다 (CLAUDE.md §5) — 보내는 쪽이 퍼센트 인코딩하고 **받는 쪽이 푼다**.
+
+    풀지 않으면 `주문.bpmn`이 `%EC%A3%BC%EB%AC%B8.bpmn`이라는 이름으로 담긴다.
+    """
+    new_workspace(client)
+    made(client.post(f"{API}/workspaces/finance.invoice/import", content=XML.encode("utf-8"),
+                     headers={**ADMIN, "X-BPM-File-Name": quote("주문.bpmn")}))
+    listed = made(client.get(f"{API}/workspaces/finance.invoice/files", headers=ADMIN), 200)
+    assert "process/주문.bpmn" in {one["path"] for one in listed}
 
 
 def test_an_old_work_folder_zip_loses_its_wrapper(client: TestClient) -> None:

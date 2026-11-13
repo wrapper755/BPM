@@ -846,3 +846,78 @@ export async function removeOrgItem(kind: "department" | "staff", id: string, co
   revalidatePath("/organization");
   redirect(orgHref("company", company));
 }
+
+// ─────────────────────────── 작업공간 (C17·CON-20) ───────────────────────────
+
+/** 저장의 답 — 새 `revision`을 돌려줘야 **다음 저장이 또 `If-Match`를 싣는다** (C17). */
+export interface SaveResult {
+  revision?: string;
+  error?: string;
+  /** 남이 먼저 저장했다 (409 `stale`) — 화면이 합치지 않고 묻는다. */
+  stale?: boolean;
+}
+
+/**
+ * 새 작업공간 (C17). 파일을 함께 주면 만든 뒤 **바로 가져온다** — 「파일에서 가져오기」가
+ * 빈 작업공간을 남기고 실패하지 않게 한 걸음으로 묶는다.
+ */
+export async function createWorkspace(_previous: ActionResult, form: FormData): Promise<ActionResult> {
+  const id = String(form.get("id") ?? "").trim();
+  const name = String(form.get("name") ?? "").trim();
+  const version = String(form.get("version") ?? "").trim() || "0.1.0";
+  const description = String(form.get("description") ?? "").trim();
+  if (!id) return { error: "id를 넣으세요." };
+  if (!name) return { error: "이름을 넣으세요." };
+  const file = form.get("file");
+  const bringing = file instanceof File && file.size > 0 ? file : null;
+  try {
+    // `schema`는 이 계약의 번호다 (C17 schema 1) — 모델이 요구한다.
+    await center.createWorkspace({ schema: 1, id, name, version, ...(description ? { description } : {}) });
+    if (bringing) {
+      await center.importIntoWorkspace(id, await bringing.arrayBuffer(), bringing.name);
+    }
+    revalidatePath("/workspaces");
+    return {};
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 파일 저장 (C17 `PUT …/files/{path}`). `revision`이 낡으면 **아무것도 쓰이지 않는다**. */
+export async function saveWorkspaceFile(
+  workspaceId: string,
+  path: string,
+  revision: string,
+  text: string,
+): Promise<SaveResult> {
+  try {
+    const made = await center.writeWorkspaceFile(workspaceId, path, text, revision);
+    return { revision: made.revision };
+  } catch (cause) {
+    const stale = cause instanceof CenterError && cause.status === 409;
+    return { error: message(cause), ...(stale ? { stale: true } : {}) };
+  }
+}
+
+/** 작업공간 지우기 — **배포된 패키지는 그대로다** (C17). */
+export async function deleteWorkspace(workspaceId: string): Promise<ActionResult> {
+  try {
+    await center.deleteWorkspace(workspaceId);
+    revalidatePath("/workspaces");
+    return {};
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 파일 본문과 `revision` — 편집기가 고를 때마다 부른다 (C17). */
+export async function loadWorkspaceFile(
+  workspaceId: string,
+  path: string,
+): Promise<{ text?: string; revision?: string; error?: string }> {
+  try {
+    return await center.readWorkspaceFile(workspaceId, path);
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}

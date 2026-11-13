@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import unquote
 
 from fastapi import APIRouter, Request, Response
 
@@ -189,11 +190,24 @@ def delete_file(request: Request, workspace_id: str, path: str) -> Response:
     return Response(status_code=204)
 
 
+def _file_name(request: Request) -> str:
+    """가져오는 파일의 이름 — 퍼센트 인코딩을 푼다. 풀리지 않으면 받은 글 그대로다
+    (이름 하나 때문에 가져오기를 거부하지 않는다 — 경로 규칙이 그 뒤에서 본다)."""
+    raw = request.headers.get("x-bpm-file-name", "").strip()
+    if not raw:
+        return "bundle.zip"
+    try:
+        return unquote(raw, errors="strict") or "bundle.zip"
+    except (UnicodeDecodeError, ValueError):
+        return raw
+
+
 @router.post("/workspaces/{workspace_id}/import")
 async def import_files(request: Request, workspace_id: str) -> Any:
     """`.bpmn` 하나 또는 **옛 작업 폴더 zip** — 밖에서 그린 그림이 들어오는 자리 (ADR-0143 §2).
 
-    이름은 `X-BPM-File-Name` 헤더로 받는다 (ASCII만 — CLAUDE.md §5). 없으면 zip으로 본다.
+    이름은 `X-BPM-File-Name` 헤더로 받는다. 헤더는 ASCII라서 **UTF-8 퍼센트 인코딩**이고
+    (CLAUDE.md §5 — `X-BPM-Actor`와 같은 규칙) 여기서 푼다. 없으면 zip으로 본다.
     """
     found = _writer(request)
     made = workspaces.import_into(
@@ -201,7 +215,7 @@ async def import_files(request: Request, workspace_id: str) -> Any:
         workspace_dir=_dir(request),
         workspace_id=workspace_id,
         raw=await request.body(),
-        file_name=request.headers.get("x-bpm-file-name", "bundle.zip"),
+        file_name=_file_name(request),
         actor=found.actor,
         company=company_scope(found),
     )

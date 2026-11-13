@@ -57,7 +57,20 @@ export function BpmnCanvas({
   const handlers = useRef({ onChanged, onPicked, onImported, onFailed });
   handlers.current = { onChanged, onPicked, onImported, onFailed };
 
-  useImperativeHandle(ref, () => ({ editor: editor.current, viewer: viewer.current }), [mode]);
+  // **읽을 때 꺼내 준다** — 캔버스는 effect에서 지어지는데 손잡이는 그보다 먼저 만들어져,
+  // 값을 그때 담으면 늘 `null`이다.
+  useImperativeHandle(
+    ref,
+    () => ({
+      get editor() {
+        return editor.current;
+      },
+      get viewer() {
+        return viewer.current;
+      },
+    }),
+    [],
+  );
 
   // 캔버스를 짓는다 — 모드가 바뀌면 다시 짓는다 (모델러와 뷰어는 다른 배포본이다).
   useEffect(() => {
@@ -89,11 +102,16 @@ export function BpmnCanvas({
         if (xml) {
           const found = await canvas.importXML(xml);
           if (alive) handlers.current.onImported?.(found);
+          // **들인 뒤에 사실대로 알린다** — bpmn-js가 들이면서 `commandStack.changed`를 한 번 내므로
+          // 그 말만 들으면 **연 적밖에 없는 그림이 「저장 안 한 변경」**이 된다. 캔버스 자신은
+          // 들인 뒤 그 표시를 바로잡으므로(자동 배치를 했을 때만 참) 그 값을 그대로 전한다.
+          if (alive && canvas instanceof CanvasEditor) handlers.current.onChanged?.(canvas.dirty);
           return;
         }
         if (canvas instanceof CanvasEditor) {
           if (empty) await canvas.createEmpty(empty.processId, empty.name);
           else canvas.clear();
+          if (alive) handlers.current.onChanged?.(canvas.dirty);
         }
       } catch (error) {
         if (alive) handlers.current.onFailed?.(error instanceof Error ? error : new Error(String(error)));
