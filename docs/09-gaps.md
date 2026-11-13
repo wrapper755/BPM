@@ -61,9 +61,9 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 **없는 것**: 공유 BPM 프로세스 설치(`POST …/libs`)와 **화면**(CON-20 — 조각 4). 그래서 지금 설계를
 **사람이 할 수 있는 길은 데스크톱 Studio뿐**이다 (API는 돌지만 편집기가 없다).
 
-**화면의 배치안은 적었다** ([center-console-workspace.md](../server/docs/screens/center-console-workspace.md)) —
-거기 `> 제안:` 셋이 아직 열려 있다: 탭을 셋으로 둘지(ADR-0145는 여섯이라 바꾸려면 새 ADR이 필요하다),
-저장이 「저장」 단추인지 자동인지, 「내 PC로 내려받기」를 둘지.
+**화면의 배치는 정했다** ([center-console-workspace.md](../server/docs/screens/center-console-workspace.md)) —
+탭 셋 + 탐색기가 가운데를 정한다([ADR-0147](decisions/0147-workspace-has-three-tabs.md)), 저장은 「저장」 단추,
+「내 PC로 내려받기」는 없다. 남은 것은 **만드는 일**이다.
 
 **전송에서 먼저 정할 것은 없다** — 미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다
 (C17·C12에 적혀 있다).
