@@ -33,7 +33,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 | C13 | **구현됨** | `contracts.extension`·`core.extensions` | — (닫았다 — 기여 지점마다 읽는 쪽이 있다: 호스트·Studio·PC 실행기·콘솔·Center) |
 | C14 | **구현됨** | `contracts.bpmn_ext` B1~B17 + `contracts.dmn` | — (닫았다 — 엔진이 수행하고 Studio가 편집·검사하고 예제 49개가 이 형식이다. schema 1에서 **쓰지 않기로 적은 것**은 범위 결정이다) |
 | C15 | **구현됨** | `contracts.external_task`, Center `api/external_tasks.py` (15판) + **양쪽** — 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`server/adapter_consumer` | — (조각 2~4가 닫았고 긴 작업은 [ADR-0103](decisions/0103-long-external-tasks.md)이 닫았다, §3-17) |
-| C17 | **초안** | 알맹이(`core.testrun`)만 돈다 — 전송은 없다 | 작업공간 저장·파일 API·시험 실행 내려보내기·실행 전 검사·배포 후보로 만들기. **먼저 정할 것은 없다** — 미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다. §3-34 |
+| C17 | **초안** | 작업공간·파일·묶음·시험 실행·검사·짓기가 돈다 | 공유 BPM 프로세스 설치와 **화면**(CON-20). **먼저 정할 것은 없다** — 미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다. §3-34 |
 
 **열둘이 「구현됨」이고 C17(작업공간)은 「초안」이다** (C12가 M7 다섯째 조각에서, C15가 ADR-0102 조각 4에서 올라왔다. C17은 M11이 구현한다 — §3-34). C8·C9·C10은 UI 자동화 확장과 함께 지웠다 ([ADR-0114](decisions/0114-remove-ui-automation.md) — §3-28). 상태 셋의 뜻은 [03-contracts/README](03-contracts/README.md) §상태에 적었다 — 적혀 있지 않아 올릴 때마다 사람이 다시 물었다.
 
@@ -55,9 +55,11 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 가져오기, 30판)과 **시험 실행**(31판 — 줄에 세우고 하트비트로 내려보내고 진행·판정·배운 것을 적는다),
 **실행기의 시험 모드**(`testmode.py`).
 
-**없는 것**: 실행 전 검사·짓기의 전송(`checks[]`·`builds[]`와 지은 zip 올리기), 공유 BPM 프로세스 설치,
-그리고 **화면**(CON-20 — 조각 4). 그래서 지금 설계를 **사람이 할 수 있는 길은 데스크톱 Studio뿐**이다
-(API는 돌지만 편집기가 없다).
+**실행 전 검사와 짓기도 돈다** (32판 — 하트비트의 `checks[]`·`builds[]`, 검사 캐시, 지은 zip을 Center가
+제 이름으로 등록).
+
+**없는 것**: 공유 BPM 프로세스 설치(`POST …/libs`)와 **화면**(CON-20 — 조각 4). 그래서 지금 설계를
+**사람이 할 수 있는 길은 데스크톱 Studio뿐**이다 (API는 돌지만 편집기가 없다).
 
 **먼저 정할 것은 없다** — 미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다
 (C17·C12에 적혀 있다).

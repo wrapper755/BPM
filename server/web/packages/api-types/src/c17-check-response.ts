@@ -3,15 +3,21 @@
    그다음 `pnpm --filter @bpm/api-types generate`. */
 
 /**
- * `POST /api/v1/workspaces/{id}/check`의 답.
+ * `POST`·`GET /api/v1/workspaces/{id}/check`의 답.
  *
  * **오류만 돌리기를 막는다** — 경고는 보이고 사람이 판단한다 (C14 §검사 규칙).
  * `cached`면 실행기에 다시 묻지 않고 담아 둔 것을 준 것이다 (ADR-0146 — 저장할 때마다 묻지 않는다).
+ *
+ * **아직 안 끝났으면 `state: pending`이고 202다** — 검사는 실행기가 하고 지시는 하트비트로
+ * 내려가므로 주기만큼 늦을 수 있다. 콘솔은 `GET`으로 다시 묻는다. 끝났으면 `done`이다.
  */
 export interface CheckResponse {
   cached?: boolean;
-  checked_at: string;
-  checked_revision: string;
+  check_id?: string;
+  checked_at?: string | null;
+  checked_revision?: string;
+  reason?: string | null;
+  state?: string;
   violations?: Violation[];
   [k: string]: unknown;
 }

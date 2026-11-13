@@ -33,6 +33,10 @@ from bpm.contracts.server_runner import RunningRun
 from bpm.contracts.workspace import (
     VERDICT_ERROR,
     VERDICT_STOPPED,
+    BuildDispatch,
+    BuildResult,
+    CheckDispatch,
+    CheckResult,
     TrialTarget,
 )
 from bpm.core.replay import read_memory
@@ -45,7 +49,10 @@ from bpm.core.testrun import (
     RunSettings,
     Workspace,
     read_cases,
+    readiness,
 )
+from bpm.core.testrun.packaging import default_lib_name, default_name, export, export_lib
+from bpm.core.testrun.readiness import inspect
 from bpm.core.testrun.workspace import RECORD_NAME
 from bpm.server_runner.center_client import CenterClient, CenterProblem
 from bpm.server_runner.settings import Settings
@@ -181,27 +188,8 @@ class Trial(threading.Thread):
         )
 
     def _unpack(self) -> BpmProcess:
-        """묶음을 받아 풀고 작업 폴더로 읽는다.
-
-        **경로를 믿지 않는다** — Center가 담을 때 경로 규칙을 지났지만 zip은 길을 타고 오는
-        것이라 푸는 쪽에서 다시 본다 (패키지 설치와 같은 결, C2 V5).
-        """
-        raw = self.client.download_bundle(self.target.workspace_id)
-        root = self.folder
-        shutil.rmtree(root, ignore_errors=True)
-        root.mkdir(parents=True)
-        with zipfile.ZipFile(BytesIO(raw)) as archive:
-            for name in archive.namelist():
-                if name.endswith("/"):
-                    continue
-                found = (root / name).resolve()
-                if root.resolve() not in found.parents:
-                    raise ValueError(f"묶음에 위험한 경로가 있다: {name}")
-                found.parent.mkdir(parents=True, exist_ok=True)
-                found.write_bytes(archive.read(name))
-        if not (root / RECORD_NAME).is_file():
-            raise ValueError("묶음에 작업 폴더 기록이 없다")
-        return Workspace(root.parent).read(root, group="trial")
+        """묶음을 받아 풀고 작업 폴더로 읽는다 — **검사·짓기와 같은 함수**다 (`unpack`)."""
+        return unpack(self.client, self.target.workspace_id, self.folder)
 
     def _case(self, process: BpmProcess, definition: Any) -> Any:
         """케이스 하나 — **비우면 비교하지 않는다** (`비교 안 함`).
@@ -293,6 +281,131 @@ class Trial(threading.Thread):
             self._variables = dict(variables)
 
 
+class DesignWork(threading.Thread):
+    """검사·짓기 하나 — **작업이 아니다** (실행 id도 C3 사건도 없다, ADR-0146).
+
+    하트비트 루프를 막지 않으려고 스레드로 둔다: 묶음을 받고 그림을 읽는 데 한두 걸음이 걸리고,
+    그 사이 하트비트가 늦으면 Center가 실행기를 잃은 것으로 본다.
+
+    **둘을 한 클래스로 둔다** — 받는 것(묶음)과 올리는 자리가 같고, 다른 것은 「무엇을 하나」
+    하나뿐이다.
+    """
+
+    def __init__(
+        self,
+        *,
+        check: CheckDispatch | None = None,
+        build: BuildDispatch | None = None,
+        settings: Settings,
+        client: CenterClient,
+        host: Any = None,
+        context: Any = None,
+        externals: Any = (),
+        on_check: Any = None,
+        on_build: Any = None,
+    ) -> None:
+        assert (check is None) != (build is None), "검사 아니면 짓기 하나다"
+        name = check.check_id if check is not None else (build.build_id if build is not None else "")
+        super().__init__(name=f"design-{name}", daemon=True)
+        self.check = check
+        self.build = build
+        self.settings = settings
+        self.client = client
+        self.host = host
+        self.context = context
+        self.externals = externals
+        self.on_check = on_check
+        self.on_build = on_build
+
+    @property
+    def folder(self) -> Path:
+        return self.settings.data_path / "design" / self.name
+
+    def run(self) -> None:
+        try:
+            if self.check is not None:
+                self._inspect(self.check)
+            elif self.build is not None:
+                self._build(self.build)
+        except Exception as e:  # noqa: BLE001 — 조용히 죽으면 콘솔이 영원히 기다린다
+            log.exception("설계 일 %s가 실패했다", self.name)
+            reason = f"{type(e).__name__}: {e}"
+            if self.check is not None and self.on_check is not None:
+                self.on_check(CheckResult(check_id=self.check.check_id, reason=reason))
+            if self.build is not None and self.on_build is not None:
+                self.on_build(BuildResult(build_id=self.build.build_id, ok=False, reason=reason))
+        finally:
+            shutil.rmtree(self.folder, ignore_errors=True)
+            shutil.rmtree(self.folder.parent / f"{self.name}-out", ignore_errors=True)
+
+    def _inspect(self, dispatch: CheckDispatch) -> None:
+        """C14 B1~B17 + 식 검사 + 사전 점검을 한 모양으로 모은다 (`core.testrun.readiness`).
+
+        **가르지 않는다** — B15(도우미 호출 모양)가 `core.expr_check`에 있어 Center가 못 하고,
+        사전 점검은 깔린 확장을 보는 일이다 (ADR-0146). 결과 모양은 Studio가 내던 그것이다.
+        """
+        process = unpack(self.client, dispatch.workspace_id, self.folder)
+        definition = process.entry_definition
+        if definition is None or definition.process is None:
+            self._tell_check(CheckResult(check_id=dispatch.check_id, reason="읽을 정의가 없다"))
+            return
+        found = inspect(definition.process, process)
+        found += readiness(
+            process, host=self.host, context=self.context, external_ids=self.externals
+        )
+        self._tell_check(CheckResult(check_id=dispatch.check_id, violations=found))
+
+    def _build(self, dispatch: BuildDispatch) -> None:
+        """배포 후보 zip 하나를 짓고 **C17의 올리기 길로** 올린다 (ADR-0146).
+
+        짓는 코드는 데스크톱 Studio가 쓰던 그것이다 (`core.testrun.packaging`) — 매니페스트를
+        그림에서 모으고 시험 케이스는 넣지 않는다. 받는 검사는 Center가 C5와 같은 함수로 한다.
+        """
+        process = unpack(self.client, dispatch.workspace_id, self.folder)
+        out = self.folder.parent / f"{self.name}-out"
+        out.mkdir(parents=True, exist_ok=True)
+        # **이름은 짓는 쪽이 정한다** (`default_name`) — Center는 zip 안의 매니페스트를 읽는다.
+        if dispatch.kind == "process_lib":
+            target = out / default_lib_name(process)
+            made = export_lib(process, process.definitions, target, by=EXECUTOR)
+        else:
+            target = out / default_name(process)
+            made = export(process, target, by=EXECUTOR)
+        self.client.put_artifact(dispatch.workspace_id, dispatch.build_id, made.read_bytes())
+        self._tell_build(BuildResult(build_id=dispatch.build_id, ok=True))
+
+    def _tell_check(self, result: CheckResult) -> None:
+        if self.on_check is not None:
+            self.on_check(result)
+
+    def _tell_build(self, result: BuildResult) -> None:
+        if self.on_build is not None:
+            self.on_build(result)
+
+
+def unpack(client: CenterClient, workspace_id: str, folder: Path) -> BpmProcess:
+    """묶음을 받아 풀고 작업 폴더로 읽는다 — 시험 실행·검사·짓기가 **같은 길**이다 (C17).
+
+    **경로를 믿지 않는다**: Center가 담을 때 경로 규칙을 지났지만 zip은 길을 타고 오는 것이라
+    푸는 쪽에서 다시 본다 (패키지 설치와 같은 결, C2 V5).
+    """
+    raw = client.download_bundle(workspace_id)
+    shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir(parents=True)
+    with zipfile.ZipFile(BytesIO(raw)) as archive:
+        for name in archive.namelist():
+            if name.endswith("/"):
+                continue
+            found = (folder / name).resolve()
+            if folder.resolve() not in found.parents:
+                raise ValueError(f"묶음에 위험한 경로가 있다: {name}")
+            found.parent.mkdir(parents=True, exist_ok=True)
+            found.write_bytes(archive.read(name))
+    if not (folder / RECORD_NAME).is_file():
+        raise ValueError("묶음에 작업 폴더 기록이 없다")
+    return Workspace(folder.parent).read(folder, group="trial")
+
+
 class _Listen:
     """`core.testrun`의 듣는 이 — 올리는 쪽으로 넘긴다 (화면이 신호로 받던 자리다)."""
 
@@ -312,4 +425,4 @@ class _Listen:
         """끝은 `_go()`가 올린다 — 여기서도 올리면 같은 것이 두 번 간다."""
 
 
-__all__ = ["EXECUTOR", "REPORT_EVERY_S", "Trial"]
+__all__ = ["EXECUTOR", "REPORT_EVERY_S", "DesignWork", "Trial", "unpack"]

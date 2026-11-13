@@ -47,19 +47,50 @@
   },
   "$id": "urn:bpm:contracts:c17-check-response",
   "additionalProperties": true,
-  "description": "`POST /api/v1/workspaces/{id}/check`의 답.\n\n**오류만 돌리기를 막는다** — 경고는 보이고 사람이 판단한다 (C14 §검사 규칙).\n`cached`면 실행기에 다시 묻지 않고 담아 둔 것을 준 것이다 (ADR-0146 — 저장할 때마다 묻지 않는다).",
+  "description": "`POST`·`GET /api/v1/workspaces/{id}/check`의 답.\n\n**오류만 돌리기를 막는다** — 경고는 보이고 사람이 판단한다 (C14 §검사 규칙).\n`cached`면 실행기에 다시 묻지 않고 담아 둔 것을 준 것이다 (ADR-0146 — 저장할 때마다 묻지 않는다).\n\n**아직 안 끝났으면 `state: pending`이고 202다** — 검사는 실행기가 하고 지시는 하트비트로\n내려가므로 주기만큼 늦을 수 있다. 콘솔은 `GET`으로 다시 묻는다. 끝났으면 `done`이다.",
   "properties": {
     "cached": {
       "default": false,
       "title": "Cached",
       "type": "boolean"
     },
-    "checked_at": {
-      "title": "Checked At",
+    "check_id": {
+      "default": "",
+      "title": "Check Id",
       "type": "string"
     },
+    "checked_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Checked At"
+    },
     "checked_revision": {
+      "default": "",
       "title": "Checked Revision",
+      "type": "string"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    },
+    "state": {
+      "default": "done",
+      "title": "State",
       "type": "string"
     },
     "violations": {
@@ -70,10 +101,6 @@
       "type": "array"
     }
   },
-  "required": [
-    "checked_revision",
-    "checked_at"
-  ],
   "title": "CheckResponse",
   "type": "object"
 }

@@ -2,10 +2,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **초안** (2026-11-13) — **작업공간·파일·묶음·가져오기와 시험 실행이 돈다**(Center `workspaces.py`·`trials.py`·`api/workspaces.py`, 30·31판 / 실행기 `testmode.py`). 검사·짓기는 모델만 있고 전송이 없다. **`> 미정:` 셋은 [ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)으로 닫았다** (시험 자리·검사와 짓기의 자리·누가 올리나). [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
+| 상태 | **초안** (2026-11-13) — **다 돈다**: 작업공간·파일·묶음·가져오기(30판), 시험 실행(31판), **실행 전 검사와 배포 후보 짓기**(32판). 남은 것은 공유 BPM 프로세스 설치와 **화면**(CON-20 — M11 조각 4). **`> 미정:` 셋은 [ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)으로 닫았다** (시험 자리·검사와 짓기의 자리·누가 올리나). [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 콘솔(BFF) → Center, Center → 서버 실행기 (시험 실행·짓기는 C12 작업으로 내려간다) |
-| 코드 위치 | Center `workspaces.py`·`trials.py`(판단)·`api/workspaces.py`(길), 모델 `contracts.workspace`, 실행기 `testmode.py`. 알맹이는 `bpm.core.testrun` |
+| 코드 위치 | Center `workspaces.py`·`trials.py`·`design_work.py`(판단)·`api/workspaces.py`(길), 모델 `contracts.workspace`, 실행기 `testmode.py`. 알맹이는 `bpm.core.testrun` |
 | 관련 ADR | [0143](../decisions/0143-design-happens-in-the-console.md), **[0146](../decisions/0146-design-work-has-its-own-lane.md)(시험 자리·검사와 짓기·누가 올리나)**, [0145](../decisions/0145-console-is-workspace-shaped.md), [0022](../decisions/0022-studio-canvas.md)(캔버스를 거쳐 고친다 — 웹에서도 그대로), [0109](../decisions/0109-studio-writes-decision-tables.md)(결정표는 캔버스 밖), [0028](../decisions/0028-replay-memory.md)(배운 것), [0082](../decisions/0082-batch-start.md)(맡기기), [0142](../decisions/0142-open-mode.md)(이 계약이 보안을 더 급하게 만든다) |
 | 관련 화면 | CON-20 작업공간 (STU-01·02·04·05·06·07·08·09·12를 대신한다) |
 
@@ -167,7 +167,8 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 
 | 길 | 권한 | 하는 일 |
 | --- | --- | --- |
-| `POST /workspaces/{id}/check` | 읽기 | C14 B1~B17 + 실행 전 검사를 `Violation[]`로 준다 |
+| `POST /workspaces/{id}/check` | 관리자 | 검사를 청한다. **같은 묶음의 결과가 있으면 그대로 준다**(200 `cached`), 없으면 지시를 세우고 **202**다. `?again=true`면 담아 둔 것을 버리고 다시 묻는다 |
+| `GET /workspaces/{id}/check` | 읽기 | 지금 묶음의 결과 (`CheckResponse`). 끝났으면 200, 아직이면 202, **이 묶음을 검사한 적이 없으면 404**다 — 낡은 결과를 주지 않는다 |
 
 **검사도 실행기가 한다** — 그림을 읽고(`contracts.bpmn_ext`) 확장이 깔렸나를 보는 일이라 Center가 못 한다.
 결과 모양은 `core.testrun.readiness`가 내던 것 그대로이고 **오류만 돌리기를 막는다**(경고는 보인다).
@@ -188,7 +189,8 @@ Center가 마지막 결과를 **그때 본 파일 revision 묶음**과 함께 �
 
 | 길 | 권한 | 하는 일 |
 | --- | --- | --- |
-| `POST /workspaces/{id}/package` | 관리자 | 본문 `{kind}` (`bpm_process`\|`process_lib`). 지어서 **C5 패키지 후보로 등록한다** |
+| `POST /workspaces/{id}/package` | 관리자 | 본문 `{kind}` (`bpm_process`\|`process_lib`). **202**로 받고 `BuildInfo`를 준다 — 짓는 것은 실행기다 |
+| `GET /workspaces/{id}/builds`·`/{build_id}` | 읽기 | 짓기 기록 (`BuildInfo` — `done`이면 `package_id`·`version`) |
 
 - **짓는 코드는 데스크톱 Studio가 쓰던 것 그대로다** (`core.testrun.packaging` — 매니페스트를 그림에서
   모으고, 시험 케이스는 넣지 않고, `content_hash`는 받는 쪽이 다시 계산한다, C1·C2).

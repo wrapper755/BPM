@@ -433,6 +433,26 @@ MIGRATIONS: tuple[Step, ...] = (
             "CREATE INDEX test_runs_workspace ON test_runs (workspace_id, requested_at)",
         ),
     ),
+    Step(
+        32,
+        "실행 전 검사와 배포 후보 짓기 — **작업이 아니다**(하트비트의 작은 칸). 검사는 그때 본 "
+        "묶음과 함께 담아 두어 바뀐 것이 없으면 다시 묻지 않는다 (C17, ADR-0146)",
+        (
+            "CREATE TABLE workspace_checks ("
+            " check_id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, revision TEXT NOT NULL,"
+            " state TEXT NOT NULL, violations_json TEXT, reason TEXT,"
+            " requested_by TEXT NOT NULL, requested_at TEXT NOT NULL, checked_at TEXT,"
+            " dispatched_at TEXT)",
+            # **묶음마다 하나만** 담아 둔다 — 캐시의 열쇠다.
+            "CREATE UNIQUE INDEX workspace_checks_revision ON workspace_checks (workspace_id, revision)",
+            "CREATE TABLE workspace_builds ("
+            " build_id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, revision TEXT NOT NULL,"
+            " kind TEXT NOT NULL, state TEXT NOT NULL, package_id TEXT, version TEXT, reason TEXT,"
+            " requested_by TEXT NOT NULL, requested_at TEXT NOT NULL, updated_at TEXT NOT NULL,"
+            " dispatched_at TEXT)",
+            "CREATE INDEX workspace_builds_workspace ON workspace_builds (workspace_id, requested_at)",
+        ),
+    ),
 )
 
 

@@ -29,7 +29,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
-from bpm.center import enrollments, host_keys
+from bpm.center import design_work, enrollments, host_keys
 from bpm.center.api import approvals, deployments, jobs, messages, signing, timers
 from bpm.center.api.timers import DEFAULT_ZONE
 from bpm.center.auth import Caller, require_key_type
@@ -234,6 +234,9 @@ def heartbeat(
 
     # 배치 결정은 **한 주기만 올라온다** — 흘려보내면 「왜 설치가 안 됐나」가 남지 않는다 (C4·C12).
     deployments.remember_results(store, host_id=runner_id, results=request.deployment_results)
+    # 검사·짓기의 결과도 같은 결이다 (C17, ADR-0146) — **작업이 아니라** 한 주기만 올라온다.
+    design_work.remember_checks(store, request.check_results)
+    design_work.remember_builds(store, request.build_results)
 
     paused = bool(found["paused"])
     # 재시작을 요청해 두었으면 **작업을 싣지 않는다** (ADR-0117) — 곧 끝날 프로세스다.
@@ -243,6 +246,12 @@ def heartbeat(
     dispatch, cancels = jobs.server_heartbeat(
         store, runner_id=runner_id, request=request, paused=paused or restart
     )
+    # 작업공간의 검사·짓기 지시 (C17) — **일시 중지·재시작 중에는 보내지 않는다** (곧 끝날
+    # 프로세스이고, 못 받은 지시는 한도를 넘기면 다시 내려간다).
+    checks = [] if paused or restart else design_work.pending_checks(store)
+    builds = [] if paused or restart else design_work.pending_builds(store)
+    design_work.checks_went_down(store, checks)
+    design_work.builds_went_down(store, builds)
     return ServerRunnerHeartbeatResponse(
         server_time=now_iso(),
         next_heartbeat_s=heartbeat_interval_s,
@@ -254,6 +263,8 @@ def heartbeat(
         admin_keys=signing.admin_keys(store),
         jobs=dispatch,
         cancel_jobs=cancels,
+        checks=checks,
+        builds=builds,
         # 답이 정해진 결재 (C6) — **C4와 같은 함수**다. 결재 창구는 Center만이다 (C12).
         approvals=approvals.heartbeat(store, host_id=runner_id, acks=request.approval_acks),
         # 받을 곳이 이 실행기인 메시지 (C12 §메시지) — **ack가 올 때까지 매번 다시 싣는다**.

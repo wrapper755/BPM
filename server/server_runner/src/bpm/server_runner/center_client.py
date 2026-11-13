@@ -276,6 +276,36 @@ class CenterClient:
             raise _problem(response)
         return bytes(response.content)
 
+    def put_artifact(self, workspace_id: str, build_id: str, raw: bytes) -> dict[str, Any]:
+        """다 지은 배포 후보 zip을 올린다 (C17 `POST …/builds/{build_id}/artifact`).
+
+        **C5 `POST /packages`를 부르지 않는다** — 실행기 키에 패키지 올리기 권한이 없고, 그것이
+        [ADR-0146](../../../../../docs/decisions/0146-design-work-has-its-own-lane.md)이 정한
+        자리다. Center가 받아 **제 이름으로** 등록한다.
+        """
+        own = self.client is None
+        client = self.client or httpx.Client(timeout=self.timeout_s)
+        try:
+            response = client.post(
+                f"{self.base_url.rstrip('/')}{WORKSPACES}/{workspace_id}/builds/{build_id}/artifact",
+                content=raw,
+                headers={
+                    "Content-Type": "application/zip",
+                    "Authorization": f"Bearer {self.api_key}",
+                },
+            )
+        except httpx.HTTPError as e:
+            raise Unreachable(f"지은 패키지를 올리지 못했습니다 ({type(e).__name__})") from e
+        finally:
+            if own:
+                client.close()
+        if response.status_code >= 400:
+            raise _problem(response)
+        try:
+            return dict(response.json())
+        except ValueError as e:  # pragma: no cover - 방어
+            raise CenterProblem("Center 응답이 JSON이 아닙니다") from e
+
     def report_trial(self, workspace_id: str, run_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """시험 실행의 진행·끝 (C17 `PUT …/test-runs/{run_id}`).
 

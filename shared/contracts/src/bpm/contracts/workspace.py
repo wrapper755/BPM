@@ -291,17 +291,24 @@ class CheckResult(ContractModel):
 
 
 class CheckResponse(ContractModel):
-    """`POST /api/v1/workspaces/{id}/check`의 답.
+    """`POST`·`GET /api/v1/workspaces/{id}/check`의 답.
 
     **오류만 돌리기를 막는다** — 경고는 보이고 사람이 판단한다 (C14 §검사 규칙).
     `cached`면 실행기에 다시 묻지 않고 담아 둔 것을 준 것이다 (ADR-0146 — 저장할 때마다 묻지 않는다).
+
+    **아직 안 끝났으면 `state: pending`이고 202다** — 검사는 실행기가 하고 지시는 하트비트로
+    내려가므로 주기만큼 늦을 수 있다. 콘솔은 `GET`으로 다시 묻는다. 끝났으면 `done`이다.
     """
 
+    state: str = "done"  # done | pending | failed
+    check_id: str = ""
     violations: list[Violation] = Field(default_factory=list)
     #: 이 결과가 본 묶음. 지금 묶음과 다르면 낡은 것이다.
-    checked_revision: str
-    checked_at: Timestamp
+    checked_revision: str = ""
+    checked_at: Timestamp | None = None
     cached: bool = False
+    #: 검사하지 못한 사유 (`failed`일 때) — 그림을 읽지 못했다·묶음을 집지 못했다.
+    reason: str | None = None
 
 
 # ─────────────────────────── 배포 후보로 만들기 ───────────────────────────

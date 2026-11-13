@@ -52,6 +52,7 @@ from bpm.contracts.server_runner import (
     validate_heartbeat,
 )
 from bpm.contracts.signing import AdminKey
+from bpm.contracts.workspace import BuildDispatch, BuildResult, CheckDispatch, CheckResult
 from bpm.core import build_info, machine
 from bpm.core import requests as approval_requests
 from bpm.core.app_directory import AppDirectory, DirectoryCache
@@ -86,7 +87,7 @@ from bpm.server_runner.extensions import load as load_extensions
 from bpm.server_runner.extensions import tasks as extension_tasks
 from bpm.server_runner.settings import Settings
 from bpm.server_runner.store import Saved, Store
-from bpm.server_runner.testmode import Trial
+from bpm.server_runner.testmode import DesignWork, Trial
 from bpm.server_runner.worker import ACK_STARTED, EMPTY_COUNTS, Worker, reopen_log
 
 log = logging.getLogger(__name__)
@@ -199,6 +200,14 @@ class Agent:
     #: 빌려주지 않는다 ([ADR-0146](../../../../../docs/decisions/0146-design-work-has-its-own-lane.md)).
     #: 기다리지 않으므로 담아 두지 않는다 — 다시 띄우면 그 시험 실행은 닫힌다.
     trials: dict[str, Trial] = field(default_factory=dict)
+    #: 지금 도는 **검사·짓기** (C17). **자리를 세지 않는다** — 실행이 아니라 그림을 읽는 일이고
+    #: 금방 끝난다. 못 받은 지시는 Center가 한도를 넘기면 다시 내려 준다 (ADR-0146).
+    _design: list[DesignWork] = field(default_factory=list)
+    #: 아직 올리지 못한 검사·짓기 결과 (C12 — 한 주기만 올라가는 값이라 들고 있는다).
+    pending_check_results: list[CheckResult] = field(default_factory=list)
+    pending_build_results: list[BuildResult] = field(default_factory=list)
+    #: 그 둘을 지키는 자물쇠 — **일하는 스레드가 넣는다**.
+    _design_lock: threading.Lock = field(default_factory=threading.Lock)
 
     @property
     def registered(self) -> bool:
@@ -643,7 +652,8 @@ class Agent:
             job_id=job.job_id,
             settings=self.settings,
             client=self.client,
-            extensions=self.extensions,
+            # **엔진이 쓰는 것 그대로다** (ADR-0064) — 점검과 실행이 같은 호스트를 본다.
+            extensions=self.extensions(),
             services=self.services(),
             llm_api_key=self.credentials.llm_api_key() or "",
         )
@@ -651,6 +661,60 @@ class Agent:
         found.start()
         log.info("시험 작업 %s를 시작했다 (%s, 실행 %s)", job.job_id, target.workspace_id, target.run_id)
         return JobAck(job_id=job.job_id, result=ACK_STARTED, run_id=target.run_id)
+
+    def take_design(self, *, checks: list[CheckDispatch], builds: list[BuildDispatch]) -> None:
+        """내려온 **검사·짓기**를 시작한다 (C17, ADR-0146) — 작업이 아니라 그림을 읽는 일이다.
+
+        **일시 중지 중에는 하지 않는다** — Center도 보내지 않지만, 한 주기 어긋날 수 있다.
+        **같은 것을 두 번 받으면 두 번 하지 않는다**: 돌고 있는 것이 있으면 건너뛴다. 멱등 기억을
+        두지 않는 까닭은 결과가 업무가 아니라 **그림의 판정**이라 다시 해도 같기 때문이다.
+        """
+        if self.paused or self.restarting:
+            return
+        self._design = [one for one in self._design if one.is_alive()]
+        busy = {one.name for one in self._design}
+        for check in checks:
+            if f"design-{check.check_id}" not in busy:
+                self._start_design(self._work(check=check))
+        for build in builds:
+            if f"design-{build.build_id}" not in busy:
+                self._start_design(self._work(build=build))
+
+    def _work(
+        self, *, check: CheckDispatch | None = None, build: BuildDispatch | None = None
+    ) -> DesignWork:
+        return DesignWork(
+            check=check,
+            build=build,
+            settings=self.settings,
+            client=self.client,
+            host=self.extension_host(),
+            # 확장이 기여한 점검도 같은 것을 본다 (C13 — 「점검은 통과했는데 실행이 안 된다」를 막는다).
+            context=self.extensions().context,
+            externals=self._external_ids(),
+            on_check=self._took_check,
+            on_build=self._took_build,
+        )
+
+    def _start_design(self, work: DesignWork) -> None:
+        self._design.append(work)
+        work.start()
+
+    def _external_ids(self) -> tuple[str, ...]:
+        """어느 확장이 **외부**인가 — 사전 점검의 고정 경고에 쓴다 (ADR-0060).
+
+        여기서는 **모른다고 말한다**(빈 튜플) — 받아 둔 리소스 목록을 읽는 일이고, 주지 않으면
+        점검은 그 경고를 **하지 않는다**(모르는 것으로 경고를 지어내지 않는다).
+        """
+        return ()
+
+    def _took_check(self, result: CheckResult) -> None:
+        with self._design_lock:
+            self.pending_check_results.append(result)
+
+    def _took_build(self, result: BuildResult) -> None:
+        with self._design_lock:
+            self.pending_build_results.append(result)
 
     def _remember_ack(self, ack: JobAck) -> None:
         self.seen_jobs.remember(ack.job_id, ack)
@@ -1157,6 +1221,9 @@ class Agent:
             # **설치된 BPM 프로세스별 준비 상태** (C12) — 캐시하고 설치·키가 바뀌면 비운다.
             readiness=self.readiness(),
             deployment_results=list(self.pending_results),
+            # 검사·짓기의 결과 (C17) — **작업이 아니다**. 배치 결정과 같은 결로 한 주기만 간다.
+            check_results=list(self.pending_check_results),
+            build_results=list(self.pending_build_results),
             job_acks=list(self.pending_acks),
             approval_acks=list(self.pending_approval_acks),
             message_acks=list(self.pending_message_acks),
@@ -1260,6 +1327,9 @@ class Agent:
         self.pending_approval_acks.clear()  # 올렸다
         self.pending_message_acks.clear()  # 올렸다
         self.pending_delegation_acks.clear()  # 올렸다
+        with self._design_lock:
+            self.pending_check_results.clear()  # 올렸다
+            self.pending_build_results.clear()  # 올렸다
         self.next_in_s = answer.next_heartbeat_s
         self.last_response = answer
         if answer.paused != self.paused:
@@ -1282,6 +1352,8 @@ class Agent:
         # **작업보다 뒤다** — 둘 다 자리를 쓰는데, 자리가 없을 때 작업은 `rejected`로 닫히고
         # 맡긴 결과는 **ack하지 않으면 다시 내려온다**.
         self.apply_delegations(list(answer.delegations))
+        # **설계 일은 마지막이다** — 자리를 쓰지 않으므로 작업·결재보다 급하지 않다 (C17).
+        self.take_design(checks=list(answer.checks), builds=list(answer.builds))
 
     def restart_ready(self) -> bool:
         """재시작해도 되나 (ADR-0117) — 자리를 쥔 실행이 없고 **올릴 ack가 없다**.

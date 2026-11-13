@@ -249,6 +249,102 @@ def test_the_heartbeat_says_how_many_test_slots_there_are(runner: agent_mod.Agen
     assert body.capacity.test_running == 0
 
 
+def settle(runner: agent_mod.Agent) -> None:
+    """설계 일(검사·짓기)이 끝나기를 기다린다 — 스레드로 돈다 (하트비트를 막지 않는다)."""
+    for one in list(runner._design):
+        one.join(timeout=WAIT_S)
+        assert not one.is_alive(), one.name
+
+
+# ─────────────────────────── 실행 전 검사 ───────────────────────────
+
+
+def test_a_check_is_asked_and_the_runner_answers(center: TestClient, runner: agent_mod.Agent) -> None:
+    """**검사도 실행기가 한다** — 청하면 202이고 결과는 하트비트를 타고 온다 (ADR-0146)."""
+    join(runner)
+    workspace(center)
+    asked = center.post(f"{API}/workspaces/{WS}/check", headers=ADMIN)
+    assert asked.status_code == 202, asked.text
+    assert asked.json()["state"] == "pending"
+
+    beat(runner)  # 지시가 내려간다
+    settle(runner)
+    beat(runner)  # 결과가 올라간다
+    found = made(center.get(f"{API}/workspaces/{WS}/check", headers=READ), 200)
+    assert found["state"] == "done", found
+    assert found["checked_revision"].startswith("sha256:")
+    assert [one for one in found["violations"] if one["severity"] == "error"] == [], found
+
+
+def test_the_second_ask_does_not_go_to_the_runner(center: TestClient, runner: agent_mod.Agent) -> None:
+    """**되묻지 않는다** — 저장할 때마다 실행기를 거치면 느리다 (ADR-0146의 캐시)."""
+    join(runner)
+    workspace(center)
+    center.post(f"{API}/workspaces/{WS}/check", headers=ADMIN)
+    beat(runner)
+    settle(runner)
+    beat(runner)
+    again = made(center.post(f"{API}/workspaces/{WS}/check", headers=ADMIN), 200)
+    assert again["cached"] is True
+    beat(runner)
+    assert runner._design == [] or all(not one.is_alive() for one in runner._design)
+
+
+def test_a_changed_file_makes_the_old_result_stale(center: TestClient, runner: agent_mod.Agent) -> None:
+    """파일이 바뀌면 묶음이 달라진다 — **그 결과는 다른 그림의 것**이라 주지 않는다."""
+    join(runner)
+    workspace(center)
+    center.post(f"{API}/workspaces/{WS}/check", headers=ADMIN)
+    beat(runner)
+    settle(runner)
+    beat(runner)
+    made(center.put(f"{API}/workspaces/{WS}/files/cases/또.cases.json", content=b"{}", headers=ADMIN))
+    assert center.get(f"{API}/workspaces/{WS}/check", headers=READ).status_code == 404
+
+
+# ─────────────────────────── 배포 후보로 만들기 ───────────────────────────
+
+
+def test_the_runner_builds_and_center_registers_it(center: TestClient, runner: agent_mod.Agent) -> None:
+    """**짓는 것도 실행기이고 등록은 Center다** — 올린 사람은 단추를 누른 계정이다 (ADR-0146)."""
+    join(runner)
+    workspace(center)
+    asked = center.post(f"{API}/workspaces/{WS}/package", json={}, headers=ADMIN)
+    assert asked.status_code == 202, asked.text
+    build_id = asked.json()["build_id"]
+
+    beat(runner)
+    settle(runner)
+    beat(runner)
+    found = made(center.get(f"{API}/workspaces/{WS}/builds/{build_id}", headers=READ), 200)
+    assert found["state"] == "done", found
+    assert found["package_id"] == WS
+
+    listed = made(center.get(f"{API}/packages?id={WS}", headers=ADMIN), 200)
+    assert [one["id"] for one in listed] == [WS]
+    assert listed[0]["uploaded_by"] == found["requested_by"], "실행기가 아니다"
+    assert listed[0]["status"] == "candidate", "후보일 뿐 — 승인·배포는 그대로다"
+
+
+def test_only_the_runner_may_put_the_artifact(center: TestClient, runner: agent_mod.Agent) -> None:
+    """**C5 권한표가 바뀌지 않는 까닭**이 이 길이다 — 콘솔 토큰으로는 올릴 수 없다."""
+    join(runner)
+    workspace(center)
+    build_id = made(center.post(f"{API}/workspaces/{WS}/package", json={}, headers=ADMIN), 202)["build_id"]
+    answer = center.post(
+        f"{API}/workspaces/{WS}/builds/{build_id}/artifact", content=b"PK", headers=ADMIN
+    )
+    assert answer.status_code == 403
+    assert answer.json()["code"] == "wrong_key_type"
+
+
+def test_a_workspace_without_an_entry_cannot_be_built(center: TestClient) -> None:
+    made(center.post(f"{API}/workspaces", json={"id": WS, "name": "n"}, headers=ADMIN))
+    answer = center.post(f"{API}/workspaces/{WS}/package", json={}, headers=ADMIN)
+    assert answer.status_code == 422
+    assert answer.json()["code"] == "no_entry"
+
+
 def test_stopping_a_trial_does_not_judge_it(center: TestClient, runner: agent_mod.Agent) -> None:
     """「중지」는 작업 취소와 **같은 길**이다 (C17 — 자리를 둘로 만들지 않는다)."""
     join(runner)

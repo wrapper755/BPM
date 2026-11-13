@@ -18,7 +18,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request, Response
 
-from bpm.center import trials, workspaces
+from bpm.center import design_work, trials, workspaces
 from bpm.center.api import server_runner
 from bpm.center.api.body import read_json as _json
 from bpm.center.auth import (
@@ -275,6 +275,101 @@ async def report_test_run(request: Request, workspace_id: str, run_id: str) -> A
         body=await _json(request),
         actor=key.name,
     ).to_json_dict()
+
+
+# ─────────────────────────── 실행 전 검사 ───────────────────────────
+
+
+@router.post("/workspaces/{workspace_id}/check")
+def ask_check(request: Request, workspace_id: str, again: bool = False) -> Any:
+    """C14 B1~B17 + 사전 점검을 청한다 — **검사도 실행기가 한다** (ADR-0146).
+
+    같은 묶음의 결과가 있으면 **그대로 준다**(200 `cached`). 없으면 지시를 세우고 **202**다 —
+    지시는 하트비트로 내려가므로 주기만큼 늦는다. 콘솔은 `GET`으로 다시 묻는다.
+    """
+    found = _writer(request)
+    answer, done = design_work.check(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        actor=found.actor,
+        company=company_scope(found),
+        again=again,
+    )
+    return Utf8JSONResponse(status_code=200 if done else 202, content=answer.to_json_dict())
+
+
+@router.get("/workspaces/{workspace_id}/check")
+def read_check(request: Request, workspace_id: str) -> Any:
+    """지금 묶음의 검사 결과. **낡은 것은 주지 않는다** — 파일이 바뀌면 다른 그림의 결과다."""
+    found = _reader(request)
+    answer, done = design_work.latest_check(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        company=company_scope(found),
+    )
+    return Utf8JSONResponse(status_code=200 if done else 202, content=answer.to_json_dict())
+
+
+# ─────────────────────────── 배포 후보로 만들기 ───────────────────────────
+
+
+@router.post("/workspaces/{workspace_id}/package")
+async def ask_build(request: Request, workspace_id: str) -> Any:
+    """「배포 후보로 만들기」 — **짓는 것도 실행기다**. 202로 받고 짓기 기록을 돌려준다."""
+    found = _writer(request)
+    info = design_work.start_build(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        body=await _json(request),
+        actor=found.actor,
+        company=company_scope(found),
+    )
+    return Utf8JSONResponse(status_code=202, content=info.to_json_dict())
+
+
+@router.get("/workspaces/{workspace_id}/builds")
+def list_builds(request: Request, workspace_id: str) -> Any:
+    found = _reader(request)
+    listed = design_work.builds(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        company=company_scope(found),
+    )
+    return [one.to_json_dict() for one in listed]
+
+
+@router.get("/workspaces/{workspace_id}/builds/{build_id}")
+def get_build(request: Request, workspace_id: str, build_id: str) -> Any:
+    found = _reader(request)
+    return design_work.build(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        build_id=build_id,
+        company=company_scope(found),
+    ).to_json_dict()
+
+
+@router.post("/workspaces/{workspace_id}/builds/{build_id}/artifact")
+async def take_artifact(request: Request, workspace_id: str, build_id: str) -> Any:
+    """실행기가 다 지은 zip을 올린다 — **Center가 제 이름으로 등록한다** (ADR-0146).
+
+    받는 검사는 **C5 `POST /packages`와 같은 함수**다(zip 안전·C1 R1~R6·R9·해시 재계산). 그래서
+    **C5 권한표가 바뀌지 않는다** — 실행기 키에 패키지 올리기 권한을 주지 않는다.
+    """
+    require_key_type(request.app.state.authenticate(request), RUNNER_KEY_TYPE)
+    info = design_work.took_artifact(
+        _store(request),
+        package_dir=_settings(request).package_dir,
+        workspace_id=workspace_id,
+        build_id=build_id,
+        raw=await request.body(),
+    )
+    return Utf8JSONResponse(status_code=201, content=info.to_json_dict())
 
 
 # ─────────────────────────── 묶음 (실행기가 집어 간다) ───────────────────────────
