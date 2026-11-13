@@ -51,7 +51,21 @@ export default async function WorkspacePage({ params }: { params: Promise<{ work
   }
 
   return (
-    <Shell mode={found.mode} actor={found.actor} current="/workspaces" full>
+    <Shell
+      mode={found.mode}
+      actor={found.actor}
+      current="/workspaces"
+      full
+      crumb={
+        <>
+          <Link href="/workspaces" className="hover:underline">
+            작업공간
+          </Link>
+          <span className="text-text-muted"> › </span>
+          {info.name}
+        </>
+      }
+    >
       <Workspace
         info={info}
         files={files}
@@ -61,11 +75,6 @@ export default async function WorkspacePage({ params }: { params: Promise<{ work
         canWrite={found.mode === "admin"}
         departments={departments.map((one) => ({ id: one.id, name: one.name }))}
         staff={staff.map((one) => ({ id: one.id, name: one.name }))}
-        crumb={
-          <Link href="/workspaces" className="hover:text-text-primary hover:underline">
-            작업공간
-          </Link>
-        }
       />
     </Shell>
   );

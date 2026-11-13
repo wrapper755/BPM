@@ -55,7 +55,7 @@ export default async function AppsPage() {
   return (
     <Shell mode={found.mode} actor={found.actor} current="/apps">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-h1 font-bold">앱</h1>
+        <h1 className="text-h2 font-bold">앱</h1>
         <CenterAddress url={CENTER_PUBLIC_URL} who="Studio" />
       </header>
 

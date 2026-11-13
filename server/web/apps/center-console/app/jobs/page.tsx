@@ -146,7 +146,7 @@ export default async function JobsPage({
     <Shell mode={found.mode} actor={found.actor} current="/jobs">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-h1 font-bold">작업 지시</h1>
+          <h1 className="text-h2 font-bold">작업 지시</h1>
         </div>
         {admin ? (
           <Link

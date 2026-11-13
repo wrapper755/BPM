@@ -30,7 +30,7 @@ export default async function WorkspacesPage({ searchParams }: { searchParams: P
   return (
     <Shell mode={found.mode} actor={found.actor} current="/workspaces">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-h1 font-bold">작업공간</h1>
+        <h1 className="text-h2 font-bold">작업공간</h1>
         {found.mode === "admin" ? <NewWorkspace /> : null}
       </header>
 

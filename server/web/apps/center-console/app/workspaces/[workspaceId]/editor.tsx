@@ -90,7 +90,6 @@ export function Workspace({
   canWrite,
   departments,
   staff,
-  crumb,
 }: {
   info: WorkspaceInfo;
   files: FileInfo[];
@@ -101,7 +100,6 @@ export function Workspace({
   /** 업무 자리를 고르는 거리 (C16) — 서버 쪽이 읽어 준다. */
   departments: { id: string; name: string }[];
   staff: { id: string; name: string }[];
-  crumb: React.ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("설계");
   // 「정보」 탭이 고치면 그 자리에서 바뀐다 — 머리 띠의 이름·판과 진입 정의가 함께 따라간다.
@@ -328,11 +326,12 @@ export function Workspace({
     <div className="flex h-full min-h-0 flex-col">
       {/* [H] 머리 띠 — 지금 자리와 탭, 그리고 그 화면에서만 쓰는 것 (CON-00 [H]와 같은 결). */}
       <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-default bg-bg-surface px-5 py-3">
-        <nav aria-label="지금 자리" className="text-body-sm text-text-secondary">
-          {crumb} › <span className="font-semibold text-text-primary">{info.name}</span>
+        {/* 지금 자리는 **위 막대가 쥔다** (ADR-0145 §1) — 여기는 그 작업공간의 지금 상태만 말한다. */}
+        <p className="text-body-sm text-text-secondary">
+          <span className="font-semibold text-text-primary">{info.name}</span>
           {dirty ? <span title="저장하지 않은 변경이 있습니다"> *</span> : null}
           <span className="text-text-muted"> · v{info.version}</span>
-        </nav>
+        </p>
         <div role="tablist" aria-label="작업공간" className="flex gap-1">
           {TABS.map((one) => (
             <button

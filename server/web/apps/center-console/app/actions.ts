@@ -61,11 +61,13 @@ export async function login(_previous: ActionResult, form: FormData): Promise<Ac
   } catch (cause) {
     return { error: message(cause) };
   }
+  // 쓰기 권한이 곧 **설계 권한**이다 — 첫 화면도 이것으로 갈린다 (ADR-0145 §2).
+  // 회사 관리자도 **제 회사 안에서는** 관리자다 — 무엇을 다룰 수 있는지는 Center가 회사로 가른다 (C16).
+  const writes = made.role === "admin" || made.role === "company_admin";
   (await cookies()).set(
     COOKIE_NAME,
     seal({
-      // 회사 관리자도 **제 회사 안에서는** 관리자다 — 무엇을 다룰 수 있는지는 Center가 회사로 가른다 (C16).
-      mode: made.role === "admin" || made.role === "company_admin" ? "admin" : "read",
+      mode: writes ? "admin" : "read",
       token: made.token,
       actor: made.username,
       company: made.company ?? null,
@@ -79,8 +81,8 @@ export async function login(_previous: ActionResult, form: FormData): Promise<Ac
       expires: new Date(made.expires_at),
     },
   );
-  // 첫 화면 — 메뉴 맨 위 「운영 현황 › 프로세스」 (ADR-0121).
-  redirect("/bots");
+  // 첫 화면 — **설계할 수 있는 사람은 작업공간 홈**, 보기 전용은 운영 현황이다 (ADR-0145 §2).
+  redirect(writes ? "/workspaces" : "/bots");
 }
 
 export async function logout(): Promise<void> {
