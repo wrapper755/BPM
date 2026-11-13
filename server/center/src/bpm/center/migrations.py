@@ -397,6 +397,24 @@ MIGRATIONS: tuple[Step, ...] = (
         "확인도 결재함으로 온다 — 어느 층인가를 적어 둔다 (C6 `layer`, ADR-0144)",
         ("ALTER TABLE approvals ADD COLUMN layer TEXT NOT NULL DEFAULT 'approval'",),
     ),
+    Step(
+        30,
+        "작업공간 — 설계가 콘솔에서 일어난다 (C17, ADR-0143). **파일은 디스크**이고 여기에는 "
+        "Center의 사실만 둔다 (누구 회사·누가 언제 고쳤나)",
+        (
+            "CREATE TABLE workspaces ("
+            " id TEXT PRIMARY KEY, company TEXT NOT NULL,"
+            " created_at TEXT NOT NULL, created_by TEXT NOT NULL,"
+            " updated_at TEXT NOT NULL, updated_by TEXT NOT NULL)",
+            "CREATE INDEX workspaces_company ON workspaces (company)",
+            # 파일마다의 기록 — `updated_by`를 파일 시스템이 모른다. `revision`은 내용 해시다.
+            "CREATE TABLE workspace_files ("
+            " workspace_id TEXT NOT NULL REFERENCES workspaces (id),"
+            " path TEXT NOT NULL, revision TEXT NOT NULL, size_bytes INTEGER NOT NULL,"
+            " updated_at TEXT NOT NULL, updated_by TEXT NOT NULL,"
+            " PRIMARY KEY (workspace_id, path))",
+        ),
+    ),
 )
 
 

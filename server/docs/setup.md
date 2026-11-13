@@ -37,9 +37,12 @@ uv run bpm-center hosts retire bui_xxxxxxxx
 
 ## Center 백업
 
-Center의 저장소는 **SQLite 파일 하나와 패키지 폴더**다([ADR-0070](../../docs/decisions/0070-center-stays-on-sqlite.md) —
-PostgreSQL은 쓰지 않는다). 컨테이너에서는 `/data/center.sqlite3`·`/data/packages`이고 자리는
-`BPM_CENTER__DATA_DIR`(또는 `DB_PATH`·`PACKAGE_DIR`)가 정한다.
+Center의 저장소는 **SQLite 파일 하나와 패키지·작업 폴더**다([ADR-0070](../../docs/decisions/0070-center-stays-on-sqlite.md) —
+PostgreSQL은 쓰지 않는다). 컨테이너에서는 `/data/center.sqlite3`·`/data/packages`·`/data/workspaces`이고
+자리는 `BPM_CENTER__DATA_DIR`(또는 `DB_PATH`·`PACKAGE_DIR`·`WORKSPACE_DIR`)가 정한다.
+
+**작업 폴더도 백업해야 한다** — 설계가 콘솔에서 일어나므로 그리던 그림이 거기 있다
+([ADR-0143](../../docs/decisions/0143-design-happens-in-the-console.md) — 설계자 PC에 사본이 없다).
 
 - **DB 파일을 그냥 복사하지 않는다** — WAL이라 커밋 일부가 `-wal` 파일에 있다. SQLite의 백업 API로 뜬다
   (Center가 도는 중에도 된다):

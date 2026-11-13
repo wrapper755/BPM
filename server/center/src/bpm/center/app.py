@@ -34,6 +34,7 @@ from bpm.center.api import (
     server_runner,
     signing,
     timers,
+    workspaces,
 )
 from bpm.center.auth import (
     Caller,
@@ -128,6 +129,7 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
     app.include_router(console_extensions.router)
     app.include_router(runs.router)
     app.include_router(organization.router)
+    app.include_router(workspaces.router)
 
     def _own_package(found: Caller, package_id: str, version: str) -> None:
         """회사가 정해진 쪽은 **제 회사의 패키지만** 다룬다 (C16). Center 전체를 보는 쪽은 원래 길이 답한다."""

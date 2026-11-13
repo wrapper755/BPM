@@ -63,6 +63,8 @@ class Settings:
     db_path: Path = field(default_factory=lambda: data_dir() / "center.sqlite3")
     #: 패키지 zip을 두는 곳. **DB에는 메타데이터만** 둔다 (01-architecture §7).
     package_dir: Path = field(default_factory=lambda: data_dir() / "packages")
+    #: 작업 폴더를 두는 곳 (C17 — 설계가 콘솔에서 일어난다, ADR-0143). 패키지와 같은 결이다.
+    workspace_dir: Path = field(default_factory=lambda: data_dir() / "workspaces")
     heartbeat_interval_s: int = DEFAULT_HEARTBEAT_S
     #: 서버 실행기에게 내려 줄 주기 (C12 — `next_heartbeat_s`).
     runner_heartbeat_s: int = DEFAULT_RUNNER_HEARTBEAT_S
@@ -106,12 +108,14 @@ class Settings:
         port = _env("PORT")
         db = _env("DB_PATH")
         packages = _env("PACKAGE_DIR")
+        workspaces = _env("WORKSPACE_DIR")
         consumers_dir = _env("CONSUMERS_DIR")
         return cls(
             port=int(port) if port else DEFAULT_PORT,
             host=_env("HOST") or "0.0.0.0",  # noqa: S104
             db_path=Path(db) if db else data_dir() / "center.sqlite3",
             package_dir=Path(packages) if packages else data_dir() / "packages",
+            workspace_dir=Path(workspaces) if workspaces else data_dir() / "workspaces",
             heartbeat_interval_s=int(_env("HEARTBEAT_INTERVAL_S") or DEFAULT_HEARTBEAT_S),
             runner_heartbeat_s=int(_env("RUNNER_HEARTBEAT_S") or DEFAULT_RUNNER_HEARTBEAT_S),
             admin_token=_env("ADMIN_TOKEN"),

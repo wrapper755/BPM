@@ -13,7 +13,7 @@ export interface WorkspaceInfo {
   entry?: string | null;
   id: string;
   name: string;
-  place?: PlaceIdentity | null;
+  place?: Place | null;
   revision: string;
   updated_at: string;
   updated_by: string;
@@ -21,22 +21,11 @@ export interface WorkspaceInfo {
   [k: string]: unknown;
 }
 /**
- * **작업의 주인** — Center가 서버 작업을 내려줄 때 붙인다 (C12 `JobDispatch.place`). 저장하지 않는다.
- *
- * 실행하는 쪽이 출처가 `company.*`·`department.*`·`staff.*`인 입력의 값으로 푼다
- * (`core.engine.sourced_inputs`). 그 자리에 없는 것(회사 자리 업무의 직원)은 비어 있다.
+ * 업무 자리 — BPM 프로세스(패키지 id)마다 하나. **회사는 적지 않는다** — 패키지의 회사다.
  */
-export interface PlaceIdentity {
-  company: OrgRef;
-  department?: OrgRef | null;
-  staff?: OrgRef | null;
-  [k: string]: unknown;
-}
-/**
- * 조직 하나를 가리키는 id와 이름 — 실행하는 쪽이 값 출처로 푼다.
- */
-export interface OrgRef {
-  id: string;
-  name: string;
+export interface Place {
+  department?: string | null;
+  scope: string;
+  staff?: string | null;
   [k: string]: unknown;
 }

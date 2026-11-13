@@ -26,7 +26,7 @@ from typing import Annotated, Any
 from pydantic import Field
 
 from bpm.contracts._base import ContractModel, SchemaVersioned, Timestamp, Violation
-from bpm.contracts.organization import Place, PlaceIdentity
+from bpm.contracts.organization import Place
 
 #: 시험 실행의 실행 id 앞자리 (C3). **운영 실행과 한눈에 갈린다** — 자리 셈도 이것으로 가른다
 #: (`validate_heartbeat` — 칸을 따로 두면 두 값이 갈라진다, ADR-0146).
@@ -161,7 +161,8 @@ class WorkspaceInfo(ContractModel):
     version: str
     description: str | None = None
     company: str
-    place: PlaceIdentity | None = None
+    #: 업무 자리 (C16 — 회사는 위 칸이다). 매니페스트 `place`로 그대로 간다 (ADR-0127).
+    place: Place | None = None
     #: 없으면 아직 고르지 않았다 — 돌리거나 지을 수 없다 (422 `no_entry`).
     entry: str | None = None
     updated_at: Timestamp

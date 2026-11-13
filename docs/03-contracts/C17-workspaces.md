@@ -2,10 +2,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **초안** (2026-11-13) — 아직 아무것도 돌지 않는다. **`> 미정:` 셋은 [ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)으로 닫았다** (시험 자리·검사와 짓기의 자리·누가 올리나). [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
+| 상태 | **초안** (2026-11-13) — **작업공간·파일·묶음·가져오기가 돈다**(Center `workspaces.py`·`api/workspaces.py`, 30판). 시험 실행·검사·짓기는 모델만 있고 전송이 없다. **`> 미정:` 셋은 [ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)으로 닫았다** (시험 자리·검사와 짓기의 자리·누가 올리나). [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 콘솔(BFF) → Center, Center → 서버 실행기 (시험 실행·짓기는 C12 작업으로 내려간다) |
-| 코드 위치 | (예정) Center `api/workspaces.py`, 서버 실행기 `testmode.py`. 알맹이는 `bpm.core.testrun` |
+| 코드 위치 | Center `workspaces.py`(판단)·`api/workspaces.py`(길), 모델 `contracts.workspace`. (예정) 서버 실행기 `testmode.py`. 알맹이는 `bpm.core.testrun` |
 | 관련 ADR | [0143](../decisions/0143-design-happens-in-the-console.md), **[0146](../decisions/0146-design-work-has-its-own-lane.md)(시험 자리·검사와 짓기·누가 올리나)**, [0145](../decisions/0145-console-is-workspace-shaped.md), [0022](../decisions/0022-studio-canvas.md)(캔버스를 거쳐 고친다 — 웹에서도 그대로), [0109](../decisions/0109-studio-writes-decision-tables.md)(결정표는 캔버스 밖), [0028](../decisions/0028-replay-memory.md)(배운 것), [0082](../decisions/0082-batch-start.md)(맡기기), [0142](../decisions/0142-open-mode.md)(이 계약이 보안을 더 급하게 만든다) |
 | 관련 화면 | CON-20 작업공간 (STU-01·02·04·05·06·07·08·09·12를 대신한다) |
 
