@@ -3,11 +3,12 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, ErrorBanner } from "@bpm/ui";
-import type { BpmnCanvasHandle, NodeProperties } from "@bpm/bpmn-canvas";
+import type { BpmnCanvasHandle, NodeProperties, PropertyPatch } from "@bpm/bpmn-canvas";
 import type { FileInfo } from "@bpm/api-types/c17-file-info";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import { loadWorkspaceFile, saveWorkspaceFile } from "@/app/actions";
 import { fileLabel, groupFiles, isEditable, opensWith } from "@/lib/workspaces";
+import { Properties } from "./properties";
 import "@bpm/bpmn-canvas/canvas.css";
 
 /**
@@ -120,6 +121,18 @@ export function Workspace({
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [editing, save]);
+
+  /** 「적용」 — 캔버스의 `modeling`으로 고친다. 한 번이 **실행 취소 한 걸음**이다. */
+  const applyProperties = useCallback(
+    (patch: PropertyPatch) => {
+      const editor = canvas.current?.editor;
+      if (!editor || !picked) return;
+      editor.setProperties(picked.id, patch);
+      // 고친 뒤의 모습을 다시 읽는다 — 캔버스가 다듬은 값(정의 수준 요소 등)이 그대로 보이게.
+      setPicked(editor.properties(picked.id));
+    },
+    [picked],
+  );
 
   const groups = groupFiles(files);
 
@@ -235,24 +248,16 @@ export function Workspace({
             className="w-72 shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-3"
           >
             {picked ? (
-              <>
-                <dl className="flex flex-col gap-2 text-body-sm">
-                  <Row label="종류" value={picked.type} />
-                  <Row label="이름" value={picked.name || "—"} />
-                  <Row label="id" value={picked.id} mono />
-                  {picked.calledElement ? <Row label="부르는 것" value={picked.calledElement} mono /> : null}
-                  {picked.multiInstance ? <Row label="반복" value={picked.multiInstance} /> : null}
-                  {Object.entries(picked.bpm).map(([name, body]) => (
-                    <div key={name}>
-                      <dt className="text-caption text-text-muted">bpm:{name}</dt>
-                      <dd>
-                        <pre className="overflow-x-auto bg-bg-subtle p-2 text-caption">{body}</pre>
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-                <p className="mt-3 text-caption text-text-muted">고치는 칸은 아직입니다 (M11 조각 4c).</p>
-              </>
+              <Properties
+                key={picked.id}
+                node={picked}
+                canWrite={editing}
+                flows={(picked.gateway?.outgoing ?? []).map((one) => ({
+                  id: one.id,
+                  label: one.name || one.to || one.id,
+                }))}
+                onApply={applyProperties}
+              />
             ) : (
               <>
                 <dl className="flex flex-col gap-2 text-body-sm">

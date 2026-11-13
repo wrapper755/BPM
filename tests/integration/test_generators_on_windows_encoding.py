@@ -25,6 +25,7 @@ GENERATORS = [
     "scripts/gen_schemas.py",
     "scripts/gen_tokens.py",
     "scripts/gen_console_pages.py",
+    "scripts/gen_moddle.py",
     "docs/08-business-examples/_source/build.py",
 ]
 

@@ -21,6 +21,9 @@ export type { BpmnCanvasHandle, BpmnCanvasProps } from "./BpmnCanvas";
 export { layout, laidOut, needsLayout } from "./auto-layout";
 export { propertiesOf, eventOf, gatewayOf, multiInstanceOf } from "./read";
 export { BPM_MODDLE } from "./moddle";
+// C14 모델에서 **생성한** 폼 명세 — 상세 패널이 칸을 손으로 적지 않는다 (scripts/gen_moddle.py).
+export { ELEMENT_FORMS } from "./element-forms";
+export type { ElementField, ElementForm, FieldKind } from "./element-forms";
 export type {
   BusinessObject,
   CanvasStats,
