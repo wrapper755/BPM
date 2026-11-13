@@ -5,13 +5,28 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, ErrorBanner } from "@bpm/ui";
 import type { BpmnCanvasHandle, NodeProperties, NodeState, PropertyPatch } from "@bpm/bpmn-canvas";
 import type { FileInfo } from "@bpm/api-types/c17-file-info";
+import type { BuildInfo } from "@bpm/api-types/c17-build-info";
+import type { CheckResponse } from "@bpm/api-types/c17-check-response";
 import type { TrialInfo } from "@bpm/api-types/c17-test-run-info";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
-import { loadTrial, loadTrials, loadWorkspaceFile, saveWorkspaceFile, stopTrial } from "@/app/actions";
+import {
+  loadBuild,
+  loadCheck,
+  loadTrial,
+  loadTrials,
+  loadWorkspaceFile,
+  saveWorkspaceFile,
+  startCheck,
+  stopTrial,
+} from "@/app/actions";
 import { fileLabel, groupFiles, isEditable, opensWith } from "@/lib/workspaces";
 import { isLive } from "@/lib/trials";
+import { building, checking } from "@/lib/checks";
+import { BuildButton, BuildLine } from "./build";
 import { CaseEditor } from "./cases";
+import { Checks } from "./checks";
 import { DecisionGrid } from "./decisions";
+import { Info } from "./info";
 import { StartTrial, TrialLog, TrialRuns } from "./trials";
 import { Variables } from "./variables";
 import { Properties } from "./properties";
@@ -67,12 +82,14 @@ function canvasMarks(states: Record<string, string> | undefined): Record<string,
 }
 
 export function Workspace({
-  info,
+  info: given,
   files,
   opened,
   text,
   revision,
   canWrite,
+  departments,
+  staff,
   crumb,
 }: {
   info: WorkspaceInfo;
@@ -81,9 +98,14 @@ export function Workspace({
   text: string;
   revision: string;
   canWrite: boolean;
+  /** 업무 자리를 고르는 거리 (C16) — 서버 쪽이 읽어 준다. */
+  departments: { id: string; name: string }[];
+  staff: { id: string; name: string }[];
   crumb: React.ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("설계");
+  // 「정보」 탭이 고치면 그 자리에서 바뀐다 — 머리 띠의 이름·판과 진입 정의가 함께 따라간다.
+  const [info, setInfo] = useState(given);
   const [file, setFile] = useState<Opened | null>(opened ? { path: opened, text, revision } : null);
   const [dirty, setDirty] = useState(false);
   const [picked, setPicked] = useState<NodeProperties | null>(null);
@@ -93,6 +115,10 @@ export function Workspace({
   const [trials, setTrials] = useState<TrialInfo[]>([]);
   const [trial, setTrial] = useState<TrialInfo | null>(null);
   const [trialBusy, setTrialBusy] = useState(false);
+  const [check, setCheck] = useState<CheckResponse | null>(null);
+  const [noCheck, setNoCheck] = useState(false);
+  const [checkBusy, setCheckBusy] = useState(false);
+  const [build, setBuild] = useState<BuildInfo | null>(null);
   const canvas = useRef<BpmnCanvasHandle>(null);
 
   const editing = file !== null && canWrite && isEditable(file.path);
@@ -220,6 +246,66 @@ export function Workspace({
     }
   }, [trial, info.id, refreshTrials]);
 
+  /**
+   * 「실행 전 검사」 — 담아 둔 결과가 있으면 그대로 온다(`cached`). 지시는 하트비트로 내려가므로
+   * **끝났는지는 되물어야** 안다.
+   */
+  const ask = useCallback(
+    async (again: boolean) => {
+      setCheckBusy(true);
+      setFailure(null);
+      const made = await startCheck(info.id, again);
+      setCheckBusy(false);
+      if (made.error) {
+        setFailure(made.error);
+        return;
+      }
+      setNoCheck(false);
+      if (made.check) setCheck(made.check);
+      setBottom("검사");
+    },
+    [info.id],
+  );
+
+  // 아래 탭 「검사」를 열 때 담아 둔 것을 읽는다 — **저장할 때마다 묻지 않는다** (ADR-0146).
+  useEffect(() => {
+    if (bottom !== "검사" || check) return;
+    void (async () => {
+      const found = await loadCheck(info.id);
+      if (found.none) setNoCheck(true);
+      if (found.check) setCheck(found.check);
+    })();
+  }, [bottom, check, info.id]);
+
+  // 검사가 도는 동안 되묻는다.
+  useEffect(() => {
+    if (!checking(check)) return;
+    const timer = setInterval(() => {
+      void (async () => {
+        const found = await loadCheck(info.id);
+        if (found.check) setCheck(found.check);
+      })();
+    }, ASK_EVERY_MS);
+    return () => clearInterval(timer);
+  }, [check, info.id]);
+
+  // 짓는 동안 되묻는다 — 끝나면 패키지 id와 판이 들어온다.
+  useEffect(() => {
+    if (!build || !building(build.state)) return;
+    const timer = setInterval(() => {
+      void (async () => {
+        const found = await loadBuild(info.id, build.build_id);
+        if (found.build) setBuild(found.build);
+      })();
+    }, ASK_EVERY_MS);
+    return () => clearInterval(timer);
+  }, [build, info.id]);
+
+  // 파일을 고치면 담아 둔 검사 결과는 **그 그림의 것이 아니다** — 버린다 (C17: 낡은 것을 주지 않는다).
+  useEffect(() => {
+    if (dirty) setCheck(null);
+  }, [dirty]);
+
   /** 「적용」 — 캔버스의 `modeling`으로 고친다. 한 번이 **실행 취소 한 걸음**이다. */
   const applyProperties = useCallback(
     (patch: PropertyPatch) => {
@@ -261,6 +347,17 @@ export function Workspace({
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {canWrite ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void ask(Boolean(check?.cached))}
+              disabled={checkBusy}
+            >
+              실행 전 검사
+            </Button>
+          ) : null}
+          {canWrite ? <BuildButton workspaceId={info.id} onStarted={setBuild} /> : null}
           {/* 돌리는 중에는 「시험 실행...」 자리가 「중지」가 된다 (U5) — 단추를 둘 두지 않는다. */}
           {canWrite ? (
             trial && isLive(trial.state) ? (
@@ -287,6 +384,8 @@ export function Workspace({
           ) : null}
         </div>
       </header>
+
+      {build ? <BuildLine build={build} /> : null}
 
       {failure ? (
         <div className="px-5 pt-3">
@@ -442,9 +541,17 @@ export function Workspace({
             )
           ) : null}
           {bottom === "검사" ? (
-            <p className="border-t border-border-default p-3 text-body-sm text-text-muted">
-              실행 전 검사는 아직입니다 (M11 조각 4f) — 전송은 돕니다 (C17).
-            </p>
+            <Checks
+              check={check}
+              none={noCheck}
+              busy={checkBusy}
+              onCheck={(again) => void ask(again)}
+              onPick={(id) => {
+                const found = canvas.current?.editor?.select(id) ?? false;
+                if (found) setPicked(canvas.current?.editor?.properties(id) ?? null);
+                return found;
+              }}
+            />
           ) : null}
           {bottom === "로그" ? (
             <div className="border-t border-border-default p-3">
@@ -462,7 +569,14 @@ export function Workspace({
 
       {tab === "시험 실행" ? <TrialRuns trials={trials} picked={trial} onPick={setTrial} /> : null}
       {tab === "정보" ? (
-        <div className="p-6 text-body-sm text-text-muted">작업공간 정보 화면은 아직입니다 (M11 조각 4f).</div>
+        <Info
+          info={info}
+          files={files}
+          canWrite={canWrite}
+          departments={departments}
+          staff={staff}
+          onSaved={setInfo}
+        />
       ) : null}
     </div>
   );

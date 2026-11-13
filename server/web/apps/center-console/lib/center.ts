@@ -35,6 +35,10 @@ import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import type { WorkspaceCreateRequest } from "@bpm/api-types/c17-workspace-create-request";
 import type { TrialInfo } from "@bpm/api-types/c17-test-run-info";
 import type { TrialCreateRequest } from "@bpm/api-types/c17-test-run-create-request";
+import type { CheckResponse } from "@bpm/api-types/c17-check-response";
+import type { BuildInfo } from "@bpm/api-types/c17-build-info";
+import type { BuildRequest } from "@bpm/api-types/c17-build-request";
+import type { LibInstallRequest } from "@bpm/api-types/c17-lib-install-request";
 import type { WorkspaceUpdateRequest } from "@bpm/api-types/c17-workspace-update-request";
 import type { FileInfo } from "@bpm/api-types/c17-file-info";
 import type { DecisionsResponse } from "@bpm/api-types/c17-decisions-response";
@@ -222,6 +226,34 @@ export const center = {
   /** 「중지」 — **판정하지 않는다** (판정이 「중지」다, C17). */
   stopTestRun: (workspaceId: string, runId: string) =>
     call<TrialInfo>(`${ws(workspaceId)}/test-runs/${encodeURIComponent(runId)}`, { method: "DELETE" }),
+
+  /**
+   * 실행 전 검사 (C17 §실행 전 검사) — **검사도 실행기가 한다**. 같은 묶음의 결과가 있으면
+   * 그대로 오고(`cached`), 없으면 지시를 세우고 `state: pending`이다. 끝났는지는 **`state`가**
+   * 말한다 — 상태 코드(200·202)로 가르지 않는다(`send`가 그것을 지우고 본문만 준다).
+   */
+  askCheck: (workspaceId: string, again = false) =>
+    call<CheckResponse>(`${ws(workspaceId)}/check${again ? "?again=true" : ""}`, { method: "POST" }),
+  readCheck: (workspaceId: string) => call<CheckResponse>(`${ws(workspaceId)}/check`),
+
+  /**
+   * 「배포 후보로 만들기」 (C17) — **짓는 것도 실행기다**. 올린 것은 **후보**이고 승인·배포는
+   * 바뀌지 않는다 (C2·CON-06·CON-15).
+   */
+  askBuild: (workspaceId: string, body: BuildRequest) =>
+    call<BuildInfo>(`${ws(workspaceId)}/package`, { method: "POST", body: JSON.stringify(body) }),
+  builds: (workspaceId: string) => call<BuildInfo[]>(`${ws(workspaceId)}/builds`),
+  build: (workspaceId: string, buildId: string) =>
+    call<BuildInfo>(`${ws(workspaceId)}/builds/${encodeURIComponent(buildId)}`),
+
+  /**
+   * 공유 BPM 프로세스 설치 (C17, ADR-0048) — **받아 올 것이 없다**: 패키지가 Center에 있다.
+   * 같은 id가 있으면 갈아 치운다(「갱신」).
+   */
+  installLib: (workspaceId: string, body: LibInstallRequest) =>
+    call<WorkspaceInfo>(`${ws(workspaceId)}/libs`, { method: "POST", body: JSON.stringify(body) }),
+  removeLib: (workspaceId: string, packageId: string) =>
+    call<WorkspaceInfo>(`${ws(workspaceId)}/libs/${encodeURIComponent(packageId)}`, { method: "DELETE" }),
 
   deleteWorkspaceFile: (workspaceId: string, path: string) =>
     call<void>(`${ws(workspaceId)}/files/${filePath(path)}`, { method: "DELETE" }),

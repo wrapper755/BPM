@@ -12,11 +12,24 @@ export interface WorkspaceInfo {
   description?: string | null;
   entry?: string | null;
   id: string;
+  libs?: InstalledLibInfo[];
   name: string;
   place?: Place | null;
   revision: string;
   updated_at: string;
   updated_by: string;
+  version: string;
+  [k: string]: unknown;
+}
+/**
+ * 받아 둔 공유 BPM 프로세스 하나 (`process.json`의 기록, ADR-0048).
+ *
+ * **파일 목록으로는 판을 알 수 없다** — `libs/`는 평평하고 이름이 `<id>__<이름>`이라 판이
+ * 어디에도 없다. 그래서 기록을 읽어 싣는다.
+ */
+export interface InstalledLibInfo {
+  id: string;
+  processes?: string[];
   version: string;
   [k: string]: unknown;
 }

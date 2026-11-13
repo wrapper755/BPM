@@ -35,6 +35,12 @@ export default async function WorkspacePage({ params }: { params: Promise<{ work
     );
   }
 
+  // 업무 자리를 고르는 거리 (C16) — **없어도 화면은 뜬다**(조직이 비어 있을 수 있다).
+  const [departments, staff] = await Promise.all([
+    center.departments().catch(() => []),
+    center.staffList().catch(() => []),
+  ]);
+
   const opened = firstOpen(files, info.entry);
   let text = "";
   let revision = "";
@@ -53,6 +59,8 @@ export default async function WorkspacePage({ params }: { params: Promise<{ work
         text={text}
         revision={revision}
         canWrite={found.mode === "admin"}
+        departments={departments.map((one) => ({ id: one.id, name: one.name }))}
+        staff={staff.map((one) => ({ id: one.id, name: one.name }))}
         crumb={
           <Link href="/workspaces" className="hover:text-text-primary hover:underline">
             작업공간

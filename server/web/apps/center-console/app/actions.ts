@@ -23,6 +23,11 @@ import {
 } from "@/lib/adapter-editor";
 import type { DecisionTableInfo } from "@bpm/api-types/c17-decisions-response";
 import type { TrialInfo } from "@bpm/api-types/c17-test-run-info";
+import type { CheckResponse } from "@bpm/api-types/c17-check-response";
+import type { BuildInfo } from "@bpm/api-types/c17-build-info";
+import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
+import type { WorkspaceUpdateRequest } from "@bpm/api-types/c17-workspace-update-request";
+import type { PackageInfo } from "@bpm/api-types/c5-package-info";
 import type { ExtensionDependent } from "@bpm/api-types/c7-extension-dependent";
 import type { ExtensionTestResult } from "@bpm/api-types/c7-extension-test-result";
 import type { ExtensionVersionInfo } from "@bpm/api-types/c7-extension-version-info";
@@ -1016,6 +1021,115 @@ export async function stopTrial(
 ): Promise<{ trial?: TrialInfo; error?: string }> {
   try {
     return { trial: await center.stopTestRun(workspaceId, runId) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+// ─────────────────────── 실행 전 검사·배포 후보 짓기 (C17, CON-20) ───────────────────────
+
+export interface CheckResult {
+  check?: CheckResponse;
+  /** 이 묶음을 아직 검사한 적이 없다 (404) — 낡은 결과를 주지 않는다. */
+  none?: boolean;
+  error?: string;
+}
+
+/** 「실행 전 검사」 — 담아 둔 것이 있으면 그대로 온다(`cached`). `again`이면 버리고 다시 묻는다. */
+export async function startCheck(workspaceId: string, again = false): Promise<CheckResult> {
+  try {
+    return { check: await center.askCheck(workspaceId, again) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 지금 묶음의 결과. 도는 동안 콘솔이 이것을 되묻는다 (지시는 하트비트로 내려간다). */
+export async function loadCheck(workspaceId: string): Promise<CheckResult> {
+  try {
+    return { check: await center.readCheck(workspaceId) };
+  } catch (cause) {
+    if (cause instanceof CenterError && cause.status === 404) return { none: true };
+    return { error: message(cause) };
+  }
+}
+
+export interface BuildResult {
+  build?: BuildInfo;
+  error?: string;
+}
+
+/** 「배포 후보로 만들기」 — 202로 받는다. 짓는 것은 실행기이고 끝나면 **후보**로 올라간다. */
+export async function startBuild(workspaceId: string, kind: string): Promise<BuildResult> {
+  try {
+    return { build: await center.askBuild(workspaceId, { schema: 1, kind }) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+export async function loadBuild(workspaceId: string, buildId: string): Promise<BuildResult> {
+  try {
+    return { build: await center.build(workspaceId, buildId) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/**
+ * 작업공간 설정 (C17 `PATCH`) — 이름·판·설명·진입 정의·업무 자리 (STU-06이 하던 일).
+ * **보내지 않은 칸은 그대로 둔다** — `process.json`의 담당자·태그처럼 매니페스트에 칸이 없는
+ * 값도 Center가 지우지 않는다.
+ */
+export async function saveWorkspaceInfo(
+  workspaceId: string,
+  fields: WorkspaceUpdateRequest,
+): Promise<{ info?: WorkspaceInfo; error?: string }> {
+  try {
+    const made = await center.updateWorkspace(workspaceId, { ...fields, schema: 1 });
+    revalidatePath(`/workspaces/${workspaceId}`);
+    return { info: made };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+// ─────────────────── 공유 BPM 프로세스 설치 (C17, ADR-0048) ───────────────────
+
+/** 공유 프로세스를 `libs/`에 푼다. 같은 id가 있으면 **갈아 치운다**(「갱신」). */
+export async function installLib(
+  workspaceId: string,
+  packageId: string,
+  version: string,
+): Promise<{ info?: WorkspaceInfo; error?: string }> {
+  try {
+    const made = await center.installLib(workspaceId, { schema: 1, package_id: packageId, version });
+    revalidatePath(`/workspaces/${workspaceId}`);
+    return { info: made };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 제거 — **기록이 적어 둔 파일만** 지운다 (`libs/`를 비우면 다른 판까지 날아간다). */
+export async function removeLib(
+  workspaceId: string,
+  packageId: string,
+): Promise<{ info?: WorkspaceInfo; error?: string }> {
+  try {
+    const made = await center.removeLib(workspaceId, packageId);
+    revalidatePath(`/workspaces/${workspaceId}`);
+    return { info: made };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 설치할 수 있는 공유 프로세스 — C5 패키지 표의 `process_lib`만 (C7에 그 갈래가 없다). */
+export async function loadSharedPackages(): Promise<{ items?: PackageInfo[]; error?: string }> {
+  try {
+    // Center가 갈래로 걸러 준다 — 콘솔에서 거르면 많은 패키지를 공연히 끌고 온다.
+    return { items: await center.packages({ kind: "process_lib" }) };
   } catch (cause) {
     return { error: message(cause) };
   }

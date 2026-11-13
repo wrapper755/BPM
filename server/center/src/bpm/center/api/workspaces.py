@@ -19,7 +19,7 @@ from urllib.parse import unquote
 
 from fastapi import APIRouter, Request, Response
 
-from bpm.center import decisions, design_work, trials, workspaces
+from bpm.center import decisions, design_work, libs, trials, workspaces
 from bpm.center.api import server_runner
 from bpm.center.api.body import read_json as _json
 from bpm.center.auth import (
@@ -421,6 +421,42 @@ async def take_artifact(request: Request, workspace_id: str, build_id: str) -> A
         raw=await request.body(),
     )
     return Utf8JSONResponse(status_code=201, content=info.to_json_dict())
+
+
+# ─────────────────────────── 공유 BPM 프로세스 설치 ───────────────────────────
+
+
+@router.post("/workspaces/{workspace_id}/libs")
+async def install_lib(request: Request, workspace_id: str) -> Any:
+    """공유 BPM 프로세스를 `libs/`에 푼다 (STU-11이 하던 일, ADR-0048).
+
+    **받아 올 것이 없다** — 패키지가 Center에 있다. 같은 id가 있으면 갈아 치운다(「갱신」).
+    """
+    found = _writer(request)
+    info = libs.install(
+        _store(request),
+        workspace_dir=_dir(request),
+        package_dir=_settings(request).package_dir,
+        workspace_id=workspace_id,
+        body=await _json(request),
+        actor=found.actor,
+        company=company_scope(found),
+    )
+    return Utf8JSONResponse(status_code=201, content=info.to_json_dict())
+
+
+@router.delete("/workspaces/{workspace_id}/libs/{package_id}")
+def remove_lib(request: Request, workspace_id: str, package_id: str) -> Any:
+    """제거 — **기록이 적어 둔 파일만** 지운다 (`libs/`를 비우면 다른 판까지 날아간다)."""
+    found = _writer(request)
+    return libs.remove(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        package_id=package_id,
+        actor=found.actor,
+        company=company_scope(found),
+    ).to_json_dict()
 
 
 # ─────────────────────────── 묶음 (실행기가 집어 간다) ───────────────────────────

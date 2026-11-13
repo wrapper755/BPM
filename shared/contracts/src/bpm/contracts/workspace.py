@@ -150,6 +150,20 @@ class WorkspaceUpdateRequest(SchemaVersioned):
     entry: str | None = None
 
 
+class InstalledLibInfo(ContractModel):
+    """받아 둔 공유 BPM 프로세스 하나 (`process.json`의 기록, ADR-0048).
+
+    **파일 목록으로는 판을 알 수 없다** — `libs/`는 평평하고 이름이 `<id>__<이름>`이라 판이
+    어디에도 없다. 그래서 기록을 읽어 싣는다.
+    """
+
+    id: str
+    version: str
+    #: 그 파일들이 주는 BPMN 프로세스 id (`calledElement`가 가리키는 것). **읽지 못한 정의는
+    #: 여기 없다** — 호출할 수 없기 때문이고, B14가 그 말을 한다.
+    processes: list[str] = Field(default_factory=list)
+
+
 class WorkspaceInfo(ContractModel):
     """작업공간 하나 — `process.json`을 읽어 보인 것이다.
 
@@ -170,6 +184,8 @@ class WorkspaceInfo(ContractModel):
     #: 이 작업공간의 **지금 묶음 해시** — 파일이 하나라도 바뀌면 달라진다. 검사 캐시의 열쇠이고
     #: 실행기가 묶음을 집어 갈 때 적는 값이다 (C17 §내려보내기).
     revision: str
+    #: 받아 둔 공유 BPM 프로세스 (§공유 BPM 프로세스 설치). 배포 후보를 지을 때 `requires.libs`로 간다.
+    libs: list[InstalledLibInfo] = Field(default_factory=list)
 
 
 class FileInfo(ContractModel):
@@ -457,6 +473,7 @@ __all__ = [
     "CheckResponse",
     "CheckResult",
     "FileInfo",
+    "InstalledLibInfo",
     "LibInstallRequest",
     "TrialCreateRequest",
     "TrialInfo",

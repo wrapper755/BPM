@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **초안** (2026-11-13) — **다 돈다**: 작업공간·파일·묶음·가져오기(30판), 시험 실행(31판), **실행 전 검사와 배포 후보 짓기**(32판). 남은 것은 공유 BPM 프로세스 설치와 **화면**(CON-20 — M11 조각 4). **`> 미정:` 셋은 [ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)으로 닫았다** (시험 자리·검사와 짓기의 자리·누가 올리나). [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
+| 상태 | **초안** (2026-11-13) — **다 돈다**: 작업공간·파일·묶음·가져오기(30판), 시험 실행(31판), **실행 전 검사와 배포 후보 짓기**(32판), 공유 BPM 프로세스 설치. **화면**(CON-20)도 탭 셋이 돈다 (M11 조각 4). **`> 미정:` 셋은 [ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)으로 닫았다** (시험 자리·검사와 짓기의 자리·누가 올리나). [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 콘솔(BFF) → Center, Center → 서버 실행기 (시험 실행·짓기는 C12 작업으로 내려간다) |
 | 코드 위치 | Center `workspaces.py`·`trials.py`·`design_work.py`(판단)·`api/workspaces.py`(길), 모델 `contracts.workspace`, 실행기 `testmode.py`. 알맹이는 `bpm.core.testrun` |
@@ -43,6 +43,7 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | `place` | object | | 업무 자리 `{company, department?, staff?}` (C16, [ADR-0127](../decisions/0127-studio-picks-the-work-place.md)) | 1 |
 | `entry` | str | | 진입 정의의 경로 (`process/<이름>.bpmn`). 없으면 아직 고르지 않았다 | 1 |
 | `updated_at` | str | ✓ | 마지막으로 파일이 바뀐 때 | 1 |
+| `libs` | object[] | | 받아 둔 공유 BPM 프로세스 — `{id, version, processes[]}` (§공유 BPM 프로세스 설치). **파일 목록으로는 판을 알 수 없어** 기록을 읽어 싣는다 | 1 |
 | `updated_by` | str | ✓ | 그때의 행위자 | 1 |
 
 `process.json`(작업 폴더 기록)이 원본이고 이 모델은 **그것을 읽어 보인 것**이다 — 담당자·태그처럼
@@ -262,6 +263,15 @@ Center가 마지막 결과를 **그때 본 파일 revision 묶음**과 함께 �
 - 받은 것은 **편집 대상이 아니다** — 파일 쓰기가 `libs/`를 거부하는 까닭이다.
 - 판은 `process.json`에 남고 배포 후보를 지을 때 `requires.libs`로 간다 (C1).
 - **결정표(.dmn)도 함께 푼다** — 한쪽만 읽으면 「편집기에서는 되는데 현장에서 안 된다」가 된다.
+- **자리는 평평하고 이름에 패키지 id가 붙는다** — `libs/<id>__<이름>.bpmn`. 실행기가 `libs/*.bpmn`만
+  글롭하므로(`core.testrun.workspace`) 하위 폴더를 쓰면 현장에서 못 찾는다. 서로 다른 패키지가 같은
+  `main.bpmn`을 들고 올 수 있어 id를 붙이고, **어느 파일이 어느 판의 것인지는 기록이 안다**(제거가
+  그것만 지운다 — `libs/`를 비우면 다른 판까지 날아간다).
+- **아무 패키지나 풀지 않는다** — `kind`가 `process_lib`이고(422 `wrong_kind`) 매니페스트의 id·판이
+  받으려던 것과 같아야 한다(422 `wrong_package`). `bpm_process`를 lib으로 풀면 진입 정의가 남의
+  `libs/`에서 돌게 된다. **철회된 패키지는 받지 않는다**(410 — 푼 뒤에는 거둘 길이 없다).
+- **같은 id가 이미 있으면 갈아 치운다** — 「갱신」이 그 길이다. 옛 판의 파일을 먼저 지운다(남겨 두면
+  글롭하는 쪽이 **두 판을 함께** 읽는다).
 
 ## 오류
 
