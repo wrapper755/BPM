@@ -323,6 +323,21 @@ def test_a_test_job_is_not_in_the_job_list(client: TestClient) -> None:
     assert [one for one in listed if one.get("run_id") == run_id] == []
 
 
+def test_deleting_the_workspace_takes_its_trials_with_it(client: TestClient, store: Store) -> None:
+    """**고아를 남기지 않는다** — 로그·변수는 업무 값이고, 작업공간이 없으면 누구도 못 지운다.
+
+    로컬 compose에 쳐 보고 드러났다: 작업공간을 지웠는데 시험 실행·검사·짓기가 세 표에 남았다.
+    """
+    ready_workspace(client)
+    start_trial(client)
+    made(client.post(f"{API}/workspaces/{WS}/check", headers=ADMIN), 202)
+    made(client.post(f"{API}/workspaces/{WS}/package", json={}, headers=ADMIN), 202)
+    assert client.delete(f"{API}/workspaces/{WS}", headers=ADMIN).status_code == 204
+    for table in ("test_runs", "workspace_checks", "workspace_builds", "workspace_files"):
+        row = store.row(f"SELECT COUNT(*) AS n FROM {table} WHERE workspace_id = ?", (WS,))  # noqa: S608
+        assert row is not None and row["n"] == 0, table
+
+
 def test_the_list_shows_the_newest_first(client: TestClient) -> None:
     ready_workspace(client)
     first = start_trial(client)

@@ -313,13 +313,24 @@ def update(
     return get(store, workspace_dir=workspace_dir, workspace_id=workspace_id)
 
 
+#: 작업공간에 매달린 표 — **지울 때 함께 지운다** (업무 값·로그가 담겨 있다).
+#: SQL을 여기 두는 까닭: `trials`·`design_work`가 이 모듈을 import하므로 거꾸로는 못 부른다
+#: (import 방향이 막는다). **표를 늘리면 이 목록에 더한다** — 로컬 compose가 고아 셋을 드러냈다.
+CHILD_TABLES = ("workspace_files", "test_runs", "workspace_checks", "workspace_builds")
+
+
 def delete(
     store: Store, *, workspace_dir: Path, workspace_id: str, company: str | None
 ) -> None:
-    """지운다. **배포된 패키지는 그대로다** — 패키지가 원본이고 작업공간은 그것을 짓는 자리다."""
+    """지운다. **배포된 패키지는 그대로다** — 패키지가 원본이고 작업공간은 그것을 짓는 자리다.
+
+    **매달린 것은 함께 지운다** (`CHILD_TABLES`) — 시험 실행의 로그·변수와 검사 결과는 업무
+    값이고, 작업공간이 없어진 뒤에 남아 있으면 누구도 지울 수 없는 고아가 된다.
+    """
     _row(store, workspace_id, company=company)
     with store.tx() as cur:
-        cur.execute("DELETE FROM workspace_files WHERE workspace_id = ?", (workspace_id,))
+        for table in CHILD_TABLES:
+            cur.execute(f"DELETE FROM {table} WHERE workspace_id = ?", (workspace_id,))  # noqa: S608 — 위 표 목록만
         cur.execute("DELETE FROM workspaces WHERE id = ?", (workspace_id,))
     root = folder_of(workspace_dir, workspace_id)
     if root.is_dir():
@@ -580,6 +591,7 @@ def _remove_tree(root: Path) -> None:
 
 
 __all__ = [
+    "CHILD_TABLES",
     "MAX_FILES",
     "MAX_FILE_MB",
     "MAX_IMPORT_MB",
