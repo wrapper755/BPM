@@ -119,6 +119,10 @@ export function Workspace({
   const [noCheck, setNoCheck] = useState(false);
   const [checkBusy, setCheckBusy] = useState(false);
   const [build, setBuild] = useState<BuildInfo | null>(null);
+  // 접는 것은 **보는 자리를 넓히는 일**이라 기억하지 않는다 — 탭을 옮겨도 그대로 있고 새로
+  // 열면 펴진 채다 (CON-20 [E]·[P]).
+  const [showFiles, setShowFiles] = useState(true);
+  const [showDetail, setShowDetail] = useState(true);
   const canvas = useRef<BpmnCanvasHandle>(null);
 
   const editing = file !== null && canWrite && isEditable(file.path);
@@ -399,11 +403,19 @@ export function Workspace({
       */}
       <div className={tab === "설계" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
         <div className="flex min-h-0 flex-1">
-        {/* [E] 탐색기 */}
+        {/* [E] 탐색기 — 접힌다 (CON-20). 접어도 **여는 길이 남는다**. */}
+        {showFiles ? null : (
+          <Spine label="파일" onOpen={() => setShowFiles(true)} side="left" />
+        )}
         <aside
           aria-label="파일"
+          hidden={!showFiles}
           className="w-64 shrink-0 overflow-y-auto border-r border-border-default bg-bg-surface p-3"
         >
+          <div className="mb-2 flex items-center">
+            <h2 className="text-caption font-semibold text-text-muted">파일</h2>
+            <Fold label="파일 패널 접기" onClick={() => setShowFiles(false)} />
+          </div>
           {groups.map((group) => (
             <section key={group.label} className="mb-4">
               <h2 className="mb-1 text-caption font-semibold text-text-muted">{group.label}</h2>
@@ -475,11 +487,19 @@ export function Workspace({
           )}
         </div>
 
-        {/* [P] 상세 패널 — 고른 것 하나만 (STU-04). */}
+        {/* [P] 상세 패널 — 고른 것 하나만 (STU-04). 접힌다. */}
+        {showDetail ? null : (
+          <Spine label="속성" onOpen={() => setShowDetail(true)} side="right" />
+        )}
         <aside
           aria-label="속성"
+          hidden={!showDetail}
           className="w-72 shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-3"
         >
+          <div className="mb-2 flex items-center">
+            <h2 className="text-caption font-semibold text-text-muted">속성</h2>
+            <Fold label="속성 패널 접기" onClick={() => setShowDetail(false)} />
+          </div>
           {picked ? (
             <Properties
               key={picked.id}
@@ -579,6 +599,36 @@ export function Workspace({
         />
       ) : null}
     </div>
+  );
+}
+
+/** 패널을 접는 단추 — 글자는 툴팁으로만 둔다 (띠가 좁다). */
+function Fold({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className="ml-auto rounded-md px-1 text-caption text-text-muted hover:bg-bg-subtle hover:text-text-primary"
+    >
+      ⟨⟩
+    </button>
+  );
+}
+
+/** 접힌 패널이 남기는 띠 — **여는 길이 사라지면 안 된다**. */
+function Spine({ label, onOpen, side }: { label: string; onOpen: () => void; side: "left" | "right" }) {
+  return (
+    <button
+      onClick={onOpen}
+      title={`${label} 패널 펼치기`}
+      aria-label={`${label} 패널 펼치기`}
+      className={`w-7 shrink-0 bg-bg-surface text-caption text-text-muted hover:text-text-primary ${
+        side === "left" ? "border-r" : "border-l"
+      } border-border-default`}
+    >
+      <span className="[writing-mode:vertical-rl]">{label}</span>
+    </button>
   );
 }
 

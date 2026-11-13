@@ -5,7 +5,7 @@
  * 여기서는 그 갈래마다 값을 읽고 쓰는 길만 정한다.
  */
 
-import type { ElementField } from "@bpm/bpmn-canvas";
+import type { ElementField, EventInfo, EventPatch } from "@bpm/bpmn-canvas";
 
 /** 폼이 다루는 본문 — `{칸: 값}`. 모르는 칸도 **그대로 들고 간다** (C14 호환 규칙). */
 export type Body = Record<string, unknown>;
@@ -99,4 +99,48 @@ export function withField(body: Body, field: ElementField, text: string): Body {
 export function strayKeys(body: Body, fields: ElementField[]): string[] {
   const known = new Set(fields.map((one) => one.name));
   return Object.keys(body).filter((one) => !known.has(one) && one !== "schema");
+}
+
+// ─────────────────────────── 이벤트 칸 (STU-04) ───────────────────────────
+
+/** 이벤트 폼이 들고 있는 값. **정의 수준 요소는 캔버스가 만든다** — 여기는 글자뿐이다. */
+export interface EventFieldValues {
+  timerKind: string;
+  timerValue: string;
+  message: string;
+  signal: string;
+  error: string;
+  cancelActivity: boolean;
+}
+
+/** 읽은 이벤트 → 폼 값. 타이머가 없으면 **기본은 「그만큼 뒤에」**다 (가장 흔하다). */
+export function eventFields(event: EventInfo | null): EventFieldValues {
+  return {
+    timerKind: event?.timer?.kind || "timeDuration",
+    timerValue: event?.timer?.value ?? "",
+    message: event?.message ?? "",
+    signal: event?.signal ?? "",
+    error: event?.error ?? "",
+    cancelActivity: event?.cancelActivity ?? true,
+  };
+}
+
+/**
+ * 폼 값 → `setProperties`의 `event` — **바뀐 칸만** 담는다.
+ *
+ * 캔버스는 `"message" in patch`로 「건드렸나」를 보므로, 바뀌지 않은 칸을 담으면 멀쩡한 정의
+ * 수준 요소를 다시 쓴다(실행 취소가 한 걸음 늘고 id가 바뀔 수 있다). 빈 글은 **지우라는 뜻**이라
+ * 그대로 담는다 — 「건드리지 않았다」와는 다르다.
+ */
+export function eventPatch(before: EventInfo, now: EventFieldValues): EventPatch {
+  const patch: EventPatch = {};
+  const was = eventFields(before);
+  if (now.timerKind !== was.timerKind || now.timerValue !== was.timerValue) {
+    patch.timer = { kind: now.timerKind, value: now.timerValue };
+  }
+  if (now.message !== was.message) patch.message = now.message;
+  if (now.signal !== was.signal) patch.signal = now.signal;
+  if (now.error !== was.error) patch.error = now.error;
+  if (now.cancelActivity !== was.cancelActivity) patch.cancelActivity = now.cancelActivity;
+  return patch;
 }

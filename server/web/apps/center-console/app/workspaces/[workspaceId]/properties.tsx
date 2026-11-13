@@ -4,7 +4,17 @@ import { useEffect, useState } from "react";
 import { Button } from "@bpm/ui";
 import { ELEMENT_FORMS } from "@bpm/bpmn-canvas";
 import type { ElementField, NodeProperties, PropertyPatch } from "@bpm/bpmn-canvas";
-import { parseBody, strayKeys, toInput, withField, writeBody, type Body } from "@/lib/element-values";
+import {
+  eventFields,
+  eventPatch,
+  parseBody,
+  strayKeys,
+  toInput,
+  withField,
+  writeBody,
+  type Body,
+  type EventFieldValues,
+} from "@/lib/element-values";
 
 /**
  * CON-20b 상세 패널 — 고른 요소 하나를 고친다 (STU-04가 하던 일).
@@ -45,6 +55,7 @@ export function Properties({
   );
   const [dropped, setDropped] = useState<string[]>([]);
   const [adding, setAdding] = useState("");
+  const [event, setEvent] = useState(() => eventFields(node.event));
 
   // 다른 요소를 고르면 **그 요소의 값으로 갈아 끼운다** — 앞 요소의 편집이 따라오지 않게.
   useEffect(() => {
@@ -58,6 +69,7 @@ export function Properties({
     setBpm(Object.fromEntries(Object.entries(node.bpm).map(([key, body]) => [key, parseBody(body)])));
     setDropped([]);
     setAdding("");
+    setEvent(eventFields(node.event));
   }, [node]);
 
   const apply = () => {
@@ -71,6 +83,7 @@ export function Properties({
     for (const [key, body] of Object.entries(bpm)) bodies[key] = writeBody(body);
     for (const key of dropped) bodies[key] = null;
     if (Object.keys(bodies).length) patch.bpm = bodies;
+    if (node.event) patch.event = eventPatch(node.event, event);
     onApply(patch);
   };
 
@@ -162,7 +175,14 @@ export function Properties({
         </Labelled>
       ) : null}
 
-      {node.event ? <EventView event={node.event} /> : null}
+      {node.event ? (
+        <EventFields
+          event={node.event}
+          fields={event}
+          canWrite={canWrite}
+          onChange={(made) => setEvent({ ...event, ...made })}
+        />
+      ) : null}
 
       {Object.entries(bpm).map(([key, body]) => (
         <ElementBlock
@@ -348,20 +368,102 @@ function FieldView({
   );
 }
 
-/** 이벤트 칸은 **보기만** 한다 — 정의 수준 요소를 만드는 일이라 조각 4f에서 폼이 온다. */
-function EventView({ event }: { event: NonNullable<NodeProperties["event"]> }) {
+/**
+ * 이벤트 칸 — **정의 수준 요소를 만드는 일이라 캔버스가 한다** (`setProperties`의 `event`).
+ * 메시지·신호·오류는 이름/코드로 **같은 것을 다시 쓰고**(`rootNamed`), 타이머는 식 하나다.
+ *
+ * 그 이벤트가 쓰지 않는 칸은 **보이지 않는다** — 적어도 그림에 들어가지 않고, 보이면 사람이
+ * 적어 놓고 왜 안 되는지 묻게 된다.
+ */
+function EventFields({
+  event,
+  fields,
+  canWrite,
+  onChange,
+}: {
+  event: NonNullable<NodeProperties["event"]>;
+  fields: EventFieldValues;
+  canWrite: boolean;
+  onChange: (made: Partial<EventFieldValues>) => void;
+}) {
+  const kind = event.definition;
   return (
-    <section className="border-t border-border-default pt-3">
-      <h3 className="mb-2 font-semibold">이벤트</h3>
+    <section className="flex flex-col gap-2 border-t border-border-default pt-3">
+      <h3 className="font-semibold">이벤트</h3>
       <dl className="flex flex-col gap-1">
-        {event.definition ? <Row label="종류" value={event.definition} /> : null}
-        {event.timer ? <Row label="타이머" value={`${event.timer.kind} · ${event.timer.value}`} /> : null}
-        {event.message ? <Row label="메시지" value={event.message} /> : null}
-        {event.signal ? <Row label="신호" value={event.signal} /> : null}
-        {event.error ? <Row label="오류 코드" value={event.error} /> : null}
+        <Row label="종류" value={kind || "(없음 — 그냥 시작·끝)"} />
         {event.attachedTo ? <Row label="붙은 곳" value={event.attachedTo} /> : null}
       </dl>
-      <p className="mt-2 text-caption text-text-muted">이벤트 칸을 고치는 폼은 아직입니다 (M11 조각 4f).</p>
+
+      {kind === "bpmn:TimerEventDefinition" ? (
+        <>
+          <Labelled label="타이머">
+            <select
+              className={INPUT}
+              value={fields.timerKind}
+              onChange={(e) => onChange({ timerKind: e.target.value })}
+              disabled={!canWrite}
+            >
+              <option value="timeDate">그 시각에 (timeDate)</option>
+              <option value="timeDuration">그만큼 뒤에 (timeDuration)</option>
+              <option value="timeCycle">되풀이 (timeCycle)</option>
+            </select>
+          </Labelled>
+          <Labelled label="값" help="ISO-8601 — 2026-11-13T09:00:00+09:00 · PT30M · R/PT1H">
+            <input
+              className={INPUT}
+              value={fields.timerValue}
+              onChange={(e) => onChange({ timerValue: e.target.value })}
+              disabled={!canWrite}
+            />
+          </Labelled>
+        </>
+      ) : null}
+
+      {kind === "bpmn:MessageEventDefinition" || event.message ? (
+        <Labelled label="메시지 이름" help="Center 메시지 API가 이 이름으로 찾습니다 (C12).">
+          <input
+            className={INPUT}
+            value={fields.message}
+            onChange={(e) => onChange({ message: e.target.value })}
+            disabled={!canWrite}
+          />
+        </Labelled>
+      ) : null}
+
+      {kind === "bpmn:SignalEventDefinition" ? (
+        <Labelled label="신호 이름">
+          <input
+            className={INPUT}
+            value={fields.signal}
+            onChange={(e) => onChange({ signal: e.target.value })}
+            disabled={!canWrite}
+          />
+        </Labelled>
+      ) : null}
+
+      {kind === "bpmn:ErrorEventDefinition" ? (
+        <Labelled label="오류 코드" help="비우면 **코드 없는 경계**입니다 — 모든 업무 실패를 받습니다 (C14).">
+          <input
+            className={INPUT}
+            value={fields.error}
+            onChange={(e) => onChange({ error: e.target.value })}
+            disabled={!canWrite}
+          />
+        </Labelled>
+      ) : null}
+
+      {event.attachedTo ? (
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={fields.cancelActivity}
+            onChange={(e) => onChange({ cancelActivity: e.target.checked })}
+            disabled={!canWrite}
+          />
+          받으면 하던 일을 걷는다 (cancelActivity)
+        </label>
+      ) : null}
     </section>
   );
 }

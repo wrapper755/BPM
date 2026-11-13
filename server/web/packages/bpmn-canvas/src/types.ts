@@ -66,6 +66,8 @@ export interface BusinessObject {
   messageRef?: NamedRoot;
   /** `bpmn:Definitions`의 정의 수준 요소들. */
   rootElements?: BusinessObject[];
+  /** 프로세스·하위 프로세스가 담은 흐름 요소들 (글자에서 읽을 때 쓴다 — `approvals.ts`). */
+  flowElements?: BusinessObject[];
 }
 
 export interface ExtensionElements extends BusinessObject {

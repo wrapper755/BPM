@@ -110,6 +110,8 @@ declare module "bpmn-js/lib/NavigatedViewer" {
 declare module "bpmn-moddle" {
   // **이름 있는 내보내기**다 (`export { SimpleBpmnModdle as BpmnModdle }`) — default가 아니다.
   export class BpmnModdle {
+    /** 확장 moddle 설명 — 넘기지 않으면 `bpm:*`가 「모르는 것」이 된다. */
+    constructor(packages?: Record<string, unknown>);
     fromXML(xml: string): Promise<{ rootElement: import("./types").BusinessObject }>;
     toXML(element: import("./types").BusinessObject): Promise<{ xml: string }>;
   }

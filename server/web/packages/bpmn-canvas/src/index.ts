@@ -20,6 +20,9 @@ export { BpmnCanvas } from "./BpmnCanvas";
 export type { BpmnCanvasHandle, BpmnCanvasProps } from "./BpmnCanvas";
 export { layout, laidOut, needsLayout } from "./auto-layout";
 export { propertiesOf, eventOf, gatewayOf, multiInstanceOf } from "./read";
+// 케이스 편집기가 답 폼을 짓는 자리 — **캔버스가 떠 있지 않아도** 읽는다 (DOM이 없다).
+export { readApprovals } from "./approvals";
+export type { ApprovalAsk, ApprovalField } from "./approvals";
 export { BPM_MODDLE } from "./moddle";
 // C14 모델에서 **생성한** 폼 명세 — 상세 패널이 칸을 손으로 적지 않는다 (scripts/gen_moddle.py).
 export { ELEMENT_FORMS } from "./element-forms";

@@ -4,13 +4,17 @@ import { useEffect, useState } from "react";
 import { Button, ErrorBanner } from "@bpm/ui";
 import type { Case, CaseFile } from "@bpm/api-types/c14-case-file";
 import { loadWorkspaceFile, saveWorkspaceFile } from "@/app/actions";
+import type { ApprovalAsk } from "@bpm/bpmn-canvas";
 import {
   VALUE_KINDS,
+  definitionPath,
   duplicateNames,
   freshName,
   fromText,
   kindOf,
+  kindOfField,
   parseCases,
+  strayApprovals,
   toText,
   withEntry,
   writeCases,
@@ -23,8 +27,12 @@ import {
  * 케이스는 **JSON 파일 그대로**라 콘솔이 직접 읽고 쓴다 (BPMN·DMN과 다른 점이다 — 형식 해석이
  * 없다). **값마다 갈래를 고른다** — JSON 글상자 하나로 두면 `"3"`과 `3`을 사람이 가려 적어야 한다.
  *
- * 결재 답·맡기기 결과·메시지는 **아직 JSON으로 적는다** — 그 폼은 그림의 결재 칸을 알아야 짓는데
- * 케이스를 고칠 때 그림이 열려 있지 않다 (M11 조각 4f).
+ * **결재 답은 그림을 읽어 폼으로 짓는다** — 케이스를 고칠 때 캔버스가 떠 있지 않으므로 짝이 되는
+ * 정의(`process/<이름>.bpmn`)를 글자로 읽는다 (`readApprovals` — DOM이 없어도 돈다). 읽지 못하면
+ * 그 자리에 JSON 칸을 둔다: 폼을 짓지 못한다고 답을 못 적게 하면 안 된다.
+ *
+ * 맡기기 결과·메시지는 **JSON으로 적는다** — 맡길 패키지의 그림이 여기 없고(ADR-0082), 메시지는
+ * 보내는 쪽의 모양이라 그림이 말해 주지 않는다.
  */
 
 const INPUT = "w-full border border-border-default bg-bg-surface px-2 py-1 text-body-sm";
@@ -46,6 +54,34 @@ export function CaseEditor({
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [asks, setAsks] = useState<ApprovalAsk[] | null>(null);
+
+  /**
+   * 짝이 되는 정의를 읽어 **그림이 묻는 결재**를 꺼낸다 (STU-07이 보던 것).
+   * **읽지 못해도 편집기는 뜬다** — 그러면 결재 답이 JSON 칸으로 보인다.
+   */
+  useEffect(() => {
+    const definition = definitionPath(path);
+    if (!definition) {
+      setAsks([]);
+      return;
+    }
+    let alive = true;
+    void (async () => {
+      const found = await loadWorkspaceFile(workspaceId, definition);
+      if (!alive) return;
+      if (!found.text) {
+        setAsks([]);
+        return;
+      }
+      const { readApprovals } = await import("@bpm/bpmn-canvas");
+      const read = await readApprovals(found.text);
+      if (alive) setAsks(read);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [workspaceId, path]);
 
   useEffect(() => {
     let alive = true;
@@ -223,13 +259,29 @@ export function CaseEditor({
               onChange={(made) => changeCase({ ...one, expected: made })}
             />
 
-            <JsonPart
-              title="결재 답"
-              help="노드 id → 답한 폼 값. 비워 두면 그 결재는 **기다립니다**(기한 초과를 시험하는 길입니다)."
-              value={one.approvals ?? {}}
-              canWrite={canWrite}
-              onChange={(made) => changeCase({ ...one, approvals: made as Case["approvals"] })}
-            />
+            {asks && asks.length > 0 ? (
+              <Approvals
+                asks={asks}
+                answers={(one.approvals ?? {}) as Record<string, Record<string, unknown>>}
+                answeredBy={one.answered_by ?? {}}
+                canWrite={canWrite}
+                onChange={(approvals, answeredBy) =>
+                  changeCase({
+                    ...one,
+                    approvals: approvals as Case["approvals"],
+                    answered_by: answeredBy,
+                  })
+                }
+              />
+            ) : (
+              <JsonPart
+                title="결재 답"
+                help="노드 id → 답한 폼 값. 비워 두면 그 결재는 **기다립니다**(기한 초과를 시험하는 길입니다)."
+                value={one.approvals ?? {}}
+                canWrite={canWrite}
+                onChange={(made) => changeCase({ ...one, approvals: made as Case["approvals"] })}
+              />
+            )}
             <JsonPart
               title="맡기기 결과"
               help="맡긴 BPM 프로세스가 돌려줄 값입니다 (ADR-0082) — 적지 않으면 그 자리에서 업무 실패입니다."
@@ -244,15 +296,18 @@ export function CaseEditor({
               canWrite={canWrite}
               onChange={(made) => changeCase({ ...one, messages: made as Case["messages"] })}
             />
-            <JsonPart
-              title="답한 사람"
-              help="노드 id → 이름. 그림이 `answered_by_as`를 적었을 때만 변수로 갑니다 (ADR-0096)."
-              value={one.answered_by ?? {}}
-              canWrite={canWrite}
-              onChange={(made) => changeCase({ ...one, answered_by: made as Case["answered_by"] })}
-            />
+            {asks && asks.length > 0 ? null : (
+              <JsonPart
+                title="답한 사람"
+                help="노드 id → 이름. 그림이 `answered_by_as`를 적었을 때만 변수로 갑니다 (ADR-0096)."
+                value={one.answered_by ?? {}}
+                canWrite={canWrite}
+                onChange={(made) => changeCase({ ...one, answered_by: made as Case["answered_by"] })}
+              />
+            )}
             <p className="text-caption text-text-muted">
-              결재 답·맡기기 결과·메시지의 폼은 아직입니다 (M11 조각 4f) — 그림의 결재 칸을 알아야 짓습니다.
+              맡기기 결과·메시지는 JSON으로 적습니다 — 맡길 패키지의 그림이 여기 없고, 메시지는 보내는
+              쪽의 모양이라 그림이 말해 주지 않습니다.
             </p>
           </div>
         )}
@@ -401,5 +456,184 @@ function JsonPart({
       />
       {problem ? <p className="text-caption text-status-failed-fg">{problem}</p> : null}
     </section>
+  );
+}
+
+/**
+ * 결재 답 — **그림이 묻는 것마다 한 칸**이다 (STU-07이 하던 일).
+ *
+ * **비워 두는 것과 빈 답은 다르다** (C14): 적지 않은 결재는 **기다리고**(기한 초과를 시험하는
+ * 길이다), 빈 답은 「폼을 비워 답했다」는 뜻이다. 그래서 「답한다」를 먼저 켠다.
+ */
+function Approvals({
+  asks,
+  answers,
+  answeredBy,
+  canWrite,
+  onChange,
+}: {
+  asks: ApprovalAsk[];
+  answers: Record<string, Record<string, unknown>>;
+  answeredBy: Record<string, string>;
+  canWrite: boolean;
+  onChange: (answers: Record<string, Record<string, unknown>>, answeredBy: Record<string, string>) => void;
+}) {
+  const stray = strayApprovals(answers, asks.map((one) => one.nodeId));
+
+  const setAnswer = (nodeId: string, made: Record<string, unknown> | null) => {
+    const next = { ...answers };
+    if (made === null) delete next[nodeId];
+    else next[nodeId] = made;
+    onChange(next, answeredBy);
+  };
+
+  return (
+    <section className="flex flex-col gap-3">
+      <div>
+        <h3 className="font-semibold">결재 답</h3>
+        <p className="text-caption text-text-muted">
+          그림이 묻는 것마다 한 칸입니다. 「답한다」를 켜지 않으면 그 결재는 **기다립니다** — 기한
+          초과를 시험하는 길입니다.
+        </p>
+      </div>
+
+      {asks.map((ask) => {
+        const answer = answers[ask.nodeId];
+        return (
+          <div key={ask.nodeId} className="rounded-md border border-border-default p-3">
+            <label className="flex flex-wrap items-center gap-2">
+              <input
+                type="checkbox"
+                checked={answer !== undefined}
+                onChange={(e) => setAnswer(ask.nodeId, e.target.checked ? {} : null)}
+                disabled={!canWrite}
+              />
+              <span className="font-semibold">{ask.label}</span>
+              <span className="text-caption text-text-muted">
+                {ask.confirmation ? "확인" : "결재"} · <span className="font-mono">{ask.nodeId}</span>
+              </span>
+            </label>
+            {ask.title ? <p className="mt-1 text-caption text-text-muted">{ask.title}</p> : null}
+
+            {answer === undefined ? null : (
+              <div className="mt-2 flex flex-col gap-2">
+                {ask.fields.length === 0 ? (
+                  <p className="text-caption text-text-muted">
+                    폼 칸이 없습니다 — 「승인 / 반려」 두 단추입니다 (빈 답으로 승인합니다).
+                  </p>
+                ) : (
+                  ask.fields.map((field) => (
+                    <AnswerField
+                      key={field.key}
+                      field={field}
+                      value={answer[field.key]}
+                      canWrite={canWrite}
+                      onChange={(made) => setAnswer(ask.nodeId, { ...answer, [field.key]: made })}
+                    />
+                  ))
+                )}
+                <label className="flex flex-col gap-1">
+                  <span className="text-caption text-text-muted">
+                    답한 사람 — 그림이 `answered_by_as`를 적었을 때만 변수로 갑니다 (ADR-0096).
+                  </span>
+                  <input
+                    className={INPUT}
+                    value={answeredBy[ask.nodeId] ?? ""}
+                    onChange={(e) => {
+                      const next = { ...answeredBy };
+                      if (e.target.value) next[ask.nodeId] = e.target.value;
+                      else delete next[ask.nodeId];
+                      onChange(answers, next);
+                    }}
+                    disabled={!canWrite}
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {stray.length > 0 ? (
+        // **지우지 않고 보인다** — 조용히 버리면 적어 둔 답이 사라진다 (U8).
+        <p className="text-caption text-status-warning-fg">
+          그림에 없는 결재의 답이 남아 있습니다: {stray.join(", ")} — 노드를 지웠거나 id가 바뀐
+          것입니다. 그대로 저장되지만 쓰이지 않습니다.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+/** 폼 칸 하나 — **갈래는 그림이 정한다** (C6 `FormField.type`). */
+function AnswerField({
+  field,
+  value,
+  canWrite,
+  onChange,
+}: {
+  field: ApprovalAsk["fields"][number];
+  value: unknown;
+  canWrite: boolean;
+  onChange: (value: unknown) => void;
+}) {
+  const label = (
+    <span className="text-caption text-text-muted">
+      {field.label}
+      {field.required ? " *" : ""}
+    </span>
+  );
+
+  if (field.type === "bool") {
+    return (
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={value === true}
+          onChange={(e) => onChange(e.target.checked)}
+          disabled={!canWrite}
+        />
+        {label}
+      </label>
+    );
+  }
+
+  if (field.type === "choice" && field.choices) {
+    return (
+      <label className="flex flex-col gap-1">
+        {label}
+        <select
+          className={INPUT}
+          value={toText(value)}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={!canWrite}
+        >
+          <option value="">(고르지 않음)</option>
+          {field.choices.map((one) => (
+            <option key={String(one)} value={String(one)}>
+              {String(one)}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  const kind = kindOfField(field.type);
+  return (
+    <label className="flex flex-col gap-1">
+      {label}
+      <input
+        className={INPUT}
+        type={kind === "수" ? "number" : "text"}
+        value={toText(value)}
+        onChange={(e) => {
+          const made = fromText(kind, e.target.value);
+          // 갈래가 받아들이지 못하는 글은 **그대로 글로 담는다** — 고치는 중인 글을 버리지 않는다.
+          onChange(made.error ? e.target.value : made.value);
+        }}
+        disabled={!canWrite}
+      />
+    </label>
   );
 }

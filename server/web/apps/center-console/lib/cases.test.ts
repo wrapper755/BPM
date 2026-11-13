@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { Case } from "@bpm/api-types/c14-case-file";
 
-import { duplicateNames, freshName, fromText, kindOf, parseCases, toText, withEntry, writeCases } from "./cases";
+import {
+  definitionPath,
+  duplicateNames,
+  freshName,
+  fromText,
+  kindOf,
+  kindOfField,
+  parseCases,
+  strayApprovals,
+  toText,
+  withEntry,
+  writeCases,
+} from "./cases";
 
 describe("케이스 파일", () => {
   it("깨진 글은 빈 파일로 보지 않고 그렇게 말한다", () => {
@@ -70,5 +82,29 @@ describe("케이스 이름", () => {
   it("겹친 이름을 찾아낸다 — 엔진은 이름으로 케이스를 고른다", () => {
     expect(duplicateNames(cases)).toEqual([]);
     expect(duplicateNames([...cases, { name: "케이스 1" } as Case])).toEqual(["케이스 1"]);
+  });
+});
+
+describe("결재 답 폼", () => {
+  it("케이스 파일의 짝은 같은 이름의 정의다 — 엔진이 그 짝만 본다", () => {
+    expect(definitionPath("cases/main.cases.json")).toBe("process/main.bpmn");
+    expect(definitionPath("cases/order.cases.json")).toBe("process/order.bpmn");
+  });
+
+  it("케이스 파일이 아니면 짝도 없다", () => {
+    expect(definitionPath("process/main.bpmn")).toBeNull();
+    expect(definitionPath("cases/main.json")).toBeNull();
+  });
+
+  it("폼 칸의 갈래를 값 칸으로 옮긴다 (모르는 갈래는 글)", () => {
+    expect(kindOfField("bool")).toBe("참거짓");
+    expect(kindOfField("number")).toBe("수");
+    expect(kindOfField("choice")).toBe("글");
+    expect(kindOfField("signature")).toBe("글");
+  });
+
+  it("그림에 없는 결재도 지우지 않고 보인다 — 적어 둔 답이 조용히 사라지면 안 된다", () => {
+    expect(strayApprovals({ Approve_Hold: {}, Gone: {} }, ["Approve_Hold"])).toEqual(["Gone"]);
+    expect(strayApprovals(undefined, ["Approve_Hold"])).toEqual([]);
   });
 });

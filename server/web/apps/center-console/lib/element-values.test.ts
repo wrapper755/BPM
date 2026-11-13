@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import type { ElementField } from "@bpm/bpmn-canvas";
+import type { ElementField, EventInfo } from "@bpm/bpmn-canvas";
 
-import { fromInput, parseBody, strayKeys, toInput, withField, writeBody } from "./element-values";
+import {
+  eventFields,
+  eventPatch,
+  fromInput,
+  parseBody,
+  strayKeys,
+  toInput,
+  withField,
+  writeBody,
+} from "./element-values";
 
 const field = (kind: ElementField["kind"], name = "x"): ElementField => ({ name, kind, required: false });
 
@@ -55,5 +64,50 @@ describe("칸 하나", () => {
 describe("폼이 모르는 칸", () => {
   it("있다는 것을 숨기지 않는다", () => {
     expect(strayKeys({ goal: "읽기", 미래칸: 1, schema: 1 }, [field("text", "goal")])).toEqual(["미래칸"]);
+  });
+});
+
+describe("이벤트 칸", () => {
+  const event = (over: Partial<EventInfo> = {}): EventInfo => ({
+    definition: "bpmn:TimerEventDefinition",
+    attachedTo: "",
+    cancelActivity: true,
+    timer: { kind: "timeDuration", value: "PT30M" },
+    message: "",
+    signal: "",
+    error: "",
+    ...over,
+  });
+
+  it("타이머가 없으면 기본은 「그만큼 뒤에」다 — 가장 흔하다", () => {
+    expect(eventFields(event({ timer: null })).timerKind).toBe("timeDuration");
+    expect(eventFields(null).timerValue).toBe("");
+  });
+
+  it("건드리지 않으면 아무 칸도 보내지 않는다 — 멀쩡한 정의 요소를 다시 쓰지 않게", () => {
+    const one = event();
+    expect(eventPatch(one, eventFields(one))).toEqual({});
+  });
+
+  it("타이머는 갈래·값 중 하나만 바뀌어도 함께 간다 (둘이 한 요소다)", () => {
+    const one = event();
+    expect(eventPatch(one, { ...eventFields(one), timerValue: "PT1H" })).toEqual({
+      timer: { kind: "timeDuration", value: "PT1H" },
+    });
+    expect(eventPatch(one, { ...eventFields(one), timerKind: "timeCycle" })).toEqual({
+      timer: { kind: "timeCycle", value: "PT30M" },
+    });
+  });
+
+  it("빈 글은 **지우라는 뜻**이다 — 「건드리지 않았다」와 다르다", () => {
+    const one = event({ definition: "bpmn:ErrorEventDefinition", timer: null, error: "E_PAY" });
+    expect(eventPatch(one, { ...eventFields(one), error: "" })).toEqual({ error: "" });
+  });
+
+  it("경계의 「걷는다」도 바뀔 때만 간다", () => {
+    const one = event({ attachedTo: "Task_1" });
+    expect(eventPatch(one, { ...eventFields(one), cancelActivity: false })).toEqual({
+      cancelActivity: false,
+    });
   });
 });

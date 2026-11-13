@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { laidOut, needsLayout } from "./auto-layout";
 import { BPM_MODDLE } from "./moddle";
+import { readApprovals } from "./approvals";
 import { eventOf, gatewayOf, multiInstanceOf, propertiesOf } from "./read";
 import type { BusinessObject, ExtensionElement, ExtensionElements, Flow } from "./types";
 
@@ -174,5 +175,56 @@ describe("노드 읽기", () => {
     );
     expect(found?.definition).toBe("Message");
     expect(found?.message).toBe("승인됨");
+  });
+});
+
+/** 결재 둘 — 하나는 폼이 있고 하나는 하위 프로세스 안의 확인이다. */
+const WITH_APPROVALS = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpm="urn:chaeksas:bpmn:1" id="Definitions_1" targetNamespace="urn:test">
+  <bpmn:process id="P1" isExecutable="true">
+    <bpmn:userTask id="Approve_Hold" name="보류 건 확인">
+      <bpmn:extensionElements>
+        <bpm:approval>{"title":"보류 건을 확인하세요","fields":[
+          {"key":"지급진행","label":"지급 진행","type":"text","required":true},
+          {"key":"승인","label":"승인","type":"bool","default":true},
+          {"key":"등급","label":"등급","type":"choice","choices":["상","중","하"]}]}</bpm:approval>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:subProcess id="Sub_1">
+      <bpmn:manualTask id="Check_Site">
+        <bpmn:extensionElements>
+          <bpm:approval>{"title":"현장을 확인하세요"}</bpm:approval>
+        </bpmn:extensionElements>
+      </bpmn:manualTask>
+    </bpmn:subProcess>
+  </bpmn:process>
+</bpmn:definitions>`;
+
+describe("그림이 묻는 결재", () => {
+  it("노드 id와 폼 칸을 읽는다 — 케이스가 답을 적을 자리다 (C14 approvals)", async () => {
+    const found = await readApprovals(WITH_APPROVALS);
+    const ask = found.find((one) => one.nodeId === "Approve_Hold");
+    expect(ask?.label).toBe("보류 건 확인");
+    expect(ask?.confirmation).toBe(false);
+    expect(ask?.fields.map((one) => [one.key, one.type, one.required])).toEqual([
+      ["지급진행", "text", true],
+      ["승인", "bool", false],
+      ["등급", "choice", false],
+    ]);
+    expect(ask?.fields[2]?.choices).toEqual(["상", "중", "하"]);
+    expect(ask?.fields[1]?.default).toBe(true);
+  });
+
+  it("하위 프로세스 안도 훑고 확인(manualTask)을 가른다 — 답하는 자리는 같아도 글이 다르다", async () => {
+    const found = await readApprovals(WITH_APPROVALS);
+    const ask = found.find((one) => one.nodeId === "Check_Site");
+    expect(ask?.confirmation).toBe(true);
+    expect(ask?.title).toBe("현장을 확인하세요");
+    expect(ask?.fields).toEqual([]);
+  });
+
+  it("읽지 못하는 그림이면 빈 목록이다 — 케이스 편집기가 뜨지 못하면 안 된다", async () => {
+    expect(await readApprovals("이건 BPMN이 아니다")).toEqual([]);
   });
 });

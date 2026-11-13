@@ -114,3 +114,39 @@ export function duplicateNames(cases: Case[]): string[] {
   }
   return [...twice].sort();
 }
+
+// ─────────────────── 결재 답 폼 (그림의 결재 칸을 본다) ───────────────────
+
+/**
+ * 그 케이스 파일이 딸린 정의 — `cases/<이름>.cases.json` → `process/<이름>.bpmn`.
+ *
+ * **엔진이 그 짝만 본다** (`core.testrun.workspace`의 `case_file`) — 다른 정의의 결재를 폼으로
+ * 그리면 적어 넣은 답이 돌릴 때 쓰이지 않는다.
+ */
+export function definitionPath(casePath: string): string | null {
+  const name = casePath.startsWith("cases/") ? casePath.slice("cases/".length) : "";
+  if (!name.endsWith(".cases.json")) return null;
+  const stem = name.slice(0, -".cases.json".length);
+  return stem ? `process/${stem}.bpmn` : null;
+}
+
+/** 폼 칸의 갈래 (C6 `KNOWN_FIELD_TYPES`) → 값 칸의 갈래. 모르는 갈래는 글이다. */
+export function kindOfField(type: string): ValueKind {
+  if (type === "bool") return "참거짓";
+  if (type === "number") return "수";
+  return "글";
+}
+
+/**
+ * 케이스에는 있는데 **그림에는 없는** 결재 — 노드를 지웠거나 이름이 바뀐 것이다.
+ *
+ * **지우지 않고 보인다** — 조용히 버리면 사람이 적어 둔 답이 사라지고, 왜 그 케이스가 달라졌는지
+ * 알 수 없다 (U8).
+ */
+export function strayApprovals(
+  approvals: Record<string, unknown> | undefined,
+  nodeIds: string[],
+): string[] {
+  const known = new Set(nodeIds);
+  return Object.keys(approvals ?? {}).filter((one) => !known.has(one));
+}
