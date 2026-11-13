@@ -3,14 +3,13 @@
 실행: `uv run python scripts/gen_moddle.py`
 `--check`: 파일을 쓰지 않고 검사만 하며, 생성물이 모델과 다르면 1로 끝난다 (CI용).
 
-bpmn-js가 우리 확장 요소를 **타입으로** 다루려면 설명이 필요하다 ([ADR-0022](../docs/decisions/0022-studio-canvas.md)).
-**손으로 쓰지 않는다** — 원본은 `contracts.bpmn_ext.ELEMENT_MODELS`이고, `bpm:*`를 하나 더하면
-여기를 다시 돌려야 CI가 통과한다.
+bpmn-js가 우리 확장 요소를 **타입으로** 다루려면 설명이 필요하다. **손으로 쓰지 않는다** —
+원본은 `contracts.bpmn_ext.ELEMENT_MODELS`이고, `bpm:*`를 하나 더하면 여기를 다시 돌려야 CI가
+통과한다.
 
-**자리가 셋이다** (ADR-0143):
+**자리가 둘이다** (ADR-0143):
 
-- 콘솔 웹 편집기: `server/web/packages/bpmn-canvas/src/moddle.ts` (ES 모듈)
-- Qt Studio 캔버스: `studio/app/.../web/bpm-moddle.js` (전역 `window.BPM_MODDLE`) — 걷힐 자리다 (M11 조각 5)
+- 콘솔 웹 편집기의 캔버스: `server/web/packages/bpmn-canvas/src/moddle.ts` (ES 모듈)
 - 속성 폼: `server/web/packages/bpmn-canvas/src/element-forms.ts` — CON-20 상세 패널이 **폼을 손으로
   쓰지 않게** 한다. 칸 이름·타입·필수 여부가 모델에서 오므로 `bpm:*`에 칸을 더하면 폼에 저절로 생긴다.
 
@@ -36,13 +35,11 @@ if hasattr(sys.stdout, "reconfigure"):
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "server" / "web" / "packages" / "bpmn-canvas" / "src" / "moddle.ts"
 FORMS = ROOT / "server" / "web" / "packages" / "bpmn-canvas" / "src" / "element-forms.ts"
-QT = ROOT / "studio" / "app" / "src" / "bpm" / "studio" / "web" / "bpm-moddle.js"
 
 #: XML 속성으로 적는 것 (나머지는 전부 본문 JSON이다). C14 §태스크 종류 표의 `bpm:task`.
 XML_ATTRIBUTES: dict[str, tuple[str, ...]] = {"task": ("type", "extension")}
 
-#: 요소의 **화면 이름** — 모델에는 한글이 없다. 데스크톱 Studio의 탭 이름을 그대로 옮겼다
-#: (`studio/app/.../*_editor.py`의 `TAB_LABEL` — 그 파일들은 M11 조각 5에서 걷힌다).
+#: 요소의 **화면 이름** — 모델에는 한글이 없다. 데스크톱 Studio의 탭 이름을 그대로 옮겨 왔다.
 #: 빠진 것이 있으면 아래에서 **멈춘다** — 이름 없는 폼이 조용히 생기지 않게.
 ELEMENT_LABELS: dict[str, str] = {
     "process": "프로세스",
@@ -164,7 +161,6 @@ def rendered() -> dict[Path, str]:
     forms_body = json.dumps(forms(), ensure_ascii=False, indent=2)
     return {
         WEB: f"{BANNER}export const BPM_MODDLE = {body};\n",
-        QT: f"{BANNER}window.BPM_MODDLE = {body};\n",
         FORMS: (
             f"{BANNER}"
             "\n"

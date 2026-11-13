@@ -21,7 +21,7 @@
 | M8 | 건넬 수 있게, 고칠 수 있게 | **멈춤** (PC 실행기를 걷어 남은 둘이 사라졌다 — ADR-0144) | Windows 설치 파일(빌드·CI 산출물·판 올리기), Center 저장소 옮기기 수단 | M7 |
 | M9 | 바깥 기능은 Pull로 | **끝** (조각 1~6과 C14·C1의 옛 키 칸 — ADR-0102·0103) | C15 외부 작업, 일꾼이 된 서비스 앱, 어댑터 일꾼, 주소·키 칸 없는 CON-07 | M7 |
 | M10 | 세 기둥 — AI 작업·외부 작업·통합 일꾼 | **진행 중** (조각 1~6 끝, 7은 Company1 저장소 — ADR-0135) | 일꾼 종류 칸, 통합 일꾼과 AI 작업 뼈대, 보상, 일꾼 콘솔. 업무 처리기는 Company1로 | M9 |
-| M11 | 하나의 웹 — Studio를 콘솔로, PC 실행기 걷기 | **진행 중** (조각 0~3a 끝 — ADR-0143·0144·0145) | PC 실행기 걷기, 콘솔 안의 웹 편집기, Dataiku 결의 콘솔 | M10 |
+| M11 | 하나의 웹 — Studio를 콘솔로, PC 실행기 걷기 | **진행 중** (조각 0~5 끝 — ADR-0143·0144·0145) | PC 실행기 걷기, 콘솔 안의 웹 편집기, Dataiku 결의 콘솔 | M10 |
 
 ## M0. 문서 기준선
 
@@ -149,7 +149,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 
 > 상태: **멈춤** — 코드로 할 것은 다 했고, 남아 있던 둘(설치한 PC 실행기의 자동 시작 확인, 설치
 > 파일로 M6의 「1시간 환경 구성」 다시 하기)은 **PC 실행기를 걷으면서 사라졌다** ([ADR-0144](decisions/0144-remove-the-pc-runner.md)).
-> Studio 쪽 산출물은 M11 조각 5에서 함께 걷는다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)).
+> Studio 쪽 산출물도 **M11 조각 5에서 걷었다** ([ADR-0143](decisions/0143-design-happens-in-the-console.md)) — 데스크톱 산출물이 없다.
 
 **A. Windows 설치 파일** — 묶는 방법은 [ADR-0024](decisions/0024-desktop-packaging-extensions.md)가
 정했고 `core`가 PyInstaller 훅까지 준다(빌드 인자를 적지 않는다). 제품 쪽 빌드는 `packaging/build.py`다.
@@ -209,7 +209,7 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 
 ## M11. 하나의 웹 — Studio를 콘솔로, PC 실행기 걷기
 
-> 상태: **진행 중** — 조각 0~3a가 끝났다. 결정은 [ADR-0143](decisions/0143-design-happens-in-the-console.md)(설계가
+> 상태: **진행 중** — 조각 0~5가 끝났다 (남은 것은 조각 6·7). 결정은 [ADR-0143](decisions/0143-design-happens-in-the-console.md)(설계가
 > 콘솔 안에서)·[ADR-0144](decisions/0144-remove-the-pc-runner.md)(PC 실행기 걷기)·[ADR-0145](decisions/0145-console-is-workspace-shaped.md)(콘솔의 틀)다.
 > **데스크톱에서 그려 올리는 것도, 현장 PC에서 돌리는 것도 존재 이유를 잃었다** — 업무는 서버에서
 > 돌고(ADR-0016) PC가 필요한 일은 RPA뿐이며 그것은 **데스크톱 일꾼**이 C15 Pull로 가져가는 쪽이다.
@@ -219,8 +219,8 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 조각 2 — **PC 실행기 걷기**: `bot/` 전부, 제어 파일(ADR-0031), `core.processes`·`core.outputs`, `shared/qt`의 결재 창(CMN-01), Center `api/bot_ui.py`·`bot_uis` 표(옮기기 28판), Windows CI 잡(ADR-0104·0108). **맡기기는 남는다** — 대상이 서버 실행기 하나다 (ADR-0082). 예제는 **FX-19가 서버 + 결재함 확인**, BX-16의 맡기기는 걷었다
 - [x] 조각 3a — **오라클 이사**: Studio의 Qt 없는 부분(`workspace`·`cases`·`packaging`·`receiver`·`runner`·실행 전 검사)을 **`core.testrun`**으로 옮겼다. `CaseRun`은 **`pump()`를 부르는 쪽이 민다**(QTimer가 아니다) — Studio는 그 위의 Qt 어댑터다. 오라클 둘이 **Qt 없이** 돈다: `tests/shared/test_m3_acceptance.py`(묶음 29개 + 재생)와 이미 있던 `tests/server/test_m7_server_rerun.py`(예제 49개)
 - [x] 조각 3b — **서버 시험 실행·검사·짓기**: 계약 [C17](03-contracts/C17-workspaces.md)(작업공간) 초안을 쓰고 **미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다**(시험 작업은 `jobs[]`로 가고 **자리만 따로**, 검사와 짓기는 **작업이 아니라** 하트비트의 작은 칸, 지은 zip은 **Center가 제 이름으로** 등록한다). **도는 것**: 계약 모델(`contracts.workspace`), Center의 작업공간 저장·파일·묶음·가져오기(30판)와 **시험 실행**(31판 — 줄에 세우고 내려보내고 진행·판정·배운 것을 적는다), 실행기의 **시험 모드**(`testmode.py` — 묶음을 받아 풀고 `core.testrun`으로 돌려 C17로 올린다). 거리 하나를 끝까지 보는 시험이 섰다(`tests/server/test_server_runner_testmode.py` — 예제 FX-03b와 그 케이스). **실행 전 검사와 짓기도 돈다**(32판 — 하트비트의 `checks[]`·`builds[]`, 검사는 묶음과 함께 담아 되묻지 않고, 지은 zip은 `POST …/builds/{id}/artifact`로 받아 **C5와 같은 함수**로 등록한다). **남은 것**: 공유 BPM 프로세스 설치(`POST …/libs`)와 **화면**(조각 4) — 지금 설계를 사람이 할 길은 데스크톱 Studio뿐이다
-- [ ] 조각 4 — **웹 편집기** (CON-20): 캔버스(`bpmn-canvas`)·작업공간·속성 편집기·표 편집·시험 실행·「배포 후보로 만들기」
-- [ ] 조각 5 — **Qt 걷기**: `studio/`·`shared/qt`·`packaging/`·`desktop.yml`·`core.selftest`
+- [x] 조각 4 — **웹 편집기** (CON-20): 캔버스 패키지(`@bpm/bpmn-canvas` — bpmn-js를 pnpm 의존으로, ADR-0029가 풀렸다), 탐색기·캔버스·상세 패널(`bpm:*` 폼은 **C14 모델에서 생성**), 결정표 격자(**Center가 읽고 쓴다** — [ADR-0148](decisions/0148-center-reads-and-writes-decision-tables.md)), 케이스 편집기와 **그림에서 읽어 짓는 결재 답 폼**, 아래 탭 셋(변수·검사·로그), 시험 실행(케이스·수행 모드·목록·노드 색·중지), 실행 전 검사, 「배포 후보로 만들기」, 「정보」 탭과 **공유 BPM 프로세스 설치**(C17의 마지막 전송 공백). 탭 셋은 [ADR-0147](decisions/0147-workspace-has-three-tabs.md)이다. 남은 것은 **리소스에서 노드 만들기** 하나다 (§3-34)
+- [x] 조각 5 — **Qt 걷기**: `studio/`·`shared/qt`·`packaging/`(설치 파일 포함)·`desktop.yml`·`core.selftest`·PyInstaller 훅, 워크스페이스 멤버와 `build` 그룹, 생성기의 QSS·Qt 출력, bpmn-js 배포본 복사(ADR-0029의 자리). **오라클은 먼저 옮겨 두었다**(조각 3a) — M5 묶음은 `test_m7_server_rerun.py`가 같은 예제·같은 모의 앱으로 덮고 그 시험이 README의 M5 줄과 대조한다. Qt 테마가 지키던 「상태 표기마다 색이 있는가」는 `tests/integration/test_design_tokens.py`가 이어받았다. **크로스플랫폼 코드 규칙은 남는다** (CLAUDE.md §5 — RPA 데스크톱 일꾼이 Windows를 다시 데려온다). **Studio 키 종류는 아직 남아 있다** — 걷는 것은 계약·Center·화면을 함께 고치는 일이라 §3-35에 적었다
 - [ ] 조각 6 — **Dataiku 모양**: 좌측 아이콘 레일 + 작업공간 탭, 토큰·구성요소, 화면 열여덟
 - [ ] 조각 7 — **문서 마무리**
 

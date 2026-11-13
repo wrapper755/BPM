@@ -341,9 +341,12 @@ def test_my_table_wins_over_a_received_one(tmp_path: Path) -> None:
         folder = tmp_path
 
         def decision_files(self) -> list[tuple[Path, bool]]:
-            from bpm.studio.workspace import BpmProcess  # noqa: PLC0415
+            # **엔진이 읽는 그 차례를 빌려 쓴다** — 베끼면 「편집기는 받은 것을, 실행은 내 것을」
+            # 읽는 날이 온다 (`core.testrun.workspace`).
+            from bpm.core.testrun.workspace import BpmProcess  # noqa: PLC0415
 
-            return BpmProcess.decision_files(self)  # type: ignore[arg-type]
+            found: list[tuple[Path, bool]] = BpmProcess.decision_files(self)  # type: ignore[arg-type]
+            return found
 
     made = decisions_of(Owner())
     assert made is not None

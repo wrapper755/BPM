@@ -23,13 +23,11 @@ COPY shared/contracts/pyproject.toml shared/contracts/
 COPY shared/extension_api/pyproject.toml shared/extension_api/
 COPY shared/core/pyproject.toml shared/core/
 COPY shared/llm/pyproject.toml shared/llm/
-COPY shared/qt/pyproject.toml shared/qt/
 COPY server/service_kit/pyproject.toml server/service_kit/
 COPY server/center/pyproject.toml server/center/
-COPY studio/app/pyproject.toml studio/app/
 COPY server/server_runner/pyproject.toml server/server_runner/
 
-# Center가 쓰는 것만 설치한다 (Qt·PySide6는 서버에 필요 없다).
+# Center가 쓰는 것만 설치한다.
 RUN uv sync --frozen --no-install-workspace --package bpm-center
 
 COPY shared/ shared/

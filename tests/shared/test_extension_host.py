@@ -9,7 +9,6 @@ from __future__ import annotations
 import base64
 import json
 import logging
-from importlib.metadata import entry_points
 from typing import Any
 
 import fake_extension
@@ -97,85 +96,6 @@ def test_states_report_what_center_asks_for(host: ExtensionHost) -> None:
     assert str(state.definition_hash).startswith("sha256:")
     assert set(state.to_json_dict()) == {"id", "version", "definition_hash", "enabled", "off"}
     assert state.off is False
-
-
-def test_pyinstaller_hook_is_shipped_with_core() -> None:
-    """ADR-0024 — 설치 파일에 확장을 넣는 훅을 `core`가 준다.
-
-    확장은 문자열(엔트리 포인트·`entry`)로만 닿아서 PyInstaller의 정적 분석에 보이지 않는다.
-    훅이 빠지면 **묶은 뒤에만** 확장이 사라지므로(S5 스파이크), 여기서 배선을 지킨다.
-    PyInstaller가 깔려 있지 않아도 돌아간다 — 훅 파일을 import하지 않고 자리만 본다.
-    """
-    from pathlib import Path
-
-    from bpm.core.__pyinstaller import get_hook_dirs
-
-    dirs = [Path(d) for d in get_hook_dirs()]
-    assert dirs, "훅 폴더가 없다"
-    hooks = [p.name for d in dirs for p in d.glob("hook-*.py")]
-    assert "hook-bpm.core.extensions.py" in hooks, hooks
-
-    # PyInstaller가 훅 폴더를 찾는 길 (`pyinstaller40` 엔트리 포인트).
-    #
-    # **이름이 겹친다.** `hook-dirs`를 선언하는 것이 우리뿐이 아니다 — PyInstaller를 깔면
-    # `pyinstaller-hooks-contrib`도 같은 이름으로 선언한다(`--group build`). 사전으로 모으면
-    # 하나가 다른 하나를 덮으므로 **우리 것이 그 안에 있나**로 본다 (처음에는 사전으로 모아
-    # 두었고, 빌드를 들이자 그 자리가 깨져 드러났다).
-    declared = [ep.value for ep in entry_points(group="pyinstaller40") if ep.name == "hook-dirs"]
-    assert "bpm.core.__pyinstaller:get_hook_dirs" in declared, declared
-
-
-# ───────────────────── 빌드 검사 (`--selftest`, ADR-0024) ─────────────────────
-
-
-def test_selftest_passes_with_no_extension() -> None:
-    """**지금은 묶을 확장이 없다** (ADR-0114) — `--want`를 주지 않으면 확장이 없어도 통과한다."""
-    from bpm.core.selftest import check  # noqa: PLC0415
-
-    found = check()
-    assert found["all_ok"], found
-    assert found["steps"]["entry_points"]["value"]["enabled"] == []
-
-
-def test_selftest_sees_an_installed_extension(host: ExtensionHost) -> None:
-    """같은 검사가 **확장이 있을 때**도 돈다 — 인스턴스를 만들지 않고 `entry`를 풀기만 한다."""
-    from bpm.core.selftest import check  # noqa: PLC0415
-
-    found = check(host=host, want=[BUILTIN_ID])
-    assert found["all_ok"], found
-    assert "풀린다" in str(found["steps"]["entries"]["value"])
-
-
-def test_selftest_fails_when_a_wanted_extension_is_missing(host: ExtensionHost) -> None:
-    """**빌드가 멈춰야 한다** — 묶음에 확장이 빠지면 실행 중에야 드러난다.
-
-    `--want`는 빌드하는 쪽이 「무엇이 들어가야 하는가」를 못 박는 자리다 (ADR-0018 §5 포함 목록).
-    """
-    from bpm.core.selftest import check  # noqa: PLC0415
-
-    found = check(host=host, want=[BUILTIN_ID, "없는-확장"])
-    assert not found["all_ok"]
-    assert not found["steps"]["entry_points"]["ok"]
-    # 기여를 푸는 쪽은 멀쩡하다 — 「무엇이 틀렸나」가 갈라져 보여야 한다.
-    assert found["steps"]["entries"]["ok"]
-
-
-def test_selftest_catches_an_entry_that_cannot_be_resolved() -> None:
-    """**서브모듈이 빠진 꼴** — 확장은 켜지는데 `entry`가 풀리지 않는다 (ADR-0024의 셋째 증상)."""
-    from bpm.core.selftest import check  # noqa: PLC0415
-
-    broken = ExtensionHost()
-    install(
-        broken,
-        definition(contributes={"task_types": [
-            {"id": "ocr_task", "label": "OCR", "executor": {"entry": "doc_ocr.gone:Missing"},
-             "run_locations": ["pc"]}
-        ]}),
-    )
-    found = check(host=broken, want=["doc-ocr"])
-    assert not found["all_ok"]
-    assert found["steps"]["entry_points"]["ok"], "확장은 켜져 있다 — 터지는 자리는 entry다"
-    assert "ocr_task" in str(found["steps"]["entries"]["value"])
 
 
 def test_unknown_entry_point_group_loads_nothing() -> None:

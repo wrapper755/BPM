@@ -11,9 +11,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
     "gen:api-types": "pnpm --filter @bpm/api-types generate",
-    "check:api-types": "pnpm --filter @bpm/api-types check",
-    "gen:bpmn-canvas": "pnpm --filter @bpm/bpmn-canvas build",
-    "check:bpmn-canvas": "pnpm --filter @bpm/bpmn-canvas check"
+    "check:api-types": "pnpm --filter @bpm/api-types check"
   },
   "devDependencies": {
     "vitest": "5.0.4"

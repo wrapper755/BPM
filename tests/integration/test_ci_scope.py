@@ -10,7 +10,7 @@ import ast
 from pathlib import Path
 
 import pytest
-from ci_scope import CLIENT_MODULES, FOLDERS, SERVER_FOLDER, is_server_side
+from ci_scope import CLIENT_MODULES, DATA_FOLDERS, FOLDERS, SERVER_FOLDER, is_server_side
 
 TESTS = Path(__file__).resolve().parents[1]
 ROOT = TESTS.parent
@@ -22,7 +22,7 @@ def test_every_test_lives_in_a_folder() -> None:
     loose = sorted(p.name for p in TESTS.glob("test_*.py"))
     assert loose == [], f"폴더에 넣는다 ({', '.join(FOLDERS)}): {loose}"
     folders = [p.name for p in TESTS.iterdir() if p.is_dir() and not p.name.startswith(("_", "."))]
-    unknown = sorted(name for name in folders if name not in FOLDERS)
+    unknown = sorted(name for name in folders if name not in (*FOLDERS, *DATA_FOLDERS))
     assert unknown == [], f"모르는 시험 폴더 — ci_scope.FOLDERS에 더하거나 옮긴다: {unknown}"
 
 

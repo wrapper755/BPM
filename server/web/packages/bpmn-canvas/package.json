@@ -3,14 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "콘솔 웹 편집기의 BPMN 캔버스 — bpmn-js를 pnpm 의존으로 쓴다 (ADR-0143). Qt Studio가 쓰는 배포본 복사는 copy.mjs가 아직 한다",
+  "description": "콘솔 웹 편집기의 BPMN 캔버스 — bpmn-js를 pnpm 의존으로 쓴다 (ADR-0143)",
   "exports": {
     ".": "./src/index.ts",
     "./canvas.css": "./src/canvas.css"
   },
   "scripts": {
-    "build": "node copy.mjs",
-    "check": "node copy.mjs --check",
     "typecheck": "tsc --project tsconfig.json"
   },
   "dependencies": {

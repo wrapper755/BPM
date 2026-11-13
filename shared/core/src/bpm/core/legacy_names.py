@@ -5,9 +5,8 @@
 이 파일과 부르는 자리를 함께 걷는다.
 
 - 폴더는 **앱마다 제 폴더를** 통째로 옮긴다(복사하지 않는다 — 두 벌이 생기면 어느 쪽이 원본인지 모른다).
-  윗 폴더째 옮기지 않는다 — Windows는 대소문자를 가리지 않아 Studio(`BPM\\BPM`)와 실행기(`bpm`)가 윗 폴더를
-  나눠 쓰므로, 먼저 뜬 앱이 남의 폴더까지 가져가 다른 앱이 빈 폴더로 뜬다.
-  못 옮기면(파일을 쥔 프로세스가 있다) 옛 자리를 그대로 쓰고 로그에 남긴다.
+  윗 폴더째 옮기지 않는다 — 한 윗 폴더를 앱들이 나눠 쓰므로 먼저 뜬 앱이 남의 폴더까지 가져가면
+  다른 앱이 빈 폴더로 뜬다. 못 옮기면(파일을 쥔 프로세스가 있다) 옛 자리를 그대로 쓰고 로그에 남긴다.
 - 키는 새 이름에서 찾지 못했을 때만 옛 이름에서 찾고, 찾으면 새 이름에 쓰고 옛 것을 지운다.
 """
 
@@ -21,12 +20,9 @@ log = logging.getLogger(__name__)
 
 #: `platformdirs.user_data_dir`에 주던 옛 이름 — 서버 실행기 (`appauthor=False`).
 OLD_DATA_NAME = "chaeksas"
-#: Studio가 주던 옛 이름·작성자 (`user_data_dir(APP_NAME, APP_AUTHOR)`).
-OLD_STUDIO_DATA = ("Chaeksas", "Chaeksas")
-
 #: OS 비밀 저장소의 서비스 이름 — 새 이름 → 옛 이름.
+#: **데스크톱 쪽은 뺐다** (M11 조각 5) — 읽는 앱이 없어졌다 (ADR-0143).
 OLD_KEYRING_SERVICES = {
-    "bpm-studio": "chaeksas-studio",
     "bpm-server-runner": "chaeksas-server-runner",
 }
 
@@ -67,7 +63,6 @@ def take_old_secret(backend: Any, service: str, name: str) -> str | None:
 __all__ = [
     "OLD_DATA_NAME",
     "OLD_KEYRING_SERVICES",
-    "OLD_STUDIO_DATA",
     "adopt_dir",
     "take_old_secret",
 ]

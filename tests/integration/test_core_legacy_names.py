@@ -43,12 +43,12 @@ def test_a_folder_that_cannot_move_is_used_where_it_is(tmp_path: Path, monkeypat
 
 
 def test_moving_one_app_leaves_the_other_apps_folder(tmp_path: Path) -> None:
-    """Windows는 대소문자를 가리지 않아 앱들이 윗 폴더를 나눠 쓴다 — 제 폴더만 옮긴다."""
+    """앱들이 윗 폴더를 나눠 쓴다 — 제 폴더만 옮긴다 (남의 것까지 가져가면 빈 폴더로 뜬다)."""
     root = tmp_path / "chaeksas"
     (root / "bot-ui").mkdir(parents=True)
-    (root / "Chaeksas" / "studio").mkdir(parents=True)
+    (root / "server-runner").mkdir(parents=True)
     legacy_names.adopt_dir(tmp_path / "bpm" / "bot-ui", root / "bot-ui")
-    assert (root / "Chaeksas" / "studio").is_dir()
+    assert (root / "server-runner").is_dir()
 
 
 class FakeKeyring:
@@ -73,16 +73,18 @@ def test_an_old_secret_moves_to_the_new_service() -> None:
 
 def test_no_old_secret_is_none() -> None:
     backend = FakeKeyring({})
-    assert legacy_names.take_old_secret(backend, "bpm-studio", "center_api_key") is None
+    assert legacy_names.take_old_secret(backend, "bpm-server-runner", "center_api_key") is None
     assert legacy_names.take_old_secret(backend, "모르는-서비스", "x") is None
 
 
 def test_every_new_service_name_has_its_old_name() -> None:
-    """두 앱의 서비스 이름이 옮기는 표에 있어야 옛 키를 찾는다."""
-    from bpm.server_runner.credentials import SERVICE as RUNNER  # noqa: PLC0415
-    from bpm.studio.credentials import SERVICE as STUDIO  # noqa: PLC0415
+    """키를 읽는 앱의 서비스 이름이 옮기는 표에 있어야 옛 키를 찾는다.
 
-    assert set(legacy_names.OLD_KEYRING_SERVICES) == {RUNNER, STUDIO}
+    **데스크톱 쪽은 뺐다** (M11 조각 5) — 읽는 앱이 없어졌으니 옮길 자리도 없다.
+    """
+    from bpm.server_runner.credentials import SERVICE as RUNNER  # noqa: PLC0415
+
+    assert set(legacy_names.OLD_KEYRING_SERVICES) == {RUNNER}
 
 
 def test_the_runner_reads_a_key_left_under_the_old_name(monkeypatch: pytest.MonkeyPatch) -> None:

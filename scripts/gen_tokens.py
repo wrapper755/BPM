@@ -1,4 +1,4 @@
-"""디자인 토큰 생성기 — `design/tokens.json` → 웹 CSS·Qt 테마·미리보기 + 명암비 검사.
+"""디자인 토큰 생성기 — `design/tokens.json` → 웹 CSS·미리보기 + 명암비 검사.
 
 BPM 흐름 마크(`design/bpm-mark.svg`, 스타일 가이드 §6-1)도 여기서 웹 구성요소·탭 아이콘으로 짓는다 —
 색이 토큰(`primary`)에서 와야 해서다.
@@ -15,7 +15,6 @@ BPM 흐름 마크(`design/bpm-mark.svg`, 스타일 가이드 §6-1)도 여기서
 from __future__ import annotations
 
 import json
-import math
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -35,7 +34,6 @@ WEB_SRC = ROOT / "server" / "web" / "packages" / "ui" / "src"
 WEB_CSS = WEB_SRC / "tokens.css"
 WEB_THEME = WEB_SRC / "theme.css"
 WEB_STATUS_MAP = WEB_SRC / "status-map.ts"
-QT_DIR = ROOT / "shared" / "qt" / "src" / "bpm" / "qt" / "theme"
 PREVIEW = ROOT / "design" / "preview.html"
 #: BPM 흐름 마크 (ADR-0118) — 원본 하나, 웹 구성요소 하나, 콘솔마다 탭 아이콘 하나.
 MARK_SOURCE = ROOT / "design" / "bpm-mark.svg"
@@ -151,11 +149,6 @@ def css_var(name: str) -> str:
     return "--" + name.replace(".", "-")
 
 
-def py_const(name: str) -> str:
-    """`bg.surface` → `BG_SURFACE` (스타일 가이드 §1)."""
-    return name.replace(".", "_").replace("-", "_").upper()
-
-
 # ───────────────────────── 웹 CSS ─────────────────────────
 
 
@@ -239,7 +232,7 @@ def web_theme_css(tokens: dict[str, Any]) -> str:
 
 
 def web_status_map_ts(tokens: dict[str, Any]) -> str:
-    """상태 표기 → 상태 색 (스타일 가이드 §2-2). Qt의 `STATUS_MAP`과 같은 내용이다.
+    """상태 표기 → 상태 색 (스타일 가이드 §2-2).
 
     **화면이 표기를 직접 쓰지 않게** 하려고 생성한다. 여기 없는 표기를 쓰면 타입이 막는다.
     """
@@ -271,89 +264,6 @@ def web_status_map_ts(tokens: dict[str, Any]) -> str:
         "}",
     ]
     return "\n".join(lines) + "\n"
-
-
-# ───────────────────────── Qt ─────────────────────────
-
-
-def _fit(line: str) -> str:
-    """ruff의 줄 길이(120)를 넘는 생성 줄에는 noqa를 붙인다 (글꼴 목록이 길다)."""
-    return f"{line}  # noqa: E501" if len(line) > 120 else line
-
-
-def qt_tokens_py(tokens: dict[str, Any]) -> str:
-    """Qt용 상수. 색은 테마마다 다르므로 `colors()`로 고르고, 색 상수는 밝게 값이다."""
-    lines = [
-        f'"""{BANNER}."""',
-        "",
-        "from typing import Final",
-        "",
-        "LIGHT: Final[dict[str, str]] = {",
-    ]
-    lines += [f'    "{k}": "{v}",' for k, v in tokens["color"]["light"].items()]
-    lines += ["}", "", "DARK: Final[dict[str, str]] = {"]
-    lines += [f'    "{k}": "{v}",' for k, v in tokens["color"]["dark"].items()]
-    lines += ["}", ""]
-
-    lines.append("# 색 상수는 **밝게** 값이다. 테마를 따라야 하면 colors()를 쓴다.")
-    for key, value in tokens["color"]["light"].items():
-        lines.append(f'{py_const(key)}: Final = "{value}"')
-    lines.append("")
-
-    for group in ("space", "radius", "size"):
-        for key, value in tokens[group].items():
-            lines.append(f"{py_const(group + '.' + str(key))}: Final = {value}")
-    lines.append("")
-    for key, value in tokens["font"].items():
-        rendered = json.dumps(value, ensure_ascii=False) if isinstance(value, str) else value
-        lines.append(_fit(f"{py_const('font.' + key)}: Final = {rendered}"))
-    lines.append("")
-    for group in ("shadow", "motion"):
-        for key, value in tokens[group].items():
-            rendered = json.dumps(value, ensure_ascii=False) if isinstance(value, str) else value
-            lines.append(f"{py_const(group + '.' + key)}: Final = {rendered}")
-    lines.append("")
-    lines.append("#: 상태 표기 → 상태 색 이름 (`docs/07-style-guide.md` §2). 표기는 이 표에 있는 것만 쓴다.")
-    lines.append("STATUS_MAP: Final[dict[str, dict[str, str]]] = {")
-    for group, mapping in tokens["status_map"].items():
-        lines.append(f'    "{group}": {{')
-        lines += [f'        "{k}": "{v}",' for k, v in mapping.items()]
-        lines.append("    },")
-    lines.append("}")
-    lines.append("")
-    lines.append("")
-    lines.append("def colors(*, dark: bool) -> dict[str, str]:")
-    lines.append('    """테마에 맞는 색 표."""')
-    lines.append("    return DARK if dark else LIGHT")
-    return "\n".join(lines) + "\n"
-
-
-def qt_arrow_svg(tokens: dict[str, Any], theme: str, direction: str) -> str:
-    """QSpinBox ▲▼ 화살표. 색은 토큰 `text.secondary`, 크기는 간격 토큰 (가로 space.2 × 세로 space.1)."""
-    w, h = tokens["space"]["2"], tokens["space"]["1"]
-    color = tokens["color"][theme]["text.secondary"]
-    points = f"0,{h} {w // 2},0 {w},{h}" if direction == "up" else f"0,0 {w // 2},{h} {w},0"
-    return (
-        f"<!-- {BANNER} ({theme}) -->\n"
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">'
-        f'<polygon points="{points}" fill="{color}"/></svg>\n'
-    )
-
-
-def qt_dot_svg(tokens: dict[str, Any], theme: str) -> str:
-    """고른 라디오 단추의 가운데 점. 색은 `primary`, 상자는 표시기와 같은 space.4.
-
-    테두리를 두껍게 해 점을 흉내 내면 상자가 커져 `border-radius`(지름의 절반)가 맞지 않고
-    **모서리만 둥근 네모**가 된다 — 테두리는 1px 그대로 두고 점을 그림으로 얹는다.
-    """
-    size = tokens["space"]["4"]
-    color = tokens["color"][theme]["primary"]
-    half = size / 2
-    return (
-        f"<!-- {BANNER} ({theme}) -->\n"
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">'
-        f'<circle cx="{half:g}" cy="{half:g}" r="{size * 0.28:g}" fill="{color}"/></svg>\n'
-    )
 
 
 def _mark_shapes() -> tuple[str, list[tuple[str, dict[str, str]]]]:
@@ -420,366 +330,6 @@ def console_icon_svg(tokens: dict[str, Any]) -> str:
         f"<style>g{{color:{light}}}@media (prefers-color-scheme: dark){{g{{color:{dark}}}}}</style>"
         f"<g>{_svg_shapes(shapes)}</g></svg>\n"
     )
-
-
-def qt_check_svg(tokens: dict[str, Any], theme: str) -> str:
-    """체크박스의 ✓. 색은 `primary.fg`(채운 상자 위에 올라간다), 크기는 간격 토큰 space.3."""
-    size = tokens["space"]["3"]
-    color = tokens["color"][theme]["primary.fg"]
-    # 선 세 점: 왼쪽에서 아래로 내려가 오른쪽 위로 올라간다.
-    corner = (size * 0.42, size * 0.78)
-    points = f"{size * 0.2:.1f},{size * 0.55:.1f} {corner[0]:.1f},{corner[1]:.1f} {size * 0.8:.1f},{size * 0.25:.1f}"
-    return (
-        f"<!-- {BANNER} ({theme}) -->\n"
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">'
-        f'<polyline points="{points}" fill="none" stroke="{color}" stroke-width="2" '
-        'stroke-linecap="round" stroke-linejoin="round"/></svg>\n'
-    )
-
-
-def qt_qss(tokens: dict[str, Any], theme: str) -> str:
-    """QSS에는 변수가 없어 테마마다 파일 하나씩 만든다."""
-    c = tokens["color"][theme]
-    f, s, r, z = tokens["font"], tokens["space"], tokens["radius"], tokens["size"]
-    # 묶음의 위 패딩 = 제목 위 여백(space.3) + 제목 줄 높이 + 제목 아래 간격(space.3).
-    group_top = s["3"] + math.ceil(f["size.body-lg"] * f["line.heading"]) + s["3"]
-    # 작업 영역의 세 단계 (스타일 가이드 §4-2) — 틈 < 머리띠 < 카드. 어둡게에서는 카드가 밝은 쪽이라 뒤집힌다.
-    light = theme == "light"
-    # 묶음 제목 밑줄을 늘이는 길이 — 어떤 창보다 넓으면 된다(묶음이 넘친 것을 자른다).
-    title_tail = 4000
-    gap = c["bg.subtle"] if light else c["bg.canvas"]
-    head = c["bg.canvas"] if light else c["bg.subtle"]
-    return f"""/* {BANNER} ({theme}) */
-
-QWidget {{
-  background-color: {c["bg.canvas"]};
-  color: {c["text.primary"]};
-  font-family: {f["family.sans"]};
-  font-size: {f["size.body"]}px;
-}}
-
-QFrame#Surface, QGroupBox, QDialog {{
-  background-color: {c["bg.surface"]};
-  border: 1px solid {c["border.default"]};
-  border-radius: {r["lg"]}px;
-}}
-
-/* 묶음(Section, 스타일 가이드 §3) — 제목은 **카드 안쪽 맨 위**에 굵게, 그 아래 옅은 선.
-   테두리에 걸친 회색 제목은 내용과 붙어 보여
-   묶음이 갈리지 않았다. Qt는 제목 자리를 비워 주지
-   않으므로 위 패딩 = 제목 위 여백 + 제목 줄 높이 + 제목 아래 간격으로 직접 연다 (없으면 겹친다, 이슈 #3). */
-QGroupBox {{
-  margin-top: 0;
-  font-size: {f["size.body-lg"]}px;
-  font-weight: {f["weight.bold"]};
-  padding: {group_top}px {s["2"]}px {s["2"]}px {s["2"]}px;
-}}
-QGroupBox::title {{
-  subcontrol-origin: padding;
-  subcontrol-position: top left;
-  left: 0;
-  top: {s["3"]}px;
-  /* 아래 선 — 제목 칸을 오른쪽으로 길게 늘여 그 밑줄이 묶음 폭을 가로지르게 한다(묶음이 넘친 것을 자른다).
-     폭 전체 선은 QSS로 따로 그을 수 없다. 선은 제목 아래 간격의 절반에 오고
-     카드 양끝까지 닿는다(제목 글은 왼쪽 패딩으로 들여 쓴다). */
-  padding: 0 {title_tail}px {s["3"] // 2}px {s["3"]}px;
-  border-bottom: 1px solid {c["border.default"]};
-  color: {c["text.primary"]};
-}}
-
-/* QWidget 배경이 글자 위젯에도 칠해져 흰 상자 안에 회색 칸이 생긴다 — 글자는 놓인 곳의 배경을 따른다. */
-QLabel, QCheckBox, QRadioButton {{ background-color: transparent; }}
-
-QLabel#Secondary {{ color: {c["text.secondary"]}; }}
-QLabel#Muted {{ color: {c["text.muted"]}; }}
-
-/* 글자의 뜻은 `role` 속성으로 준다 (스타일 가이드 §4-2) — 「빨간 글자로 이유」(U3)가 여기서 빨갛다. */
-QLabel[role="error"] {{ color: {c["status.failed.fg"]}; }}
-QLabel[role="warning"] {{ color: {c["status.warning.fg"]}; }}
-QLabel[role="muted"] {{ color: {c["text.muted"]}; }}
-QLabel[role="h2"] {{ font-size: {f["size.h2"]}px; font-weight: {f["weight.semibold"]}; }}
-
-/* 주 단추는 **연한 채움**이다 (데스크톱만 — 스타일 가이드 §3 Button). 회색 화면에서 진한 채움 하나가 너무 튄다. */
-QPushButton {{
-  background-color: {c["primary.subtle"]};
-  color: {c["primary"]};
-  border: 1px solid {c["primary"]};
-  border-radius: {r["md"]}px;
-  min-height: {z["control.md"]}px;
-  padding: 0 {s["3"]}px;
-  font-weight: {f["weight.medium"]};
-}}
-QPushButton:hover {{ color: {c["primary.hover"]}; border-color: {c["primary.hover"]}; }}
-QPushButton:focus {{ border: 2px solid {c["focus"]}; }}
-QPushButton:disabled {{
-  background-color: {c["bg.subtle"]};
-  color: {c["text.muted"]};
-  border-color: {c["border.default"]};
-}}
-
-QPushButton#Secondary {{
-  background-color: {c["bg.surface"]};
-  color: {c["text.primary"]};
-  border: 1px solid {c["border.strong"]};
-}}
-
-/* 대화상자 아래 단추 — Qt 표준 아이콘(초록 체크·빨간 X)을 쓰지 않는다 (스타일 가이드 §6).
-   우리 아이콘은 `dress_button_box`가 단다. 메시지 상자는 단추를 우리가 짓지 않으니 기본 단추 하나만 채운다. */
-QDialogButtonBox {{ dialogbuttonbox-buttons-have-icons: 0; }}
-QMessageBox QPushButton:!default {{
-  background-color: {c["bg.surface"]};
-  color: {c["text.primary"]};
-  border: 1px solid {c["border.strong"]};
-}}
-
-QPushButton#Danger {{
-  background-color: {c["status.failed.solid"]};
-  color: {c["danger.fg"]};
-}}
-
-QToolButton[running="true"] {{
-  background-color: {c["primary"]};
-  color: {c["primary.fg"]};
-  border-radius: {r["md"]}px;
-}}
-
-QLineEdit, QComboBox, QPlainTextEdit, QTextEdit, QSpinBox {{
-  background-color: {c["bg.surface"]};
-  color: {c["text.primary"]};
-  border: 1px solid {c["border.strong"]};
-  border-radius: {r["md"]}px;
-  padding: 0 {s["2"]}px;
-}}
-/* 한 줄 칸만 컨트롤 높이를 받는다 — 여러 줄 글상자(QPlainTextEdit·QTextEdit)에 주면 편집기가 정한
-   높이를 이 값으로 눌러 한 줄 반만 보인다. 여러 줄 높이는 그 칸을 만든 쪽이 정한다 (스타일 가이드 §4-2). */
-QLineEdit, QComboBox, QSpinBox {{ min-height: {z["control.md"]}px; }}
-QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QTextEdit:focus, QSpinBox:focus {{
-  border: 2px solid {c["focus"]};
-}}
-
-/* 속성 패널의 편집기 탭 (Studio `EditorHolder`) — 스크롤 영역과 편집기 바탕을 카드와 같은 흰색으로.
-   맨 QWidget은 위의 앱 바탕을 칠해 묶음 사이에 회색 띠가 생긴다 (스타일 가이드 §4-2). */
-QScrollArea#EditorHolder, QScrollArea#EditorHolder > QWidget#qt_scrollarea_viewport,
-QScrollArea#EditorHolder > QWidget#qt_scrollarea_viewport > QWidget {{
-  background-color: {c["bg.surface"]};
-}}
-
-/* 표 칸 안의 콤보(칸 위젯) — 칸 선에 붙지 않게 띄우고 높이는 줄을 따른다 (스타일 가이드 §4-2). */
-QAbstractItemView QComboBox {{
-  margin: {s["0.5"]}px {s["1"]}px;
-  padding: 0 {s["1"]}px;
-  min-height: 0;
-}}
-
-/* QSpinBox에 테두리·둥근 모서리를 입히면 기본 ▲▼ 단추가 그 테두리 위에 그대로 겹쳐 잘린다 (이슈 #3, 150%).
-   단추를 테두리 안쪽에 세로로 놓고, 칸 오른쪽에 그 자리를 비운다. */
-QSpinBox {{ padding-right: {s["6"]}px; }}
-QSpinBox::up-button, QSpinBox::down-button {{
-  subcontrol-origin: border;
-  width: {s["5"]}px;
-  border: none;
-  border-left: 1px solid {c["border.default"]};
-  background-color: transparent;
-}}
-QSpinBox::up-button {{
-  subcontrol-position: top right;
-  margin: 1px 1px 0 0;
-  border-top-right-radius: {r["md"]}px;
-}}
-QSpinBox::down-button {{
-  subcontrol-position: bottom right;
-  margin: 0 1px 1px 0;
-  border-bottom-right-radius: {r["md"]}px;
-}}
-QSpinBox::up-button:hover, QSpinBox::down-button:hover {{ background-color: {c["bg.subtle"]}; }}
-/* 단추를 꾸미면 Qt가 기본 화살표를 그리지 않는다 — 생성한 SVG를 쓴다. `@THEME_DIR@`는 테마를 읽을 때
-   그 패키지 폴더의 실제 경로로 바뀐다 (bpm.qt.theme.qss). */
-QSpinBox::up-arrow {{
-  image: url(@THEME_DIR@/arrow-up-{theme}.svg);
-  width: {s["2"]}px;
-  height: {s["1"]}px;
-}}
-QSpinBox::down-arrow {{
-  image: url(@THEME_DIR@/arrow-down-{theme}.svg);
-  width: {s["2"]}px;
-  height: {s["1"]}px;
-}}
-
-/* QCheckBox·QRadioButton에 **무엇이든** 스타일을 주면 Qt가 기본 표시기를 그리지 않는다 — 체크된 칸이
-   상자 없이 ✓만 보였다 (이슈 #3). 표시기를 직접 그린다. ✓는 생성한 SVG다. */
-QCheckBox::indicator, QRadioButton::indicator {{
-  width: {s["4"]}px;
-  height: {s["4"]}px;
-  border: 1px solid {c["border.strong"]};
-  background-color: {c["bg.surface"]};
-}}
-QCheckBox::indicator {{ border-radius: {r["sm"]}px; }}
-QRadioButton::indicator {{ border-radius: {s["2"]}px; }}  /* 지름의 절반 = 동그라미 */
-QCheckBox::indicator:hover, QRadioButton::indicator:hover {{ border-color: {c["primary"]}; }}
-QCheckBox::indicator:checked {{
-  background-color: {c["primary"]};
-  border-color: {c["primary"]};
-  image: url(@THEME_DIR@/check-{theme}.svg);
-}}
-QRadioButton::indicator:checked {{
-  background-color: {c["bg.surface"]};
-  border-color: {c["primary"]};
-  image: url(@THEME_DIR@/dot-{theme}.svg);
-}}
-QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {{
-  background-color: {c["bg.subtle"]};
-  border-color: {c["border.default"]};
-}}
-
-QHeaderView::section {{
-  background-color: {c["bg.subtle"]};
-  color: {c["text.secondary"]};
-  border: none;
-  border-bottom: 1px solid {c["border.default"]};
-  height: {z["row.compact"]}px;
-  padding: 0 {s["2"]}px;
-}}
-QTableView, QTreeView, QListView {{
-  background-color: {c["bg.surface"]};
-  alternate-background-color: {c["bg.canvas"]};
-  border: 1px solid {c["border.default"]};
-  border-radius: {r["lg"]}px;
-}}
-QTableView::item:selected, QTreeView::item:selected, QListView::item:selected {{
-  background-color: {c["primary.subtle"]};
-  color: {c["text.primary"]};
-}}
-
-/* 작업 영역(STU-01) — 영역마다 카드(흰 바탕 + 테두리)이고 사이는 바탕색 틈이 가른다. 선을 긋지 않는다
-   (선은 옆 영역의 테두리와 겹쳐 두 겹이 된다). 틈이 곧 끌어서 크기를 바꾸는 자리다. */
-QSplitter::handle, QMainWindow::separator {{ background-color: transparent; }}
-QSplitter::handle:horizontal, QMainWindow::separator:horizontal {{ width: {s["2"]}px; }}
-QSplitter::handle:vertical, QMainWindow::separator:vertical {{ height: {s["2"]}px; }}
-QFrame#Pane, QTabWidget#PaneTabs::pane {{
-  background-color: {c["bg.surface"]};
-  border: 1px solid {c["border.default"]};
-  border-radius: {r["lg"]}px;
-}}
-QTabWidget#PaneTabs::pane {{ top: -1px; border-top-left-radius: 0; }}
-/* 카드 안의 첫 목록은 카드의 테두리를 쓴다 — 제 테두리를 또 그리면 두 겹이다. */
-QTabWidget#PaneTabs > QStackedWidget > QAbstractScrollArea,
-QTabWidget#PaneTabs > QStackedWidget > QWidget > QAbstractScrollArea {{
-  border: none;
-  border-radius: 0;
-}}
-/* 틈 — 카드보다 한 단계 가라앉는다. 메인 창과 그 안의 감싸개만 (`Workspace`) — 대화상자는 그대로다. */
-QMainWindow[workspace="true"], QMainWindow[workspace="true"] > QDockWidget,
-QMainWindow[workspace="true"] > QStatusBar, QWidget#Workspace,
-QSplitter#middleSplit, QSplitter#bottomSplit {{ background-color: {gap}; }}
-/* 카드 머리띠 — 캔버스·속성처럼 탭이 없는 카드. 위 모서리는 카드의 둥글기 안쪽에 맞춘다. */
-QLabel#PaneHeader {{
-  background-color: {head};
-  color: {c["text.secondary"]};
-  font-weight: {f["weight.semibold"]};
-  padding: {s["1"]}px {s["3"]}px;
-  border-bottom: 1px solid {c["border.default"]};
-  border-top-left-radius: {r["lg"] - 1}px;
-  border-top-right-radius: {r["lg"] - 1}px;
-}}
-/* 탭 (스타일 가이드 §3 Tabs) — 앱의 **모든 탭이 한 모양**이다. 탭이 있는 카드는 탭 줄이 곧 머리띠다.
-   고른 탭은 흰 바탕 + 굵게 + **연한 보라 밑줄**(`focus`) — `primary` 밑줄은 너무 셌다.
-   밑줄 자리는 다른 탭도 같은 두께로 비워(머리 바탕색) 고를 때 높이가 바뀌지 않는다. */
-QTabWidget#PaneTabs > QTabBar {{ background-color: transparent; }}
-QTabBar::tab {{
-  background-color: {head};
-  color: {c["text.secondary"]};
-  border: 1px solid {c["border.default"]};
-  border-bottom: 2px solid {head};
-  padding: {s["1"]}px {s["3"]}px;
-  margin-right: 2px;
-  border-top-left-radius: {r["md"]}px;
-  border-top-right-radius: {r["md"]}px;
-}}
-QTabBar::tab:selected {{
-  background-color: {c["bg.surface"]};
-  color: {c["text.primary"]};
-  font-weight: {f["weight.semibold"]};
-  border-bottom: 2px solid {c["focus"]};
-}}
-QTabBar::tab:!selected:hover {{ color: {c["text.primary"]}; }}
-
-/* 위 띠 (STU-01 [M]·[B]) — 메뉴 막대와 도구 모음이 하나로 이어진 연한 보라 띠. `band` 속성을 단 창만이다.
-   남색 틀(`chrome.*`)은 데스크톱 창 위에서 너무 셌다 — 브랜드 색의 옅은 단계에 보통 글자를 얹는다. */
-QMenuBar[band="true"] {{
-  background-color: {c["primary.subtle"]};
-  color: {c["text.primary"]};
-  padding: {s["1"]}px {s["2"]}px 0 {s["2"]}px;
-}}
-QMenuBar[band="true"]::item {{
-  background-color: transparent;
-  color: {c["text.primary"]};
-  padding: {s["1"]}px {s["2"]}px;
-  border-radius: {r["sm"]}px;
-}}
-QMenuBar[band="true"]::item:selected, QMenuBar[band="true"]::item:pressed {{
-  background-color: {c["bg.surface"]};
-}}
-QToolBar[band="true"] {{
-  background-color: {c["primary.subtle"]};
-  border: none;
-  border-bottom: 1px solid {c["border.default"]};
-  padding: {s["1"]}px {s["2"]}px;
-  spacing: {s["1"]}px;
-}}
-QToolBar[band="true"] QToolButton {{
-  background-color: transparent;
-  color: {c["text.primary"]};
-  border: none;
-  border-radius: {r["md"]}px;
-  padding: {s["1"]}px {s["2"]}px;
-}}
-QToolBar[band="true"] QToolButton:hover, QToolBar[band="true"] QToolButton:checked {{
-  background-color: {c["bg.surface"]};
-}}
-QToolBar[band="true"] QToolButton:disabled {{ color: {c["text.muted"]}; }}
-QToolBar[band="true"] QToolButton[running="true"] {{ background-color: {c["primary"]}; color: {c["primary.fg"]}; }}
-QToolBar[band="true"]::separator {{
-  background-color: {c["border.strong"]};
-  width: 1px;
-  margin: {s["1"]}px {s["2"]}px;
-}}
-
-/* 무리 아래 선 (STU-01 「변수」 탭) — 작은 탭과 그 아래 표를 가른다. */
-QFrame#Rule {{
-  background-color: {c["border.default"]};
-  border: none;
-  max-height: 1px;
-  min-height: 1px;
-}}
-
-/* 펼친 메뉴(메뉴 막대·문맥 메뉴) — 테두리가 없으면 흰 바탕 위에서 메뉴가 어디까지인지 안 보인다. */
-QMenu {{
-  background-color: {c["bg.surface"]};
-  color: {c["text.primary"]};
-  border: 1px solid {c["border.strong"]};
-  padding: {s["1"]}px 0;
-}}
-QMenu::item {{ padding: {s["1"]}px {s["6"]}px {s["1"]}px {s["3"]}px; }}
-QMenu::item:selected {{ background-color: {c["primary"]}; color: {c["primary.fg"]}; }}
-QMenu::item:disabled {{ color: {c["text.muted"]}; }}
-QMenu::separator {{ height: 1px; background-color: {c["border.default"]}; margin: {s["1"]}px {s["2"]}px; }}
-
-QToolTip {{
-  background-color: {c["bg.inverse"]};
-  color: {c["text.inverse"]};
-  border: none;
-  padding: {s["1"]}px {s["2"]}px;
-}}
-
-QProgressBar {{
-  background-color: {c["bg.subtle"]};
-  border: none;
-  border-radius: {r["full"]}px;
-  height: {s["2"]}px;
-  text-align: center;
-}}
-QProgressBar::chunk {{ background-color: {c["status.active.solid"]}; border-radius: {r["full"]}px; }}
-"""
 
 
 # ───────────────────────── 미리보기 ─────────────────────────
@@ -907,17 +457,6 @@ def outputs(tokens: dict[str, Any]) -> dict[Path, str]:
         WEB_CSS: web_css(tokens),
         WEB_THEME: web_theme_css(tokens),
         WEB_STATUS_MAP: web_status_map_ts(tokens),
-        QT_DIR / "tokens.py": qt_tokens_py(tokens),
-        QT_DIR / "theme-light.qss": qt_qss(tokens, "light"),
-        QT_DIR / "theme-dark.qss": qt_qss(tokens, "dark"),
-        **{
-            QT_DIR / f"arrow-{d}-{t}.svg": qt_arrow_svg(tokens, t, d)
-            for t in ("light", "dark")
-            for d in ("up", "down")
-        },
-        **{QT_DIR / f"check-{t}.svg": qt_check_svg(tokens, t) for t in ("light", "dark")},
-        **{QT_DIR / f"dot-{t}.svg": qt_dot_svg(tokens, t) for t in ("light", "dark")},
-        # `theme/__init__.py`는 손으로 쓴다 (테마를 **적용하는** 코드가 거기 있다).
         PREVIEW: preview_html(tokens, contrast_rows(tokens["color"]["light"])),
         WEB_MARK: web_mark_tsx(),
         **{icon: console_icon_svg(tokens) for icon in CONSOLE_ICONS},

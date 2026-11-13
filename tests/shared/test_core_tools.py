@@ -86,10 +86,7 @@ def box(tmp_path: Path) -> dict[str, ToolDef]:
 def sample_pdf(target: Path, lines: list[str]) -> Path:
     """한글이 든 PDF 하나 (CID 글꼴을 심어야 진짜 문서와 같다 — 스파이크 S8)."""
     fpdf = pytest.importorskip("fpdf", reason="시험용 PDF를 만들 fpdf2가 없다")
-    font = (
-        Path(__file__).resolve().parents[2]
-        / "shared/qt/src/bpm/qt/fonts/Pretendard-Regular.otf"
-    )
+    font = Path(__file__).resolve().parents[1] / "fonts" / "Pretendard-Regular.otf"
     pdf = fpdf.FPDF()
     pdf.add_font("pretendard", "", str(font))
     pdf.set_font("pretendard", size=12)

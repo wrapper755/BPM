@@ -21,15 +21,13 @@ COPY shared/contracts/pyproject.toml shared/contracts/
 COPY shared/extension_api/pyproject.toml shared/extension_api/
 COPY shared/core/pyproject.toml shared/core/
 COPY shared/llm/pyproject.toml shared/llm/
-COPY shared/qt/pyproject.toml shared/qt/
 COPY server/service_kit/pyproject.toml server/service_kit/
 COPY server/center/pyproject.toml server/center/
-COPY studio/app/pyproject.toml studio/app/
 COPY server/server_runner/pyproject.toml server/server_runner/
 COPY server/adapter_consumer/pyproject.toml server/adapter_consumer/
 COPY server/unified_consumer/pyproject.toml server/unified_consumer/
 
-# 일꾼이 쓰는 것만 (Qt·PySide6는 들어가지 않는다).
+# 일꾼이 쓰는 것만.
 RUN uv sync --frozen --no-install-workspace --package bpm-unified-consumer
 
 COPY shared/ shared/

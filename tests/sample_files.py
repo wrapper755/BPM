@@ -71,10 +71,9 @@ def write_pdf(target: Path, lines: list[str]) -> None:
     key = tuple(lines)
     if key not in _PDFS:
         fpdf = pytest.importorskip("fpdf", reason="표본 PDF를 만들 fpdf2가 없다")
-        font = (
-            Path(__file__).resolve().parent.parent
-            / "shared/qt/src/bpm/qt/fonts/Pretendard-Regular.otf"
-        )
+        # **쓰는 자리 옆에 둔다** — Qt와 함께 `shared/qt`가 없어졌다 (ADR-0143). 웹 글꼴은
+        # woff2라 fpdf2가 읽지 못하고, 한글 없는 표본 PDF는 `pdf_text_tool` 시험을 거짓으로 만든다.
+        font = Path(__file__).resolve().parent / "fonts" / "Pretendard-Regular.otf"
         pdf = fpdf.FPDF()
         pdf.add_font("pretendard", "", str(font))
         pdf.set_font("pretendard", size=12)

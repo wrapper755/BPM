@@ -575,6 +575,22 @@ def test_the_server_examples_are_read_from_the_drawings() -> None:
     assert "fx19_manual_task_pc" in SERVER
 
 
+def test_the_m5_bundle_is_covered_here() -> None:
+    """**M5 인수 묶음도 이 시험이 본다** (M11 조각 5).
+
+    M5는 「서비스 앱이 진짜로 있는 한 바퀴」였고 데스크톱 Studio가 몰았다. Studio를 걷으면서
+    그 시험을 지웠는데(ADR-0143), 여기가 **같은 예제들을 같은 모의 앱으로** 돌린다 — 다른 것은
+    모는 쪽이 서버 실행기라는 점뿐이다. 묶음이 조용히 덮이지 않게 **목록을 대조한다**.
+    """
+    body = (DOCS / "README.md").read_text(encoding="utf-8")
+    row = next(line for line in body.splitlines() if line.startswith("| M5 |"))
+    wanted = [one.strip() for one in row.split("|")[2].split(",")]
+    assert len(wanted) == 20, "README의 M5 묶음이 바뀌었다"
+    for one in wanted:
+        prefix = one.lower().replace("-", "")
+        assert any(name.startswith(prefix) for name in SERVER), f"M5 묶음의 {one}이 여기에 없다"
+
+
 def test_every_server_example_is_in_the_bundle_or_has_a_reason() -> None:
     """빼는 것은 **이유와 함께** 적는다 (M4·M5 인수 시험과 같은 자리).
 
