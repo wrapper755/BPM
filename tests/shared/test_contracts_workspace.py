@@ -116,5 +116,17 @@ def test_a_test_run_id_says_it_is_a_test() -> None:
     assert TEST_RUN_PREFIX == "test_"
 
 
+def test_the_id_a_center_mints_passes_the_contract() -> None:
+    """**짓는 함수와 패턴이 같은 자리에 있다** — 따로 지었다가 어긋났고, 그것이 실행 기록의
+    첫 줄에서야 드러났다 (엔진이 `run_started`를 쓰지 못해 멈췄다).
+    """
+    from bpm.contracts.events import RunEvent, new_run_id
+
+    made = new_run_id(test=True)
+    assert made.startswith(TEST_RUN_PREFIX)
+    # 모양이 틀리면 여기서 `ValidationError`다 (C3 `RunId`).
+    RunEvent(schema=1, run_id=made, seq=1, ts=AT, kind="log", data={"level": "info", "message": "x"})
+
+
 def test_building_defaults_to_a_bpm_process() -> None:
     assert BuildRequest(schema=1).kind == "bpm_process"

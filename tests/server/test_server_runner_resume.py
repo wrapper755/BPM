@@ -238,7 +238,7 @@ def test_a_waiting_run_is_saved_and_releases_its_slot(
     assert settings.max_concurrency == 1
     assert runner.free_slots() == 1
     listed = center.get("/api/v1/server-runners", headers=READ).json()[0]
-    assert listed["capacity"] == {"max": 1, "running": 0}
+    assert listed["capacity"] == {"max": 1, "running": 0, "test_max": 2, "test_running": 0}
     assert [one["run_id"] for one in listed["waiting"]] == [run_id]
     assert listed["waiting"][0]["waiting_for"] == "approval"
 

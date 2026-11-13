@@ -138,6 +138,7 @@ export interface TrialTarget {
   case?: string | null;
   mode?: string;
   revision: string;
+  run_id?: string;
   workspace_id: string;
   [k: string]: unknown;
 }

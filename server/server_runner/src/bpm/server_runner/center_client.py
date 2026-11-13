@@ -38,6 +38,8 @@ API = "/api/v1/server-runner"
 APPROVALS = "/api/v1/approvals"
 #: 리소스 목록도 **C7 경로**다 — 주소와 외부 확장 정의를 읽는다 (실행기 키로, C5 권한표).
 RESOURCES = "/api/v1/resources"
+#: 작업공간의 경로 (C17). **실행기 경로가 아니다** — 기본 `API`를 쓰면 `/server-runner`가 붙는다.
+WORKSPACES = "/api/v1/workspaces"
 #: 요청 크기 한도 (C4와 같다 — 256 KB). 넘으면 보내기 전에 막는다.
 MAX_REQUEST_KB = 256
 #: 한 번의 요청을 기다리는 시간. 주기(10초)보다 넉넉히 짧게.
@@ -250,6 +252,40 @@ class CenterClient:
             raise _problem(response)
         return bytes(response.content)
 
+    # ── 작업공간 (C17 — 시험 실행·검사·짓기가 같은 길을 쓴다) ──
+
+    def download_bundle(self, workspace_id: str) -> bytes:
+        """작업 폴더 zip (C17 `GET /workspaces/{id}/bundle`).
+
+        **승인 봉투도 서명도 없다** — 승인받지 않은 그림이라서다. 그래서 이 길은 **실행기 키**로
+        좁혀 두었고, 여기서 받는 것은 지시에 적힌 묶음이다 (ADR-0146).
+        """
+        own = self.client is None
+        client = self.client or httpx.Client(timeout=self.timeout_s)
+        try:
+            response = client.get(
+                f"{self.base_url.rstrip('/')}/api/v1/workspaces/{workspace_id}/bundle",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+            )
+        except httpx.HTTPError as e:
+            raise Unreachable(f"작업 폴더를 받지 못했습니다 ({type(e).__name__})") from e
+        finally:
+            if own:
+                client.close()
+        if response.status_code >= 400:
+            raise _problem(response)
+        return bytes(response.content)
+
+    def report_trial(self, workspace_id: str, run_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """시험 실행의 진행·끝 (C17 `PUT …/test-runs/{run_id}`).
+
+        **하트비트에 싣지 않는다** — 로그가 수백 줄이다 (ADR-0146). 도는 중에도 올려 콘솔이
+        따라간다.
+        """
+        return self._send(
+            f"/{workspace_id}/test-runs/{run_id}", body, method="PUT", api=WORKSPACES
+        )
+
 
 __all__ = [
     "API",
@@ -258,6 +294,7 @@ __all__ = [
     "KEY_REJECTED_CODES",
     "MAX_REQUEST_KB",
     "RESOURCES",
+    "WORKSPACES",
     "CenterClient",
     "CenterProblem",
     "KeyRejected",

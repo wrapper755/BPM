@@ -15,7 +15,7 @@ from pathlib import Path
 
 import platformdirs
 
-from bpm.contracts.server_runner import DEFAULT_MAX_CONCURRENCY
+from bpm.contracts.server_runner import DEFAULT_MAX_CONCURRENCY, DEFAULT_MAX_TEST_CONCURRENCY
 from bpm.core import legacy_names
 from bpm.core.senders import (
     DEFAULT_ATTACHMENT_MB,
@@ -70,6 +70,10 @@ class Settings:
     name: str = ""
     #: 한 번에 도는 실행 수의 상한 (C12 `max_concurrency`, 기본 10).
     max_concurrency: int = DEFAULT_MAX_CONCURRENCY
+    #: **시험 실행의 자리는 따로다** (C17, ADR-0146) — 운영과 서로 빌려주지 않으므로 그 기계가
+    #: 한꺼번에 도는 최대는 `max_concurrency + max_test_concurrency`다. **0이면 시험을 받지
+    #: 않는다** (운영만 하는 실행기를 그렇게 둔다).
+    max_test_concurrency: int = DEFAULT_MAX_TEST_CONCURRENCY
     heartbeat_s: int = DEFAULT_HEARTBEAT_S
     retry_s: int = DEFAULT_RETRY_S
     data_path: Path = field(default_factory=data_dir)
@@ -128,12 +132,16 @@ class Settings:
     @classmethod
     def from_env(cls) -> Settings:
         limit = _env("MAX_CONCURRENCY")
+        test_limit = _env("MAX_TEST_CONCURRENCY")
         heartbeat = _env("HEARTBEAT_S")
         retry = _env("RETRY_S")
         return cls(
             center_url=_env("CENTER_URL") or DEFAULT_CENTER_URL,
             name=_env("NAME") or "",
             max_concurrency=max(1, int(limit)) if limit else DEFAULT_MAX_CONCURRENCY,
+            max_test_concurrency=(
+                max(0, int(test_limit)) if test_limit else DEFAULT_MAX_TEST_CONCURRENCY
+            ),
             heartbeat_s=max(1, int(heartbeat)) if heartbeat else DEFAULT_HEARTBEAT_S,
             retry_s=max(1, int(retry)) if retry else DEFAULT_RETRY_S,
             data_path=data_dir(),

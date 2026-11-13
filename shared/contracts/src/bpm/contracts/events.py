@@ -8,7 +8,9 @@
 
 from __future__ import annotations
 
+import secrets
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from pydantic import Field
@@ -20,7 +22,18 @@ MAX_BATCH_LINES = 500
 MAX_BATCH_BYTES = 1024 * 1024
 
 RunId = Annotated[str, Field(pattern=r"^(run|test)_\d{8}_\d{6}_[0-9a-f]{6}$")]
-"""`run_<YYYYMMDD>_<HHMMSS>_<hex6>` (운영), `test_…` (Studio 시험 실행)."""
+"""`run_<YYYYMMDD>_<HHMMSS>_<hex6>` (운영), `test_…` (시험 실행)."""
+
+
+def new_run_id(*, now: datetime | None = None, test: bool = False) -> str:
+    """C3 `run_id` 하나 — **패턴과 같은 자리에 둔다**.
+
+    짓는 쪽이 둘이다: 실행하는 쪽(`core.run_state`가 이것을 쓴다)과 **Center**(시험 실행의 id를
+    정한다, C17·ADR-0146). 각자 지으면 한쪽이 패턴을 어겨 **실행 기록을 보낼 때야 드러난다** —
+    실제로 그랬다(`test_<hex8>`로 지었더니 엔진이 첫 줄에서 멈췄다).
+    """
+    at = (now or datetime.now(UTC)).strftime("%Y%m%d_%H%M%S")
+    return f"{'test' if test else 'run'}_{at}_{secrets.token_hex(3)}"
 
 #: 종류별 `data` 필수 키. 알려진 종류만 있고, **모르는 종류는 검사하지 않는다**.
 REQUIRED_DATA_KEYS: dict[str, frozenset[str]] = {

@@ -478,6 +478,11 @@
           "title": "Revision",
           "type": "string"
         },
+        "run_id": {
+          "default": "",
+          "title": "Run Id",
+          "type": "string"
+        },
         "workspace_id": {
           "title": "Workspace Id",
           "type": "string"

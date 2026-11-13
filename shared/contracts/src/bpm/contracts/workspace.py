@@ -217,6 +217,9 @@ class TrialTarget(ContractModel):
     workspace_id: str
     #: 집어 갈 묶음 (C17 `GET /workspaces/{id}/bundle`).
     revision: str
+    #: **실행 id를 Center가 정한다** (`test_…`) — 콘솔이 만들자마자 그것으로 묻기 때문이다.
+    #: 운영 작업과 다른 점이고, 그래서 실행기는 제 id를 짓지 않고 이것을 쓴다.
+    run_id: str = ""
     case: str | None = None
     mode: str = MODE_AUTONOMOUS
 

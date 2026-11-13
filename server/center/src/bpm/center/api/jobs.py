@@ -20,7 +20,7 @@ from collections.abc import Iterable
 from datetime import datetime, timedelta
 from typing import Any
 
-from bpm.center import organization
+from bpm.center import organization, trials
 from bpm.center.api import deployments
 from bpm.center.auth import Caller
 from bpm.center.errors import ApiError
@@ -368,7 +368,8 @@ def server_heartbeat(
         store, host_id=runner_id, seen=_server_seen(store, request) | acked, lost_reason=LOST_RUNNER
     )
     return (
-        _server_dispatch(store, runner_id=runner_id, request=request, paused=paused),
+        _server_dispatch(store, runner_id=runner_id, request=request, paused=paused)
+        + _test_dispatch(store, runner_id=runner_id, request=request, paused=paused),
         _to_cancel(store, host_id=runner_id),
     )
 
@@ -426,6 +427,7 @@ def _server_candidates(store: Store, *, runner_id: str) -> list[Any]:
     return list(
         store.rows(
             "SELECT * FROM jobs WHERE target_type = ? AND settled = 0 AND cancel_requested = 0"
+            " AND test_json IS NULL"  # 시험 작업은 **제 자리에서** 고른다 (ADR-0146)
             " AND state IN (?, ?) AND (target_id = ? OR target_id = ? OR target_id = ?)"
             " ORDER BY requested_at, job_id",
             ("server_runner", PENDING, DISPATCHED, runner_id, UNASSIGNED, TARGET_ANY),
@@ -480,6 +482,60 @@ def _server_dispatch(
                 note=row["note"],
                 # **작업의 주인을 붙인다** (C12·C16) — 행에는 id만, 이름은 내려줄 때 읽는다.
                 place=organization.identity(store, row["company"], row["department"], row["staff"]),
+            )
+        )
+    return out
+
+
+def _test_dispatch(
+    store: Store, *, runner_id: str, request: ServerRunnerHeartbeatRequest, paused: bool
+) -> list[JobDispatch]:
+    """내려줄 **시험 작업** — 시험 빈자리만큼만 (C17, ADR-0146).
+
+    **`pick_jobs()`를 쓰지 않는다** — 그 함수가 하는 일은 *BPM 프로세스별 상한을 건너뛰는 것*이고
+    시험 작업에는 배포가 없어 볼 상한이 없다. 들어온 순서로 앞에서 가져온다.
+
+    **이미 내려간 것을 다시 싣지 않는다** — 작업으로 묶이는 자리에서 `running`이 되므로 대기열에
+    남는 것은 아직 작업이 아닌 것뿐이다. ack는 운영 작업과 같은 길로 온다.
+    """
+    slots = free_slots(request.capacity, paused=paused, test=True)
+    if slots <= 0:
+        return []
+    out: list[JobDispatch] = []
+    now = now_iso()
+    for row in trials.queued(store)[:slots]:
+        target = trials.target_of(row)
+        job_id = new_job_id()
+        with store.tx() as cur:
+            cur.execute(
+                "INSERT INTO jobs (job_id, bpm_process_id, version, target_type, target_id,"
+                " inputs_json, owner, body_hash, requested_by, requested_at, state, dispatched_at,"
+                " run_id, test_json)"
+                " VALUES (?, ?, ?, ?, ?, '{}', ?, '', ?, ?, ?, ?, ?, ?)",
+                (
+                    job_id,
+                    target.workspace_id,
+                    "",
+                    "server_runner",
+                    runner_id,
+                    f"workspace:{target.workspace_id}",
+                    row["requested_by"],
+                    row["requested_at"],
+                    DISPATCHED,
+                    now,
+                    target.run_id,
+                    dumps(target.to_json_dict()),
+                ),
+            )
+        trials.took(store, run_id=target.run_id, job_id=job_id)
+        out.append(
+            JobDispatch(
+                job_id=job_id,
+                bpm_process_id=target.workspace_id,
+                version=None,
+                requested_by=row["requested_by"],
+                requested_at=row["requested_at"],
+                test=target,
             )
         )
     return out
@@ -546,7 +602,24 @@ def _apply_acks(store: Store, *, host_id: str, acks: list[JobAck]) -> set[str]:
                 f"UPDATE jobs SET {columns} WHERE job_id = ?", (*changes.values(), ack.job_id)
             )
         _note_delegation(store, row=row, ack=ack)
+        _note_test_refusal(store, row=row, ack=ack)
     return touched
+
+
+def _note_test_refusal(store: Store, *, row: Any, ack: JobAck) -> None:
+    """거절·만료된 **시험 작업**은 그 시험 실행을 끝으로 적는다 (C17).
+
+    적지 않으면 콘솔이 영원히 「도는 중」으로 보인다 — 실행기가 받지 않은 것을 사람은 알 수 없다.
+    **시작했다는 ack는 건드리지 않는다** (`트리얼`은 작업으로 묶일 때 이미 `running`이다).
+    """
+    if not row["test_json"] or not row["run_id"]:
+        return
+    if ack.result == "rejected" and ack.reason in ("queue_full", "paused"):
+        # **자리가 없었을 뿐이다** — 줄로 돌려보내 다음 하트비트에 다시 간다.
+        trials.requeue(store, run_id=str(row["run_id"]))
+        return
+    if ack.result in ("rejected", "expired", "cancelled"):
+        trials.lost(store, run_id=str(row["run_id"]), reason=ack.reason or ack.result)
 
 
 def _note_delegation(store: Store, *, row: Any, ack: JobAck) -> None:
@@ -645,7 +718,8 @@ def _reconcile(store: Store, *, host_id: str, seen: set[str], lost_reason: str =
     서버 실행기는 `running[]`·`waiting[]`으로 말한다 (C12).
     """
     for row in store.rows(
-        "SELECT job_id, misses, run_id FROM jobs WHERE target_id = ? AND settled = 0 AND state IN (?, ?)",
+        "SELECT job_id, misses, run_id FROM jobs WHERE target_id = ? AND settled = 0"
+        " AND state IN (?, ?)",
         (host_id, QUEUED, ACCEPTED),
     ):
         if row["job_id"] in seen:
@@ -664,6 +738,7 @@ def _reconcile(store: Store, *, host_id: str, seen: set[str], lost_reason: str =
             else:
                 cur.execute("UPDATE jobs SET misses = ? WHERE job_id = ?", (misses, row["job_id"]))
         if misses >= LOST_AFTER and row["run_id"]:
+            trials.lost(store, run_id=str(row["run_id"]), reason=lost_reason)
             # 대기열을 잃었으면 그 실행의 결재도 전달될 곳이 없다 (C6 `host_lost`).
             from bpm.center.api import approvals  # noqa: PLC0415 — 순환 import를 피한다
 

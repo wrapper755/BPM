@@ -18,7 +18,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request, Response
 
-from bpm.center import workspaces
+from bpm.center import trials, workspaces
 from bpm.center.api import server_runner
 from bpm.center.api.body import read_json as _json
 from bpm.center.auth import (
@@ -206,6 +206,75 @@ async def import_files(request: Request, workspace_id: str) -> Any:
         company=company_scope(found),
     )
     return Utf8JSONResponse(status_code=201, content=[one.to_json_dict() for one in made])
+
+
+# ─────────────────────────── 시험 실행 ───────────────────────────
+
+
+@router.post("/workspaces/{workspace_id}/test-runs")
+async def create_test_run(request: Request, workspace_id: str) -> Any:
+    """돌려 본다 — **내려보내는 것은 하트비트**이고 여기서는 줄에 세운다 (ADR-0007·0146)."""
+    found = _writer(request)
+    info = trials.create(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        body=await _json(request),
+        actor=found.actor,
+        company=company_scope(found),
+    )
+    return Utf8JSONResponse(status_code=201, content=info.to_json_dict())
+
+
+@router.get("/workspaces/{workspace_id}/test-runs")
+def list_test_runs(request: Request, workspace_id: str) -> Any:
+    found = _reader(request)
+    listed = trials.listing(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        company=company_scope(found),
+    )
+    return [one.to_json_dict() for one in listed]
+
+
+@router.get("/workspaces/{workspace_id}/test-runs/{run_id}")
+def get_test_run(request: Request, workspace_id: str, run_id: str) -> Any:
+    found = _reader(request)
+    return trials.get(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        run_id=run_id,
+        company=company_scope(found),
+    ).to_json_dict()
+
+
+@router.delete("/workspaces/{workspace_id}/test-runs/{run_id}")
+def stop_test_run(request: Request, workspace_id: str, run_id: str) -> Any:
+    """「중지」 — **판정하지 않는다**. 내려간 것은 작업 취소로 실행기가 닫는다 (ADR-0063)."""
+    found = _writer(request)
+    return trials.stop(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        run_id=run_id,
+        company=company_scope(found),
+    ).to_json_dict()
+
+
+@router.put("/workspaces/{workspace_id}/test-runs/{run_id}")
+async def report_test_run(request: Request, workspace_id: str, run_id: str) -> Any:
+    """실행기가 올리는 진행·끝 — **하트비트에 싣지 않는다** (로그가 수백 줄이다, ADR-0146)."""
+    key = require_key_type(request.app.state.authenticate(request), RUNNER_KEY_TYPE)
+    return trials.report(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        run_id=run_id,
+        body=await _json(request),
+        actor=key.name,
+    ).to_json_dict()
 
 
 # ─────────────────────────── 묶음 (실행기가 집어 간다) ───────────────────────────

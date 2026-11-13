@@ -299,6 +299,7 @@ from bpm.contracts.runner import (
 from bpm.contracts.server_runner import DEFAULT_HEARTBEAT_S as RUNNER_HEARTBEAT_S
 from bpm.contracts.server_runner import (
     DEFAULT_MAX_CONCURRENCY,
+    DEFAULT_MAX_TEST_CONCURRENCY,
     DEFAULT_PER_BOT_CONCURRENCY,
     KNOWN_DELEGATION_STATES,
     KNOWN_MESSAGE_ACK_REASONS,
@@ -612,6 +613,7 @@ __all__ = [
     "resolve_mode",
     # C12 (ack·배포·준비 모양은 C4가, `AdminKey`는 C2가 소유한다)
     "DEFAULT_MAX_CONCURRENCY",
+    "DEFAULT_MAX_TEST_CONCURRENCY",
     "DEFAULT_PER_BOT_CONCURRENCY",
     "KNOWN_MESSAGE_ACK_REASONS",
     "KNOWN_MESSAGE_TARGETS",

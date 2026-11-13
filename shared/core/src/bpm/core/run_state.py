@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 from bpm.contracts.approvals import Form
 from bpm.contracts.bpmn_ext import BpmnProcess, Flow, Node
 from bpm.contracts.dmn import Decision
+from bpm.contracts.events import new_run_id as contract_run_id
 from bpm.contracts.replay import ReplayMemory, ReplaySpec
 from bpm.core.agent import Tool
 from bpm.core.delegation import Delegator, NoDelegator
@@ -557,9 +558,11 @@ def task_type(node: Node) -> str | None:
 
 
 def new_run_id(*, now: datetime | None = None, test: bool = False) -> str:
-    """C3 `run_id` — `run_<YYYYMMDD>_<HHMMSS>_<hex6>` (시험 실행은 `test_`)."""
-    at = (now or utc_now()).strftime("%Y%m%d_%H%M%S")
-    return f"{'test' if test else 'run'}_{at}_{secrets.token_hex(3)}"
+    """C3 `run_id` — **짓는 규칙은 계약에 있다** (패턴과 같은 자리, `contracts.events`).
+
+    짓는 쪽이 둘이라서다: 여기(실행하는 쪽)와 **Center**(시험 실행의 id를 정한다, C17).
+    """
+    return contract_run_id(now=now or utc_now(), test=test)
 
 
 __all__ = [

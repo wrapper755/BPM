@@ -53,6 +53,9 @@ OFFLINE_AFTER_S = 180
 
 #: 실행기 하나가 **한 번에 도는** 실행 수의 기본 상한 (`BPM_SERVER_RUNNER__MAX_CONCURRENCY`).
 DEFAULT_MAX_CONCURRENCY = 10
+#: 시험 실행에 내줄 자리 (C17, ADR-0146). 운영과 **서로 빌려주지 않으므로** 그 기계가 한꺼번에
+#: 도는 최대는 `DEFAULT_MAX_CONCURRENCY + DEFAULT_MAX_TEST_CONCURRENCY`다 — 셈을 숨기지 않는다.
+DEFAULT_MAX_TEST_CONCURRENCY = 2
 #: BPM 프로세스 하나가 한 번에 도는 수의 기본 상한 (배포의 `max_concurrency`, ADR-0016).
 DEFAULT_PER_BOT_CONCURRENCY = 5
 
@@ -556,6 +559,7 @@ def pick_jobs(
 __all__ += [
     "DEFAULT_HEARTBEAT_S",
     "DEFAULT_MAX_CONCURRENCY",
+    "DEFAULT_MAX_TEST_CONCURRENCY",
     "DEFAULT_PER_BOT_CONCURRENCY",
     "KNOWN_MESSAGE_ACK_REASONS",
     "KNOWN_MESSAGE_TARGETS",

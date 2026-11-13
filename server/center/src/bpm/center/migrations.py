@@ -415,6 +415,24 @@ MIGRATIONS: tuple[Step, ...] = (
             " PRIMARY KEY (workspace_id, path))",
         ),
     ),
+    Step(
+        31,
+        "시험 실행 — 작업에 **시험 칸 하나**(있으면 시험 작업이다, 깃발을 따로 두지 않는다)와 "
+        "그 실행의 진행·판정 (C17, ADR-0146)",
+        (
+            # C4 `JobDispatch.test`를 그대로 담는다 — NULL이면 운영 작업이다.
+            "ALTER TABLE jobs ADD COLUMN test_json TEXT",
+            "CREATE TABLE test_runs ("
+            " run_id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, job_id TEXT,"
+            " revision TEXT NOT NULL, case_name TEXT, mode TEXT NOT NULL,"
+            " state TEXT NOT NULL, verdict TEXT, detail TEXT,"
+            # 업무 값이다 (계약 README 원칙 6의 예외) — 목록에는 키만 보이고 지울 때 함께 지운다.
+            " log_json TEXT, node_states_json TEXT, variables_json TEXT,"
+            " learned INTEGER NOT NULL DEFAULT 0,"
+            " requested_by TEXT NOT NULL, requested_at TEXT NOT NULL, updated_at TEXT NOT NULL)",
+            "CREATE INDEX test_runs_workspace ON test_runs (workspace_id, requested_at)",
+        ),
+    ),
 )
 
 

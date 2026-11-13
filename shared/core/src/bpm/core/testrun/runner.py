@@ -240,6 +240,9 @@ class Plan:
     mode: str = "autonomous"  # autonomous | deterministic
     #: C3 `executor` — 누가 돌렸나 (`studio` | `server_runner`). 시험 실행도 어디서 돌았는지 남는다.
     executor: str = "studio"
+    #: **실행 id를 주면 그것을 쓴다** — 서버 시험 실행은 Center가 정한 `test_…`다 (C17 — 콘솔이
+    #: 만들자마자 그 id로 묻는다). 비우면 여기서 짓는다 (데스크톱에서 돌릴 때).
+    run_id: str = ""
     settings: RunSettings = field(default_factory=RunSettings)
     #: 확장 태스크를 수행할 쪽 (C13·ADR-0018). 없으면 그 태스크를 만났을 때
     #: 분명히 실패한다 (그림·설치 오류).
@@ -354,7 +357,8 @@ class CaseRun:
             return
 
         self._started = datetime.now(UTC)
-        log_file = self.plan.settings.data_dir / "runs" / f"{new_run_id(test=True)}.jsonl"
+        given_id = self.plan.run_id or new_run_id(test=True)
+        log_file = self.plan.settings.data_dir / "runs" / f"{given_id}.jsonl"
         record = RunLog(run_id=log_file.stem, path=log_file)
         record.sinks.append(self._on_event)
         try:

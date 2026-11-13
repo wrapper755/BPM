@@ -86,6 +86,7 @@ from bpm.server_runner.extensions import load as load_extensions
 from bpm.server_runner.extensions import tasks as extension_tasks
 from bpm.server_runner.settings import Settings
 from bpm.server_runner.store import Saved, Store
+from bpm.server_runner.testmode import Trial
 from bpm.server_runner.worker import ACK_STARTED, EMPTY_COUNTS, Worker, reopen_log
 
 log = logging.getLogger(__name__)
@@ -194,6 +195,10 @@ class Agent:
     host: ExtensionHost | None = None
     #: 그 호스트를 엔진·사전 점검에 꽂는 것 — 한 번 짓고 들고 있는다.
     _tasks: HostTasks | None = None
+    #: 지금 도는 **시험 실행**들 (`run_id` → 몰이, C17). **자리를 따로 센다** — 운영과 서로
+    #: 빌려주지 않는다 ([ADR-0146](../../../../../docs/decisions/0146-design-work-has-its-own-lane.md)).
+    #: 기다리지 않으므로 담아 두지 않는다 — 다시 띄우면 그 시험 실행은 닫힌다.
+    trials: dict[str, Trial] = field(default_factory=dict)
 
     @property
     def registered(self) -> bool:
@@ -575,6 +580,8 @@ class Agent:
             self._remember_ack(self._take_one(job))
 
     def _take_one(self, job: JobDispatch) -> JobAck:
+        if job.test is not None:
+            return self._take_trial(job)
         if self.paused or self.restarting:
             # 일시 중지 중에는 **새 작업을 받지 않는다** (C12 `paused`).
             return JobAck(job_id=job.job_id, result="rejected", reason="paused")
@@ -617,6 +624,33 @@ class Agent:
         found.start()
         log.info("작업 %s를 시작했다 (%s, 실행 %s)", job.job_id, bot.id, found.run_id)
         return JobAck(job_id=job.job_id, result=ACK_STARTED, run_id=found.run_id)
+
+    def _take_trial(self, job: JobDispatch) -> JobAck:
+        """시험 작업 하나 (C17). **배포를 보지 않는다** — 그림이 묶음으로 온다.
+
+        준비 상태·외부 정의 관문도 지나지 않는다: 돌려 보는 자리이므로 **막는 것은 검사**이고
+        (C17 §실행 전 검사) 여기서 또 막으면 사람이 왜 안 도는지 모른다. 모자란 것은 실행이
+        그 자리에서 분명히 실패해 로그에 남는다.
+        """
+        target = job.test
+        assert target is not None
+        if self.paused or self.restarting:
+            return JobAck(job_id=job.job_id, result="rejected", reason="paused")
+        if self.free_test_slots() <= 0:
+            return JobAck(job_id=job.job_id, result="rejected", reason="queue_full")
+        found = Trial(
+            target=target,
+            job_id=job.job_id,
+            settings=self.settings,
+            client=self.client,
+            extensions=self.extensions,
+            services=self.services(),
+            llm_api_key=self.credentials.llm_api_key() or "",
+        )
+        self.trials[target.run_id] = found
+        found.start()
+        log.info("시험 작업 %s를 시작했다 (%s, 실행 %s)", job.job_id, target.workspace_id, target.run_id)
+        return JobAck(job_id=job.job_id, result=ACK_STARTED, run_id=target.run_id)
 
     def _remember_ack(self, ack: JobAck) -> None:
         self.seen_jobs.remember(ack.job_id, ack)
@@ -787,10 +821,30 @@ class Agent:
                     )
                 )
             del self.workers[run_id]
+        self._collect_trials()
+
+    def _collect_trials(self) -> None:
+        """끝난 시험 실행을 거둔다 — **끝은 그 스레드가 올렸다** (C17 `PUT …/test-runs`).
+
+        작업 ack는 **실행의 성패가 아니라** 「시작했다」로 이미 올렸으므로(C5) 여기서 더 올리지
+        않는다. 거둔 뒤에 시험 자리가 빈다.
+        """
+        for run_id, found in list(self.trials.items()):
+            if found.finished and not found.is_alive():
+                log.info("시험 실행 %s 끝남", run_id)
+                del self.trials[run_id]
 
     def free_slots(self) -> int:
         """빈자리 — **기다리는 실행은 세지 않는다** (C12, ADR-0054 §5)."""
         return max(0, self.settings.max_concurrency - self._running_count())
+
+    def free_test_slots(self) -> int:
+        """시험 빈자리 — 운영과 **서로 빌려주지 않는다** (C17, ADR-0146).
+
+        운영 빈자리가 남아도 시험은 거기로 가지 않고, 그 반대도 그렇다. 0으로 두면 그 실행기는
+        **시험을 받지 않는다**(운영만 하는 실행기).
+        """
+        return max(0, self.settings.max_test_concurrency - len(self.trials))
 
     def _running_count(self) -> int:
         return sum(1 for found in self.workers.values() if found.snapshot().holds_a_slot)
@@ -799,7 +853,13 @@ class Agent:
         """취소 지시 (C4 `cancel_jobs`). **시작된 실행도 중지를 부탁한다** — 유예를 기다려 준다.
 
         그래야 `cancelled`가 기록에 남는다. 이미 끝났으면 `cancel_refused`다 (현장이 옳다).
+
+        **시험 실행도 같은 길이다** (C17 「중지」) — 자리를 둘로 만들지 않는다.
         """
+        for trial in self.trials.values():
+            if trial.job_id == job_id:
+                trial.stop()
+                return
         for run_id, found in self.workers.items():
             if found.job_id != job_id:
                 continue
@@ -1077,13 +1137,21 @@ class Agent:
         alive = [one for one in shots if not one.done]
         running = [one.running_row() for one in alive if one.holds_a_slot]
         waiting = [one.waiting for one in alive if one.waiting is not None]
+        trials = [found.running_row() for found in self.trials.values() if not found.finished]
         return ServerRunnerHeartbeatRequest(
             schema=1,
             status=STATUS_DRAINING if self.restarting else STATUS_PAUSED if self.paused else STATUS_RUNNING,
             # **`running`은 기다리는 실행을 뺀 수**다 (C12) — `running[]` 길이와 같아야 한다
             # (어긋나면 Center가 422로 거부한다, `validate_heartbeat`).
-            capacity=Capacity(max=self.settings.max_concurrency, running=len(running)),
-            running=running,
+            capacity=Capacity(
+                max=self.settings.max_concurrency,
+                running=len(running),
+                # **시험 자리는 따로 센다** (C17, ADR-0146). `running[]`에는 함께 싣고 계약이
+                # **실행 id의 `test_` 앞자리로** 가른다 — 깃발을 따로 두면 두 값이 갈라진다.
+                test_max=self.settings.max_test_concurrency,
+                test_running=len(trials),
+            ),
+            running=running + trials,
             waiting=waiting,
             versions=self.versions(),
             # **설치된 BPM 프로세스별 준비 상태** (C12) — 캐시하고 설치·키가 바뀌면 비운다.
