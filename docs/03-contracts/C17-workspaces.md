@@ -197,6 +197,8 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | `node_states` | object | `{노드 id: running\|done\|failed\|waiting}` — 캔버스 색 |
 | `variables` | object | 지금 값. **업무 값이라 목록에는 키만** 보인다 (원칙 6·U10) |
 | `learned` | int | 적은 재생 명세 수 |
+| `requested_by`·`requested_at` | str | 누가 언제 눌렀나 |
+| `updated_at` | str | 마지막으로 바뀐 때 — **소요를 재는 자리**다 (끝난 실행은 끝난 때). 따로 「끝난 때」를 두지 않는다: 끝나면 더 바뀌지 않는다 |
 
 ## 실행 전 검사
 

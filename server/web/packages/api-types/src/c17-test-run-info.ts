@@ -18,6 +18,7 @@ export interface TrialInfo {
   requested_by?: string;
   run_id: string;
   state: string;
+  updated_at?: string | null;
   variables?: {
     [k: string]: unknown;
   };

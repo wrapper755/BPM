@@ -67,6 +67,7 @@ def _info(row: Any) -> TrialInfo:
         mode=row["mode"],
         requested_by=row["requested_by"],
         requested_at=row["requested_at"],
+        updated_at=row["updated_at"],
         log=loads(row["log_json"], []) or [],
         node_states=loads(row["node_states_json"], {}) or {},
         variables=loads(row["variables_json"], {}) or {},

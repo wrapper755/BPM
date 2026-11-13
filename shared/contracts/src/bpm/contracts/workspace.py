@@ -306,6 +306,9 @@ class TrialInfo(ContractModel):
     mode: str = MODE_AUTONOMOUS
     requested_by: str = ""
     requested_at: Timestamp | None = None
+    #: 마지막으로 바뀐 때 — **소요를 재는 자리**다 (끝난 실행은 그때가 끝난 때다).
+    #: 「끝난 때」를 따로 두지 않는다 — 끝나면 더 바뀌지 않으므로 두 칸이 갈라질 자리만 생긴다.
+    updated_at: Timestamp | None = None
     #: 로그 줄 — `Listener.said`가 낸 것 그대로.
     log: list[str] = Field(default_factory=list)
     #: `{노드 id: 상태}` (KNOWN_NODE_STATES) — 캔버스가 칠한다.

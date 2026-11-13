@@ -61,6 +61,8 @@
 | API 키 (Center) | 사용 중 / 만료 / 폐기됨 | done / warning / neutral |
 | 패키지 | 후보 / 승인됨 / 지원 종료 / 철회 / 로컬만 | waiting / done / warning / failed / neutral |
 | 서명·준비·온라인·외부 작업·배치 결정·조직·관리자 계정·배포·등록 요청·기능 | `tokens.json` `status_map` 참고 | — |
+| 시험 실행 | 대기열 / 실행 중 / 기다리는 중 / 완료 / 실패 / 중지됨 | waiting / active / waiting / done / failed / neutral |
+| 시험 판정 | 통과 / 실패 / 비교 안 함 / 중지 / 오류 | done / failed / neutral / neutral / failed |
 | 결재 | 대기 / 답함 / 시간 초과 / 회수됨 (실행하는 쪽이 답을 거절하면 다시 「대기」 + 안내 띠) | waiting / done / warning / neutral |
 | 작업 | 대기 / 전달됨 / 대기열 / 수락 / 거절 / 만료 / 취소됨 | neutral / active / waiting / done / failed / warning / neutral |
 | 서비스 앱 | 정상 / 저하 / 응답 없음 / 확인 전 | done / warning / failed / neutral |

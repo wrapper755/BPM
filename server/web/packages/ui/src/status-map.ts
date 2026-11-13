@@ -134,6 +134,21 @@ export const STATUS_MAP = {
     "쓸 수 없음": "failed",
     "확인 전": "neutral",
   },
+  "시험 실행": {
+    "대기열": "waiting",
+    "실행 중": "active",
+    "기다리는 중": "waiting",
+    "완료": "done",
+    "실패": "failed",
+    "중지됨": "neutral",
+  },
+  "시험 판정": {
+    "통과": "done",
+    "실패": "failed",
+    "비교 안 함": "neutral",
+    "중지": "neutral",
+    "오류": "failed",
+  },
 } as const satisfies Record<string, Record<string, StatusToken>>;
 
 export type StatusGroup = keyof typeof STATUS_MAP;
