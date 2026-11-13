@@ -267,6 +267,10 @@ def create(
         raise ApiError(403, "forbidden", "제 회사의 작업공간만 만들 수 있다")
     if store.row("SELECT id FROM workspaces WHERE id = ?", (request.id,)) is not None:
         raise ApiError(409, "exists", f"같은 id의 작업공간이 있다: {request.id}")
+    # **없는 회사로 만들지 않는다** — 짓는 데까지 가서야 패키지 등록이 그 회사를 찾지 못해
+    # 막힌다(그리고 그 자리에서는 고칠 길이 없다 — 회사는 바뀌지 않는다).
+    if store.row("SELECT id FROM companies WHERE id = ?", (owner,)) is None:
+        raise ApiError(422, "company_unknown", f"그 회사가 없다: {owner}")
     _refuse_unknown_place(store, request.place, company=owner)
 
     root = folder_of(workspace_dir, request.id)

@@ -106,6 +106,17 @@ def test_the_same_id_twice_is_refused(client: TestClient) -> None:
     assert answer.json()["code"] == "exists"
 
 
+def test_a_company_that_is_not_there_is_refused(client: TestClient) -> None:
+    """**없는 회사로 만들지 않는다** — 짓는 데까지 가서야 패키지 등록이 막히고, 그 자리에서는
+    고칠 길이 없다 (회사는 만들 때 정해지고 바뀌지 않는다, C16).
+    """
+    answer = client.post(
+        f"{API}/workspaces", json={"id": "x.y", "name": "x", "company": "nope"}, headers=ADMIN
+    )
+    assert answer.status_code == 422
+    assert answer.json()["code"] == "company_unknown"
+
+
 def test_an_id_that_could_not_be_a_package_is_refused(client: TestClient) -> None:
     """id는 **그대로 C1 매니페스트 id**가 된다 — 여기서 느슨하면 짓다가 R1로 막힌다."""
     answer = client.post(f"{API}/workspaces", json={"id": "Finance Invoice", "name": "청구"}, headers=ADMIN)
