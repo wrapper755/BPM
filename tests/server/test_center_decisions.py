@@ -47,7 +47,9 @@ DMN = """<?xml version="1.0" encoding="UTF-8"?>
   </dmn:decision>
   <dmn:decision id="Other" name="건드리지 않는 결정">
     <dmn:decisionTable id="Table_2" hitPolicy="FIRST">
-      <dmn:input id="Input_9"><dmn:inputExpression id="Expr_9"><dmn:text>구분</dmn:text></dmn:inputExpression></dmn:input>
+      <dmn:input id="Input_9">
+        <dmn:inputExpression id="Expr_9"><dmn:text>구분</dmn:text></dmn:inputExpression>
+      </dmn:input>
       <dmn:output id="Output_9" name="결과" />
       <dmn:rule id="Rule_9">
         <dmn:inputEntry id="Cell_9"><dmn:text>-</dmn:text></dmn:inputEntry>
@@ -100,7 +102,7 @@ def tables(client: TestClient) -> Any:
 def xml_of(client: TestClient) -> str:
     answer = client.get(f"{API}/workspaces/finance.limit/files/{PATH}", headers=READ)
     assert answer.status_code == 200
-    return answer.text
+    return str(answer.text)
 
 
 def test_the_grid_comes_as_cell_text(ready: TestClient) -> None:
@@ -197,7 +199,7 @@ def test_a_file_that_is_not_dmn_says_so(ready: TestClient) -> None:
     """읽지 못하는 파일은 **그 자리에서** 말한다 — 빈 격자를 그리지 않는다."""
     answer = ready.put(
         f"{API}/workspaces/finance.limit/files/process/broken.dmn",
-        content="<이건 DMN이 아니다".encode("utf-8"),
+        content="<이건 DMN이 아니다".encode(),
         headers=ADMIN,
     )
     assert answer.status_code == 201

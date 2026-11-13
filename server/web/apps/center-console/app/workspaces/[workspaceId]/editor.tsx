@@ -8,7 +8,9 @@ import type { FileInfo } from "@bpm/api-types/c17-file-info";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import { loadWorkspaceFile, saveWorkspaceFile } from "@/app/actions";
 import { fileLabel, groupFiles, isEditable, opensWith } from "@/lib/workspaces";
+import { CaseEditor } from "./cases";
 import { DecisionGrid } from "./decisions";
+import { Variables } from "./variables";
 import { Properties } from "./properties";
 import "@bpm/bpmn-canvas/canvas.css";
 
@@ -36,6 +38,10 @@ interface Opened {
 const TABS = ["설계", "시험 실행", "정보"] as const;
 type Tab = (typeof TABS)[number];
 
+/** 아래 탭 (STU-01 [L]) — 「검사」·「로그」는 조각 4e·4f에서 찬다. */
+const BOTTOM = ["변수", "검사", "로그"] as const;
+type Bottom = (typeof BOTTOM)[number];
+
 export function Workspace({
   info,
   files,
@@ -59,6 +65,7 @@ export function Workspace({
   const [picked, setPicked] = useState<NodeProperties | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bottom, setBottom] = useState<Bottom | null>(null);
   const canvas = useRef<BpmnCanvasHandle>(null);
 
   const editing = file !== null && canWrite && isEditable(file.path);
@@ -179,7 +186,8 @@ export function Workspace({
       ) : null}
 
       {tab === "설계" ? (
-        <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-1">
           {/* [E] 탐색기 */}
           <aside
             aria-label="파일"
@@ -238,18 +246,24 @@ export function Workspace({
                 canWrite={editing}
                 onDirty={setDirty}
               />
+            ) : file && shows === "cases" ? (
+              <CaseEditor
+                key={file.path}
+                workspaceId={info.id}
+                path={file.path}
+                canWrite={editing}
+                onDirty={setDirty}
+              />
             ) : (
               <p className="p-6 text-body-sm text-text-muted">
                 {!file
                   ? "열린 정의가 없습니다. 왼쪽에서 정의를 고르거나 「파일에서 가져오기」로 그림을 들이세요."
-                  : shows === "cases"
-                    ? "케이스 편집기는 아직입니다 (M11 조각 4d 나머지)."
-                    : "이 파일은 편집기에서 열지 않습니다."}
+                  : "이 파일은 편집기에서 열지 않습니다."}
               </p>
             )}
           </div>
 
-          {/* [P] 상세 패널 — 고른 것 하나만 (STU-04). 고치는 폼은 조각 4c다. */}
+          {/* [P] 상세 패널 — 고른 것 하나만 (STU-04). */}
           <aside
             aria-label="속성"
             className="w-72 shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-3"
@@ -277,6 +291,54 @@ export function Workspace({
               </>
             )}
           </aside>
+          </div>
+
+          {/* [L] 아래 탭 — 접힌다. 「변수」는 그림의 `bpm:process`라 캔버스 쪽에 있다 (STU-01 [L]). */}
+          <div className="shrink-0 border-t border-border-default bg-bg-surface">
+            <div role="tablist" aria-label="아래 탭" className="flex gap-1 px-3">
+              {BOTTOM.map((one) => (
+                <button
+                  key={one}
+                  role="tab"
+                  aria-selected={bottom === one}
+                  onClick={() => setBottom(bottom === one ? null : one)}
+                  className={
+                    bottom === one
+                      ? "border-b-2 border-primary px-3 py-1 text-body-sm font-semibold"
+                      : "border-b-2 border-transparent px-3 py-1 text-body-sm text-text-muted hover:text-text-primary"
+                  }
+                >
+                  {one}
+                </button>
+              ))}
+            </div>
+            {bottom === "변수" ? (
+              shows === "canvas" ? (
+                <div className="max-h-72 overflow-y-auto border-t border-border-default">
+                  <Variables
+                    key={file?.path}
+                    canvas={canvas}
+                    canWrite={editing}
+                    onApplied={() => setDirty(true)}
+                  />
+                </div>
+              ) : (
+                <p className="border-t border-border-default p-3 text-body-sm text-text-muted">
+                  정의(`.bpmn`)를 열면 그 BPM 프로세스의 입력·출력이 여기 보입니다.
+                </p>
+              )
+            ) : null}
+            {bottom === "검사" ? (
+              <p className="border-t border-border-default p-3 text-body-sm text-text-muted">
+                실행 전 검사는 아직입니다 (M11 조각 4f) — 전송은 돕니다 (C17).
+              </p>
+            ) : null}
+            {bottom === "로그" ? (
+              <p className="border-t border-border-default p-3 text-body-sm text-text-muted">
+                시험 실행 로그는 아직입니다 (M11 조각 4e).
+              </p>
+            ) : null}
+          </div>
         </div>
       ) : (
         <div className="p-6 text-body-sm text-text-muted">

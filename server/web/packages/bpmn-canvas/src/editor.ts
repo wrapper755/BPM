@@ -142,6 +142,14 @@ export class CanvasEditor {
     }
   }
 
+  /**
+   * 그림의 BPM 프로세스 요소 id — `bpm:process`(입력·출력 선언)를 고치는 자리다.
+   * 아래 탭 「변수」가 쓴다 (STU-01 [L]).
+   */
+  processId(): string | null {
+    return this.modeler.get("elementRegistry").find((one) => one.type === "bpmn:Process")?.id ?? null;
+  }
+
   /** 속성 패널이 읽는 것 (STU-04) — 없는 노드면 `null`. */
   properties(id: string): NodeProperties | null {
     const element = this.modeler.get("elementRegistry").get(id);
