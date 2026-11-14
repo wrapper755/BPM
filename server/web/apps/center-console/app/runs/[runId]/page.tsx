@@ -372,13 +372,13 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
           {/* 제목은 BPM 프로세스 이름, 그 아래 실행 id (화면 문서 CON-01). 이름을 못 읽으면 id다. */}
           {processName || info?.bpm_process_id ? (
             <>
-              <h1 className={`text-h1 font-bold ${processName ? "" : "font-mono"}`}>
+              <h1 className={`text-h2 font-bold ${processName ? "" : "font-mono"}`}>
                 {processName ?? info?.bpm_process_id}
               </h1>
               <p className="font-mono text-body-sm text-text-muted">{decodeURIComponent(runId)}</p>
             </>
           ) : (
-            <h1 className="text-h1 font-bold font-mono">{decodeURIComponent(runId)}</h1>
+            <h1 className="text-h2 font-bold font-mono">{decodeURIComponent(runId)}</h1>
           )}
         </div>
       </header>

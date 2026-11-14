@@ -1,0 +1,61 @@
+/* 캔버스의 모양 — 쓰는 앱의 globals.css가 `@import "@bpm/bpmn-canvas/canvas.css"`로 들인다.
+   **색·크기 값을 여기 적지 않는다** (CLAUDE.md §5): `design/tokens.json`에서 온 `tokens.css`의
+   변수만 쓴다. bpmn-js의 CSS는 그 패키지에서 바로 온다 — 배포본을 커밋하지 않는다 (ADR-0143). */
+@import "bpmn-js/dist/assets/diagram-js.css";
+@import "bpmn-js/dist/assets/bpmn-js.css";
+@import "bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css";
+
+/* 캔버스가 자리를 다 쓰게 한다 — 쓰는 쪽이 높이를 주는 상자 안에 둔다. */
+.bpm-canvas {
+  height: 100%;
+  width: 100%;
+  background-color: var(--bg-surface);
+}
+
+/* 포커스 테두리는 브라우저 기본이 캔버스 둘레에 뜬다 — 카드 테두리가 영역을 말한다. */
+.bpm-canvas .djs-container svg:focus {
+  outline: none;
+}
+
+/* 팔레트·문맥 메뉴·선택 윤곽은 bpmn-js의 `--bio-*`를 쓴다 — 우리 토큰으로 바꿔 끼운다 (ADR-0101).
+   Qt 캔버스는 창이 색을 넣어 줬지만(`--bpm-*`) 웹에서는 토큰이 이미 `:root`에 있다. */
+.bio-theme-parent {
+  --bio-surface: var(--bg-surface);
+  --bio-surface-overlay: var(--bg-surface);
+  --bio-surface-subtle: var(--bg-subtle);
+  --bio-surface-medium: var(--bg-subtle);
+  --bio-text: var(--text-primary);
+  --bio-text-subtle: var(--text-muted);
+  --bio-text-subtlest: var(--text-muted);
+  --bio-border: var(--border-strong);
+  --bio-border-disabled: var(--border-default);
+  --bio-primary: var(--primary);
+  --bio-primary-surface: var(--primary-subtle);
+  --bio-selected-surface: var(--primary-subtle);
+  --bio-focus: var(--focus);
+  --bio-focus-surface: var(--primary-subtle);
+  --bio-canvas-accent: var(--primary);
+}
+
+/* 실행 표시 (STU-09) — `mark()`가 노드에 붙이는 표식 넷. 상태 색은 `status_map`의 「실행·노드」
+   묶음과 **같은 토큰**이다 (실행 중=active, 기다리는 중=waiting, 완료=done, 실패=failed).
+   `:nth-child(1)`은 노드의 바깥 테두리 도형이다 — bpmn-js가 그것을 먼저 그린다. */
+.djs-element.bpm-running .djs-visual > :nth-child(1) {
+  fill: var(--status-active-bg) !important;
+  stroke: var(--status-active-solid) !important;
+}
+
+.djs-element.bpm-waiting .djs-visual > :nth-child(1) {
+  fill: var(--status-waiting-bg) !important;
+  stroke: var(--status-waiting-solid) !important;
+}
+
+.djs-element.bpm-done .djs-visual > :nth-child(1) {
+  fill: var(--status-done-bg) !important;
+  stroke: var(--status-done-solid) !important;
+}
+
+.djs-element.bpm-failed .djs-visual > :nth-child(1) {
+  fill: var(--status-failed-bg) !important;
+  stroke: var(--status-failed-solid) !important;
+}

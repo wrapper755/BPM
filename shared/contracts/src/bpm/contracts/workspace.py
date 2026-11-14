@@ -150,6 +150,20 @@ class WorkspaceUpdateRequest(SchemaVersioned):
     entry: str | None = None
 
 
+class InstalledLibInfo(ContractModel):
+    """받아 둔 공유 BPM 프로세스 하나 (`process.json`의 기록, ADR-0048).
+
+    **파일 목록으로는 판을 알 수 없다** — `libs/`는 평평하고 이름이 `<id>__<이름>`이라 판이
+    어디에도 없다. 그래서 기록을 읽어 싣는다.
+    """
+
+    id: str
+    version: str
+    #: 그 파일들이 주는 BPMN 프로세스 id (`calledElement`가 가리키는 것). **읽지 못한 정의는
+    #: 여기 없다** — 호출할 수 없기 때문이고, B14가 그 말을 한다.
+    processes: list[str] = Field(default_factory=list)
+
+
 class WorkspaceInfo(ContractModel):
     """작업공간 하나 — `process.json`을 읽어 보인 것이다.
 
@@ -170,6 +184,8 @@ class WorkspaceInfo(ContractModel):
     #: 이 작업공간의 **지금 묶음 해시** — 파일이 하나라도 바뀌면 달라진다. 검사 캐시의 열쇠이고
     #: 실행기가 묶음을 집어 갈 때 적는 값이다 (C17 §내려보내기).
     revision: str
+    #: 받아 둔 공유 BPM 프로세스 (§공유 BPM 프로세스 설치). 배포 후보를 지을 때 `requires.libs`로 간다.
+    libs: list[InstalledLibInfo] = Field(default_factory=list)
 
 
 class FileInfo(ContractModel):
@@ -188,6 +204,74 @@ class LibInstallRequest(SchemaVersioned):
 
     package_id: str
     version: str
+
+
+# ─────────────────────────── 결정표 ───────────────────────────
+
+
+class DecisionInputInfo(ContractModel):
+    """입력 열 하나. **이름은 `expression`**(`inputExpression` 본문)이고 `label`은 사람이 읽는 이름이다."""
+
+    id: str = ""
+    expression: str = ""
+    label: str = ""
+    #: `typeRef` — 없으면 맞추지 않는다 (C14: 없으면 `"25" > 20`이 글자 비교가 된다).
+    type: str = ""
+
+
+class DecisionOutputInfo(ContractModel):
+    id: str = ""
+    name: str = ""
+    type: str = ""
+
+
+class DecisionRuleInfo(ContractModel):
+    """규칙 줄 하나 — **칸의 원문**이다 (판정용 모델은 칸을 해석해 버린다)."""
+
+    id: str = ""
+    #: 입력 열 수와 같다.
+    cells: list[str] = Field(default_factory=list)
+    #: 출력 열 수와 같다.
+    values: list[str] = Field(default_factory=list)
+    description: str = ""
+
+
+class DecisionTableInfo(ContractModel):
+    """결정 하나(`dmn:decision` + `dmn:decisionTable`)를 격자로 (ADR-0148)."""
+
+    id: str
+    name: str = ""
+    hit: str = "UNIQUE"
+    inputs: list[DecisionInputInfo] = Field(default_factory=list)
+    outputs: list[DecisionOutputInfo] = Field(default_factory=list)
+    rules: list[DecisionRuleInfo] = Field(default_factory=list)
+
+
+class DecisionsResponse(ContractModel):
+    """`GET /api/v1/workspaces/{id}/decisions/{path}` — 그 파일의 결정표들.
+
+    **결정표가 아닌 결정은 오지 않는다** — 격자로 그릴 것이 없다. 그래도 파일에는 남아 있고
+    저장할 때 그대로 간다.
+    """
+
+    tables: list[DecisionTableInfo] = Field(default_factory=list)
+    #: 그 파일의 `revision` — 저장할 때 `If-Match`에 싣는다 (C17 파일 규칙과 같다).
+    revision: str = ""
+
+
+class DecisionSaveRequest(SchemaVersioned):
+    """`PUT /api/v1/workspaces/{id}/decisions/{path}` — 결정표 **하나**를 바꿔 쓴다."""
+
+    table: DecisionTableInfo
+    #: 결정 id를 바꾸는 경우의 **옛 id**. 없으면 `table.id`를 찾는다.
+    original_id: str | None = None
+
+
+class DecisionSaveResponse(ContractModel):
+    """저장한 뒤 — 새 `revision`과 **막지 않은 경고**(겹친 입력 이름·빈 규칙 줄)."""
+
+    revision: str = ""
+    warnings: list[str] = Field(default_factory=list)
 
 
 # ─────────────────────────── 시험 실행 ───────────────────────────
@@ -238,6 +322,9 @@ class TrialInfo(ContractModel):
     mode: str = MODE_AUTONOMOUS
     requested_by: str = ""
     requested_at: Timestamp | None = None
+    #: 마지막으로 바뀐 때 — **소요를 재는 자리**다 (끝난 실행은 그때가 끝난 때다).
+    #: 「끝난 때」를 따로 두지 않는다 — 끝나면 더 바뀌지 않으므로 두 칸이 갈라질 자리만 생긴다.
+    updated_at: Timestamp | None = None
     #: 로그 줄 — `Listener.said`가 낸 것 그대로.
     log: list[str] = Field(default_factory=list)
     #: `{노드 id: 상태}` (KNOWN_NODE_STATES) — 캔버스가 칠한다.
@@ -386,12 +473,20 @@ __all__ = [
     "CheckResponse",
     "CheckResult",
     "FileInfo",
+    "InstalledLibInfo",
     "LibInstallRequest",
     "TrialCreateRequest",
     "TrialInfo",
     "TrialReport",
     "TrialTarget",
     "WorkspaceCreateRequest",
+    "DecisionInputInfo",
+    "DecisionOutputInfo",
+    "DecisionRuleInfo",
+    "DecisionSaveRequest",
+    "DecisionSaveResponse",
+    "DecisionTableInfo",
+    "DecisionsResponse",
     "WorkspaceId",
     "WorkspaceInfo",
     "WorkspaceUpdateRequest",

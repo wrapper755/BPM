@@ -22,7 +22,6 @@ MEMBER_GLOBS = (
     "server/adapter_consumer",
     "server/service_kit",
     "server/unified_consumer",
-    "studio/app",
     "bot/app",
     "samples/*",
     "extensions/*",
@@ -66,11 +65,7 @@ FORBIDDEN_DEPS = [
     ("bpm-contracts", "bpm-extension-api", "§2 — contracts는 로직·I/O를 모른다"),
     ("bpm-extension-api", "bpm-core", "§5 — 방향은 extension_api ◀── core"),
     ("bpm-service-kit", "bpm-core", "§5 — service_kit은 contracts만 본다 (업무 로직·실행을 모른다)"),
-    ("bpm-service-kit", "bpm-qt", "§2 — 서비스 앱은 화면이 없다"),
-    ("bpm-server-runner", "bpm-qt", "§2 — 서버 실행기는 화면이 없다"),
-    ("bpm-core", "bpm-qt", "§5 — core는 Qt를 import하지 않는다"),
     ("bpm-mock-apps", "bpm-core", "§5 — 모의 앱도 서비스 앱이다 (core를 모른다)"),
-    ("bpm-mock-apps", "bpm-qt", "§2 — 서비스 앱은 화면이 없다"),
 ]
 
 
@@ -92,7 +87,6 @@ def test_platform_does_not_depend_on_extensions() -> None:
     graph = members()
     platform = [
         "bpm-core",
-        "bpm-studio",
         "bpm-server-runner",
         "bpm-center",
     ]
@@ -133,22 +127,9 @@ FORBIDDEN_IMPORTS = [
     ("server/center", "PySide6", "§2 — 서버"),
     ("shared/*", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
     ("server/*", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
-    ("studio/app", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
-    ("bot/app", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
     ("extensions/*", "spikes", "CLAUDE.md §3 — 제품 코드는 spikes를 import하지 않는다"),
-    # ADR-0129 — 제품끼리 import하지 않는다. 함께 쓰는 것은 shared/로 내린다.
-    ("server/*", "bpm.studio", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("server/*", "bpm.bot_ui", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("studio/app", "bpm.bot_ui", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("studio/app", "bpm.center", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("studio/app", "bpm.server_runner", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("studio/app", "bpm.adapter_consumer", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("studio/app", "bpm.service_kit", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("bot/app", "bpm.studio", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("bot/app", "bpm.center", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("bot/app", "bpm.server_runner", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("bot/app", "bpm.adapter_consumer", "ADR-0129 — 제품끼리 import하지 않는다"),
-    ("bot/app", "bpm.service_kit", "ADR-0129 — 제품끼리 import하지 않는다"),
+    # ADR-0129 「제품끼리 import하지 않는다」의 줄은 **제품이 서버 하나가 되면서 비었다**
+    # (ADR-0143, M11 조각 5). 둘째 제품이 생기면(RPA 데스크톱 일꾼) 그때 다시 적는다.
 ]
 
 

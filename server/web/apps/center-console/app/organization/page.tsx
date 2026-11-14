@@ -188,7 +188,7 @@ export default async function OrganizationPage({ searchParams }: { searchParams:
   return (
     <Shell mode={found.mode} actor={found.actor} current="/organization">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-h1 font-bold">조직</h1>
+        <h1 className="text-h2 font-bold">조직</h1>
       </header>
       {failure ? (
         <ErrorBanner message={failure} />

@@ -52,23 +52,51 @@ th {
   background-color: var(--chrome-side);
 }
 
-/* 본문 머리 띠 (CON-00 [H], 스타일 가이드 §4-1) — 틀이 넣는 「지금 자리」 줄과 바로 뒤의 제목 `<header>`를
-   본문 폭 전체의 흰 띠 하나로 칠한다. 화면은 제목 `<header>`만 쓰고 띠를 모른다. 유틸리티(`mb-4` 등)보다
-   이겨야 해서 레이어 밖에 둔다. 제목이 바로 뒤에 없으면 줄 혼자 띠가 된다. */
-.page-main > .page-crumb {
+/* 콘솔의 두 층 (CON-00, ADR-0145) — 레일(56) + 펼침 패널(224) + 위 막대 + 본문.
+   **자리를 변수 하나로 잡는다**: 넷이 같은 값을 보아야 해서, 접을 때 변수만 바꾼다. */
+:root {
+  --console-panel: var(--size-nav-width);
+}
+html[data-panel="folded"] {
+  --console-panel: 0px;
+}
+.console-panel {
+  width: var(--console-panel);
+  overflow-x: hidden;
+}
+.console-topbar,
+.console-main {
+  left: calc(var(--size-rail-width) + var(--console-panel));
+  margin-left: calc(var(--size-rail-width) + var(--console-panel));
+}
+/* 위 막대는 자리를 `left`로 잡는다 (고정이다) — 본문은 `margin-left`다. 둘을 함께 적고 서로의
+   것을 지운다: 한 규칙으로 두면 같은 값을 두 번 적지 않는다. */
+.console-topbar {
+  margin-left: 0;
+}
+.console-main {
+  left: auto;
+}
+
+/* 좁은 화면에서는 **패널이 기본으로 접힌다** — 레일 56 + 패널 224면 360px에 본문이 80px밖에
+   남지 않는다. 결재함은 휴대폰에서도 답할 수 있어야 한다 (CON-00). 펼치면 본문을 **덮는다**
+   (밀어내면 다시 같은 자리가 된다). */
+@media (max-width: 860px) {
+  :root {
+    --console-panel: 0px;
+  }
+  html[data-panel="open"] .console-panel {
+    width: var(--size-nav-width);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+/* 본문 머리 띠 (CON-00 [H], 스타일 가이드 §4-1) — 본문 폭 전체의 흰 띠에 **제목 한 줄뿐**이다.
+   「지금 자리」 줄은 위 막대로 올라갔다 (ADR-0145 §1). 화면은 제목 `<header>`만 쓰고 띠를 모른다.
+   유틸리티(`mb-4` 등)보다 이겨야 해서 레이어 밖에 둔다. */
+.page-main > header:first-child {
   margin: calc(var(--space-6) * -1) calc(var(--space-6) * -1) var(--space-6);
   padding: var(--space-5) var(--space-6);
-  background-color: var(--bg-surface);
-  border-bottom: 1px solid var(--border-default);
-}
-.page-main > .page-crumb:has(+ header) {
-  margin-bottom: 0;
-  padding-bottom: var(--space-2);
-  border-bottom: 0;
-}
-.page-main > .page-crumb + header {
-  margin: 0 calc(var(--space-6) * -1) var(--space-6);
-  padding: 0 var(--space-6) var(--space-6);
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-default);
 }

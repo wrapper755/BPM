@@ -62,6 +62,18 @@
       "title": "State",
       "type": "string"
     },
+    "updated_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Updated At"
+    },
     "variables": {
       "additionalProperties": true,
       "title": "Variables",

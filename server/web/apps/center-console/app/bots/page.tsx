@@ -166,7 +166,7 @@ export default async function BotsPage({
   return (
     <Shell mode={found.mode} actor={found.actor} current="/bots">
       <header className="mb-4">
-        <h1 className="text-h1 font-bold">프로세스</h1>
+        <h1 className="text-h2 font-bold">프로세스</h1>
       </header>
 
       {/* [F] 거르기 — GET 폼이라 JS 없이 돌고 주소에 남는다. */}

@@ -1,0 +1,163 @@
+{
+  "$defs": {
+    "DecisionInputInfo": {
+      "additionalProperties": true,
+      "description": "입력 열 하나. **이름은 `expression`**(`inputExpression` 본문)이고 `label`은 사람이 읽는 이름이다.",
+      "properties": {
+        "expression": {
+          "default": "",
+          "title": "Expression",
+          "type": "string"
+        },
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "default": "",
+          "title": "Label",
+          "type": "string"
+        },
+        "type": {
+          "default": "",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "title": "DecisionInputInfo",
+      "type": "object"
+    },
+    "DecisionOutputInfo": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "default": "",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "title": "DecisionOutputInfo",
+      "type": "object"
+    },
+    "DecisionRuleInfo": {
+      "additionalProperties": true,
+      "description": "규칙 줄 하나 — **칸의 원문**이다 (판정용 모델은 칸을 해석해 버린다).",
+      "properties": {
+        "cells": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cells",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "title": "DecisionRuleInfo",
+      "type": "object"
+    },
+    "DecisionTableInfo": {
+      "additionalProperties": true,
+      "description": "결정 하나(`dmn:decision` + `dmn:decisionTable`)를 격자로 (ADR-0148).",
+      "properties": {
+        "hit": {
+          "default": "UNIQUE",
+          "title": "Hit",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "$ref": "#/$defs/DecisionInputInfo"
+          },
+          "title": "Inputs",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "outputs": {
+          "items": {
+            "$ref": "#/$defs/DecisionOutputInfo"
+          },
+          "title": "Outputs",
+          "type": "array"
+        },
+        "rules": {
+          "items": {
+            "$ref": "#/$defs/DecisionRuleInfo"
+          },
+          "title": "Rules",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "DecisionTableInfo",
+      "type": "object"
+    }
+  },
+  "$id": "urn:bpm:contracts:c17-decision-save-request",
+  "additionalProperties": true,
+  "description": "`PUT /api/v1/workspaces/{id}/decisions/{path}` — 결정표 **하나**를 바꿔 쓴다.",
+  "properties": {
+    "original_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Original Id"
+    },
+    "schema": {
+      "description": "이 계약의 schema 번호",
+      "title": "Schema",
+      "type": "integer"
+    },
+    "table": {
+      "$ref": "#/$defs/DecisionTableInfo"
+    }
+  },
+  "required": [
+    "schema",
+    "table"
+  ],
+  "title": "DecisionSaveRequest",
+  "type": "object"
+}

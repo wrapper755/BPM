@@ -227,19 +227,21 @@ def start_build(
 ) -> BuildInfo:
     """「배포 후보로 만들기」를 청한다 (ADR-0143 §2).
 
-    **진입 정의가 없으면 지을 수 없다** (422 `no_entry`) — 매니페스트의 `entry`가 될 값이다.
+    **BPM 프로세스는 진입 정의가 없으면 지을 수 없다** (422 `no_entry`) — 매니페스트의 `entry`가
+    될 값이다. **공유 프로세스는 묻지 않는다** — `kind=process_lib`에는 진입이 없고(C1, R1은
+    `bpm_process`에만 묻는다) 짓는 쪽도 정의 전부를 담는다 (`export_lib`).
     """
     info = workspaces.get(
         store, workspace_dir=workspace_dir, workspace_id=workspace_id, company=company
     )
-    if not info.entry:
-        raise ApiError(422, "no_entry", "진입 정의를 먼저 고르세요")
     try:
         request = BuildRequest.model_validate({"schema": 1, **body})
     except ValidationError as e:
         raise ApiError(422, "input_invalid", "요청이 계약과 맞지 않는다", {"errors": e.errors()}) from e
     if request.kind not in KNOWN_BUILD_KINDS:
         raise ApiError(422, "input_invalid", f"종류는 {' 또는 '.join(sorted(KNOWN_BUILD_KINDS))}이다")
+    if request.kind == "bpm_process" and not info.entry:
+        raise ApiError(422, "no_entry", "진입 정의를 먼저 고르세요")
 
     build_id = _new_id("bld")
     at = now_iso()

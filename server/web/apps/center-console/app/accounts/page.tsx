@@ -68,7 +68,7 @@ export default async function AccountsPage() {
   return (
     <Shell mode={found.mode} actor={found.actor} current="/accounts">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-h1 font-bold">관리자 계정</h1>
+        <h1 className="text-h2 font-bold">관리자 계정</h1>
         <NewAccount companies={companies} />
       </header>
       {failure ? (

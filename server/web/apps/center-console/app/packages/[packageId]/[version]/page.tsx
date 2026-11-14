@@ -157,7 +157,7 @@ export async function PackageDetail({
   return (
     <Shell mode={found.mode} actor={found.actor} current={area === "process" ? "/bots" : "/packages"}>
       <header className="mb-4">
-        <h1 className="text-h1 font-bold">
+        <h1 className="text-h2 font-bold">
           {info?.name ?? packageId} <span className="font-mono text-h2">{version}</span>
         </h1>
       </header>

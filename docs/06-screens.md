@@ -12,9 +12,10 @@
 
 | 파일 | 앱 | 화면 ID |
 | --- | --- | --- |
-| [studio/docs/screens.md](../studio/docs/screens.md) | Studio (Windows 데스크톱, BPM 프로세스 설계) | STU-01 ~ STU-16 |
-| [server/docs/screens/center-console.md](../server/docs/screens/center-console.md) | Center 콘솔 (웹) — 관리자 계정으로 승인·배포까지 ([ADR-0090](decisions/0090-center-admin-accounts.md)) | CON-00 ~ CON-18 (CON-07~11 폐기) |
+| ~~Studio (Windows 데스크톱)~~ | **폐기** — 설계가 콘솔 안으로 옮겼다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md), M11 조각 5) | ~~STU-01 ~ STU-16~~ → CON-20 |
+| [server/docs/screens/center-console.md](../server/docs/screens/center-console.md) | Center 콘솔 (웹) — 관리자 계정으로 승인·배포까지 ([ADR-0090](decisions/0090-center-admin-accounts.md)) | CON-00 ~ CON-18 (CON-07~11 폐기) · CON-20은 아래 파일 |
 | [server/docs/screens/center-console-connections.md](../server/docs/screens/center-console-connections.md) | Center 콘솔 — 일꾼·연결 앱 (위 파일을 나눈 것) | CON-17 · CON-18 |
+| [server/docs/screens/center-console-workspace.md](../server/docs/screens/center-console-workspace.md) | Center 콘솔 — 작업공간 (설계가 콘솔 안으로, [ADR-0143](decisions/0143-design-happens-in-the-console.md)) | CON-20 |
 | [server/docs/screens/service-app-console.md](../server/docs/screens/service-app-console.md) | 서비스 앱 관리 콘솔 (웹, 앱마다) | SVC-00 ~ SVC-03 |
 
 
@@ -60,6 +61,8 @@
 | API 키 (Center) | 사용 중 / 만료 / 폐기됨 | done / warning / neutral |
 | 패키지 | 후보 / 승인됨 / 지원 종료 / 철회 / 로컬만 | waiting / done / warning / failed / neutral |
 | 서명·준비·온라인·외부 작업·배치 결정·조직·관리자 계정·배포·등록 요청·기능 | `tokens.json` `status_map` 참고 | — |
+| 시험 실행 | 대기열 / 실행 중 / 기다리는 중 / 완료 / 실패 / 중지됨 | waiting / active / waiting / done / failed / neutral |
+| 시험 판정 | 통과 / 실패 / 비교 안 함 / 중지 / 오류 | done / failed / neutral / neutral / failed |
 | 결재 | 대기 / 답함 / 시간 초과 / 회수됨 (실행하는 쪽이 답을 거절하면 다시 「대기」 + 안내 띠) | waiting / done / warning / neutral |
 | 작업 | 대기 / 전달됨 / 대기열 / 수락 / 거절 / 만료 / 취소됨 | neutral / active / waiting / done / failed / warning / neutral |
 | 서비스 앱 | 정상 / 저하 / 응답 없음 / 확인 전 | done / warning / failed / neutral |
@@ -72,11 +75,11 @@
 새 업무 하나가 만들어져 운영되기까지 거치는 화면이다.
 
 0. **준비 (서버)** — 설치하는 사람이 `.env`에 첫 관리자 아이디·비밀번호를 적고 Center를 띄운다. 서비스 앱·어댑터 일꾼은 관리자가 [CON-17](../server/docs/screens/center-console.md#con-17-일꾼-신규) 「일꾼」에서 만들고 받은 토큰과 Center 주소를 주어 띄운다(함께 배포되는 일꾼은 일꾼 폴더의 파일로 처음 한 번 들어온다 — `bpm-center consumer-file`) — 외부 확장 정의는 어댑터 일꾼이 들고 있다가 올리고, 외부 앱의 주소·키는 어댑터 일꾼의 설정에만 넣는다 ([ADR-0102](decisions/0102-calling-outside-is-pull.md), [ADR-0137](decisions/0137-consumers-are-managed-in-the-console.md)). 들어왔는지·마지막으로 가져간 때도 CON-17에서 본다. 서버 BPM 프로세스를 쓸 거면 서버 실행기에 Center 주소를 주고 띄운 뒤, 로그의 요청 코드와 같은 줄을 [CON-12](../server/docs/screens/center-console.md#con-12-서버-실행-신규-m7) 「승인 대기」에서 승인한다 (컨테이너는 환경변수로 키를 준다 — C12).
-1. **준비 (Studio)** — 설계자가 Studio에 Center 주소를 넣고 뜬 요청 코드를 관리자에게 알리면, 관리자가 [CON-03](../server/docs/screens/center-console.md#con-03-앱) 「승인 대기」에서 같은 코드를 승인한다 — 키는 Center가 내려 준다 ([ADR-0092](decisions/0092-keys-are-issued-and-delivered-by-center.md)·[ADR-0093](decisions/0093-studio-is-let-in-by-approval.md)). **서비스 앱 키는 없다** — BPM 프로세스는 바깥 기능을 Center의 외부 작업으로 부르고, 불러도 되는가는 7 「배포」가 정한다 (C15).
-3. **BPM 프로세스 만들기** — 설계자가 Studio에서 새 BPM 프로세스를 만든다. **실행 자리는 서버 하나다** ([ADR-0016](decisions/0016-server-first.md)·[ADR-0144](decisions/0144-remove-the-pc-runner.md)). [STU-05](../studio/docs/screens.md#stu-05-새-bpm-프로세스), [STU-06](../studio/docs/screens.md#stu-06-bpm-프로세스-정보)
-4. **그리기** — BPMN을 그리고 태스크마다 속성을 채운다. 서비스 앱 태스크는 리소스 탐색기의 작업을 고른다. [STU-01](../studio/docs/screens.md#stu-01-메인-창), [STU-03](../studio/docs/screens.md#stu-03-리소스-탐색기), [STU-14](../studio/docs/screens.md#stu-14-서비스-앱-태스크-편집기-신규)
-5. **시험** — 시험 케이스를 만들고 자율 수행으로 실행한다. AI 태스크는 학습되어 재생 명세가 생기고, 결정 수행(재생)으로 운영과 같은 방식을 미리 확인한다. [STU-07](../studio/docs/screens.md#stu-07-시험-케이스), [STU-08](../studio/docs/screens.md#stu-08-실행-대화상자), [STU-09](../studio/docs/screens.md#stu-09-실행-표시와-결과)
-6. **올리기** — 패키지로 Center에 올린다 (후보 상태). 패키지에는 키가 없다. [STU-01](../studio/docs/screens.md#stu-01-메인-창) 파일 메뉴, [CON-02](../server/docs/screens/center-console.md#con-02-프로세스)
+1. **준비 (설계자)** — 관리자가 [CON-14](../server/docs/screens/center-console.md#con-14-관리자-계정) 「관리자 계정」에서 계정을 만들어 준다. **설계자의 키는 없다** — 설계가 콘솔 안에서 일어나므로 로그인 하나뿐이다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md) §4). **서비스 앱 키도 없다** — BPM 프로세스는 바깥 기능을 Center의 외부 작업으로 부르고, 불러도 되는가는 7 「배포」가 정한다 (C15).
+3. **BPM 프로세스 만들기** — 설계자가 콘솔에서 작업공간 하나를 만든다. **실행 자리는 서버 하나다** ([ADR-0016](decisions/0016-server-first.md)·[ADR-0144](decisions/0144-remove-the-pc-runner.md)). [CON-20a](../server/docs/screens/center-console-workspace.md#con-20a-작업공간-홈), [CON-20b](../server/docs/screens/center-console-workspace.md#con-20b-작업공간) 「정보」 탭
+4. **그리기** — BPMN을 그리고 태스크마다 속성을 채운다. [CON-20b](../server/docs/screens/center-console-workspace.md#con-20b-작업공간) 「설계」 탭
+5. **시험** — 시험 케이스를 만들고 자율 수행으로 돌려 본다. **돌리는 것은 서버 실행기다** (C17). AI 태스크는 학습되어 재생 명세가 생기고, 결정 수행(재생)으로 운영과 같은 방식을 미리 확인한다. [CON-20b](../server/docs/screens/center-console-workspace.md#시험-실행-탭) 「시험 실행」 탭
+6. **배포 후보로 만들기** — 콘솔이 그 자리에서 패키지를 지어 후보로 올린다. 패키지에는 키가 없다. [CON-20b](../server/docs/screens/center-console-workspace.md#배포-후보로-만들기), [CON-02](../server/docs/screens/center-console.md#con-02-프로세스)
 7. **승인·배포** — 관리자가 콘솔에서 승인하고([CON-02](../server/docs/screens/center-console.md#con-02-프로세스)) 서버 실행기에 배포한다([CON-15](../server/docs/screens/center-console.md#con-15-배포-신규)). 봉투는 Center가 서명한다.
 8. **적용** — 서버 실행기가 하트비트로 배포를 받아 BPM 프로세스를 설치하고 사전 점검(확장 포함)을 한다 ([CON-12](../server/docs/screens/center-console.md#con-12-서버-실행-신규-m7)).
 9. **작업 지시** — 운영자가 콘솔에서 작업을 만들거나, 외부 시스템(연동용 키)·감시 모드·일정·메시지로 시작된다. [CON-05](../server/docs/screens/center-console.md#con-05-작업-지시)
@@ -88,33 +91,18 @@
 
 결재·확인 창(`shared/qt`)은 **PC 실행기와 함께 걷었다** ([ADR-0144](decisions/0144-remove-the-pc-runner.md)).
 결재와 확인은 둘 다 **Center 결재함**([CON-04](../server/docs/screens/center-console.md#con-04-결재함))에서
-답하고, Studio 시험 실행은 시험 케이스가 답한다 (C14 `approvals`).
+답하고, **시험 실행은 시험 케이스가 답한다** (C14 `approvals`).
 
 ## 6. 화면 목록 총괄
 
 | ID | 화면 | 앱 | 주 사용자 | 마일스톤 | 출처 |
 | --- | --- | --- | --- | --- | --- |
-| STU-01 | 메인 창 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-02 | BPM 프로세스 탐색기 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-03 | 리소스 탐색기 | Studio | 설계자 | M4 | 프로토타입 확장 |
-| STU-04 | 속성 패널 | Studio | 설계자 | M3 | 프로토타입 확장 |
-| STU-05 | 새 BPM 프로세스 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-06 | BPM 프로세스 정보 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-07 | 시험 케이스 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-08 | 실행 대화상자 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-09 | 실행 표시와 결과 | Studio | 설계자 | M3 | 프로토타입 |
-| STU-10 | 설정 | Studio | 설계자 | M3 | 프로토타입 확장 |
-| STU-11 | Center 공유 자원 | Studio | 설계자 | M5 | 프로토타입 |
-| STU-12 | 공유 BPM 프로세스 내보내기·올리기 | Studio | 설계자 | M5 | 프로토타입 |
-| STU-13 | (폐기 — UI 태스크 편집기, [ADR-0114](decisions/0114-remove-ui-automation.md)) | — | — | — | — |
-| STU-14 | 서비스 앱 태스크 편집기 | Studio | 설계자 | M5 | 신규 |
-| STU-15 | 확장 | Studio | 설계자 | M4 | 신규 (ADR-0018) |
-| STU-16 | Center에 연결 | Studio | 설계자 | — | 신규 (ADR-0093) |
+| STU-01 ~ STU-16 | (폐기 — 데스크톱 Studio 화면. **CON-20이 대신한다**, [ADR-0143](decisions/0143-design-happens-in-the-console.md)) | — | — | — | — |
 | BUI-01 ~ BUI-11 | (폐기 — PC 실행기 화면, [ADR-0144](decisions/0144-remove-the-pc-runner.md)) | — | — | — | — |
 | CON-00 | 공통 틀 | Center 콘솔 | 모두 | M2 | 프로토타입 |
 | CON-01 | 프로세스 로그 | Center 콘솔 | 운영자 | M3 | 프로토타입 |
 | CON-02 | 프로세스 | Center 콘솔 | 운영자 | M3 | 프로토타입 |
-| CON-03 | 앱 (Studio) | Center 콘솔 | 운영자 | M2 | 프로토타입 확장 |
+| CON-03 | 앱 | Center 콘솔 | 운영자 | M2 | 프로토타입 확장 (쓰는 키 종류가 남았다 — `docs/09-gaps.md` §3-35) |
 | CON-04 | 결재함 | Center 콘솔 | 결재자 | M5 | 프로토타입 |
 | CON-05 | 작업 지시 | Center 콘솔 | 운영자 | M5 | 프로토타입 확장 (만들기 추가) |
 | CON-06 | 공통 패키지 | Center 콘솔 | 운영자 | M5 | 프로토타입 |
@@ -127,6 +115,7 @@
 | CON-16 | 앱 로그 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0121](decisions/0121-center-console-says-process.md)) |
 | CON-17 | 일꾼 | Center 콘솔 | Center 관리자 | — | 신규 ([ADR-0137](decisions/0137-consumers-are-managed-in-the-console.md)) |
 | CON-18 | 연결 앱 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0138](decisions/0138-console-app-catalog.md) — 보기만) |
+| CON-20 | 작업공간 (설계) | Center 콘솔 | 설계자 | M11 | 신규 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)·[ADR-0147](decisions/0147-workspace-has-three-tabs.md) — STU-01·02·04·05·06·07·08·09·12를 대신한다) |
 | SVC-00 | 공통 틀 | 서비스 앱 관리 콘솔 | 서비스 앱 관리자 | M2 | 신규 (`service_kit`) |
 | SVC-01 | 상태 | 서비스 앱 관리 콘솔 | 서비스 앱 관리자 | M2 | 신규 |
 | SVC-02 | API 키 — **없어졌다** (ADR-0102, 서비스 앱 키가 없다) | 서비스 앱 관리 콘솔 | — | M2 | 폐기 |

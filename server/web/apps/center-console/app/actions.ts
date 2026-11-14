@@ -21,6 +21,13 @@ import {
   type OperationTab,
   type Violation,
 } from "@/lib/adapter-editor";
+import type { DecisionTableInfo } from "@bpm/api-types/c17-decisions-response";
+import type { TrialInfo } from "@bpm/api-types/c17-test-run-info";
+import type { CheckResponse } from "@bpm/api-types/c17-check-response";
+import type { BuildInfo } from "@bpm/api-types/c17-build-info";
+import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
+import type { WorkspaceUpdateRequest } from "@bpm/api-types/c17-workspace-update-request";
+import type { PackageInfo } from "@bpm/api-types/c5-package-info";
 import type { ExtensionDependent } from "@bpm/api-types/c7-extension-dependent";
 import type { ExtensionTestResult } from "@bpm/api-types/c7-extension-test-result";
 import type { ExtensionVersionInfo } from "@bpm/api-types/c7-extension-version-info";
@@ -54,11 +61,13 @@ export async function login(_previous: ActionResult, form: FormData): Promise<Ac
   } catch (cause) {
     return { error: message(cause) };
   }
+  // 쓰기 권한이 곧 **설계 권한**이다 — 첫 화면도 이것으로 갈린다 (ADR-0145 §2).
+  // 회사 관리자도 **제 회사 안에서는** 관리자다 — 무엇을 다룰 수 있는지는 Center가 회사로 가른다 (C16).
+  const writes = made.role === "admin" || made.role === "company_admin";
   (await cookies()).set(
     COOKIE_NAME,
     seal({
-      // 회사 관리자도 **제 회사 안에서는** 관리자다 — 무엇을 다룰 수 있는지는 Center가 회사로 가른다 (C16).
-      mode: made.role === "admin" || made.role === "company_admin" ? "admin" : "read",
+      mode: writes ? "admin" : "read",
       token: made.token,
       actor: made.username,
       company: made.company ?? null,
@@ -72,8 +81,8 @@ export async function login(_previous: ActionResult, form: FormData): Promise<Ac
       expires: new Date(made.expires_at),
     },
   );
-  // 첫 화면 — 메뉴 맨 위 「운영 현황 › 프로세스」 (ADR-0121).
-  redirect("/bots");
+  // 첫 화면 — **설계할 수 있는 사람은 작업공간 홈**, 보기 전용은 운영 현황이다 (ADR-0145 §2).
+  redirect(writes ? "/workspaces" : "/bots");
 }
 
 export async function logout(): Promise<void> {
@@ -845,4 +854,285 @@ export async function removeOrgItem(kind: "department" | "staff", id: string, co
   }
   revalidatePath("/organization");
   redirect(orgHref("company", company));
+}
+
+// ─────────────────────────── 작업공간 (C17·CON-20) ───────────────────────────
+
+/** 저장의 답 — 새 `revision`을 돌려줘야 **다음 저장이 또 `If-Match`를 싣는다** (C17). */
+export interface SaveResult {
+  revision?: string;
+  error?: string;
+  /** 남이 먼저 저장했다 (409 `stale`) — 화면이 합치지 않고 묻는다. */
+  stale?: boolean;
+}
+
+/**
+ * 새 작업공간 (C17). 파일을 함께 주면 만든 뒤 **바로 가져온다** — 「파일에서 가져오기」가
+ * 빈 작업공간을 남기고 실패하지 않게 한 걸음으로 묶는다.
+ */
+export async function createWorkspace(_previous: ActionResult, form: FormData): Promise<ActionResult> {
+  const id = String(form.get("id") ?? "").trim();
+  const name = String(form.get("name") ?? "").trim();
+  const version = String(form.get("version") ?? "").trim() || "0.1.0";
+  const description = String(form.get("description") ?? "").trim();
+  if (!id) return { error: "id를 넣으세요." };
+  if (!name) return { error: "이름을 넣으세요." };
+  const file = form.get("file");
+  const bringing = file instanceof File && file.size > 0 ? file : null;
+  try {
+    // `schema`는 이 계약의 번호다 (C17 schema 1) — 모델이 요구한다.
+    await center.createWorkspace({ schema: 1, id, name, version, ...(description ? { description } : {}) });
+    if (bringing) {
+      await center.importIntoWorkspace(id, await bringing.arrayBuffer(), bringing.name);
+    }
+    revalidatePath("/workspaces");
+    return {};
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 파일 저장 (C17 `PUT …/files/{path}`). `revision`이 낡으면 **아무것도 쓰이지 않는다**. */
+export async function saveWorkspaceFile(
+  workspaceId: string,
+  path: string,
+  revision: string,
+  text: string,
+): Promise<SaveResult> {
+  try {
+    const made = await center.writeWorkspaceFile(workspaceId, path, text, revision);
+    return { revision: made.revision };
+  } catch (cause) {
+    const stale = cause instanceof CenterError && cause.status === 409;
+    return { error: message(cause), ...(stale ? { stale: true } : {}) };
+  }
+}
+
+/** 작업공간 지우기 — **배포된 패키지는 그대로다** (C17). */
+export async function deleteWorkspace(workspaceId: string): Promise<ActionResult> {
+  try {
+    await center.deleteWorkspace(workspaceId);
+    revalidatePath("/workspaces");
+    return {};
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 파일 본문과 `revision` — 편집기가 고를 때마다 부른다 (C17). */
+export async function loadWorkspaceFile(
+  workspaceId: string,
+  path: string,
+): Promise<{ text?: string; revision?: string; error?: string }> {
+  try {
+    return await center.readWorkspaceFile(workspaceId, path);
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 결정표 격자 (C17 §결정표). 브라우저는 DMN을 해석하지 않는다 — Center가 읽고 쓴다. */
+export async function loadDecisions(
+  workspaceId: string,
+  path: string,
+): Promise<{ tables?: DecisionTableInfo[]; revision?: string; error?: string }> {
+  try {
+    return await center.workspaceDecisions(workspaceId, path);
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+export interface DecisionSaveResult {
+  revision?: string;
+  /** 막지 않은 것 — 겹친 입력 이름·빈 규칙 줄. */
+  warnings?: string[];
+  error?: string;
+  stale?: boolean;
+}
+
+export async function saveDecision(
+  workspaceId: string,
+  path: string,
+  table: DecisionTableInfo,
+  originalId: string,
+  revision: string,
+): Promise<DecisionSaveResult> {
+  try {
+    const made = await center.saveWorkspaceDecision(
+      workspaceId,
+      path,
+      { schema: 1, table, original_id: originalId },
+      revision,
+    );
+    return { revision: made.revision, warnings: made.warnings };
+  } catch (cause) {
+    const stale = cause instanceof CenterError && cause.status === 409;
+    return { error: message(cause), ...(stale ? { stale: true } : {}) };
+  }
+}
+
+// ─────────────────────────── 시험 실행 (C17 §시험 실행, CON-20) ───────────────────────────
+
+/**
+ * 돌려 본다 — **내려보내는 것은 하트비트**라 돌아온 실행은 아직 `queued`다 (ADR-0007·0146).
+ * 케이스를 비우면 비교하지 않는다(판정 「비교 안 함」).
+ */
+export async function startTrial(
+  workspaceId: string,
+  caseName: string,
+  mode: string,
+): Promise<{ trial?: TrialInfo; error?: string }> {
+  try {
+    const made = await center.createTestRun(workspaceId, {
+      schema: 1,
+      mode,
+      ...(caseName ? { case: caseName } : {}),
+    });
+    return { trial: made };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 목록 — 최근 것부터 (C17). */
+export async function loadTrials(workspaceId: string): Promise<{ trials?: TrialInfo[]; error?: string }> {
+  try {
+    return { trials: await center.testRuns(workspaceId) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 하나 — 도는 동안 콘솔이 이것을 되묻는다 (실행기가 콘솔로 미는 길이 없다). */
+export async function loadTrial(
+  workspaceId: string,
+  runId: string,
+): Promise<{ trial?: TrialInfo; error?: string }> {
+  try {
+    return { trial: await center.testRun(workspaceId, runId) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 「중지」 — 내려간 것은 작업 취소로 실행기가 닫는다 (ADR-0063과 같은 길). */
+export async function stopTrial(
+  workspaceId: string,
+  runId: string,
+): Promise<{ trial?: TrialInfo; error?: string }> {
+  try {
+    return { trial: await center.stopTestRun(workspaceId, runId) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+// ─────────────────────── 실행 전 검사·배포 후보 짓기 (C17, CON-20) ───────────────────────
+
+export interface CheckResult {
+  check?: CheckResponse;
+  /** 이 묶음을 아직 검사한 적이 없다 (404) — 낡은 결과를 주지 않는다. */
+  none?: boolean;
+  error?: string;
+}
+
+/** 「실행 전 검사」 — 담아 둔 것이 있으면 그대로 온다(`cached`). `again`이면 버리고 다시 묻는다. */
+export async function startCheck(workspaceId: string, again = false): Promise<CheckResult> {
+  try {
+    return { check: await center.askCheck(workspaceId, again) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 지금 묶음의 결과. 도는 동안 콘솔이 이것을 되묻는다 (지시는 하트비트로 내려간다). */
+export async function loadCheck(workspaceId: string): Promise<CheckResult> {
+  try {
+    return { check: await center.readCheck(workspaceId) };
+  } catch (cause) {
+    if (cause instanceof CenterError && cause.status === 404) return { none: true };
+    return { error: message(cause) };
+  }
+}
+
+export interface BuildResult {
+  build?: BuildInfo;
+  error?: string;
+}
+
+/** 「배포 후보로 만들기」 — 202로 받는다. 짓는 것은 실행기이고 끝나면 **후보**로 올라간다. */
+export async function startBuild(workspaceId: string, kind: string): Promise<BuildResult> {
+  try {
+    return { build: await center.askBuild(workspaceId, { schema: 1, kind }) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+export async function loadBuild(workspaceId: string, buildId: string): Promise<BuildResult> {
+  try {
+    return { build: await center.build(workspaceId, buildId) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/**
+ * 작업공간 설정 (C17 `PATCH`) — 이름·판·설명·진입 정의·업무 자리 (STU-06이 하던 일).
+ * **보내지 않은 칸은 그대로 둔다** — `process.json`의 담당자·태그처럼 매니페스트에 칸이 없는
+ * 값도 Center가 지우지 않는다.
+ */
+export async function saveWorkspaceInfo(
+  workspaceId: string,
+  fields: WorkspaceUpdateRequest,
+): Promise<{ info?: WorkspaceInfo; error?: string }> {
+  try {
+    const made = await center.updateWorkspace(workspaceId, { ...fields, schema: 1 });
+    revalidatePath(`/workspaces/${workspaceId}`);
+    return { info: made };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+// ─────────────────── 공유 BPM 프로세스 설치 (C17, ADR-0048) ───────────────────
+
+/** 공유 프로세스를 `libs/`에 푼다. 같은 id가 있으면 **갈아 치운다**(「갱신」). */
+export async function installLib(
+  workspaceId: string,
+  packageId: string,
+  version: string,
+): Promise<{ info?: WorkspaceInfo; error?: string }> {
+  try {
+    const made = await center.installLib(workspaceId, { schema: 1, package_id: packageId, version });
+    revalidatePath(`/workspaces/${workspaceId}`);
+    return { info: made };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 제거 — **기록이 적어 둔 파일만** 지운다 (`libs/`를 비우면 다른 판까지 날아간다). */
+export async function removeLib(
+  workspaceId: string,
+  packageId: string,
+): Promise<{ info?: WorkspaceInfo; error?: string }> {
+  try {
+    const made = await center.removeLib(workspaceId, packageId);
+    revalidatePath(`/workspaces/${workspaceId}`);
+    return { info: made };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 설치할 수 있는 공유 프로세스 — C5 패키지 표의 `process_lib`만 (C7에 그 갈래가 없다). */
+export async function loadSharedPackages(): Promise<{ items?: PackageInfo[]; error?: string }> {
+  try {
+    // Center가 갈래로 걸러 준다 — 콘솔에서 거르면 많은 패키지를 공연히 끌고 온다.
+    return { items: await center.packages({ kind: "process_lib" }) };
+  } catch (cause) {
+    return { error: message(cause) };
+  }
 }

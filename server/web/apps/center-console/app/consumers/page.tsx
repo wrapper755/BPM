@@ -111,7 +111,7 @@ export default async function ConsumersPage() {
   return (
     <Shell mode={found.mode} actor={found.actor} current="/consumers">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-h1 font-bold">일꾼</h1>
+        <h1 className="text-h2 font-bold">일꾼</h1>
         {manage ? <NewConsumer apps={apps} /> : null}
       </header>
       {failure ? (

@@ -71,7 +71,7 @@ export default async function AppLogsPage({
   return (
     <Shell mode={found.mode} actor={found.actor} current="/app-logs">
       <header className="mb-4">
-        <h1 className="text-h1 font-bold">앱 로그</h1>
+        <h1 className="text-h2 font-bold">앱 로그</h1>
       </header>
 
       <nav className="mb-4 flex flex-wrap items-center gap-2" aria-label="앱 종류">

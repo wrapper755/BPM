@@ -107,7 +107,7 @@ export default async function PackagesPage() {
   return (
     <Shell mode={found.mode} actor={found.actor} current="/packages">
       <header className="mb-4">
-        <h1 className="text-h1 font-bold">공통 패키지</h1>
+        <h1 className="text-h2 font-bold">공통 패키지</h1>
       </header>
 
       {failure ? (

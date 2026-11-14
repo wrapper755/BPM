@@ -475,10 +475,10 @@ def test_a_value_the_graph_reads_but_the_case_does_not_return_fails(
 def test_without_a_case_a_delegation_says_what_to_write() -> None:
     """케이스를 고르지 않고 돌리면 위임은 **적을 곳이 없다** — 그 말을 그대로 한다.
 
-    창도 엔진도 필요 없는 자리라 포트만 직접 부른다.
+    엔진도 필요 없는 자리라 포트만 직접 부른다.
     """
     from bpm.core.delegation import DelegationCall, DelegationError
-    from bpm.studio.runner import CaseDelegator
+    from bpm.core.testrun.runner import CaseDelegator
 
     call = DelegationCall(
         run_id="test_20261015_090000_aaaaaa",
@@ -497,7 +497,7 @@ def test_without_a_case_a_delegation_says_what_to_write() -> None:
 
 
 def test_what_the_autonomous_run_learned_is_written_into_the_package(tmp_path: Path) -> None:
-    """엔진은 파일을 쓰지 않는다 — **Studio가** 패키지 안 `memory/specs.json`에 적는다."""
+    """엔진은 파일을 쓰지 않는다 — **시험 실행이** 패키지 안 `memory/specs.json`에 적는다."""
     from bpm.core.llm import RecordingLlm, Reply
     from bpm.core.replay import read_memory
 

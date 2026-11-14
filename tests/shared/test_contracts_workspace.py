@@ -130,3 +130,24 @@ def test_the_id_a_center_mints_passes_the_contract() -> None:
 
 def test_building_defaults_to_a_bpm_process() -> None:
     assert BuildRequest(schema=1).kind == "bpm_process"
+
+
+def test_the_screen_has_a_word_for_every_state_and_verdict() -> None:
+    """상태 표기는 `status_map`에 있는 것만 쓴다 (스타일 가이드 §2-2, 06-screens §3).
+
+    **표기가 빠지면 화면이 회색 배지에 영문 상태를 찍는다** — 색을 고르지 못한 채. 계약의
+    상태는 열린 문자열이라(원칙 10) 화면은 깨지지 않고 **조용히 못생겨지므로** 여기서 막는다.
+    """
+    import json
+    from pathlib import Path
+
+    from bpm.contracts import KNOWN_BUILD_STATES, KNOWN_TEST_RUN_STATES
+
+    tokens = json.loads(
+        (Path(__file__).resolve().parents[2] / "design" / "tokens.json").read_text(encoding="utf-8")
+    )
+    # 상태는 영문이고 표기는 한글이라 **수를 맞춰 본다** (옮기는 표는 콘솔의 `lib/trials.ts`·
+    # `lib/checks.ts`에 있고 그쪽 시험이 「표에 있는 것만 쓴다」를 지킨다).
+    assert len(tokens["status_map"]["시험 실행"]) == len(KNOWN_TEST_RUN_STATES)
+    assert len(tokens["status_map"]["배포 후보 짓기"]) == len(KNOWN_BUILD_STATES)
+    assert set(tokens["status_map"]["시험 판정"]) == KNOWN_TEST_VERDICTS

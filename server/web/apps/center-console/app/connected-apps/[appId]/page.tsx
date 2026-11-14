@@ -260,7 +260,7 @@ export default async function ConnectedAppPage({
     <>
       <header className="mb-4 flex flex-col gap-1">
         <div className="flex items-baseline gap-2">
-          <h1 className="text-h1 font-bold">{name}</h1>
+          <h1 className="text-h2 font-bold">{name}</h1>
           <span className="font-mono text-body-sm text-text-muted" title={external?.definition_hash ?? undefined}>
             {id}@{version}
           </span>

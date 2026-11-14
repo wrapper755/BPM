@@ -192,7 +192,7 @@ export default async function RunsPage({
   return (
     <Shell mode={found.mode} actor={found.actor} current="/runs">
       <header className="mb-4">
-        <h1 className="text-h1 font-bold">프로세스 로그</h1>
+        <h1 className="text-h2 font-bold">프로세스 로그</h1>
       </header>
 
       <form className="filter-card flex flex-wrap items-end gap-3" method="get">

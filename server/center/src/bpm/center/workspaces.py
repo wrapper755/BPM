@@ -38,6 +38,7 @@ from bpm.contracts.organization import Place
 from bpm.contracts.workspace import (
     PROCESS_JSON,
     FileInfo,
+    InstalledLibInfo,
     WorkspaceCreateRequest,
     WorkspaceInfo,
     WorkspaceUpdateRequest,
@@ -55,7 +56,8 @@ MAX_FILE_MB = 8
 MAX_IMPORT_MB = 64
 
 
-def _model(model: Any, body: Any) -> Any:
+def model_of(model: Any, body: Any) -> Any:
+    """본문 → 계약 모델. 맞지 않으면 422 `input_invalid`다 (같은 묶음의 모듈들이 함께 쓴다)."""
     """요청 본문을 계약 모델로 — 맞지 않으면 422다 (`center.organization`과 같은 자리)."""
     try:
         return model.model_validate(body)
@@ -145,6 +147,24 @@ def _place_of(record: dict[str, Any]) -> Place | None:
 # ─────────────────────────── 읽기 ───────────────────────────
 
 
+def _libs_of(record: dict[str, Any]) -> list[InstalledLibInfo]:
+    """받아 둔 공유 BPM 프로세스 (ADR-0048). **기록이 깨졌다고 작업공간을 숨기지 않는다** —
+    읽히지 않는 줄만 버린다."""
+    raw = record.get("libs")
+    out = []
+    for one in raw if isinstance(raw, list) else []:
+        if not isinstance(one, dict) or not one.get("id"):
+            continue
+        out.append(
+            InstalledLibInfo(
+                id=str(one["id"]),
+                version=str(one.get("version") or ""),
+                processes=[str(name) for name in one.get("processes", []) if isinstance(name, str)],
+            )
+        )
+    return out
+
+
 def _row(store: Store, workspace_id: str, *, company: str | None) -> Any:
     found = store.row("SELECT * FROM workspaces WHERE id = ?", (workspace_id,))
     if found is None:
@@ -168,6 +188,7 @@ def _info(store: Store, workspace_dir: Path, row: Any) -> WorkspaceInfo:
         updated_at=row["updated_at"],
         updated_by=row["updated_by"],
         revision=bundle_revision(files(store, row["id"])),
+        libs=_libs_of(record),
     )
 
 
@@ -238,7 +259,7 @@ def create(
     **회사는 만들 때 정해지고 바뀌지 않는다** (C16). 비우면 부르는 쪽의 회사이고, Center 관리자가
     비우면 기본 회사다.
     """
-    request = _model(WorkspaceCreateRequest, {"schema": 1, **body})
+    request = model_of(WorkspaceCreateRequest, {"schema": 1, **body})
     owner = request.company or company
     if owner is None:
         owner = _default_company(store)
@@ -246,6 +267,10 @@ def create(
         raise ApiError(403, "forbidden", "제 회사의 작업공간만 만들 수 있다")
     if store.row("SELECT id FROM workspaces WHERE id = ?", (request.id,)) is not None:
         raise ApiError(409, "exists", f"같은 id의 작업공간이 있다: {request.id}")
+    # **없는 회사로 만들지 않는다** — 짓는 데까지 가서야 패키지 등록이 그 회사를 찾지 못해
+    # 막힌다(그리고 그 자리에서는 고칠 길이 없다 — 회사는 바뀌지 않는다).
+    if store.row("SELECT id FROM companies WHERE id = ?", (owner,)) is None:
+        raise ApiError(422, "company_unknown", f"그 회사가 없다: {owner}")
     _refuse_unknown_place(store, request.place, company=owner)
 
     root = folder_of(workspace_dir, request.id)
@@ -273,7 +298,7 @@ def create(
         record["description"] = request.description
     if request.place is not None:
         record["place"] = request.place.to_json_dict()
-    _put(store, root=root, workspace_id=request.id, path=PROCESS_JSON, data=record_bytes(record), actor=actor)
+    put_file(store, root=root, workspace_id=request.id, path=PROCESS_JSON, data=record_bytes(record), actor=actor)
     return get(store, workspace_dir=workspace_dir, workspace_id=request.id)
 
 
@@ -292,7 +317,7 @@ def update(
     없는 값도 기록에는 남는다 (C17 §모델).
     """
     row = _row(store, workspace_id, company=company)
-    request = _model(WorkspaceUpdateRequest, {"schema": 1, **body})
+    request = model_of(WorkspaceUpdateRequest, {"schema": 1, **body})
     root = folder_of(workspace_dir, workspace_id)
     record = read_record(root)
     record.setdefault("schema", RECORD_SCHEMA)
@@ -309,7 +334,7 @@ def update(
     if request.entry is not None:
         _refuse_missing_entry(store, workspace_id, request.entry)
         record["entry"] = request.entry
-    _put(store, root=root, workspace_id=workspace_id, path=PROCESS_JSON, data=record_bytes(record), actor=actor)
+    put_file(store, root=root, workspace_id=workspace_id, path=PROCESS_JSON, data=record_bytes(record), actor=actor)
     return get(store, workspace_dir=workspace_dir, workspace_id=workspace_id)
 
 
@@ -379,7 +404,7 @@ def write_file(
                 {"path": path, "revision": row["revision"]},
             )
     found.parent.mkdir(parents=True, exist_ok=True)
-    _put(store, root=root, workspace_id=workspace_id, path=path, data=data, actor=actor)
+    put_file(store, root=root, workspace_id=workspace_id, path=path, data=data, actor=actor)
     return _file_info(store, workspace_id, path), row is None
 
 
@@ -477,7 +502,7 @@ def import_into(
     for path in sorted(wanted):
         found = _inside(root, path)
         found.parent.mkdir(parents=True, exist_ok=True)
-        _put(store, root=root, workspace_id=workspace_id, path=path, data=wanted[path], actor=actor)
+        put_file(store, root=root, workspace_id=workspace_id, path=path, data=wanted[path], actor=actor)
         out.append(_file_info(store, workspace_id, path))
     return out
 
@@ -511,8 +536,12 @@ def _zip_entries(raw: bytes) -> dict[str, bytes]:
 # ─────────────────────────── 거드는 것 ───────────────────────────
 
 
-def _put(store: Store, *, root: Path, workspace_id: str, path: str, data: bytes, actor: str) -> None:
-    """파일을 쓰고 DB의 기록을 맞춘다. **파일을 먼저 쓴다** — 쓰다 실패하면 행이 거짓이 된다."""
+def put_file(store: Store, *, root: Path, workspace_id: str, path: str, data: bytes, actor: str) -> None:
+    """파일을 쓰고 DB의 기록을 맞춘다. **파일을 먼저 쓴다** — 쓰다 실패하면 행이 거짓이 된다.
+
+    **경로 규칙을 보지 않는다** — 보는 자리는 `write_file`이다. 그래서 `libs/`에 쓸 수 있는 길이
+    여기 하나이고 그것을 쓰는 곳도 하나다(`libs.install` — 설치는 사람이 적는 경로가 아니다).
+    """
     found = root / path
     found.parent.mkdir(parents=True, exist_ok=True)
     found.write_bytes(data)

@@ -102,7 +102,7 @@ export default async function NewJobPage({
   return (
     <Shell mode={found.mode} actor={found.actor} current="/jobs">
       <header className="mb-4">
-        <h1 className="text-h1 font-bold">새 작업</h1>
+        <h1 className="text-h2 font-bold">새 작업</h1>
       </header>
 
       {failure ? <ErrorBanner message={failure} /> : null}

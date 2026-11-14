@@ -345,6 +345,19 @@ def test_a_workspace_without_an_entry_cannot_be_built(center: TestClient) -> Non
     assert answer.json()["code"] == "no_entry"
 
 
+def test_a_shared_process_does_not_need_an_entry(center: TestClient) -> None:
+    """**공유 프로세스에는 진입이 없다** (C1 — R1은 `bpm_process`에만 묻는다).
+
+    묻고 있었더니 공유 프로세스를 지을 길이 아예 없었다 — 짓는 쪽은 정의 전부를 담는다
+    (`core.testrun.packaging.export_lib`).
+    """
+    made(center.post(f"{API}/workspaces", json={"id": WS, "name": "n"}, headers=ADMIN))
+    answer = center.post(
+        f"{API}/workspaces/{WS}/package", json={"kind": "process_lib"}, headers=ADMIN
+    )
+    assert answer.status_code == 202, answer.text
+
+
 def test_stopping_a_trial_does_not_judge_it(center: TestClient, runner: agent_mod.Agent) -> None:
     """「중지」는 작업 취소와 **같은 길**이다 (C17 — 자리를 둘로 만들지 않는다)."""
     join(runner)

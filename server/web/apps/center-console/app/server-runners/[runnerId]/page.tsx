@@ -235,7 +235,7 @@ export default async function ServerRunnerPage({
   return (
     <Shell mode={found.mode} actor={found.actor} current="/bots">
       <header className="mb-4">
-        <h1 className="text-h1 font-bold">{info?.name ?? wanted}</h1>
+        <h1 className="text-h2 font-bold">{info?.name ?? wanted}</h1>
       </header>
 
       {failure ? <ErrorBanner message={failure} /> : null}

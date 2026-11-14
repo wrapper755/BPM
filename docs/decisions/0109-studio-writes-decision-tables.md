@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 대체됨([ADR-0143](0143-design-happens-in-the-console.md)) — 원래 수락. **결정표는 캔버스 밖이라 편집기가 직접 쓴다는 규칙은 웹에서도 그대로다** |
+| 상태 | 수락 · **쓰는 자리는 옮겼다** ([ADR-0148](0148-center-reads-and-writes-decision-tables.md) — 데스크톱 Studio → Center). 「결정표는 캔버스 밖」이라는 결정은 그대로 산다 |
 | 날짜 | 2026-10-30 |
 | 관련 | 계약 C14 §규칙 태스크와 DMN, [ADR-0022](0022-studio-canvas.md), [ADR-0048](0048-installing-shared-packages.md), 화면 STU-04·STU-04a, 09-gaps 7-11 |
 

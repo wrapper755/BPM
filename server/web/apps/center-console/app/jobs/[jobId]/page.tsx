@@ -60,7 +60,7 @@ export default async function JobPage({
   return (
     <Shell mode={found.mode} actor={found.actor} current="/jobs">
       <header className="mb-4">
-        <h1 className="text-h1 font-bold">작업 {job?.job_id ?? ""}</h1>
+        <h1 className="text-h2 font-bold">작업 {job?.job_id ?? ""}</h1>
       </header>
 
       {failure ? <ErrorBanner message={failure} /> : null}

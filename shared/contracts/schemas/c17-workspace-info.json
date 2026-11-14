@@ -1,5 +1,32 @@
 {
   "$defs": {
+    "InstalledLibInfo": {
+      "additionalProperties": true,
+      "description": "받아 둔 공유 BPM 프로세스 하나 (`process.json`의 기록, ADR-0048).\n\n**파일 목록으로는 판을 알 수 없다** — `libs/`는 평평하고 이름이 `<id>__<이름>`이라 판이\n어디에도 없다. 그래서 기록을 읽어 싣는다.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "processes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Processes",
+          "type": "array"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "InstalledLibInfo",
+      "type": "object"
+    },
     "Place": {
       "additionalProperties": true,
       "description": "업무 자리 — BPM 프로세스(패키지 id)마다 하나. **회사는 적지 않는다** — 패키지의 회사다.",
@@ -77,6 +104,13 @@
     "id": {
       "title": "Id",
       "type": "string"
+    },
+    "libs": {
+      "items": {
+        "$ref": "#/$defs/InstalledLibInfo"
+      },
+      "title": "Libs",
+      "type": "array"
     },
     "name": {
       "title": "Name",

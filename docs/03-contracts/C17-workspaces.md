@@ -2,11 +2,11 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **초안** (2026-11-13) — **다 돈다**: 작업공간·파일·묶음·가져오기(30판), 시험 실행(31판), **실행 전 검사와 배포 후보 짓기**(32판). 남은 것은 공유 BPM 프로세스 설치와 **화면**(CON-20 — M11 조각 4). **`> 미정:` 셋은 [ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)으로 닫았다** (시험 자리·검사와 짓기의 자리·누가 올리나). [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
+| 상태 | **초안** (2026-11-13) — **다 돈다**: 작업공간·파일·묶음·가져오기(30판), 시험 실행(31판), **실행 전 검사와 배포 후보 짓기**(32판), 공유 BPM 프로세스 설치. **화면**(CON-20)도 탭 셋이 돈다 (M11 조각 4). **`> 미정:` 셋은 [ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)으로 닫았다** (시험 자리·검사와 짓기의 자리·누가 올리나). [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 콘솔(BFF) → Center, Center → 서버 실행기 (시험 실행·짓기는 C12 작업으로 내려간다) |
 | 코드 위치 | Center `workspaces.py`·`trials.py`·`design_work.py`(판단)·`api/workspaces.py`(길), 모델 `contracts.workspace`, 실행기 `testmode.py`. 알맹이는 `bpm.core.testrun` |
-| 관련 ADR | [0143](../decisions/0143-design-happens-in-the-console.md), **[0146](../decisions/0146-design-work-has-its-own-lane.md)(시험 자리·검사와 짓기·누가 올리나)**, [0145](../decisions/0145-console-is-workspace-shaped.md), [0022](../decisions/0022-studio-canvas.md)(캔버스를 거쳐 고친다 — 웹에서도 그대로), [0109](../decisions/0109-studio-writes-decision-tables.md)(결정표는 캔버스 밖), [0028](../decisions/0028-replay-memory.md)(배운 것), [0082](../decisions/0082-batch-start.md)(맡기기), [0142](../decisions/0142-open-mode.md)(이 계약이 보안을 더 급하게 만든다) |
+| 관련 ADR | [0143](../decisions/0143-design-happens-in-the-console.md), **[0146](../decisions/0146-design-work-has-its-own-lane.md)(시험 자리·검사와 짓기·누가 올리나)**, [0145](../decisions/0145-console-is-workspace-shaped.md), [0022](../decisions/0022-studio-canvas.md)(캔버스를 거쳐 고친다 — 웹에서도 그대로), [0109](../decisions/0109-studio-writes-decision-tables.md)·**[0148](../decisions/0148-center-reads-and-writes-decision-tables.md)**(결정표는 캔버스 밖이고 Center가 쓴다), [0028](../decisions/0028-replay-memory.md)(배운 것), [0082](../decisions/0082-batch-start.md)(맡기기), [0142](../decisions/0142-open-mode.md)(이 계약이 보안을 더 급하게 만든다) |
 | 관련 화면 | CON-20 작업공간 (STU-01·02·04·05·06·07·08·09·12를 대신한다) |
 
 ## 목적
@@ -43,6 +43,7 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | `place` | object | | 업무 자리 `{company, department?, staff?}` (C16, [ADR-0127](../decisions/0127-studio-picks-the-work-place.md)) | 1 |
 | `entry` | str | | 진입 정의의 경로 (`process/<이름>.bpmn`). 없으면 아직 고르지 않았다 | 1 |
 | `updated_at` | str | ✓ | 마지막으로 파일이 바뀐 때 | 1 |
+| `libs` | object[] | | 받아 둔 공유 BPM 프로세스 — `{id, version, processes[]}` (§공유 BPM 프로세스 설치). **파일 목록으로는 판을 알 수 없어** 기록을 읽어 싣는다 | 1 |
 | `updated_by` | str | ✓ | 그때의 행위자 | 1 |
 
 `process.json`(작업 폴더 기록)이 원본이고 이 모델은 **그것을 읽어 보인 것**이다 — 담당자·태그처럼
@@ -75,7 +76,7 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | `GET /workspaces/{id}` | 읽기 | `WorkspaceInfo` |
 | `PATCH /workspaces/{id}` | 관리자 | 이름·판·설명·업무 자리·진입 정의 (STU-06이 하던 일) |
 | `DELETE /workspaces/{id}` | 관리자 | 지운다. **배포된 패키지는 그대로다** (패키지가 원본이고 작업공간은 그것을 짓는 자리다) |
-| `POST /workspaces/{id}/import` | 관리자 | `.bpmn` 하나 또는 **옛 작업 폴더 zip**을 받아 넣는다 (ADR-0143 §2 — 밖에서 그린 그림이 들어오는 자리) |
+| `POST /workspaces/{id}/import` | 관리자 | `.bpmn` 하나 또는 **옛 작업 폴더 zip**을 받아 넣는다 (ADR-0143 §2 — 밖에서 그린 그림이 들어오는 자리). 파일 이름은 `X-BPM-File-Name` 헤더이고 **UTF-8 퍼센트 인코딩**이다 (헤더는 ASCII다 — `X-BPM-Actor`와 같은 규칙, CLAUDE.md §5). 없으면 zip으로 본다 |
 
 ## 파일
 
@@ -87,11 +88,43 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | `DELETE /workspaces/{id}/files/{path}` | 관리자 | 지우기. 진입 정의는 거절(409 `entry_in_use`) |
 
 - **Center는 BPMN을 해석하지 않는다.** 글자 그대로 담고 돌려준다 — 그림을 고치는 것은 **캔버스(bpmn-js)**이고
-  (ADR-0022가 정한 규칙이 웹에서도 그대로다: 실행 취소 한 걸음·DI 순서·모르는 요소 보존) 결정표(.dmn)만
-  캔버스 밖이라 편집기가 직접 쓴다 (ADR-0109).
+  (ADR-0022가 정한 규칙이 웹에서도 그대로다: 실행 취소 한 걸음·DI 순서·모르는 요소 보존), **결정표(.dmn)는
+  Center가 격자로 읽고 쓴다** (아래 §결정표 — [ADR-0148](../decisions/0148-center-reads-and-writes-decision-tables.md)).
+  비대칭은 일부러다: BPMN은 고치는 쪽이 둘이면 파일이 왔다 갔다 하고, DMN은 **칸 문법이 둘이면 편집기와
+  엔진의 판정이 갈린다**.
 - **검사는 쓰기를 막지 않는다** — C14 B1~B17·실행 전 검사는 **돌리기 전에** 본다 (§실행 전 검사).
   반쯤 그린 그림을 저장하지 못하면 설계가 되지 않는다.
 - 두 사람이 같은 파일을 열면 **나중 사람이 409 `stale`을 받는다**. 합치지 않는다 — 합치면 XML이 깨진다.
+
+## 결정표
+
+규칙 태스크가 가리키는 `.dmn`이다 ([ADR-0109](../decisions/0109-studio-writes-decision-tables.md) — 캔버스 밖,
+[ADR-0148](../decisions/0148-center-reads-and-writes-decision-tables.md) — 쓰는 쪽은 Center). 격자는
+`contracts.dmn_table`이 읽고 쓰며, 칸 문법 검사는 **엔진과 같은 함수**다(`contracts.dmn`의 `parse_cell`·`parse_value`).
+
+| 길 | 권한 | 하는 일 |
+| --- | --- | --- |
+| `GET /workspaces/{id}/decisions/{path}` | 읽기 | 그 파일의 결정표들을 격자로 (`DecisionsResponse`). `ETag`는 **그 파일의 `revision`**이다 |
+| `PUT /workspaces/{id}/decisions/{path}` | 관리자 | 결정표 **하나**를 바꿔 쓴다 (`DecisionSaveRequest`). `If-Match`는 파일 쓰기와 같고, 다르면 409 `stale`이다 |
+
+- **그 결정표 하나만** 바뀐다 — 같은 파일의 다른 결정, 결정표가 아닌 결정, DRD·DI, 확장 요소, 열의
+  `inputValues`, 줄의 `annotationEntry`는 **읽은 대로 남고** 열·줄·칸의 id와 네임스페이스 접두사도 그대로다.
+  보내지 않은 것을 지어내지 않으려고, Center는 **받은 격자를 지금 파일 위에 얹는다**(id가 같은 열·줄은 원래
+  요소를 그대로 쓴다).
+- **엔진이 거부할 칸은 저장되지 않는다** — 저장 전에 `problems()`가 막는 것(막는 흠)을 보고 있으면 422
+  `bad_table`이고 **아무것도 쓰지 않는다**. 경고(겹친 입력 이름·빈 규칙 줄)는 막지 않고 응답에 싣는다.
+- 마지막 관문은 지어 쓴 XML을 `read_decisions`가 **다시 읽는가**다 — 저장한 파일을 실행기가 거부하는 일이 없게.
+- `libs/`의 `.dmn`은 **읽기만** 된다 (파일 쓰기와 같은 규칙).
+
+### DecisionTableInfo
+
+| 필드 | 타입 | 뜻 |
+| --- | --- | --- |
+| `id`·`name` | str | 결정 id(NCName의 부분집합)와 사람이 읽는 이름 |
+| `hit` | str | 적중 정책 — `UNIQUE`·`FIRST`·`ANY`·`COLLECT` (C14) |
+| `inputs[]` | object | `{id, expression, label, type}` — **이름은 `expression`**(`inputExpression` 본문)이고 `label`은 사람이 읽는 이름이다 |
+| `outputs[]` | object | `{id, name, type}` |
+| `rules[]` | object | `{id, cells[], values[], description}` — **칸의 원문**이다. `cells`는 입력 열 수, `values`는 출력 열 수와 같다 |
 
 ## 시험 실행
 
@@ -165,6 +198,8 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | `node_states` | object | `{노드 id: running\|done\|failed\|waiting}` — 캔버스 색 |
 | `variables` | object | 지금 값. **업무 값이라 목록에는 키만** 보인다 (원칙 6·U10) |
 | `learned` | int | 적은 재생 명세 수 |
+| `requested_by`·`requested_at` | str | 누가 언제 눌렀나 |
+| `updated_at` | str | 마지막으로 바뀐 때 — **소요를 재는 자리**다 (끝난 실행은 끝난 때). 따로 「끝난 때」를 두지 않는다: 끝나면 더 바뀌지 않는다 |
 
 ## 실행 전 검사
 
@@ -197,6 +232,8 @@ Center가 마지막 결과를 **그때 본 파일 revision 묶음**과 함께 �
 
 - **짓는 코드는 데스크톱 Studio가 쓰던 것 그대로다** (`core.testrun.packaging` — 매니페스트를 그림에서
   모으고, 시험 케이스는 넣지 않고, `content_hash`는 받는 쪽이 다시 계산한다, C1·C2).
+- **진입 정의는 `bpm_process`에만 묻는다** (없으면 422 `no_entry`) — **공유 프로세스에는 진입이 없고**
+  (C1, R1도 `bpm_process`에만 묻는다) 짓는 쪽이 정의 전부를 담는다 (`export_lib`).
 - 그래서 **짓는 것도 실행기가 한다** — Center는 받은 zip을 **오늘 올리기와 똑같이** 검사한다 (C5
   `POST /packages`). 받는 쪽 코드가 바뀌지 않는 것이 이 길의 값이다.
 - 올린 것은 **후보**다. 승인·배포는 바뀌지 않는다 (C2·C5·CON-06·CON-15) — 콘솔에서 설계한 것이 저절로
@@ -228,6 +265,15 @@ Center가 마지막 결과를 **그때 본 파일 revision 묶음**과 함께 �
 - 받은 것은 **편집 대상이 아니다** — 파일 쓰기가 `libs/`를 거부하는 까닭이다.
 - 판은 `process.json`에 남고 배포 후보를 지을 때 `requires.libs`로 간다 (C1).
 - **결정표(.dmn)도 함께 푼다** — 한쪽만 읽으면 「편집기에서는 되는데 현장에서 안 된다」가 된다.
+- **자리는 평평하고 이름에 패키지 id가 붙는다** — `libs/<id>__<이름>.bpmn`. 실행기가 `libs/*.bpmn`만
+  글롭하므로(`core.testrun.workspace`) 하위 폴더를 쓰면 현장에서 못 찾는다. 서로 다른 패키지가 같은
+  `main.bpmn`을 들고 올 수 있어 id를 붙이고, **어느 파일이 어느 판의 것인지는 기록이 안다**(제거가
+  그것만 지운다 — `libs/`를 비우면 다른 판까지 날아간다).
+- **아무 패키지나 풀지 않는다** — `kind`가 `process_lib`이고(422 `wrong_kind`) 매니페스트의 id·판이
+  받으려던 것과 같아야 한다(422 `wrong_package`). `bpm_process`를 lib으로 풀면 진입 정의가 남의
+  `libs/`에서 돌게 된다. **철회된 패키지는 받지 않는다**(410 — 푼 뒤에는 거둘 길이 없다).
+- **같은 id가 이미 있으면 갈아 치운다** — 「갱신」이 그 길이다. 옛 판의 파일을 먼저 지운다(남겨 두면
+  글롭하는 쪽이 **두 판을 함께** 읽는다).
 
 ## 오류
 
@@ -241,6 +287,7 @@ Center가 마지막 결과를 **그때 본 파일 revision 묶음**과 함께 �
 | 409 | `entry_in_use` | 진입 정의를 지우려 함 |
 | 409 | `build_done` | 이미 받은 build에 **다른** zip을 올리려 함 (같은 것은 200) |
 | 422 | `bad_path` | §경로 규칙을 어겼다 |
+| 422 | `bad_table` | 결정표에 **막는 흠**이 있다 (칸 문법·빈 이름·겹친 출력 이름…) — 아무것도 쓰지 않았다 |
 | 422 | `no_entry` | 진입 정의 없이 돌리거나 지으려 함 |
 | 503 | `no_runner` | 시험 실행·검사·짓기를 맡을 서버 실행기가 없다. **검사는 담아 둔 결과가 있으면 그것을 준다** |
 
@@ -253,4 +300,5 @@ C5와 같다 — 모르는 칸은 **무시하고 버리지 않는다**(파일은
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
 | 2026-11-13 | 1 | 초안 — 작업공간·파일·시험 실행·실행 전 검사·배포 후보로 만들기·공유 BPM 프로세스 설치 | [0143](../decisions/0143-design-happens-in-the-console.md) |
+| 2026-11-13 | 1 | **결정표 격자**(`GET`·`PUT …/decisions/{path}`) — 브라우저가 DMN을 해석하지 않는다 | [0148](../decisions/0148-center-reads-and-writes-decision-tables.md) |
 | 2026-11-13 | 1 | **`> 미정:` 셋을 닫았다** — 시험 작업은 `jobs[]`로 가고 **자리만 따로**(`capacity.test_max`), 검사와 짓기는 **작업이 아니라** 하트비트의 `checks[]`·`builds[]`이고 **검사는 가르지 않는다**(revision 캐시로 받친다), 지은 zip은 `POST …/builds/{build_id}/artifact`로 받아 **Center가 제 이름으로** 등록한다(C5 권한표 그대로). 묶음을 받는 길 `GET …/bundle` | [0146](../decisions/0146-design-work-has-its-own-lane.md) |

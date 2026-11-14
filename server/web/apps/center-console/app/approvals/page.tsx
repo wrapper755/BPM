@@ -129,7 +129,7 @@ export default async function ApprovalsPage({
   return (
     <Shell mode={found.mode} actor={found.actor} current="/approvals">
       <header className="mb-4">
-        <h1 className="text-h1 font-bold">결재함</h1>
+        <h1 className="text-h2 font-bold">결재함</h1>
       </header>
 
       {/* 필터는 JS 없이도 돈다 — GET 폼이 주소에 남긴다. */}

@@ -1,11 +1,14 @@
 """산출물의 판 — 빌드가 찍은 것을 읽는 자리 하나 ([ADR-0067](../../../../../docs/decisions/0067-build-stamp.md)).
 
-`packaging/build.py`가 묶은 실행 파일 옆에 `bpm-build.json`(`STAMP_NAME`)을 둔다. 묶인 앱은
-그것을 읽어 C4 `versions`로 올린다. **묶지 않은 것**(소스·`uv sync`)에는 그 파일이 없고 판은
-설치된 배포판의 dist-info에서 온다.
+실행 파일 옆에 `bpm-build.json`(`STAMP_NAME`)이 있으면 그것을 읽어 C4 `versions`로 올린다.
+없으면(소스·`uv sync`·컨테이너 이미지) 판은 설치된 배포판의 dist-info에서 온다.
 
-**판을 짓지 않는다** — 짓는 것은 빌드다(`STAMP_NAME`을 쓰는 쪽도, 판 모양을 보는 쪽도 이 모듈의
-함수를 쓴다 — 둘이 갈라지면 빌드가 되읽어 확인하는 일이 거짓이 된다).
+**지금 그 파일을 찍는 빌드는 없다** — 데스크톱 묶기는 Qt Studio와 함께 걷었다
+([ADR-0143](../../../../../docs/decisions/0143-design-happens-in-the-console.md), M11 조각 5).
+남겨 둔 것은 **읽는 쪽이 남아서**다: 서버 실행기가 C4 `versions`를, Center가 짓기 기록을 적는다.
+찍는 쪽이 다시 생기면 판 모양(`VERSION_PATTERN`)을 여기서 함께 본다.
+
+**판을 짓지 않는다** — 읽기만 한다.
 """
 
 from __future__ import annotations
@@ -18,7 +21,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
-#: 실행 파일 옆에 찍는 파일 이름 — Studio·서버 실행기가 같다.
+#: 실행 파일 옆에 찍는 파일 이름.
 STAMP_NAME = "bpm-build.json"
 
 #: 판 모양 — PEP 440 공개 판(`1.2.3`·`1.2.3rc1`·`1.2.3.post1`·`1.2.3.dev4`)에 **로컬 판**

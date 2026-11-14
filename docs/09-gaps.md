@@ -33,7 +33,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 | C13 | **구현됨** | `contracts.extension`·`core.extensions` | — (닫았다 — 기여 지점마다 읽는 쪽이 있다: 호스트·Studio·PC 실행기·콘솔·Center) |
 | C14 | **구현됨** | `contracts.bpmn_ext` B1~B17 + `contracts.dmn` | — (닫았다 — 엔진이 수행하고 Studio가 편집·검사하고 예제 49개가 이 형식이다. schema 1에서 **쓰지 않기로 적은 것**은 범위 결정이다) |
 | C15 | **구현됨** | `contracts.external_task`, Center `api/external_tasks.py` (15판) + **양쪽** — 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`server/adapter_consumer` | — (조각 2~4가 닫았고 긴 작업은 [ADR-0103](decisions/0103-long-external-tasks.md)이 닫았다, §3-17) |
-| C17 | **초안** | 작업공간·파일·묶음·시험 실행·검사·짓기가 돈다 | 공유 BPM 프로세스 설치와 **화면**(CON-20). **먼저 정할 것은 없다** — 미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다. §3-34 |
+| C17 | **초안** | 전송이 다 돈다. 화면(CON-20)도 탭 셋이 돈다 | 리소스에서 노드 만들기 — **리소스 탐색기를 어디에 둘지 먼저 정한다**. 전송에서 정할 것은 없다 ([ADR-0146](decisions/0146-design-work-has-its-own-lane.md)). §3-34 |
 
 **열둘이 「구현됨」이고 C17(작업공간)은 「초안」이다** (C12가 M7 다섯째 조각에서, C15가 ADR-0102 조각 4에서 올라왔다. C17은 M11이 구현한다 — §3-34). C8·C9·C10은 UI 자동화 확장과 함께 지웠다 ([ADR-0114](decisions/0114-remove-ui-automation.md) — §3-28). 상태 셋의 뜻은 [03-contracts/README](03-contracts/README.md) §상태에 적었다 — 적혀 있지 않아 올릴 때마다 사람이 다시 물었다.
 
@@ -45,7 +45,20 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 ## 3. 계약 쪽 기능 공백
 
-계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18). **보안을 어디까지 조일지는 §3-33으로 미뤘다** — 관문은 다 있고 스위치 하나로 지나간다([ADR-0142](decisions/0142-open-mode.md)).
+계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18). **보안을 어디까지 조일지는 §3-33으로 미뤘다** — 관문은 다 있고 스위치 하나로 지나간다([ADR-0142](decisions/0142-open-mode.md)). **M11이 C17을 구현하면서 §3-34를 거의 닫았고**(전송 전부 + 화면 탭 셋 — 남은 것은 리소스에서 노드 만들기 하나다) **Qt를 걷으면서 §3-35가 새로 생겼다**(쓰는 앱이 없는 Studio 키 종류).
+
+### 3-35. Studio 키 종류가 남아 있다 (쓰는 앱이 없다)
+
+[ADR-0143](decisions/0143-design-happens-in-the-console.md) §4가 **「설계자의 키가 없어졌다」**고
+정했는데, 계약과 Center에는 아직 그 종류가 있다 — C5·C7의 키 종류 `studio`, C5 §Studio 등록 요청과
+승인(`POST /api/v1/studio/enroll`·`StudioEnrollRequest`), Center의 `enrollments.py` Studio 갈래,
+그리고 **CON-03**(지금은 Studio 목록 하나다).
+
+M11 조각 5는 **Qt 코드를 걷었고** 그 종류를 건드리지 않았다 — 키 종류를 걷는 것은 계약(C5 권한표·
+C7)·Center·화면·시험 열다섯 자리를 함께 고치는 일이라 **제 조각이 필요하다**. 지금 해로운 것은
+아니다(발급하는 사람이 없으면 아무 일도 없다). **먼저 정할 것**: 옛 Studio 키가 남아 있는 Center에서
+그것을 **지울 것인가 두고 만료시킬 것인가** — 지우면 그 키로 올라온 패키지의 `uploaded_by`가 가리킬
+곳이 없어진다.
 
 ### 3-34. 작업공간(C17) — 알맹이는 돌고 전송이 없다
 
@@ -58,10 +71,16 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 **실행 전 검사와 짓기도 돈다** (32판 — 하트비트의 `checks[]`·`builds[]`, 검사 캐시, 지은 zip을 Center가
 제 이름으로 등록).
 
-**없는 것**: 공유 BPM 프로세스 설치(`POST …/libs`)와 **화면**(CON-20 — 조각 4). 그래서 지금 설계를
-**사람이 할 수 있는 길은 데스크톱 Studio뿐**이다 (API는 돌지만 편집기가 없다).
+**공유 BPM 프로세스 설치도 돈다** (`POST`·`DELETE …/libs` — Center가 패키지 zip에서 정의·결정표를
+`libs/`에 평평하게 풀고 판은 기록이 안다).
 
-**먼저 정할 것은 없다** — 미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다
+**화면도 탭 셋이 돈다** ([center-console-workspace.md](../server/docs/screens/center-console-workspace.md),
+M11 조각 4) — 탐색기·캔버스·속성 패널·결정표 격자·케이스 편집기·아래 탭 셋·시험 실행·실행 전 검사·
+배포 후보로 만들기·정보 탭·이벤트 칸 폼·결재 답 폼·패널 접기다.
+**없는 것은 하나다**: 리소스에서 노드 만들기 (STU-03 「캔버스에 추가」·끌어다 놓기 — 리소스 탐색기를
+어디에 둘지 먼저 정해야 한다).
+
+**전송에서 먼저 정할 것은 없다** — 미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다
 (C17·C12에 적혀 있다).
 
 1. 시험 작업은 **C12 `jobs[]`로** 가고 **자리만 따로** 센다 (`capacity.test_max`, 기본 2 — 서로 빌려주지
@@ -328,7 +347,7 @@ CON-07 상세 「서버 주소」에서 넣고 **정의의 허용 호스트 안�
 
 ## 4. 화면 쪽 기능 공백
 
-화면 쪽 공백은 제품 문서로 옮겼다 — [Studio](../studio/docs/gaps.md) §4-5, [Center 콘솔](../server/docs/gaps.md) §4-9 ([ADR-0129](decisions/0129-product-folders.md)). 번호는 그대로다.
+화면 쪽 공백은 제품 문서로 옮겼다 — [Center 콘솔](../server/docs/gaps.md) §4-9 ([ADR-0129](decisions/0129-product-folders.md)). 번호는 그대로다. **Studio 쪽 줄(§4-5)은 Qt와 함께 없어졌다** ([ADR-0143](decisions/0143-design-happens-in-the-console.md), M11 조각 5).
 
 ## 5. 공백은 아니지만 적어 둘 것
 
@@ -344,13 +363,13 @@ CON-07 상세 「서버 주소」에서 넣고 **정의의 허용 호스트 안�
 
 ## 7. 화면 문서에 「아직」으로 적힌 자리 (M6 셋째 기준)
 
-이 절의 줄은 모두 Studio 화면이라 [studio/docs/gaps.md](../studio/docs/gaps.md) §7로 옮겼다 ([ADR-0129](decisions/0129-product-folders.md)). 번호는 그대로다.
+이 절의 줄은 모두 Studio 화면이었고 **Qt와 함께 없어졌다** ([ADR-0143](decisions/0143-design-happens-in-the-console.md), M11 조각 5). 콘솔 쪽 「아직」은 CON-20 화면 문서의 상태 줄에 있다.
 
 §1~§4는 계약·화면을 **코드의 호출자**로 대조했다. 이번에는 거꾸로 **화면 문서의 「상태」 줄이 「아직」이라고 적은 것**을 모았다(2026-10-18) — 화면이 문서와 **맞기는 하지만**(문서가 「아직」이라고 정직하게 적었다) 기준의 뜻은 「문서가 약속한 화면이 돈다」라서 여기 둔다. 먼저 정할 것이 없던 하나(BUI-04 「최근 실행」 — BUI-02가 읽는 기록 파일에서 그 BPM 프로세스의 마지막 실행을 고른다)는 **닫았다**. 7-4(STU-06 「나누기」)도 **닫았다** — 노드 하나를 새 PC BPM 프로세스로 옮기고 그 자리를 위임 호출로 바꾼다([ADR-0071](decisions/0071-splitting-a-task-into-a-pc-bot.md)). 7-5(STU-10 나머지 분류)도 **닫았다** — 칸마다 읽는 곳을 대조해 테마·확장별 설정은 켜고, 읽는 곳이 없는 메일·비밀·공급자·temperature·화면 인식 모델·캔버스 팔레트는 화면 문서에서 걷었다([ADR-0073](decisions/0073-studio-settings-only-what-is-used.md)). 7-7(서비스 앱 콘솔 → CON-01)도 **닫았다** — Center 콘솔 주소는 서비스 앱 콘솔의 설정 하나로 받고 C11은 그대로다([ADR-0075](decisions/0075-service-console-links-to-center-console.md)). 7-8(ADM 창)은 닫았다 — 지금은 Admin 창도 CLI도 없고 관리자가 Center 콘솔에 계정으로 들어와 Center가 대신 서명한다([ADR-0090](decisions/0090-center-admin-accounts.md)). UI 자동화 쪽 자리(7-2·7-3·7-6·7-10)는 그 확장과 함께 걷었다 ([ADR-0114](decisions/0114-remove-ui-automation.md)).
 
 ## 8. 화면 문서가 약속했는데 코드에 없는 것 (2026-10-31 대조)
 
-제품 화면의 줄은 제품 문서로 옮겼다 — [Studio](../studio/docs/gaps.md), [Center 콘솔](../server/docs/gaps.md) §8 ([ADR-0129](decisions/0129-product-folders.md)). 번호는 그대로이고, 여기에는 여러 앱이 같이 쓰는 창의 줄만 남는다.
+제품 화면의 줄은 제품 문서로 옮겼다 — [Center 콘솔](../server/docs/gaps.md) §8 ([ADR-0129](decisions/0129-product-folders.md)). 번호는 그대로이고, 여기에는 여러 앱이 같이 쓰는 창의 줄만 남는다. **Studio 쪽 줄은 Qt와 함께 없어졌다** (ADR-0143).
 
 §7은 화면 문서가 스스로 「아직」이라 적은 것이었다. 이번에는 **상태 줄이 「돈다」인데** 표의 단추·칸·문구가 코드에 없는 것을 모았다. 화면 문서의 라벨 글을 코드에서 찾고 손으로 읽어 맞췄다. 정직한 「아직」인데 여기 없던 것(STU-07 `delegations` 칸)도 함께 둔다.
 

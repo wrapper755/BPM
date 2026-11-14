@@ -15,10 +15,11 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import unquote
 
 from fastapi import APIRouter, Request, Response
 
-from bpm.center import design_work, trials, workspaces
+from bpm.center import decisions, design_work, libs, trials, workspaces
 from bpm.center.api import server_runner
 from bpm.center.api.body import read_json as _json
 from bpm.center.auth import (
@@ -189,11 +190,24 @@ def delete_file(request: Request, workspace_id: str, path: str) -> Response:
     return Response(status_code=204)
 
 
+def _file_name(request: Request) -> str:
+    """가져오는 파일의 이름 — 퍼센트 인코딩을 푼다. 풀리지 않으면 받은 글 그대로다
+    (이름 하나 때문에 가져오기를 거부하지 않는다 — 경로 규칙이 그 뒤에서 본다)."""
+    raw = request.headers.get("x-bpm-file-name", "").strip()
+    if not raw:
+        return "bundle.zip"
+    try:
+        return unquote(raw, errors="strict") or "bundle.zip"
+    except (UnicodeDecodeError, ValueError):
+        return raw
+
+
 @router.post("/workspaces/{workspace_id}/import")
 async def import_files(request: Request, workspace_id: str) -> Any:
     """`.bpmn` 하나 또는 **옛 작업 폴더 zip** — 밖에서 그린 그림이 들어오는 자리 (ADR-0143 §2).
 
-    이름은 `X-BPM-File-Name` 헤더로 받는다 (ASCII만 — CLAUDE.md §5). 없으면 zip으로 본다.
+    이름은 `X-BPM-File-Name` 헤더로 받는다. 헤더는 ASCII라서 **UTF-8 퍼센트 인코딩**이고
+    (CLAUDE.md §5 — `X-BPM-Actor`와 같은 규칙) 여기서 푼다. 없으면 zip으로 본다.
     """
     found = _writer(request)
     made = workspaces.import_into(
@@ -201,11 +215,48 @@ async def import_files(request: Request, workspace_id: str) -> Any:
         workspace_dir=_dir(request),
         workspace_id=workspace_id,
         raw=await request.body(),
-        file_name=request.headers.get("x-bpm-file-name", "bundle.zip"),
+        file_name=_file_name(request),
         actor=found.actor,
         company=company_scope(found),
     )
     return Utf8JSONResponse(status_code=201, content=[one.to_json_dict() for one in made])
+
+
+# ─────────────────────────── 결정표 ───────────────────────────
+
+
+@router.get("/workspaces/{workspace_id}/decisions/{path:path}")
+def read_decisions(request: Request, workspace_id: str, path: str) -> Any:
+    """그 `.dmn`의 결정표들을 격자로 (ADR-0148). `ETag`는 **그 파일의 `revision`**이다."""
+    found = _reader(request)
+    answer = decisions.read(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        path=path,
+        company=company_scope(found),
+    )
+    return Utf8JSONResponse(
+        content=answer.to_json_dict(),
+        headers={"ETag": answer.revision, "Cache-Control": "no-store"},
+    )
+
+
+@router.put("/workspaces/{workspace_id}/decisions/{path:path}")
+async def write_decision(request: Request, workspace_id: str, path: str) -> Any:
+    """결정표 **하나**를 바꿔 쓴다. 막는 흠이 있으면 422 `bad_table`이고 아무것도 쓰지 않는다."""
+    found = _writer(request)
+    answer = decisions.save(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        path=path,
+        body=await _json(request),
+        if_match=request.headers.get("if-match"),
+        actor=found.actor,
+        company=company_scope(found),
+    )
+    return Utf8JSONResponse(content=answer.to_json_dict(), headers={"ETag": answer.revision})
 
 
 # ─────────────────────────── 시험 실행 ───────────────────────────
@@ -370,6 +421,42 @@ async def take_artifact(request: Request, workspace_id: str, build_id: str) -> A
         raw=await request.body(),
     )
     return Utf8JSONResponse(status_code=201, content=info.to_json_dict())
+
+
+# ─────────────────────────── 공유 BPM 프로세스 설치 ───────────────────────────
+
+
+@router.post("/workspaces/{workspace_id}/libs")
+async def install_lib(request: Request, workspace_id: str) -> Any:
+    """공유 BPM 프로세스를 `libs/`에 푼다 (STU-11이 하던 일, ADR-0048).
+
+    **받아 올 것이 없다** — 패키지가 Center에 있다. 같은 id가 있으면 갈아 치운다(「갱신」).
+    """
+    found = _writer(request)
+    info = libs.install(
+        _store(request),
+        workspace_dir=_dir(request),
+        package_dir=_settings(request).package_dir,
+        workspace_id=workspace_id,
+        body=await _json(request),
+        actor=found.actor,
+        company=company_scope(found),
+    )
+    return Utf8JSONResponse(status_code=201, content=info.to_json_dict())
+
+
+@router.delete("/workspaces/{workspace_id}/libs/{package_id}")
+def remove_lib(request: Request, workspace_id: str, package_id: str) -> Any:
+    """제거 — **기록이 적어 둔 파일만** 지운다 (`libs/`를 비우면 다른 판까지 날아간다)."""
+    found = _writer(request)
+    return libs.remove(
+        _store(request),
+        workspace_dir=_dir(request),
+        workspace_id=workspace_id,
+        package_id=package_id,
+        actor=found.actor,
+        company=company_scope(found),
+    ).to_json_dict()
 
 
 # ─────────────────────────── 묶음 (실행기가 집어 간다) ───────────────────────────

@@ -16,9 +16,7 @@ MEMBERS = {
     "shared/extension_api": "bpm.extension_api",
     "shared/core": "bpm.core",
     "shared/llm": "bpm.llm",
-    "shared/qt": "bpm.qt",
     "server/service_kit": "bpm.service_kit",
-    "studio/app": "bpm.studio",
     "server/server_runner": "bpm.server_runner",
     # 외부 앱을 부르는 범용 일꾼 (C13 §4·C15, ADR-0102).
     "server/adapter_consumer": "bpm.adapter_consumer",
@@ -38,7 +36,6 @@ MEMBER_GLOBS = (
     "server/adapter_consumer",
     "server/service_kit",
     "server/unified_consumer",
-    "studio/app",
     "samples/*",
 )
 

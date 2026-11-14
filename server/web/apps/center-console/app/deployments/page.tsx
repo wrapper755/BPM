@@ -126,7 +126,7 @@ export default async function DeploymentsPage({
   return (
     <Shell mode={found.mode} actor={found.actor} current="/deployments">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-h1 font-bold">배포</h1>
+        <h1 className="text-h2 font-bold">배포</h1>
         <div className="flex items-center gap-3">
           <Link
             className="text-body-sm text-text-secondary underline"

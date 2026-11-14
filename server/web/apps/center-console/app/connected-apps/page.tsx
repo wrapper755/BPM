@@ -191,7 +191,7 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
   return (
     <Shell mode={found.mode} actor={found.actor} current="/connected-apps">
       <header className="mb-4 flex flex-wrap items-center gap-2">
-        <h1 className="text-h1 font-bold">연결 앱</h1>
+        <h1 className="text-h2 font-bold">연결 앱</h1>
         <Hint text={SOURCE_NOTE} />
         {manage ? (
           <span className="ml-auto">

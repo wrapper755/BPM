@@ -109,7 +109,7 @@ export default async function ApprovalPage({
   return (
     <Shell mode={found.mode} actor={found.actor} current="/approvals">
       <header className="mb-4">
-        <h1 className="text-h1 font-bold">{info?.title ?? "결재 요청"}</h1>
+        <h1 className="text-h2 font-bold">{info?.title ?? "결재 요청"}</h1>
       </header>
 
       {failure ? <ErrorBanner message={failure} /> : null}
