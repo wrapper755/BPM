@@ -10,7 +10,6 @@
   <bpmn:process id="Proc_fx26_hybrid_compensation" name="세 종류 일꾼과 보상" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "order-desk",

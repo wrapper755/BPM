@@ -2,7 +2,7 @@
 
 하트비트로 내려온 **배포 봉투**를 보고, 이 기계 것이면 패키지를 내려받아 설치한다.
 
-**PC 실행기와 서버 실행기가 같은 코드를 쓴다** — 다른 것은 `host_kind`·`host_id`뿐이다 (C2 V6의
+**실행기가 쓰는 코드다** — 다른 것은 `host_kind`·`host_id`뿐이다 (C2 V6의
 대상 검사에 들어간다). 규칙이 두 군데 있으면 「PC는 거부하는데 서버는 설치한다」가 된다.
 
 지키는 것 다섯.
@@ -29,8 +29,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from bpm.contracts.bot_ui import DeploymentResult
 from bpm.contracts.hashing import content_hash_zip
+from bpm.contracts.runner import DeploymentResult
 from bpm.contracts.signing import (
     AdminKey,
     Envelope,

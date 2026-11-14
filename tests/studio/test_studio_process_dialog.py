@@ -13,7 +13,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Any
@@ -23,7 +22,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from bpm.contracts.bpmn_ext import read_process, server_blockers  # noqa: E402
+from bpm.contracts.bpmn_ext import server_blockers  # noqa: E402
 from bpm.contracts.bpmn_ext import validate as validate_bpmn  # noqa: E402
 from bpm.studio import process_dialog as module  # noqa: E402
 from bpm.studio.packaging import build_manifest  # noqa: E402
@@ -76,57 +75,20 @@ def test_learning_says_nothing_when_there_is_no_memory(space: Workspace) -> None
 
 def test_the_server_warning_counts_and_stays_quiet_when_clean() -> None:
     assert server_warning([]) == ""
-    found = server_warning(["Task_a: 현장 결재", "Task_b: AI 태스크 domain=web"])
+    found = server_warning(["Task_a: AI 태스크 domain=desktop", "Task_b: AI 태스크 domain=web"])
     assert "2개" in found and "실행 전 검사" in found
 
 
 def test_the_window_and_the_check_count_the_same_things(space: Workspace) -> None:
     """**검사와 같은 함수**다 (`server_blockers`) — 어긋나면 한쪽이 거짓말을 한다."""
-    process = imported(space, PC_EXAMPLE)
+    process = imported(space)
     entry = process.entry_definition
     assert entry is not None and entry.process is not None
-    blockers = server_blockers(entry.process)
-    assert blockers, "현장 확인이 있는 예제라 서버에서 걸린다"
 
-    # B6은 `run_location`이 server일 때만 말한다 — 같은 목록을 쓴다.
-    xml = entry.path.read_text(encoding="utf-8")
-    as_server = read_process(xml.replace('"pc"', '"server"'))
-    found = [v for v in validate_bpmn(as_server) if v.rule == "B6"]
-    assert found and sorted(found[0].items) == sorted(blockers)
-
-
-def test_the_window_counts_extension_tasks_from_the_table_it_is_given(space: Workspace) -> None:
-    """확장 태스크도 센다 — **표를 받아서** (C13 `task_types[].run_locations`, ADR-0018).
-
-    표를 주지 않으면 세지 않는다. 「모른다」와 「서버에서 안 된다」를 가르는 자리다 — 확장을
-    깔지 않은(꺼 둔) PC에서 올바른 그림을 막으면 안 된다.
-    """
-    process = imported(space, EXTENSION_EXAMPLE)
-    assert dialog(space, process).blockers() == [], "표가 없으면 확장 태스크를 모른다"
-
-    found = dialog(space, process, task_type_locations=UI_TASK_ON_PC).blockers()
-    assert found, "확장 태스크가 있는데 세지 못했다"
-    assert all("fake_task" in one for one in found)
-
-    allowed = dialog(space, process, task_type_locations={"fake_task": ["pc", "server"]}).blockers()
-    assert allowed == [], "확장이 server를 선언했으면 걸리지 않는다"
-
-
-def test_the_window_and_b6_use_the_same_table_for_extension_tasks(space: Workspace) -> None:
-    """**셋이 같은 표를 쓴다** — 창·F6·매니페스트. 어긋나면 한쪽이 거짓말을 한다."""
-    process = imported(space, EXTENSION_EXAMPLE)
-    entry = process.entry_definition
-    assert entry is not None and entry.process is not None
-    blockers = dialog(space, process, task_type_locations=UI_TASK_ON_PC).blockers()
-
-    xml = entry.path.read_text(encoding="utf-8")
-    as_server = read_process(xml.replace('"run_location": "pc"', '"run_location": "server"'))
-    found = [
-        v
-        for v in validate_bpmn(as_server, task_type_locations=UI_TASK_ON_PC)
-        if v.rule == "B6"
-    ]
-    assert found and sorted(found[0].items) == sorted(blockers)
+    window = dialog(space, process)
+    assert window.blockers() == server_blockers(entry.process)
+    found = [v for v in validate_bpmn(entry.process) if v.rule == "B6"]
+    assert bool(found) is bool(window.blockers())
 
 
 def test_the_check_says_the_first_problem_only() -> None:
@@ -156,7 +118,6 @@ def dialog(
         process,
         space,
         editable=editable,
-        task_type_locations=task_type_locations,
     )
 
 
@@ -208,11 +169,10 @@ def test_a_bad_value_keeps_the_window_open(space: Workspace) -> None:
     assert "버전은" in window.note.text()
 
 
-def test_the_graph_fields_are_off_when_the_entry_is_not_open(space: Workspace) -> None:
-    """**그림은 캔버스가 쓴다** (ADR-0022) — 진입이 열려 있지 않으면 끄고 까닭을 적는다 (U3)."""
+def test_the_note_says_why_the_graph_is_not_read(space: Workspace) -> None:
+    """진입이 열려 있지 않으면 까닭을 적는다 (U3) — 기록은 그래도 저장된다."""
     process = imported(space)
     window = dialog(space, process, editable=False)
-    assert not window.location_box.isEnabled()
     entry = process.entry_definition
     assert entry is not None
     assert entry.path.name in window.note.text()
@@ -220,87 +180,9 @@ def test_the_graph_fields_are_off_when_the_entry_is_not_open(space: Workspace) -
     window.name_box.setText("이름만 바꾼다")
     window.save()
     assert window.saved is not None, "기록은 그래도 저장된다"
-    assert window.process_patch is None, "그림은 건드리지 않는다"
-
-
-def test_saving_builds_one_patch_that_keeps_what_the_window_does_not_know(space: Workspace) -> None:
-    """**읽은 것을 통째로 되돌려 쓴다** — 창이 모르는 칸(`inputs`)이 사라지면 안 된다."""
-    process = imported(space)
-    window = dialog(space, process)
-    assert window.info.inputs, "예제가 입력을 선언한다 (지켜야 할 칸이다)"
-
-    at = window.location_box.findData("pc")
-    window.location_box.setCurrentIndex(at)
-    window.save()
-
-    assert window.process_patch is not None
-    found = json.loads(window.process_patch)
-    assert found["run_location"] == "pc"
-    assert "service_keys" not in found, "키 참조는 없다 (ADR-0102) — 창이 지어 넣지 않는다"
-    assert [one["name"] for one in found["inputs"]] == [one.name for one in window.info.inputs]
-
-
-def test_the_server_warning_shows_only_for_server_and_does_not_block(space: Workspace) -> None:
-    """저장을 막지 않는다 (STU-06) — 고칠 거리를 알려 줄 뿐이다."""
-    process = imported(space, PC_EXAMPLE)
-    window = dialog(space, process)
-    at = window.location_box.findData("server")
-    window.location_box.setCurrentIndex(at)
-    # 창을 띄우지 않았으므로 `isVisible()`이 아니라 **명시적으로 숨겼나**를 본다.
-    assert not window.warning.isHidden()
-    assert "실행할 수 없는 태스크" in window.warning.text()
-    assert not window.to_pc.isHidden()
-
-    window.save()
-    assert window.saved is not None, "경고는 저장을 막지 않는다"
-    assert json.loads(window.process_patch or "{}")["run_location"] == "server"
-
-
-def test_the_button_moves_the_location_back_to_pc(space: Workspace) -> None:
-    window = dialog(space, imported(space, PC_EXAMPLE))
-    window.location_box.setCurrentIndex(window.location_box.findData("server"))
-    window.to_pc.click()
-    assert window.location() == "pc"
-    assert window.warning.isHidden(), "PC면 걸릴 것이 없다"
-    assert window.warning.text() == ""
-
-
-def test_the_split_button_stands_beside_to_pc_and_asks_first(space: Workspace, monkeypatch: Any) -> None:
-    """STU-06 「이 부분을 PC BPM 프로세스로 나누기...」 (ADR-0071) — 「PC로 바꾸기」와 **같이** 보이고,
-    누르면 이 창에서 고친 것이 저장되지 않는다고 **먼저 묻는다**. 그림은 메인 창이 바꾼다."""
-    from PySide6.QtWidgets import QMessageBox  # noqa: PLC0415
-
-    found = dialog(space, imported(space, EXTENSION_EXAMPLE), task_type_locations=UI_TASK_ON_PC)
-    found.location_box.setCurrentIndex(found.location_box.findData("server"))
-    assert not found.to_split.isHidden() and not found.to_pc.isHidden()
-
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Cancel)
-    found._ask_split()
-    assert found.split_requested is False, "「취소」면 그대로다"
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Ok)
-    found._ask_split()
-    assert found.split_requested is True and found.saved is None, "저장하지 않고 닫힌다"
-
-    found.location_box.setCurrentIndex(found.location_box.findData("pc"))
-    assert found.to_split.isHidden(), "PC에서는 나눌 까닭이 없다"
 
 
 # ─────────────────────────── 「서비스 앱 키」 섹션은 없다 (ADR-0102) ───────────────────────────
-
-
-def test_there_is_no_key_table_and_a_written_reference_survives(space: Workspace) -> None:
-    """키가 없다 — 표가 없고, 옛 그림에 적힌 참조는 **조용히 지우지 않는다** (모르는 칸으로 남는다, C14 B7)."""
-    process = imported(space)
-    entry = process.entry_definition
-    assert entry is not None
-    drawn = read_process(entry.path.read_text(encoding="utf-8"))
-    assert drawn.info.model_extra is not None
-    drawn.info.model_extra["service_keys"] = {"ext-credit": "applied-ref"}  # 옛 칸 — 모르는 칸으로 남는다
-    window = ProcessInfoDialog(process, space, editable=True, drawn=drawn)
-    assert not hasattr(window, "keys") and not hasattr(window, "drop_key")
-    window.save()
-    assert window.process_patch is not None
-    assert json.loads(window.process_patch)["service_keys"] == {"ext-credit": "applied-ref"}
 
 
 def test_the_button_is_apply(space: Workspace) -> None:

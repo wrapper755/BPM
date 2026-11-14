@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx03_call_mapping" name="BPM 프로세스 호출과 매핑" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": []

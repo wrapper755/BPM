@@ -122,7 +122,6 @@ export interface TaskTypeContribution {
   icon?: string | null;
   id: string;
   label: string;
-  run_locations?: string[];
   [k: string]: unknown;
 }
 /**

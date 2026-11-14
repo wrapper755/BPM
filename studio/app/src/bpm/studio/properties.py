@@ -233,9 +233,6 @@ class Properties(QWidget):
         self._loop_baseline: dict[str, Any] = {}
         #: STU-14가 고를 거리 (Center 리소스 목록). 메인 창이 실행·선택 전에 채운다.
         self.catalog: Catalog = Catalog()
-        #: 열린 BPM 프로세스의 실행 위치 (`bpm:process.run_location`) — 결재 편집기가 서버에서
-        #: 「현장 PC에서만」을 끈다 (B6과 같은 판정). 메인 창이 정의를 열 때 채운다.
-        self.run_location: str | None = None
         #: 변수 이름 칸의 고를 거리 — 「변수」 탭의 이름 (STU-04). 메인 창이 그림을 읽을 때 채우고
         #: 편집기들이 **같은 모델**을 본다 (열린 편집기의 목록도 따라 바뀐다).
         self.known_names = QStringListModel(self)
@@ -433,7 +430,6 @@ class Properties(QWidget):
         loop = _body_of(chk, "loop") or {}
         made = AiTaskEditor(
             self,
-            run_location=self.run_location,
             names=self.known_names,
             specs=self.replay_specs(),
             node_id=self.node_id,
@@ -451,7 +447,7 @@ class Properties(QWidget):
             ApprovalEditor,
         )
 
-        made = ApprovalEditor(self, run_location=self.run_location, names=self.known_names)
+        made = ApprovalEditor(self, names=self.known_names)
         made.load(_body_of(chk, "approval") or {})
         manual = str(self.loaded.get("type") or "") == "ManualTask"
         self._attach(made, TAB_CONFIRMATION if manual else TAB_APPROVAL, key="approval")
@@ -466,12 +462,11 @@ class Properties(QWidget):
         self._attach(made, TAB_LABEL, key="send")
 
     def _attach_call_editor(self, chk: dict[str, Any]) -> None:
-        """BPM 프로세스 호출 (`calledElement` + `bpm:call`). 위임 대상은 Center 목록(`catalog.bots`)이다."""
+        """BPM 프로세스 호출 (`calledElement` + `bpm:call`). 맡길 거리는 Center 목록(`catalog.bots`)이다."""
         from bpm.studio.call_editor import TAB_LABEL, CallEditor  # noqa: PLC0415
 
         made = CallEditor(
             self,
-            run_location=self.run_location,
             targets=self.call_targets(),
             bots=self.catalog.bots,
         )
@@ -526,7 +521,7 @@ class Properties(QWidget):
             return
         from bpm.studio.loop_editor import TAB_LABEL, LoopEditor  # noqa: PLC0415
 
-        made = LoopEditor(self, run_location=self.run_location, names=self.known_names)
+        made = LoopEditor(self, names=self.known_names)
         made.load({"multiInstance": str(self.loaded.get("multiInstance") or ""), "loop": _body_of(chk, "loop")})
         self._loop_editor = made
         self._loop_baseline = dict(made.dump())

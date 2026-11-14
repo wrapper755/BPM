@@ -15,18 +15,6 @@
       "default": null,
       "title": "Ai Tasks"
     },
-    "bot_ui_id": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Bot Ui Id"
-    },
     "bpm_process_id": {
       "anyOf": [
         {
@@ -180,7 +168,7 @@
       "title": "Run Id",
       "type": "string"
     },
-    "run_location": {
+    "runner_id": {
       "anyOf": [
         {
           "type": "string"
@@ -190,7 +178,7 @@
         }
       ],
       "default": null,
-      "title": "Run Location"
+      "title": "Runner Id"
     },
     "service_calls": {
       "anyOf": [

@@ -25,7 +25,6 @@ const RELATION_LABEL: Record<string, string> = {
   lib: "공유 프로세스",
 };
 
-const LOCATION_LABEL: Record<string, string> = { pc: "PC", server: "서버" };
 
 /** 「실행 요구」 한 줄 — 비어 있는 칸은 빼고 적는다. */
 function requirements(info: PackageInfo): Array<[string, string]> {
@@ -116,12 +115,6 @@ export async function PackageDetail({
     { key: "file", header: "파일", mono: true },
     { key: "reads", header: "읽는 변수", cell: (row) => (row.reads ?? []).join(", ") || "—" },
     { key: "writes", header: "쓰는 변수", cell: (row) => (row.writes ?? []).join(", ") || "—" },
-    {
-      key: "run_location",
-      header: "실행 위치",
-      width: "9ch",
-      cell: (row) => (row.run_location ? LOCATION_LABEL[row.run_location] : "—"),
-    },
     { key: "ai_tasks", header: "AI 태스크", width: "10ch", cell: (row) => String(row.ai_tasks ?? 0) },
     { key: "human", header: "결재", cell: (row) => human(row.human) },
     { key: "description", header: "설명", cell: (row) => row.description ?? "—" },

@@ -6,7 +6,7 @@
 세 줄이 여기 걸려 있다.
 
 1. 콘솔에서 발급한 Center API 키로 등록 → 하트비트 (C4, CON-11)
-2. **PC 실행기별 키로 다른 PC 실행기를 사칭할 수 없다**
+2. **서버 실행기별 키로 다른 서버 실행기를 사칭할 수 없다**
 3. 패키지 업로드·목록·내려받기, 해시 검증 (C1, C5)
 """
 
@@ -49,7 +49,7 @@ def client(packages_dir: Path) -> Iterator[TestClient]:
     store.close()
 
 
-def issue_key(client: TestClient, *, name: str = "현장 PC 1", key_type: str = "bot_ui") -> tuple[str, str]:
+def issue_key(client: TestClient, *, name: str = "현장 PC 1", key_type: str = "server_runner") -> tuple[str, str]:
     """키를 발급한다. `(key_id, 원문)` — 원문은 이 응답에만 있다."""
     response = client.post("/api/v1/center-keys", json={"name": name, "type": key_type}, headers=ADMIN)
     assert response.status_code == 201, response.text
@@ -67,8 +67,8 @@ def register_body(*, machine: str, name: str = "현장 PC 1") -> dict[str, Any]:
         "schema": 1,
         "machine_id": machine,
         "name": name,
-        "os": "windows-11-23H2",
-        "versions": {"bot_ui": "0.1.0", "core": "0.1.0"},
+        "os": "ubuntu-24.04",
+        "versions": {"server_runner": "0.1.0", "core": "0.1.0"},
     }
 
 
@@ -76,8 +76,7 @@ def heartbeat_body(**over: Any) -> dict[str, Any]:
     body: dict[str, Any] = {
         "schema": 1,
         "status": "idle",
-        "current_run": None,
-        "queue": {"max": 20, "items": []},
+        "capacity": {"max": 20, "running": 0},
     }
     body.update(over)
     return body
@@ -98,7 +97,7 @@ def test_calls_without_a_token_are_refused(client: TestClient) -> None:
 
 
 def test_read_token_cannot_write(client: TestClient) -> None:
-    response = client.post("/api/v1/center-keys", json={"name": "x", "type": "bot_ui"}, headers=READ)
+    response = client.post("/api/v1/center-keys", json={"name": "x", "type": "server_runner"}, headers=READ)
     assert response.status_code == 403 and response.json()["code"] == "admin_only"
 
 
@@ -127,7 +126,7 @@ def test_revoked_key_cannot_be_used(client: TestClient) -> None:
     assert client.delete(f"/api/v1/center-keys/{key_id}", headers=ADMIN).status_code == 200
 
     response = client.post(
-        "/api/v1/bot-ui/register",
+        "/api/v1/server-runner/register",
         json=register_body(machine=machine_id("pc1")),
         headers={"Authorization": f"Bearer {raw}"},
     )
@@ -137,14 +136,14 @@ def test_revoked_key_cannot_be_used(client: TestClient) -> None:
 def test_key_state_follows_expiry(client: TestClient) -> None:
     past = datetime(2020, 1, 1, tzinfo=UTC).isoformat()
     response = client.post(
-        "/api/v1/center-keys", json={"name": "만료된 키", "type": "bot_ui", "expires_at": past}, headers=ADMIN
+        "/api/v1/center-keys", json={"name": "만료된 키", "type": "server_runner", "expires_at": past}, headers=ADMIN
     )
     assert response.status_code == 201
     raw = response.json()["key"]
     listed = client.get("/api/v1/center-keys?state=expired", headers=READ).json()
     assert len(listed) == 1
     used = client.post(
-        "/api/v1/bot-ui/register",
+        "/api/v1/server-runner/register",
         json=register_body(machine=machine_id("pc1")),
         headers={"Authorization": f"Bearer {raw}"},
     )
@@ -164,24 +163,25 @@ def test_register_then_heartbeat(client: TestClient) -> None:
     _key_id, raw = issue_key(client)
     auth = {"Authorization": f"Bearer {raw}"}
 
-    registered = client.post("/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth)
+    registered = client.post(
+        "/api/v1/server-runner/register",
+        json=register_body(machine=machine_id("pc1")),
+        headers=auth,
+    )
     assert registered.status_code == 200, registered.text
     body = registered.json()
-    assert body["bot_ui_id"].startswith("bui_")
-    assert body["heartbeat_interval_s"] == 30
+    assert body["server_runner_id"].startswith("srv_")
+    assert body["heartbeat_interval_s"] == 10
 
-    beat = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=auth)
+    beat = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=auth)
     assert beat.status_code == 200, beat.text
-    assert beat.json()["next_heartbeat_s"] == 30
-    assert beat.json()["disabled"] is False
+    assert beat.json()["next_heartbeat_s"] == 10
+    assert beat.json()["paused"] is False
 
-    listed = client.get("/api/v1/bot-uis", headers=READ).json()
+    listed = client.get("/api/v1/server-runners", headers=READ).json()
     assert len(listed) == 1
     assert listed[0]["online"] is True, "방금 하트비트를 받았으니 온라인이다"
     assert listed[0]["status"] == "idle"
-    # 키 정보는 앞자리·만료·상태만 (C7 — 원문·해시는 주지 않는다).
-    assert listed[0]["key"]["prefix"] == raw[:16]
-    assert set(listed[0]["key"]) == {"prefix", "expires_at", "state"}
 
 
 def test_the_responses_carry_the_key_expiry(client: TestClient) -> None:
@@ -191,12 +191,16 @@ def test_the_responses_carry_the_key_expiry(client: TestClient) -> None:
     """
     at = datetime(2026, 12, 31, tzinfo=UTC).isoformat()
     created = client.post(
-        "/api/v1/center-keys", json={"name": "현장 PC 1", "type": "bot_ui", "expires_at": at}, headers=ADMIN
+        "/api/v1/center-keys", json={"name": "현장 PC 1", "type": "server_runner", "expires_at": at}, headers=ADMIN
     )
     auth = {"Authorization": f"Bearer {created.json()['key']}"}
-    registered = client.post("/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth)
+    registered = client.post(
+        "/api/v1/server-runner/register",
+        json=register_body(machine=machine_id("pc1")),
+        headers=auth,
+    )
     assert registered.json()["key_expires_at"] == at
-    beat = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=auth)
+    beat = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=auth)
     assert beat.json()["key_expires_at"] == at
 
 
@@ -204,7 +208,11 @@ def test_a_key_without_an_expiry_says_nothing(client: TestClient) -> None:
     """**없으면 「만료 없음」**이다 (C4) — 「모른다」가 아니다."""
     _key_id, raw = issue_key(client)
     auth = {"Authorization": f"Bearer {raw}"}
-    registered = client.post("/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth)
+    registered = client.post(
+        "/api/v1/server-runner/register",
+        json=register_body(machine=machine_id("pc1")),
+        headers=auth,
+    )
     assert registered.json()["key_expires_at"] is None
 
 
@@ -212,40 +220,40 @@ def test_register_is_idempotent(client: TestClient) -> None:
     _key_id, raw = issue_key(client)
     auth = {"Authorization": f"Bearer {raw}"}
     machine = machine_id("pc1")
-    first = client.post("/api/v1/bot-ui/register", json=register_body(machine=machine), headers=auth).json()
+    first = client.post("/api/v1/server-runner/register", json=register_body(machine=machine), headers=auth).json()
     again = client.post(
-        "/api/v1/bot-ui/register", json=register_body(machine=machine, name="이름 바꿈"), headers=auth
+        "/api/v1/server-runner/register", json=register_body(machine=machine, name="이름 바꿈"), headers=auth
     ).json()
-    assert first["bot_ui_id"] == again["bot_ui_id"], "같은 키·같은 PC면 같은 PC 실행기다"
-    assert client.get("/api/v1/bot-uis", headers=READ).json()[0]["name"] == "이름 바꿈"
+    assert first["server_runner_id"] == again["server_runner_id"], "같은 키·같은 PC면 같은 서버 실행기다"
+    assert client.get("/api/v1/server-runners", headers=READ).json()[0]["name"] == "이름 바꿈"
 
 
 def test_a_key_cannot_be_used_from_another_pc(client: TestClient) -> None:
-    """**M2 기준 — 다른 PC 실행기를 사칭할 수 없다.** 키는 처음 등록한 PC에 묶인다 (C4)."""
+    """**M2 기준 — 다른 서버 실행기를 사칭할 수 없다.** 키는 처음 등록한 PC에 묶인다 (C4)."""
     _key_id, raw = issue_key(client)
     auth = {"Authorization": f"Bearer {raw}"}
-    client.post("/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth)
+    client.post("/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1")), headers=auth)
 
     stolen = client.post(
-        "/api/v1/bot-ui/register",
+        "/api/v1/server-runner/register",
         json=register_body(machine=machine_id("훔친-pc"), name="공격자 PC"),
         headers=auth,
     )
     assert stolen.status_code == 409
     assert stolen.json()["code"] == "machine_mismatch"
-    assert client.get("/api/v1/bot-uis", headers=READ).json()[0]["name"] == "현장 PC 1"
+    assert client.get("/api/v1/server-runners", headers=READ).json()[0]["name"] == "현장 PC 1"
 
 
 def test_unbinding_lets_a_reinstalled_pc_register(client: TestClient) -> None:
     """PC를 다시 설치해 `machine_id`가 바뀌면 운영자가 묶음을 푼다 (CON-11)."""
     key_id, raw = issue_key(client)
     auth = {"Authorization": f"Bearer {raw}"}
-    client.post("/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth)
+    client.post("/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1")), headers=auth)
 
     unbound = client.post(f"/api/v1/center-keys/{key_id}/unbind", headers=ADMIN)
     assert unbound.status_code == 200 and unbound.json()["bound_to"] is None
     again = client.post(
-        "/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1-다시설치")), headers=auth
+        "/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1-다시설치")), headers=auth
     )
     assert again.status_code == 200
     assert client.post(f"/api/v1/center-keys/{key_id}/unbind", headers=ADMIN).status_code == 200
@@ -254,19 +262,21 @@ def test_unbinding_lets_a_reinstalled_pc_register(client: TestClient) -> None:
 def test_a_second_key_cannot_register_the_same_pc(client: TestClient) -> None:
     """**PC → 키 방향도 하나다** (C4 「키 묶기」).
 
-    같은 PC에 두 번째 키를 발급해 등록하면 PC 실행기 행이 둘 생겼다 — CON-03에 같은 PC가 두
+    같은 PC에 두 번째 키를 발급해 등록하면 서버 실행기 행이 둘 생겼다 — CON-03에 같은 PC가 두
     줄로 보이고, C7 리소스의 PC 수가 부풀고, 작업이 하트비트를 보내지 않는 쪽으로 갔다.
     """
     _a_id, key_a = issue_key(client)
     _b_id, key_b = issue_key(client, name="현장 PC 1 (키 두 번째)")
     machine = machine_id("pc1")
     first = client.post(
-        "/api/v1/bot-ui/register", json=register_body(machine=machine), headers={"Authorization": f"Bearer {key_a}"}
+        "/api/v1/server-runner/register", json=register_body(
+            machine=machine,
+        ), headers={"Authorization": f"Bearer {key_a}"}
     )
     assert first.status_code == 200
 
     second = client.post(
-        "/api/v1/bot-ui/register",
+        "/api/v1/server-runner/register",
         json=register_body(machine=machine, name="같은 PC, 다른 키"),
         headers={"Authorization": f"Bearer {key_b}"},
     )
@@ -274,9 +284,9 @@ def test_a_second_key_cannot_register_the_same_pc(client: TestClient) -> None:
     body = second.json()
     assert body["code"] == "machine_already_registered"
     assert body["detail"]["reason"] == "bound_elsewhere"
-    assert body["detail"]["bot_ui_id"] == first.json()["bot_ui_id"]
+    assert body["detail"]["server_runner_id"] == first.json()["server_runner_id"]
 
-    listed = client.get("/api/v1/bot-uis", headers=READ).json()
+    listed = client.get("/api/v1/server-runners", headers=READ).json()
     assert len(listed) == 1, "같은 PC가 두 줄로 보이면 안 된다"
     assert listed[0]["name"] == "현장 PC 1"
 
@@ -287,10 +297,14 @@ def test_a_refused_registration_does_not_bind_the_key(client: TestClient) -> Non
     key_b_id, key_b = issue_key(client, name="두 번째 키")
     machine = machine_id("pc1")
     client.post(
-        "/api/v1/bot-ui/register", json=register_body(machine=machine), headers={"Authorization": f"Bearer {key_a}"}
+        "/api/v1/server-runner/register", json=register_body(
+            machine=machine,
+        ), headers={"Authorization": f"Bearer {key_a}"}
     )
     refused = client.post(
-        "/api/v1/bot-ui/register", json=register_body(machine=machine), headers={"Authorization": f"Bearer {key_b}"}
+        "/api/v1/server-runner/register", json=register_body(
+            machine=machine,
+        ), headers={"Authorization": f"Bearer {key_b}"}
     )
     assert refused.status_code == 409
 
@@ -305,25 +319,24 @@ def test_unbinding_lets_a_new_key_take_over_the_pc(client: TestClient) -> None:
     auth_a = {"Authorization": f"Bearer {key_a}"}
     auth_b = {"Authorization": f"Bearer {key_b}"}
     machine = machine_id("pc1")
-    first = client.post("/api/v1/bot-ui/register", json=register_body(machine=machine), headers=auth_a).json()
-    beat = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(status="running"), headers=auth_a)
+    first = client.post("/api/v1/server-runner/register", json=register_body(machine=machine), headers=auth_a).json()
+    beat = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(status="running"), headers=auth_a)
     assert beat.status_code == 200
 
     assert client.post(f"/api/v1/center-keys/{key_a_id}/unbind", headers=ADMIN).status_code == 200
     again = client.post(
-        "/api/v1/bot-ui/register", json=register_body(machine=machine, name="같은 PC"), headers=auth_b
+        "/api/v1/server-runner/register", json=register_body(machine=machine, name="같은 PC"), headers=auth_b
     )
     assert again.status_code == 200, again.text
-    assert again.json()["bot_ui_id"] == first["bot_ui_id"], "배포·작업·결재가 가리키는 자리를 그대로 쓴다"
+    assert again.json()["server_runner_id"] == first["server_runner_id"], "배포·작업·결재가 가리키는 자리를 그대로 쓴다"
 
-    listed = client.get("/api/v1/bot-uis", headers=READ).json()
+    listed = client.get("/api/v1/server-runners", headers=READ).json()
     assert len(listed) == 1
-    assert listed[0]["key"]["prefix"] == key_b[:16], "이제 새 키의 PC 실행기다"
     # 이어받은 자리의 상태는 비운다 — 옛 키가 보고한 것이다 (C4).
-    assert listed[0]["status"] is None and listed[0]["online"] is False
+    assert listed[0]["status"] == "offline" and listed[0]["online"] is False
 
     # 옛 키는 자리를 잃었다 — 하트비트는 409 `not_registered`.
-    lost = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=auth_a)
+    lost = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=auth_a)
     assert lost.status_code == 409 and lost.json()["code"] == "not_registered"
 
 
@@ -342,22 +355,24 @@ def test_only_a_revoked_key_can_be_deleted(client: TestClient) -> None:
 
 
 def test_deleting_a_revoked_key_frees_its_pc_like_unbinding(client: TestClient) -> None:
-    """지운 키가 묶였던 PC는 놓인 자리다 — 새 키가 **같은 PC 실행기 자리를 이어받는다** (C4·ADR-0095)."""
+    """지운 키가 묶였던 PC는 놓인 자리다 — 새 키가 **같은 서버 실행기 자리를 이어받는다** (C4·ADR-0095)."""
     key_a_id, key_a = issue_key(client)
     _b_id, key_b = issue_key(client, name="다시 발급한 키")
     machine = machine_id("pc1")
     first = client.post(
-        "/api/v1/bot-ui/register", json=register_body(machine=machine), headers={"Authorization": f"Bearer {key_a}"}
+        "/api/v1/server-runner/register", json=register_body(
+            machine=machine,
+        ), headers={"Authorization": f"Bearer {key_a}"}
     ).json()
     client.delete(f"/api/v1/center-keys/{key_a_id}", headers=ADMIN)
     auth_b = {"Authorization": f"Bearer {key_b}"}
-    blocked = client.post("/api/v1/bot-ui/register", json=register_body(machine=machine), headers=auth_b)
+    blocked = client.post("/api/v1/server-runner/register", json=register_body(machine=machine), headers=auth_b)
     assert blocked.status_code == 409, "폐기만 해서는 자리가 묶여 있다"
 
     assert client.post(f"/api/v1/center-keys/{key_a_id}/purge", headers=ADMIN).status_code == 204
-    again = client.post("/api/v1/bot-ui/register", json=register_body(machine=machine), headers=auth_b)
+    again = client.post("/api/v1/server-runner/register", json=register_body(machine=machine), headers=auth_b)
     assert again.status_code == 200, again.text
-    assert again.json()["bot_ui_id"] == first["bot_ui_id"]
+    assert again.json()["server_runner_id"] == first["server_runner_id"]
 
 
 def test_a_key_that_still_has_its_own_pc_cannot_take_over_another(client: TestClient) -> None:
@@ -366,10 +381,10 @@ def test_a_key_that_still_has_its_own_pc_cannot_take_over_another(client: TestCl
     key_b_id, key_b = issue_key(client, name="현장 PC 2")
     pc1, pc2 = machine_id("pc1"), machine_id("pc2")
     a = client.post(
-        "/api/v1/bot-ui/register", json=register_body(machine=pc1), headers={"Authorization": f"Bearer {key_a}"}
+        "/api/v1/server-runner/register", json=register_body(machine=pc1), headers={"Authorization": f"Bearer {key_a}"}
     ).json()
     b = client.post(
-        "/api/v1/bot-ui/register",
+        "/api/v1/server-runner/register",
         json=register_body(machine=pc2, name="현장 PC 2"),
         headers={"Authorization": f"Bearer {key_b}"},
     ).json()
@@ -377,21 +392,21 @@ def test_a_key_that_still_has_its_own_pc_cannot_take_over_another(client: TestCl
         assert client.post(f"/api/v1/center-keys/{key_id}/unbind", headers=ADMIN).status_code == 200
 
     moved = client.post(
-        "/api/v1/bot-ui/register", json=register_body(machine=pc1), headers={"Authorization": f"Bearer {key_b}"}
+        "/api/v1/server-runner/register", json=register_body(machine=pc1), headers={"Authorization": f"Bearer {key_b}"}
     )
     assert moved.status_code == 409, moved.text
     assert moved.json()["detail"]["reason"] == "key_has_another_pc"
 
-    by_id = {row["bot_ui_id"]: row for row in client.get("/api/v1/bot-uis", headers=READ).json()}
-    assert by_id[a["bot_ui_id"]]["machine_id"] == pc1
-    assert by_id[b["bot_ui_id"]]["machine_id"] == pc2
+    # 둘 다 제 자리를 그대로 들고 있다 (`machine_id`는 콘솔에 내지 않는다 — C12).
+    listed = {row["server_runner_id"] for row in client.get("/api/v1/server-runners", headers=READ).json()}
+    assert listed == {a["server_runner_id"], b["server_runner_id"]}
 
 
 def test_wrong_key_type_is_refused(client: TestClient) -> None:
-    """PC 실행기용 키만 받는다 (C4). Studio용 키로 부르면 403."""
+    """서버 실행기용 키만 받는다 (C4). Studio용 키로 부르면 403."""
     _key_id, raw = issue_key(client, name="설계자 PC", key_type="studio")
     response = client.post(
-        "/api/v1/bot-ui/register",
+        "/api/v1/server-runner/register",
         json=register_body(machine=machine_id("pc1")),
         headers={"Authorization": f"Bearer {raw}"},
     )
@@ -401,7 +416,7 @@ def test_wrong_key_type_is_refused(client: TestClient) -> None:
 def test_heartbeat_before_register_is_refused(client: TestClient) -> None:
     _key_id, raw = issue_key(client)
     response = client.post(
-        "/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers={"Authorization": f"Bearer {raw}"}
+        "/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers={"Authorization": f"Bearer {raw}"}
     )
     assert response.status_code == 409 and response.json()["code"] == "not_registered"
 
@@ -409,67 +424,70 @@ def test_heartbeat_before_register_is_refused(client: TestClient) -> None:
 def test_heartbeat_keeps_the_latest_state(client: TestClient) -> None:
     _key_id, raw = issue_key(client)
     auth = {"Authorization": f"Bearer {raw}"}
-    client.post("/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth)
+    client.post("/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1")), headers=auth)
     running = heartbeat_body(
         status="running",
-        current_run={
-            "run_id": "run_1",
-            "bpm_process_id": "erp.order-entry",
-            "version": "2.1.0",
-            "state": "running",
-            "started_at": "2026-10-03T10:15:00+09:00",
-            "source": "job",
-        },
+        capacity={"max": 20, "running": 1},
+        running=[
+            {
+                "run_id": "run_1",
+                "bpm_process_id": "erp.order-entry",
+                "version": "2.1.0",
+                "node_id": "Task_a",
+                "started_at": "2026-10-03T10:15:00+09:00",
+            }
+        ],
     )
-    assert client.post("/api/v1/bot-ui/heartbeat", json=running, headers=auth).status_code == 200
-    found = client.get("/api/v1/bot-uis", headers=READ).json()[0]
+    assert client.post("/api/v1/server-runner/heartbeat", json=running, headers=auth).status_code == 200
+    found = client.get("/api/v1/server-runners", headers=READ).json()[0]
     assert found["status"] == "running"
-    assert found["current_run"]["run_id"] == "run_1"
+    assert found["running"][0]["run_id"] == "run_1"
 
 
-def test_versions_say_whether_the_pc_runs_a_packed_build(client: TestClient) -> None:
+def test_versions_say_whether_the_runner_runs_a_packed_build(client: TestClient) -> None:
     """C4 `versions.build` — 있으면 묶은 산출물, **없으면 체크아웃**이다 (ADR-0067).
 
-    Center는 받은 그대로 담아 CON-03에 내준다. 묶은 판으로 바꿔 끼우면(하트비트 `versions`)
+    Center는 받은 그대로 담아 CON-12에 내준다. 묶은 판으로 바꿔 끼우면(하트비트 `versions`)
     그것도 그대로 따라온다.
     """
     _key_id, raw = issue_key(client)
     auth = {"Authorization": f"Bearer {raw}"}
-    bot_ui_id = client.post(
-        "/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth
-    ).json()["bot_ui_id"]
+    server_runner_id = client.post(
+        "/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1")), headers=auth
+    ).json()["server_runner_id"]
     def shown_versions() -> dict[str, Any]:
-        (row,) = [one for one in client.get("/api/v1/bot-uis", headers=READ).json() if one["bot_ui_id"] == bot_ui_id]
+        listed = client.get("/api/v1/server-runners", headers=READ).json()
+        (row,) = [one for one in listed if one["server_runner_id"] == server_runner_id]
         return dict(row["versions"])
 
     plain = shown_versions()
     assert plain.get("build") is None
 
     packed = {
-        "bot_ui": "0.2.0",
+        "server_runner": "0.2.0",
         "core": "0.1.0",
         "build": {"commit": "13bca2382f33034f7d2cbc3d41f533ea2cd1ab47", "built_at": "2026-10-17T03:18:55Z"},
     }
-    beat = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(versions=packed), headers=auth)
+    beat = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(versions=packed), headers=auth)
     assert beat.status_code == 200, beat.text
     shown = shown_versions()
-    assert shown["bot_ui"] == "0.2.0"
+    assert shown["server_runner"] == "0.2.0"
     assert shown["build"]["commit"].startswith("13bca2382f33")
 
 
-def test_disabled_bot_ui_still_heartbeats(client: TestClient) -> None:
-    """비활성이어도 하트비트는 받는다 — 실행 중 BPM 프로세스와 대기열을 콘솔에서 봐야 한다 (CON-03)."""
+def test_a_paused_runner_still_heartbeats(client: TestClient) -> None:
+    """일시 중지여도 하트비트는 받는다 — 도는 실행을 콘솔에서 봐야 한다 (CON-12)."""
     _key_id, raw = issue_key(client)
     auth = {"Authorization": f"Bearer {raw}"}
-    bot_ui_id = client.post(
-        "/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth
-    ).json()["bot_ui_id"]
+    server_runner_id = client.post(
+        "/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1")), headers=auth
+    ).json()["server_runner_id"]
 
-    assert client.post(f"/api/v1/bot-uis/{bot_ui_id}/disable", headers=ADMIN).status_code == 200
-    beat = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=auth)
-    assert beat.status_code == 200 and beat.json()["disabled"] is True
-    assert client.post(f"/api/v1/bot-uis/{bot_ui_id}/enable", headers=ADMIN).status_code == 200
-    assert client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=auth).json()["disabled"] is False
+    assert client.post(f"/api/v1/server-runners/{server_runner_id}/pause", headers=ADMIN).status_code == 200
+    beat = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=auth)
+    assert beat.status_code == 200 and beat.json()["paused"] is True
+    assert client.post(f"/api/v1/server-runners/{server_runner_id}/resume", headers=ADMIN).status_code == 200
+    assert client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=auth).json()["paused"] is False
 
 
 def test_deployment_results_are_kept_not_thrown_away(client: TestClient) -> None:
@@ -479,7 +497,7 @@ def test_deployment_results_are_kept_not_thrown_away(client: TestClient) -> None
     """
     _key_id, raw = issue_key(client)
     auth = {"Authorization": f"Bearer {raw}"}
-    client.post("/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth)
+    client.post("/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1")), headers=auth)
 
     refused = {
         "deployment_id": "dep_3f9a1c07",
@@ -490,12 +508,12 @@ def test_deployment_results_are_kept_not_thrown_away(client: TestClient) -> None
         "at": "2026-10-06T09:00:00+09:00",
     }
     client.post(
-        "/api/v1/bot-ui/heartbeat", json=heartbeat_body(deployment_results=[refused]), headers=auth
+        "/api/v1/server-runner/heartbeat", json=heartbeat_body(deployment_results=[refused]), headers=auth
     )
-    # 다음 주기에는 보내지 않는다 (PC 실행기는 보낸 것을 지운다) — 그래도 남아 있어야 한다.
-    client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=auth)
+    # 다음 주기에는 보내지 않는다 (서버 실행기는 보낸 것을 지운다) — 그래도 남아 있어야 한다.
+    client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=auth)
 
-    found = client.get("/api/v1/bot-uis", headers=READ).json()[0]
+    found = client.get("/api/v1/server-runners", headers=READ).json()[0]
     assert [one["reason"] for one in found["deployment_results"]] == ["unsigned_package"]
 
 
@@ -503,7 +521,7 @@ def test_the_same_result_twice_is_recorded_once(client: TestClient) -> None:
     """보내 놓고 응답을 못 받아 다시 보내도 목록이 부풀지 않는다 (C4 멱등)."""
     _key_id, raw = issue_key(client)
     auth = {"Authorization": f"Bearer {raw}"}
-    client.post("/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth)
+    client.post("/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1")), headers=auth)
 
     one = {
         "deployment_id": "dep_3f9a1c07",
@@ -513,24 +531,24 @@ def test_the_same_result_twice_is_recorded_once(client: TestClient) -> None:
         "at": "2026-10-06T09:00:00+09:00",
     }
     body = heartbeat_body(deployment_results=[one])
-    client.post("/api/v1/bot-ui/heartbeat", json=body, headers=auth)
-    client.post("/api/v1/bot-ui/heartbeat", json=body, headers=auth)
+    client.post("/api/v1/server-runner/heartbeat", json=body, headers=auth)
+    client.post("/api/v1/server-runner/heartbeat", json=body, headers=auth)
 
-    found = client.get("/api/v1/bot-uis", headers=READ).json()[0]
+    found = client.get("/api/v1/server-runners", headers=READ).json()[0]
     assert len(found["deployment_results"]) == 1
 
     # 같은 배포라도 **다른 시각**이면 새 결정이다 (다시 배치했다).
     later = {**one, "at": "2026-10-06T10:00:00+09:00", "result": "rejected", "reason": "expired"}
-    client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(deployment_results=[later]), headers=auth)
-    found = client.get("/api/v1/bot-uis", headers=READ).json()[0]
+    client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(deployment_results=[later]), headers=auth)
+    found = client.get("/api/v1/server-runners", headers=READ).json()[0]
     assert [one["at"][11:16] for one in found["deployment_results"]] == ["10:00", "09:00"], "최신순"
 
 
 def test_heartbeat_that_breaks_the_contract_is_refused(client: TestClient) -> None:
     _key_id, raw = issue_key(client)
     auth = {"Authorization": f"Bearer {raw}"}
-    client.post("/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth)
-    response = client.post("/api/v1/bot-ui/heartbeat", json={"schema": 1, "status": "idle"}, headers=auth)
+    client.post("/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1")), headers=auth)
+    response = client.post("/api/v1/server-runner/heartbeat", json={"schema": 1, "status": "idle"}, headers=auth)
     assert response.status_code == 422 and response.json()["code"] == "input_invalid"
 
 
@@ -742,8 +760,8 @@ def test_actor_header_is_ignored_for_key_callers(client: TestClient) -> None:
 
     _key_id, raw = issue_key(client, name="현장 PC 1")
     auth = {"Authorization": f"Bearer {raw}", "X-BPM-Actor": quote("관리자인 척")}
-    client.post("/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth)
-    # PC 실행기 키로는 올릴 수 없으니, 행위자가 쓰이는 길(업로드)은 막혀 있다. Studio 키가
+    client.post("/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1")), headers=auth)
+    # 서버 실행기 키로는 올릴 수 없으니, 행위자가 쓰이는 길(업로드)은 막혀 있다. Studio 키가
     # 올릴 때도 행위자는 **키 이름**이다 — `test_studio_key_uploads_and_reads…`가 본다.
     denied = client.post(
         "/api/v1/packages", files={"file": ("p.zip", build_package(), "application/zip")}, headers=auth
@@ -759,10 +777,10 @@ def test_read_token_cannot_upload(client: TestClient) -> None:
     assert response.status_code == 403 and response.json()["code"] == "forbidden"
 
 
-def test_studio_key_uploads_and_reads_but_bot_ui_key_does_not(client: TestClient) -> None:
+def test_studio_key_uploads_and_reads_but_server_runner_key_does_not(client: TestClient) -> None:
     """올리는 쪽은 Studio다 (C5 권한표) — **관리자 토큰을 설계자 PC에 두지 않는다** (ADR-0013).
 
-    PC 실행기 키는 패키지 표를 보지 못한다 — 배포는 하트비트로 받고 내려받기만 한다.
+    서버 실행기 키는 패키지 표를 보지 못한다 — 배포는 하트비트로 받고 내려받기만 한다.
     """
     _key_id, studio = issue_key(client, name="설계자 PC", key_type="studio")
     studio_auth = {"Authorization": f"Bearer {studio}"}
@@ -790,10 +808,10 @@ def test_studio_key_uploads_and_reads_but_bot_ui_key_does_not(client: TestClient
     assert uploading.status_code == 403
 
 
-def test_bot_ui_key_cannot_download_what_is_not_deployed_to_it(client: TestClient) -> None:
+def test_server_runner_key_cannot_download_what_is_not_deployed_to_it(client: TestClient) -> None:
     """**자기 배포분만**이다 (C5 권한표). 배포된 것을 받는 길은 `test_m5_deploy.py`가 본다.
 
-    등록 전에도 403이다 — 키는 있지만 아직 어느 PC 실행기인지 모른다 (C4).
+    등록 전에도 403이다 — 키는 있지만 아직 어느 서버 실행기인지 모른다 (C4).
     """
     assert upload(client, build_package()).status_code == 201
     _key_id, raw = issue_key(client)
@@ -801,7 +819,7 @@ def test_bot_ui_key_cannot_download_what_is_not_deployed_to_it(client: TestClien
     before = client.get("/api/v1/packages/invoice-check/1.0.0", headers=auth)
     assert before.status_code == 403 and before.json()["code"] == "forbidden"
 
-    client.post("/api/v1/bot-ui/register", json=register_body(machine=machine_id("pc1")), headers=auth)
+    client.post("/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1")), headers=auth)
     denied = client.get("/api/v1/packages/invoice-check/1.0.0", headers=auth)
     assert denied.status_code == 403 and denied.json()["code"] == "forbidden"
     # **없는 패키지도 같은 답이다** — 404로 가르면 그것이 곧 목록이 된다.
@@ -984,7 +1002,7 @@ def test_delete_is_refused_while_another_package_uses_it(client: TestClient, pac
 def test_delete_is_refused_while_a_deployment_points_at_it(client: TestClient) -> None:
     """배포가 가리키면 막는다. **철회된 배포는 세지 않는다** — 행은 남지만 실행을 허용하지 않는다.
 
-    배포 행을 바로 넣는다 — 진짜 배포에는 Admin 키와 등록된 PC 실행기가 필요하고 그 길은 C2
+    배포 행을 바로 넣는다 — 진짜 배포에는 Admin 키와 등록된 서버 실행기가 필요하고 그 길은 C2
     시험이 이미 지킨다. 여기서 보는 것은 **삭제가 무엇을 보고 막는가**다.
     """
     info = upload_common(client, package_id="shared.approval", version="1.0.0", kind="process_lib")
@@ -1034,8 +1052,7 @@ def test_provides_travels_in_the_manifest(client: TestClient) -> None:
                     "name": "공통 결재",
                     "reads": ["금액"],
                     "writes": ["결과"],
-                    "run_location": "server",
-                    "ai_tasks": 0,
+                                        "ai_tasks": 0,
                     "human": {"approval_center": True},
                 }
             ]
@@ -1061,7 +1078,7 @@ def test_json_responses_declare_utf8(client: TestClient) -> None:
     for response in (
         client.get("/healthz"),
         client.get("/api/v1/center-keys", headers=ADMIN),
-        client.get("/api/v1/bot-uis", headers=ADMIN),
+        client.get("/api/v1/server-runners", headers=ADMIN),
         client.get("/api/v1/center-keys"),  # 인증 없음 → 오류 모양
     ):
         assert response.headers["content-type"] == "application/json; charset=utf-8", response.request.url
@@ -1123,13 +1140,13 @@ def test_deprecating_a_package_we_do_not_have_is_404(client: TestClient) -> None
     assert response.status_code == 404 and response.json()["code"] == "package_not_found"
 
 
-def test_a_bot_ui_key_cannot_read_the_bot_ui_listing(client: TestClient) -> None:
+def test_a_server_runner_key_cannot_read_the_bot_ui_listing(client: TestClient) -> None:
     """CON-03 현황도 **콘솔 토큰만**이다 (C5 권한표) — 키로는 남의 PC를 보지 못한다."""
     _, raw = issue_key(client)
     client.post(
-        "/api/v1/bot-ui/register",
+        "/api/v1/server-runner/register",
         json=register_body(machine=machine_id("pc1")),
         headers={"Authorization": f"Bearer {raw}"},
     )
-    response = client.get("/api/v1/bot-uis", headers={"Authorization": f"Bearer {raw}"})
+    response = client.get("/api/v1/server-runners", headers={"Authorization": f"Bearer {raw}"})
     assert response.status_code == 403 and response.json()["code"] == "forbidden"

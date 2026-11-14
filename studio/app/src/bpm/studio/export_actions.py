@@ -50,12 +50,11 @@ def export_package(window: MainWindow) -> None:
         return
     # 확장 태스크의 실행 위치는 **확장 정의만** 안다 (C13) — 매니페스트에 진짜 값이 들어가야
     # Center의 R2가 거짓으로 막지 않는다. 모르는 종류는 넣지 않는다.
-    where = window.task_type_locations()
     keyed = window.key_extensions()  # 서버 부분을 부르는 확장의 태스크도 토픽 줄이 된다 (C15)
     _write(
         window,
         "패키지",
-        lambda: export(process, target, task_type_locations=where, key_extensions=keyed),
+        lambda: export(process, target, key_extensions=keyed),
     )
 
 
@@ -77,11 +76,10 @@ def export_shared(window: MainWindow) -> None:
     target = _pick(window, "공유 BPM 프로세스로 내보내기", default_lib_name(process))
     if target is None:
         return
-    where = window.task_type_locations()
     _write(
         window,
         "공유 BPM 프로세스 패키지",
-        lambda: export_lib(process, picked, target, task_type_locations=where),
+        lambda: export_lib(process, picked, target),
     )
 
 
@@ -141,7 +139,6 @@ def upload_package(window: MainWindow) -> None:
     if place != process.place:
         process.place = place
         write_record(process)
-    locations = window.task_type_locations()
     keyed = window.key_extensions()
     _upload(
         window,
@@ -149,7 +146,6 @@ def upload_package(window: MainWindow) -> None:
         lambda where: export(
             process,
             where / default_name(process),
-            task_type_locations=locations,
             key_extensions=keyed,
         ),
         found=found,
@@ -167,7 +163,6 @@ def upload_shared(window: MainWindow) -> None:
     picked = ShareDefinitionsDialog.ask(window, process, upload=True)
     if not picked:
         return
-    locations = window.task_type_locations()
     _upload(
         window,
         "공유 BPM 프로세스 패키지",
@@ -175,7 +170,6 @@ def upload_shared(window: MainWindow) -> None:
             process,
             picked,
             where / default_lib_name(process),
-            task_type_locations=locations,
         ),
     )
 

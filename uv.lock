@@ -5,7 +5,6 @@ requires-python = "==3.12.*"
 [manifest]
 members = [
     "bpm-adapter-consumer",
-    "bpm-bot-ui",
     "bpm-center",
     "bpm-contracts",
     "bpm-core",
@@ -130,29 +129,6 @@ requires-dist = [
     { name = "bpm-core", editable = "shared/core" },
     { name = "bpm-service-kit", editable = "server/service_kit" },
     { name = "httpx", specifier = ">=0.27" },
-]
-
-[[package]]
-name = "bpm-bot-ui"
-version = "0.1.0"
-source = { editable = "bot/app" }
-dependencies = [
-    { name = "bpm-contracts" },
-    { name = "bpm-core" },
-    { name = "bpm-qt" },
-    { name = "httpx" },
-    { name = "keyring" },
-    { name = "platformdirs" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "bpm-contracts", editable = "shared/contracts" },
-    { name = "bpm-core", editable = "shared/core" },
-    { name = "bpm-qt", editable = "shared/qt" },
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "keyring", specifier = ">=25.4" },
-    { name = "platformdirs", specifier = ">=4.3" },
 ]
 
 [[package]]

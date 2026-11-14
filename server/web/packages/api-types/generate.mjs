@@ -13,7 +13,7 @@
 // 열쇠 이름이 겹치는 타입이 있어(C5·C7의 `MissingResource`) 묶음 하나로 내보내지 않는다.
 // 쓰는 쪽은 계약별 경로로 가져온다: `import type { Manifest } from "@bpm/api-types/c1-manifest"`.
 
-import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
+import { readdir, readFile, writeFile, mkdir, unlink } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compile } from "json-schema-to-typescript";
@@ -157,6 +157,29 @@ async function outputs() {
 const check = process.argv.includes("--check");
 const out = await outputs();
 
+/**
+ * 더 이상 만들지 않는 타입 파일 — **지운다**.
+ *
+ * 계약이 걷히면(ADR-0144에서 C4의 PC 쪽이 그랬다) 스키마는 없어지는데 타입 파일은 남아,
+ * 쓰는 쪽이 **없는 계약을 계속 들여온다**. 파이썬 쪽 생성기(`scripts/gen_schemas.py`)가
+ * 이미 그렇게 하므로 여기도 같은 규칙이다.
+ */
+async function extras() {
+  const made = new Set([...out.keys()]);
+  let names = [];
+  try {
+    names = await readdir(OUT_DIR);
+  } catch {
+    return [];
+  }
+  return names
+    .filter((name) => name.endsWith(".ts"))
+    .map((name) => join(OUT_DIR, name))
+    .filter((path) => !made.has(path));
+}
+
+const gone = await extras();
+
 if (check) {
   const stale = [];
   for (const [path, text] of out) {
@@ -169,7 +192,8 @@ if (check) {
     if (current !== text) stale.push(path);
   }
   for (const path of stale) console.log("다름:", path);
-  if (stale.length > 0) {
+  for (const path of gone) console.log("남았다:", path);
+  if (stale.length > 0 || gone.length > 0) {
     console.log("계약 타입이 스키마와 다르다 — `pnpm gen:api-types`를 돌린다.");
     process.exit(1);
   }
@@ -177,5 +201,9 @@ if (check) {
 } else {
   await mkdir(OUT_DIR, { recursive: true });
   for (const [path, text] of out) await writeFile(path, text, "utf8");
+  for (const path of gone) {
+    await unlink(path);
+    console.log("지움:", path);
+  }
   console.log(`계약 타입 ${out.size}개 → server/web/packages/api-types/src`);
 }

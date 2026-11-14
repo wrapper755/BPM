@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 
 from bpm.contracts.bpmn_ext import read_process
-from bpm.core.engine import DECISION_KEY, ESCALATION_CONTINUE, ESCALATION_STOP, Engine, Run, RunEnv, State
+from bpm.core.engine import DECISION_KEY, Engine, Run, RunEnv, State
 from bpm.core.run_log import RunLog
 from bpm.core.services import OpCall, OpOutcome, ServiceCallError, _outcome
 
@@ -112,48 +112,6 @@ def test_outcome_unknown_and_retryable_are_never_both_true() -> None:
 
 
 # ─────────────────────────── PC — 사람에게 묻는다 ───────────────────────────
-
-
-def test_on_a_pc_the_run_asks_a_person_instead_of_failing() -> None:
-    engine, run = start(process(), Flaky())
-    pending = the_question(engine, run)
-    assert pending.layer == "confirmation" and pending.where == "field" and pending.escalation
-    assert pending.node_id == "Task_Call" and pending.title.endswith("신용 조회")
-    assert "처리됐는지 확인" in (pending.description or "")
-    assert (pending.retry_attempt, pending.retry_call_seq) == (2, 1)
-    assert [e.kind for e in run.log.events if e.kind == "human_requested"] == ["human_requested"]
-
-
-def test_continue_calls_again_with_the_next_attempt_and_fills_the_output() -> None:
-    services = Flaky()
-    engine, run = start(process(), services)
-    pending = the_question(engine, run)
-    state = reply(engine, run, pending.request_id, ESCALATION_CONTINUE)
-    assert state is State.DONE and run.variables["등급"] == "A"
-    first, second = services.calls
-    assert (first.attempt, second.attempt) == (1, 2), "새 일감이다 (C15 멱등 칸이 다르다)"
-    assert first.call_seq == second.call_seq, "같은 호출의 다음 번째다"
-    assert "복구" not in run.variables
-
-
-def test_another_unknown_asks_again() -> None:
-    services = Flaky(lost=2)
-    engine, run = start(process(), services)
-    pending = the_question(engine, run)
-    assert reply(engine, run, pending.request_id, ESCALATION_CONTINUE) is State.WAITING
-    (again,) = run.pendings.values()
-    assert again.retry_attempt == 3
-    assert reply(engine, run, again.request_id, ESCALATION_CONTINUE) is State.DONE
-    assert [c.attempt for c in services.calls] == [1, 2, 3]
-
-
-def test_stop_is_task_failed_like_the_server() -> None:
-    services = Flaky()
-    engine, run = start(process(), services)
-    pending = the_question(engine, run)
-    state = reply(engine, run, pending.request_id, ESCALATION_STOP)
-    assert state is State.DONE and run.variables["복구"] == "TASK_FAILED", "코드 없는 경계가 받았다"
-    assert len(services.calls) == 1, "다시 부르지 않았다"
 
 
 # ─────────────────────────── 묻지 않는 곳 ───────────────────────────

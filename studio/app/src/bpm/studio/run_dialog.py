@@ -17,7 +17,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from PySide6.QtWidgets import (
     QComboBox,
@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
 
 from bpm.contracts.bpmn_ext import Case
 from bpm.qt.theme import dress_button_box, set_role
-from bpm.studio.runner import Plan, read_cases
+from bpm.studio.runner import Plan, read_cases, run_settings
 from bpm.studio.settings import Settings
 from bpm.studio.workspace import BpmProcess, Definition
 
@@ -106,13 +106,7 @@ class RunDialog(QDialog):
         self.setWindowTitle("실행")
         self.setMinimumWidth(460)
 
-        location = (definition.process.info.run_location if definition.process else None) or "pc"
-        where = QLabel(
-            "실행 위치: PC"
-            if location == "pc"
-            else "실행 위치: 서버 — 이 시험 실행은 Studio에서 돕니다",
-            self,
-        )
+        where = QLabel("이 시험 실행은 Studio에서 돕니다", self)
 
         self.case_box = QComboBox(self)
         self.case_box.addItem(NO_CASE)
@@ -205,7 +199,8 @@ class RunDialog(QDialog):
                 definition=self.definition,
                 case=case,
                 mode=self.choice.mode,
-                settings=replace(self.settings),
+                # Studio 설정 → 시험 실행이 아는 값 (모델 키는 비밀 저장소에서 온다).
+                settings=run_settings(self.settings),
             )
             for case in cases
         ]

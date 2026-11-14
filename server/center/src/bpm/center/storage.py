@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   run_status       TEXT,
   -- 실행하는 쪽이 마지막 말을 했다 — 더 내려보내지도, 맞추기(C4)로 건드리지도 않는다.
   settled          INTEGER NOT NULL DEFAULT 0,
-  -- 맞추기 규칙: 하트비트에 연속으로 보이지 않은 횟수 (C4 `bot_ui_lost`).
+  -- 맞추기 규칙: 하트비트에 연속으로 보이지 않은 횟수 (C4 `runner_lost`).
   misses           INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS messages (

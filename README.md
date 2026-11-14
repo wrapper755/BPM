@@ -21,12 +21,12 @@ Python은 따로 깔지 않는다 — uv가 3.12를 내려받는다 ([ADR-0005](
 | 순서 | 문서 | 알게 되는 것 |
 | --- | --- | --- |
 | 1 | [docs/00-vision.md](docs/00-vision.md) | 무엇을 만들고, 무엇을 만들지 않는가 |
-| 2 | [docs/02-glossary.md](docs/02-glossary.md) | 용어 하나에 뜻 하나 (BPM 프로세스, PC 실행기, 프로세스, 서비스 앱…) |
+| 2 | [docs/02-glossary.md](docs/02-glossary.md) | 용어 하나에 뜻 하나 (BPM 프로세스, 서버 실행기, 프로세스, 서비스 앱…) |
 | 3 | [docs/01-architecture.md](docs/01-architecture.md) | 구성요소, 어디서 도는가, 누가 누구를 부르는가 |
-| 4 | [docs/06-screens.md](docs/06-screens.md) | 화면 설계 공통 원칙 — 제품 화면은 [Studio](studio/docs/screens.md)·[PC 실행기](bot/docs/screens.md)·[Center 콘솔](server/docs/screens/center-console.md)·[서비스 앱 콘솔](server/docs/screens/service-app-console.md) |
+| 4 | [docs/06-screens.md](docs/06-screens.md) | 화면 설계 공통 원칙 — 제품 화면은 [Studio](studio/docs/screens.md)·[Center 콘솔](server/docs/screens/center-console.md)·[서비스 앱 콘솔](server/docs/screens/service-app-console.md) |
 | 5 | [docs/decisions/](docs/decisions/README.md) | 지금까지 내린 결정과 그 이유 |
 | 6 | [docs/03-contracts/](docs/03-contracts/README.md) | 구성요소 사이의 약속 (API·이벤트·패키지) |
-| 7 | [docs/04-setup.md](docs/04-setup.md) | Windows·Linux에서 개발 환경 만들기, 포트 — 제품마다 띄우기·설정은 `server/docs/setup.md`·`studio/docs/setup.md`·`bot/docs/setup.md` |
+| 7 | [docs/04-setup.md](docs/04-setup.md) | Windows·Linux에서 개발 환경 만들기, 포트 — 제품마다 띄우기·설정은 `server/docs/setup.md`·`studio/docs/setup.md` |
 | 8 | [docs/05-roadmap.md](docs/05-roadmap.md) | 단계와 완료 기준 |
 | 참고 | [docs/reference/](docs/reference/README.md) | 프로토타입 4개의 지도와 배운 점 |
 
@@ -35,7 +35,7 @@ Python은 따로 깔지 않는다 — uv가 3.12를 내려받는다 ([ADR-0005](
 | 구성요소 | 주 환경 | 선택 환경 |
 | --- | --- | --- |
 | 서버 (Center, 서비스 앱) | Linux | Windows |
-| 클라이언트 (Studio, PC 실행기) | Windows | Linux |
+| 클라이언트 (Studio) | Windows | Linux |
 
 근거: [ADR-0003](docs/decisions/0003-target-platforms.md)
 

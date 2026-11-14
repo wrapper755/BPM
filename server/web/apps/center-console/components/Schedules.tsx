@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { DataTable, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
-import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
 import type { ScheduleInfo } from "@bpm/api-types/c5-schedule-info";
 import { CenterError, center } from "@/lib/center";
-import { scheduleResult, schedulesOf, type Place } from "@/lib/summary";
+import { scheduleResult, schedulesOf } from "@/lib/summary";
 import { STATE_LABEL } from "@/app/jobs/labels";
-import { fullTime } from "@/app/bot-uis/page";
+import { fullTime } from "@/lib/time";
 
 /**
  * CON-02 [S] 「일정」 — 타이머로 시작하는 배포의 다음 차례·마지막 차례 (C5 §일정, ADR-0110).
@@ -15,12 +14,12 @@ import { fullTime } from "@/app/bot-uis/page";
  *
  * 「지금 쏘기」·「멈추기」 단추는 두지 않는다 (화면 문서) — 지금 돌리려면 CON-05, 멈추려면 배포를 거둔다.
  */
-export async function Schedules({ place, botUis }: { place: Place; botUis: BotUiInfo[] }) {
+export async function Schedules() {
   let rows: ScheduleInfo[] = [];
   const jobState = new Map<string, string>();
   let failure: string | null = null;
   try {
-    rows = schedulesOf(await center.schedules(), place);
+    rows = schedulesOf(await center.schedules());
     // 「결과」는 마지막 작업의 상태다 — 일정이 있을 때만 작업을 읽는다.
     if (rows.some((row) => row.last_job_id)) {
       for (const job of await center.jobs({ limit: 500 })) {
@@ -33,7 +32,6 @@ export async function Schedules({ place, botUis }: { place: Place; botUis: BotUi
   // **일정이 없으면 영역이 없다** (화면 문서) — 늘 비는 표를 그리지 않는다.
   if (!failure && rows.length === 0) return null;
 
-  const names = new Map(botUis.map((pc) => [pc.bot_ui_id, pc.name ?? pc.bot_ui_id]));
   const zone = rows[0]?.timezone ?? "";
 
   const columns: Array<Column<ScheduleInfo>> = [
@@ -42,10 +40,7 @@ export async function Schedules({ place, botUis }: { place: Place; botUis: BotUi
     {
       key: "target_id",
       header: "대상",
-      cell: (row) =>
-        row.target_type === "server_runner"
-          ? "서버 실행기 (Center가 고름)"
-          : (names.get(row.target_id ?? "") ?? row.target_id ?? "—"),
+      cell: (row) => row.target_id ?? "서버 실행기 (Center가 고름)",
     },
     { key: "expression", header: "식", mono: true },
     {

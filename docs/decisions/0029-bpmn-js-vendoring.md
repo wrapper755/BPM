@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 대체됨([ADR-0143](0143-design-happens-in-the-console.md)) — 원래 수락. 웹에는 Node가 있어 bpmn-js를 pnpm 의존으로 쓴다 (복사본을 커밋하지 않는다) |
 | 날짜 | 2026-10-04 |
 | 관련 | [ADR-0022](0022-studio-canvas.md) §미정, [ADR-0017](0017-web-nextjs-design-system.md)(`web/` pnpm 워크스페이스), [ADR-0024](0024-desktop-packaging-extensions.md)(PyInstaller), 스파이크 [S3](../../spikes/S3-studio-shell/NOTES.md), M3 조각 3e |
 

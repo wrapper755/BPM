@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 대체됨([ADR-0143](0143-design-happens-in-the-console.md)) — 원래 수락. **읽기 전용은 뷰어로만 짓는다는 규칙은 웹 편집기가 이어받는다** |
 | 날짜 | 2026-10-12 |
 | 관련 | [ADR-0048](0048-installing-shared-packages.md), [ADR-0022](0022-studio-canvas.md), [ADR-0029](0029-bpmn-js-vendoring.md), [ADR-0044](0044-canvas-drag-and-drop.md), [ADR-0045](0045-contributed-resource-children.md), C1 `provides`·`requires.libs`, C5, C14 B14, STU-03·STU-11, `docs/09-gaps.md` §4-5 |
 

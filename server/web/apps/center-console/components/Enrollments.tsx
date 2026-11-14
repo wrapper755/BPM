@@ -23,7 +23,7 @@ export function Enrollments({
   companies,
 }: {
   rows: EnrollmentInfo[];
-  /** 확인 창 첫 줄이 가리키는 자리 — 「현장 화면」(PC 실행기) / 「서버 실행기 로그」. */
+  /** 확인 창 첫 줄이 가리키는 자리 — 「Studio 설정 창」 / 「서버 실행기 로그」. */
   where: string;
   canDecide: boolean;
   /** 승인 창 「이름」 칸의 도움말 — Studio는 그 이름이 「누가」라서 다르게 말한다 (CON-11). */
@@ -33,7 +33,7 @@ export function Enrollments({
   /** 다른 화면이 이 섹션으로 걸 때의 앵커. */
   id?: string;
   /**
-   * 들일 회사의 고를 거리 (C16 — PC 실행기·Studio는 회사 소유다). 주면 승인 창에 「회사」가 생기고
+   * 들일 회사의 고를 거리 (C16 — Studio는 회사 소유다). 주면 승인 창에 「회사」가 생기고
    * **고르지 않으면 승인하지 않는다**. 서버 실행기는 Center 공용이라 주지 않는다.
    */
   companies?: Array<{ id: string; name: string }>;
@@ -72,8 +72,7 @@ export function Enrollments({
       mono: true,
       cell: (row) =>
         String(
-          row.versions?.bot_ui ??
-            row.versions?.server_runner ??
+          row.versions?.server_runner ??
             row.versions?.studio ??
             row.versions?.consumer ??
             Object.values(row.versions ?? {})[0] ??

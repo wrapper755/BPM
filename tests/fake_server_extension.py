@@ -14,8 +14,8 @@ from typing import Any
 
 from bpm.extension_api import TaskContext, TaskOutcome
 
-#: 수행된 태스크마다 한 줄 — `(node_id, 실행 위치, 런타임 포트)`.
-CALLS: list[tuple[str, str, Any]] = []
+#: 수행된 태스크마다 한 줄 — `(node_id, 런타임 포트)`.
+CALLS: list[tuple[str, Any]] = []
 
 
 class ServerTaskExecutor:
@@ -26,5 +26,5 @@ class ServerTaskExecutor:
     """
 
     def execute(self, ctx: TaskContext) -> TaskOutcome:
-        CALLS.append((ctx.node_id, ctx.run_location, ctx.extension.setting("runtime.worker.port")))
+        CALLS.append((ctx.node_id, ctx.extension.setting("runtime.worker.port")))
         return TaskOutcome(outputs={"요약": "세 줄로 줄였습니다"})

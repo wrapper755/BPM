@@ -1,7 +1,7 @@
 """실행기의 심장 — 등록하고 주기마다 하트비트를 보낸다 (C12).
 
 **배포를 설치하고, 작업을 받아 돌리고, 기록을 Center로 보낸다** (M7 조각 3·4-①). 설치는
-PC 실행기와 **같은 코드**(`core.deploy`·`core.packages`)이고 다른 것은 `host_kind`뿐이다 —
+설치는 `core.deploy`·`core.packages`다 —
 서버는 `"*"` 대상 배포도 받는다 (ADR-0046).
 
 실행 하나는 **스레드 하나**다 (`worker.Worker`, ADR-0054 §5). 자리 셈은 **기다리는 실행을
@@ -16,11 +16,6 @@ PC 실행기와 **같은 코드**(`core.deploy`·`core.packages`)이고 다른 �
 뒤 한 주기가 지났다) 넣고 ack한다. **넣을 자리가 없으면 ack하지 않고 둔다** — 그러면 Center가
 다음 주기에 다시 싣는다 (거절로 적으면 멀쩡한 메시지가 버려진다).
 
-**PC 위임도 하트비트로 돌아온다** (C12 §PC 위임, ADR-0062) — 맡기는 것은 엔진이 `RunEnv.delegate`
-포트로 하고(`delegate.CenterDelegator`), 끝난 결과는 `delegations[]`로 내려와 기다리던 실행이
-이어 간다. **ack가 올라가야 Center가 그 업무 값을 지운다** — 그래서 ack는 올릴 때까지 들고 있고,
-올라가기 전에 같은 결과가 또 내려오면 **마지막 ack를 되돌려 보낸다** (작업·메시지와 같다).
-
 한 걸음은 `tick()` 하나다 — **스레드를 만들지 않는다** (엔진과 같은 태도다). 부르는 쪽(`main`)이
 돌리고, 시험은 `tick()`을 직접 민다.
 """
@@ -33,7 +28,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from bpm.contracts.bot_ui import (
+from bpm.contracts.center_api import delegated_run, job_source
+from bpm.contracts.enrollment import SealError, open_sealed, public_of
+from bpm.contracts.runner import (
     ApprovalAck,
     ApprovalDispatch,
     DeploymentResult,
@@ -41,8 +38,6 @@ from bpm.contracts.bot_ui import (
     JobDispatch,
     Readiness,
 )
-from bpm.contracts.center_api import delegated_run, job_source
-from bpm.contracts.enrollment import SealError, open_sealed, public_of
 from bpm.contracts.server_runner import (
     Capacity,
     DelegationAck,
@@ -57,11 +52,12 @@ from bpm.contracts.server_runner import (
     validate_heartbeat,
 )
 from bpm.contracts.signing import AdminKey
+from bpm.contracts.workspace import BuildDispatch, BuildResult, CheckDispatch, CheckResult
 from bpm.core import build_info, machine
 from bpm.core import requests as approval_requests
 from bpm.core.app_directory import AppDirectory, DirectoryCache
 from bpm.core.deploy import Deployer, deployment_finding
-from bpm.core.engine import WHERE_CENTER, EngineError, RunEnv
+from bpm.core.engine import EngineError, RunEnv
 from bpm.core.extensions import ExtensionHost, HostTasks
 from bpm.core.packages import InstalledBot, find, installed
 from bpm.core.preflight import check as run_preflight
@@ -91,6 +87,7 @@ from bpm.server_runner.extensions import load as load_extensions
 from bpm.server_runner.extensions import tasks as extension_tasks
 from bpm.server_runner.settings import Settings
 from bpm.server_runner.store import Saved, Store
+from bpm.server_runner.testmode import DesignWork, Trial
 from bpm.server_runner.worker import ACK_STARTED, EMPTY_COUNTS, Worker, reopen_log
 
 log = logging.getLogger(__name__)
@@ -159,7 +156,7 @@ class Agent:
     pending_acks: list[JobAck] = field(default_factory=list)
     #: 이미 받은 작업 (`job_id` → 마지막 ack). **두 번 돌리지 않는다** (C4 멱등).
     #: **무한히 자라지 않는다** — ack가 Center에 닿고 몇 주기가 지나면 잊는다 (`core.seen`,
-    #: ADR-0056). 메시지도, **PC 실행기도** 같은 것을 쓴다 (ADR-0057 — 규칙이 갈라지면 한쪽만 고친다).
+    #: ADR-0056). 메시지도, **실행기도** 같은 것을 쓴다 (ADR-0057 — 규칙이 갈라지면 한쪽만 고친다).
     seen_jobs: Seen[JobAck] = field(default_factory=Seen)
     #: 기다리는 실행을 담아 두는 곳 (ADR-0054 §3). 없으면 담지 않는다 (시험·한 번 돌리기).
     store: Store | None = None
@@ -175,16 +172,16 @@ class Agent:
     #: **무한히 자라지 않는다** — `seen_jobs`와 **같은 규칙**이다 (`core.seen`, ADR-0056).
     #: 바깥 시스템이 밀어 넣는 것이라 수가 커서 여기가 더 급하다 (BX-11·BX-13).
     seen_messages: Seen[MessageAck] = field(default_factory=Seen)
-    #: 아직 올리지 못한 위임 ack (C12 §PC 위임). 올릴 때까지 들고 있는다 — ack가 올라가야
+    #: 아직 올리지 못한 위임 ack (C12 §맡기기). 올릴 때까지 들고 있는다 — ack가 올라가야
     #: Center가 그 업무 값을 지운다 (원칙 6의 예외는 좁게 쓴다).
     pending_delegation_acks: list[DelegationAck] = field(default_factory=list)
     #: 이미 넣은 위임 결과 (`job_id` → 마지막 ack). ack가 올라가기 전에 같은 결과가 또
     #: 내려오므로(C12) 들고 있지 않으면 **지나간 자리에 또 넣으려 한다**.
-    #: **스냅샷과 함께 담지 않는다** (ADR-0062 §5) — 메시지가 겪은 「넣은 뒤 담기 전에 죽는
+    #: **스냅샷과 함께 담지 않는다** (ADR-0082) — 메시지가 겪은 「넣은 뒤 담기 전에 죽는
     #: 틈」(ADR-0058)이 여기서는 생기지 않는다: 그 틈에서 죽으면 되살린 실행은 **다시 그
     #: 위임을 기다리는 자리**이고, Center도 ack를 못 받았으니 같은 결과를 다시 내려 준다.
     seen_delegations: Seen[DelegationAck] = field(default_factory=Seen)
-    #: 거둬야 할 위임 작업 (ADR-0062 §5) — 서버 실행이 취소되면 그 PC 작업도 취소한다.
+    #: 거둬야 할 위임 작업 (ADR-0082) — 서버 실행이 취소되면 그 PC 작업도 취소한다.
     #: **올릴 때까지 들고 있는다**(닿지 못하면 다음 주기에 다시 건다) — 거두지 못하면 PC가
     #: **받을 쪽이 없는 일**을 한다. 메모리뿐이다: 취소된 실행은 담아 둔 것도 지워져서
     #: 다시 뜬 실행기는 그 작업 id를 알 길이 없다 (그 값은 7일에 Center가 지운다).
@@ -199,6 +196,18 @@ class Agent:
     host: ExtensionHost | None = None
     #: 그 호스트를 엔진·사전 점검에 꽂는 것 — 한 번 짓고 들고 있는다.
     _tasks: HostTasks | None = None
+    #: 지금 도는 **시험 실행**들 (`run_id` → 몰이, C17). **자리를 따로 센다** — 운영과 서로
+    #: 빌려주지 않는다 ([ADR-0146](../../../../../docs/decisions/0146-design-work-has-its-own-lane.md)).
+    #: 기다리지 않으므로 담아 두지 않는다 — 다시 띄우면 그 시험 실행은 닫힌다.
+    trials: dict[str, Trial] = field(default_factory=dict)
+    #: 지금 도는 **검사·짓기** (C17). **자리를 세지 않는다** — 실행이 아니라 그림을 읽는 일이고
+    #: 금방 끝난다. 못 받은 지시는 Center가 한도를 넘기면 다시 내려 준다 (ADR-0146).
+    _design: list[DesignWork] = field(default_factory=list)
+    #: 아직 올리지 못한 검사·짓기 결과 (C12 — 한 주기만 올라가는 값이라 들고 있는다).
+    pending_check_results: list[CheckResult] = field(default_factory=list)
+    pending_build_results: list[BuildResult] = field(default_factory=list)
+    #: 그 둘을 지키는 자물쇠 — **일하는 스레드가 넣는다**.
+    _design_lock: threading.Lock = field(default_factory=threading.Lock)
 
     @property
     def registered(self) -> bool:
@@ -225,7 +234,7 @@ class Agent:
         return self._tasks
 
     def machine_id(self) -> str:
-        """C12 `machine_id` — **PC 실행기와 같은 함수**다 (`core.machine`). 원값은 보내지 않는다."""
+        """C12 `machine_id` — `core.machine` 하나다 (). 원값은 보내지 않는다."""
         return machine.machine_id(self.settings.data_path)
 
     def name(self) -> str:
@@ -309,7 +318,7 @@ class Agent:
             os=machine.os_label(),
             versions=self.versions(),
             max_concurrency=self.settings.max_concurrency,
-            # **이 서버에 깔린 확장** (C12 — PC 실행기의 C4와 같은 모양, `host.states()` 하나다).
+            # **이 서버에 깔린 확장** (C12 — 실행기의 C4와 같은 모양, `host.states()` 하나다).
             # 싣지 않으면 C7이 그 확장을 모르고, 그것을 요구하는 BPM 프로세스의 **배포가 막힌다**
             # (「확장 누락」은 배포를 막는 셋 중 하나다). CON-12 상세도 이 목록을 그린다.
             extensions=self.extension_host().states(),
@@ -390,7 +399,7 @@ class Agent:
     # ── 배포 설치 (C2 V1~V7, C12) ──
 
     def deployer(self) -> Deployer:
-        """배포를 적용하는 쪽. **PC 실행기와 같은 코드**이고 다른 것은 `host_kind`뿐이다."""
+        """배포를 적용하는 쪽. 같은 코드이고 다른 것은 `host_kind`뿐이다."""
         return Deployer(
             data_dir=self.settings.data_path,
             host_id=self.server_runner_id,
@@ -443,7 +452,7 @@ class Agent:
         **서버를 부르지 않는다** (하트비트마다 돈다).
 
         **확장까지 본다** (ADR-0064) — 태스크 종류·확장 판·AI 환경 셋이다. 호스트가 **실행
-        위치를 쥐므로**(`run_locations`에 `server`가 없는 종류는 기여를 내지 않는다) 그런 BPM 프로세스는
+        쥐므로** 그런 BPM 프로세스는
         `task_types_wrong_location`으로 **시작 전에** 막힌다 — 전에는 배포·시작까지 가서 실행
         중에 `node_kind_unsupported`로 죽었다. **실행과 같은 호스트**를 쓴다.
         """
@@ -535,7 +544,6 @@ class Agent:
             job_id=saved.job_id,
             store=self.store,
             # 맡겨진 실행이었으면 되살린 뒤에도 결과를 올린다 (ADR-0082).
-            parent_run_id=self.store.parent_of(saved.run_id) if self.store is not None else None,
         )
         self.workers[saved.run_id] = found
         found.resume(saved.snapshot)
@@ -581,6 +589,8 @@ class Agent:
             self._remember_ack(self._take_one(job))
 
     def _take_one(self, job: JobDispatch) -> JobAck:
+        if job.test is not None:
+            return self._take_trial(job)
         if self.paused or self.restarting:
             # 일시 중지 중에는 **새 작업을 받지 않는다** (C12 `paused`).
             return JobAck(job_id=job.job_id, result="rejected", reason="paused")
@@ -611,8 +621,8 @@ class Agent:
             env=self.run_env(bot),
             job_id=job.job_id,
             inputs=dict(job.inputs),
-            # **위임·일정으로 받은 작업은 출처가 다르다** (C3 `source: delegation`·`schedule`,
-            # ADR-0082·ADR-0110) — 말해 주는 것은 작업의 `requested_by` 하나다(PC 실행기와 같은 `job_source`).
+            # **맡은 것·일정으로 받은 작업은 출처가 다르다** (C3 `source: delegation`·`schedule`,
+            # ADR-0082·ADR-0110) — 말해 주는 것은 작업의 `requested_by` 하나다.
             source=job_source(job.requested_by),
             parent_run_id=delegated_run(job.requested_by),
             # 작업의 주인(업무 자리)은 Center가 붙여 보냈다 (ADR-0125).
@@ -623,6 +633,88 @@ class Agent:
         found.start()
         log.info("작업 %s를 시작했다 (%s, 실행 %s)", job.job_id, bot.id, found.run_id)
         return JobAck(job_id=job.job_id, result=ACK_STARTED, run_id=found.run_id)
+
+    def _take_trial(self, job: JobDispatch) -> JobAck:
+        """시험 작업 하나 (C17). **배포를 보지 않는다** — 그림이 묶음으로 온다.
+
+        준비 상태·외부 정의 관문도 지나지 않는다: 돌려 보는 자리이므로 **막는 것은 검사**이고
+        (C17 §실행 전 검사) 여기서 또 막으면 사람이 왜 안 도는지 모른다. 모자란 것은 실행이
+        그 자리에서 분명히 실패해 로그에 남는다.
+        """
+        target = job.test
+        assert target is not None
+        if self.paused or self.restarting:
+            return JobAck(job_id=job.job_id, result="rejected", reason="paused")
+        if self.free_test_slots() <= 0:
+            return JobAck(job_id=job.job_id, result="rejected", reason="queue_full")
+        found = Trial(
+            target=target,
+            job_id=job.job_id,
+            settings=self.settings,
+            client=self.client,
+            # **엔진이 쓰는 것 그대로다** (ADR-0064) — 점검과 실행이 같은 호스트를 본다.
+            extensions=self.extensions(),
+            services=self.services(),
+            llm_api_key=self.credentials.llm_api_key() or "",
+        )
+        self.trials[target.run_id] = found
+        found.start()
+        log.info("시험 작업 %s를 시작했다 (%s, 실행 %s)", job.job_id, target.workspace_id, target.run_id)
+        return JobAck(job_id=job.job_id, result=ACK_STARTED, run_id=target.run_id)
+
+    def take_design(self, *, checks: list[CheckDispatch], builds: list[BuildDispatch]) -> None:
+        """내려온 **검사·짓기**를 시작한다 (C17, ADR-0146) — 작업이 아니라 그림을 읽는 일이다.
+
+        **일시 중지 중에는 하지 않는다** — Center도 보내지 않지만, 한 주기 어긋날 수 있다.
+        **같은 것을 두 번 받으면 두 번 하지 않는다**: 돌고 있는 것이 있으면 건너뛴다. 멱등 기억을
+        두지 않는 까닭은 결과가 업무가 아니라 **그림의 판정**이라 다시 해도 같기 때문이다.
+        """
+        if self.paused or self.restarting:
+            return
+        self._design = [one for one in self._design if one.is_alive()]
+        busy = {one.name for one in self._design}
+        for check in checks:
+            if f"design-{check.check_id}" not in busy:
+                self._start_design(self._work(check=check))
+        for build in builds:
+            if f"design-{build.build_id}" not in busy:
+                self._start_design(self._work(build=build))
+
+    def _work(
+        self, *, check: CheckDispatch | None = None, build: BuildDispatch | None = None
+    ) -> DesignWork:
+        return DesignWork(
+            check=check,
+            build=build,
+            settings=self.settings,
+            client=self.client,
+            host=self.extension_host(),
+            # 확장이 기여한 점검도 같은 것을 본다 (C13 — 「점검은 통과했는데 실행이 안 된다」를 막는다).
+            context=self.extensions().context,
+            externals=self._external_ids(),
+            on_check=self._took_check,
+            on_build=self._took_build,
+        )
+
+    def _start_design(self, work: DesignWork) -> None:
+        self._design.append(work)
+        work.start()
+
+    def _external_ids(self) -> tuple[str, ...]:
+        """어느 확장이 **외부**인가 — 사전 점검의 고정 경고에 쓴다 (ADR-0060).
+
+        여기서는 **모른다고 말한다**(빈 튜플) — 받아 둔 리소스 목록을 읽는 일이고, 주지 않으면
+        점검은 그 경고를 **하지 않는다**(모르는 것으로 경고를 지어내지 않는다).
+        """
+        return ()
+
+    def _took_check(self, result: CheckResult) -> None:
+        with self._design_lock:
+            self.pending_check_results.append(result)
+
+    def _took_build(self, result: BuildResult) -> None:
+        with self._design_lock:
+            self.pending_build_results.append(result)
 
     def _remember_ack(self, ack: JobAck) -> None:
         self.seen_jobs.remember(ack.job_id, ack)
@@ -638,7 +730,7 @@ class Agent:
     def app_directory(self, bot: Any) -> AppDirectory:
         """그 BPM 프로세스가 쓰는 **검증된 외부 확장 정의** (C13 「전송」) — 고정한 해시와 대조하려고.
 
-        **PC 실행기와 같은 코드가 받아 둔다** (`core.app_directory.DirectoryCache`). 주소·키는 없다 —
+        **`core`가 받아 둔다** (`core.app_directory.DirectoryCache`). 주소·키는 없다 —
         바깥 앱은 Center에 외부 작업으로 올린다 (ADR-0102). **닿지 못하면 들고 있던 것을 쓰고**
         (ADR-0007) **404는 버린다**(철회는 보안 동작이다). 봉투는 **받은 쪽에서 다시 검증한다** (E6).
         """
@@ -669,15 +761,14 @@ class Agent:
     def run_env(self, bot: Any) -> RunEnv:
         """그 실행이 바깥 세계에 닿는 자리 — **실행 프로세스와 같은 함수**가 짓는다.
 
-        모델·읽기 폴더는 **설정이 정한다** (PC 실행기는 BUI-03이 정하는 자리다). 주지 않으면
+        모델·읽기 폴더는 **설정이 정한다** (실행기는 BUI-03이 정하는 자리다). 주지 않으면
         `NoLlm`·`PathDenied`로 **분명히 실패한다** — 조용히 넘어가지 않는다 (ADR-0027·0032).
 
         **보내기도 설정이 정한다** (ADR-0059) — SMTP 주소·보내는 주소가 없으면 `bpm:email`이
         **보내지 않고 실패한다**(`SEND_FAILED`). 웹훅은 **허용 호스트에 적힌 곳만**이고 비면
         아무 데도 보내지 않는다. 비밀번호는 `credentials.smtp_password()`가 준다.
 
-        **확장 태스크도 돈다** (ADR-0064) — 단 `run_locations`에 `server`를 적은 종류만이고,
-        **로컬 런타임은 띄우지 않는다**. 적지 않은 종류는 사전 점검이 이미 막았다(`readiness`).
+        **확장 태스크도 돈다** (ADR-0064) — 단 **로컬 런타임은 띄우지 않는다**.
         """
         return make_env(
             bot,
@@ -688,17 +779,15 @@ class Agent:
             llm_key=self.credentials.llm_api_key() or "",
             llm_model=self.settings.llm_model,
             services=self.services(),
-            # 보내기 — **PC 실행기와 같은 함수**가 짓는다 (ADR-0059).
+            # 보내기 — `make_sender`가 짓는다 (ADR-0059).
             sender=make_sender(
                 smtp=self.settings.smtp(),
                 webhook=self.settings.webhook(),
                 password=self.credentials.smtp_password() or "",
             ),
-            # 서버 실행기의 결재 창구는 **Center만**이다 (C12).
-            approval_where=WHERE_CENTER,
-            # **PC 위임은 Center에 맡긴다** (ADR-0062) — 어느 PC인가도 Center가 고른다.
-            # PC 실행기는 이 포트를 꽂지 않는다 (PC가 PC를 기다리면 서로를 기다릴 수 있다).
+            # **맡기기는 Center에 요청한다** (ADR-0082) — 어느 실행기인가도 Center가 고른다.
             delegate=CenterDelegator(client=self.client, on_withdraw=self.withdraw_later),
+            # 서버 실행기의 결재 창구는 **Center만**이다 (C12).
             # **확장 태스크** (C13·ADR-0064) — 호스트가 실행 위치를 쥐어 서버에서 돌 수 있는
             # 종류만 수행기를 낸다. 없는 종류는 엔진이 설치 오류로 올린다.
             extensions=self.extensions_for(bot),
@@ -791,15 +880,35 @@ class Agent:
                         result=result,
                         run_id=run_id,
                         reason=shot.failure or None,
-                        # 위임으로 받은 작업이면 **선언한 결과**가 맡긴 실행에 돌아간다 (ADR-0082).
+                        # 맡아서 받은 작업이면 **선언한 결과**가 맡긴 실행에 돌아간다 (ADR-0082).
                         outputs=found.delegated_outputs(),
                     )
                 )
             del self.workers[run_id]
+        self._collect_trials()
+
+    def _collect_trials(self) -> None:
+        """끝난 시험 실행을 거둔다 — **끝은 그 스레드가 올렸다** (C17 `PUT …/test-runs`).
+
+        작업 ack는 **실행의 성패가 아니라** 「시작했다」로 이미 올렸으므로(C5) 여기서 더 올리지
+        않는다. 거둔 뒤에 시험 자리가 빈다.
+        """
+        for run_id, found in list(self.trials.items()):
+            if found.finished and not found.is_alive():
+                log.info("시험 실행 %s 끝남", run_id)
+                del self.trials[run_id]
 
     def free_slots(self) -> int:
         """빈자리 — **기다리는 실행은 세지 않는다** (C12, ADR-0054 §5)."""
         return max(0, self.settings.max_concurrency - self._running_count())
+
+    def free_test_slots(self) -> int:
+        """시험 빈자리 — 운영과 **서로 빌려주지 않는다** (C17, ADR-0146).
+
+        운영 빈자리가 남아도 시험은 거기로 가지 않고, 그 반대도 그렇다. 0으로 두면 그 실행기는
+        **시험을 받지 않는다**(운영만 하는 실행기).
+        """
+        return max(0, self.settings.max_test_concurrency - len(self.trials))
 
     def _running_count(self) -> int:
         return sum(1 for found in self.workers.values() if found.snapshot().holds_a_slot)
@@ -808,7 +917,13 @@ class Agent:
         """취소 지시 (C4 `cancel_jobs`). **시작된 실행도 중지를 부탁한다** — 유예를 기다려 준다.
 
         그래야 `cancelled`가 기록에 남는다. 이미 끝났으면 `cancel_refused`다 (현장이 옳다).
+
+        **시험 실행도 같은 길이다** (C17 「중지」) — 자리를 둘로 만들지 않는다.
         """
+        for trial in self.trials.values():
+            if trial.job_id == job_id:
+                trial.stop()
+                return
         for run_id, found in self.workers.items():
             if found.job_id != job_id:
                 continue
@@ -817,7 +932,7 @@ class Agent:
                     JobAck(job_id=job_id, result="cancel_refused", reason="already_started")
                 )
                 return
-            # **중지를 부탁하기 전에 읽는다** — `Engine.cancel`이 기다림을 비운다 (ADR-0062 §5).
+            # **중지를 부탁하기 전에 읽는다** — `Engine.cancel`이 기다림을 비운다 (ADR-0082).
             with self._cancel_lock:
                 self.pending_cancels.extend(found.delegation_jobs())
             found.stop(reason="Center에서 취소했습니다")
@@ -827,7 +942,7 @@ class Agent:
         self._remember_ack(JobAck(job_id=job_id, result="cancelled"))
 
     def cancel_delegations(self) -> int:
-        """맡긴 위임을 Center에서 거둔다 (ADR-0062 §5). 거둔 수를 돌려준다.
+        """맡긴 위임을 Center에서 거둔다 (ADR-0082). 거둔 수를 돌려준다.
 
         **4xx는 다시 걸지 않는다** — 이미 시작됐거나(거절) 모르는 작업이다. 둘 다 답이고,
         다시 걸면 Center 로그만 쌓인다 (결재 올리기와 같은 결). **닿지 못한 것은 들고 있는다.**
@@ -843,13 +958,13 @@ class Agent:
                 self.client.cancel_delegation(job_id)
             except CenterProblem as e:
                 if e.status is not None and 400 <= e.status < 500:
-                    log.info("위임 %s를 거두지 못했다 (%s) — 다시 걸지 않는다", job_id, e)
+                    log.info("맡긴 것 %s를 거두지 못했다 (%s) — 다시 걸지 않는다", job_id, e)
                     continue
-                log.info("위임 %s를 거두지 못했다 — 다음 주기에 (%s)", job_id, e)
+                log.info("맡긴 것 %s를 거두지 못했다 — 다음 주기에 (%s)", job_id, e)
                 left.append(job_id)
                 continue
             done += 1
-            log.info("위임 %s를 거뒀다", job_id)
+            log.info("맡긴 것 %s를 거뒀다", job_id)
         with self._cancel_lock:
             self.pending_cancels = left + self.pending_cancels
         return done
@@ -897,7 +1012,7 @@ class Agent:
 
         **지금 기다리지 않는 답은 `not_waiting`으로 돌려보낸다** (C6 — Center가 다시 연다).
         회수·만료는 **답이 아니다** — 오류 경계로 간다 (ADR-0038). 기다리는 실행이 없으면 할 일이
-        없으니 **받았다고만 한다**(PC 실행기와 같다) — 거절로 적으면 Center가 취소된 실행의 회수를
+        없으니 **받았다고만 한다** — 거절로 적으면 Center가 취소된 실행의 회수를
         `open`으로 되살렸다 (C6 §상태 전이).
 
         **빈자리가 없으면 넣지 않고 ack도 하지 않는다** (메시지·타이머와 같은 결) — 기다리던
@@ -1034,70 +1149,6 @@ class Agent:
             return None
         return sorted(picked, key=lambda one: (one.snapshot().started_at, one.run_id))[0]
 
-    # ── PC 위임 (C12 §PC 위임 — 맡긴 PC 실행이 끝났다) ──
-
-    def apply_delegations(self, found: list[DelegationResult]) -> None:
-        """내려온 위임 결과를 기다리는 실행에 넣는다 (ADR-0062) — **그 실행이 이어 간다**.
-
-        **맡기는 쪽은 엔진이다** (`RunEnv.delegate` → `delegate.CenterDelegator`) — 여기는
-        **돌아오는 길**뿐이다. `finished`가 아닌 것도 그대로 넘긴다: 엔진이 업무 실패로 올려
-        오류 경계가 받는다 (가르는 자리를 둘로 두지 않는다).
-
-        **ack하지 않고 두는 자리가 있다** — 빈자리가 없으면 넣지 않는다 (메시지와 같은 결).
-        위임으로 멈춘 실행은 자리를 놓았으므로 이어 가면 **다시 쥔다**: 상한을 넘기면
-        `capacity.running > max`가 되어 **하트비트가 스스로 막는다**(`validate_heartbeat`).
-        그러면 실행기가 Center와 말을 못 한다 — 다음 주기에 넣는 편이 싸다.
-
-        **지나간 자리는 받았다고 말한다** — 넣을 실행이 없으면 다시 내려와도 같으므로, ack해
-        Center가 그 업무 값을 지우게 한다 (들고 있을 까닭이 없다).
-        """
-        for one in found:
-            seen = self.seen_delegations.get(one.job_id)
-            if seen is not None:
-                self._remember_delegation_ack(seen)
-                continue
-            worker = self._waiting_delegation(one.job_id)
-            if worker is None:
-                log.info("위임 %s의 결과를 넣을 실행이 없다 — 받은 것으로 둔다", one.job_id)
-                self._remember_delegation_ack(DelegationAck(job_id=one.job_id, accepted=True))
-                continue
-            if self.free_slots() <= 0:
-                log.info("위임 %s의 결과를 넣을 자리가 없다 — 다음 주기에", one.job_id)
-                continue
-            if self._busy(worker, f"위임 {one.job_id}의 결과"):
-                continue
-            try:
-                worker.delegation_done(
-                    one.job_id, state=one.state, outputs=one.outputs, reason=one.reason
-                )
-            except EngineError as e:  # pragma: no cover - 바로 위에서 기다림을 찾았다
-                # 기다림은 이미 걷혔다 — **받은 것으로 둔다** (다시 내려와도 같다).
-                log.error("위임 %s의 결과를 넣다 실패했다: %s", one.job_id, e)
-                self._remember_delegation_ack(DelegationAck(job_id=one.job_id, accepted=True))
-                continue
-            self._remember_delegation_ack(DelegationAck(job_id=one.job_id, accepted=True))
-            log.info(
-                "위임 %s의 결과를 실행 %s에 넣었다 (%s)", one.job_id, worker.run_id, one.state
-            )
-
-    def _remember_delegation_ack(self, ack: DelegationAck) -> None:
-        self.seen_delegations.remember(ack.job_id, ack)
-        self.pending_delegation_acks = [
-            one for one in self.pending_delegation_acks if one.job_id != ack.job_id
-        ]
-        self.pending_delegation_acks.append(ack)
-
-    def _waiting_delegation(self, job_id: str) -> Worker | None:
-        """그 위임을 기다리는 일꾼. 없으면 `None` (지나갔거나 끝난 실행이다).
-
-        **`run_id`로 찾지 않는다** — 작업 id가 그 자리의 열쇠이고(멱등 키가 그것으로 지어졌다)
-        그 실행이 정말 **지금 그것을** 기다리는지는 작업 id로만 알 수 있다.
-        """
-        for found in self.workers.values():
-            if found.waits_for_delegation(job_id):
-                return found
-        return None
-
     def _waiting_for(self, request_id: str) -> Worker | None:
         """그 결재를 기다리는 일꾼. 없으면 `None` (지나갔거나 남의 것이다)."""
         for found in self.workers.values():
@@ -1150,18 +1201,29 @@ class Agent:
         alive = [one for one in shots if not one.done]
         running = [one.running_row() for one in alive if one.holds_a_slot]
         waiting = [one.waiting for one in alive if one.waiting is not None]
+        trials = [found.running_row() for found in self.trials.values() if not found.finished]
         return ServerRunnerHeartbeatRequest(
             schema=1,
             status=STATUS_DRAINING if self.restarting else STATUS_PAUSED if self.paused else STATUS_RUNNING,
             # **`running`은 기다리는 실행을 뺀 수**다 (C12) — `running[]` 길이와 같아야 한다
             # (어긋나면 Center가 422로 거부한다, `validate_heartbeat`).
-            capacity=Capacity(max=self.settings.max_concurrency, running=len(running)),
-            running=running,
+            capacity=Capacity(
+                max=self.settings.max_concurrency,
+                running=len(running),
+                # **시험 자리는 따로 센다** (C17, ADR-0146). `running[]`에는 함께 싣고 계약이
+                # **실행 id의 `test_` 앞자리로** 가른다 — 깃발을 따로 두면 두 값이 갈라진다.
+                test_max=self.settings.max_test_concurrency,
+                test_running=len(trials),
+            ),
+            running=running + trials,
             waiting=waiting,
             versions=self.versions(),
             # **설치된 BPM 프로세스별 준비 상태** (C12) — 캐시하고 설치·키가 바뀌면 비운다.
             readiness=self.readiness(),
             deployment_results=list(self.pending_results),
+            # 검사·짓기의 결과 (C17) — **작업이 아니다**. 배치 결정과 같은 결로 한 주기만 간다.
+            check_results=list(self.pending_check_results),
+            build_results=list(self.pending_build_results),
             job_acks=list(self.pending_acks),
             approval_acks=list(self.pending_approval_acks),
             message_acks=list(self.pending_message_acks),
@@ -1169,6 +1231,70 @@ class Agent:
             restored=list(self.restored),
             unsent_events=self.unsent_events(),
         )
+
+    # ── 맡기기 (C12 §맡기기 — 맡긴 실행이 끝났다) ──
+
+    def apply_delegations(self, found: list[DelegationResult]) -> None:
+        """내려온 위임 결과를 기다리는 실행에 넣는다 (ADR-0082) — **그 실행이 이어 간다**.
+
+        **맡기는 쪽은 엔진이다** (`RunEnv.delegate` → `delegate.CenterDelegator`) — 여기는
+        **돌아오는 길**뿐이다. `finished`가 아닌 것도 그대로 넘긴다: 엔진이 업무 실패로 올려
+        오류 경계가 받는다 (가르는 자리를 둘로 두지 않는다).
+
+        **ack하지 않고 두는 자리가 있다** — 빈자리가 없으면 넣지 않는다 (메시지와 같은 결).
+        위임으로 멈춘 실행은 자리를 놓았으므로 이어 가면 **다시 쥔다**: 상한을 넘기면
+        `capacity.running > max`가 되어 **하트비트가 스스로 막는다**(`validate_heartbeat`).
+        그러면 실행기가 Center와 말을 못 한다 — 다음 주기에 넣는 편이 싸다.
+
+        **지나간 자리는 받았다고 말한다** — 넣을 실행이 없으면 다시 내려와도 같으므로, ack해
+        Center가 그 업무 값을 지우게 한다 (들고 있을 까닭이 없다).
+        """
+        for one in found:
+            seen = self.seen_delegations.get(one.job_id)
+            if seen is not None:
+                self._remember_delegation_ack(seen)
+                continue
+            worker = self._waiting_delegation(one.job_id)
+            if worker is None:
+                log.info("맡긴 것 %s의 결과를 넣을 실행이 없다 — 받은 것으로 둔다", one.job_id)
+                self._remember_delegation_ack(DelegationAck(job_id=one.job_id, accepted=True))
+                continue
+            if self.free_slots() <= 0:
+                log.info("맡긴 것 %s의 결과를 넣을 자리가 없다 — 다음 주기에", one.job_id)
+                continue
+            if self._busy(worker, f"위임 {one.job_id}의 결과"):
+                continue
+            try:
+                worker.delegation_done(
+                    one.job_id, state=one.state, outputs=one.outputs, reason=one.reason
+                )
+            except EngineError as e:  # pragma: no cover - 바로 위에서 기다림을 찾았다
+                # 기다림은 이미 걷혔다 — **받은 것으로 둔다** (다시 내려와도 같다).
+                log.error("맡긴 것 %s의 결과를 넣다 실패했다: %s", one.job_id, e)
+                self._remember_delegation_ack(DelegationAck(job_id=one.job_id, accepted=True))
+                continue
+            self._remember_delegation_ack(DelegationAck(job_id=one.job_id, accepted=True))
+            log.info(
+                "맡긴 것 %s의 결과를 실행 %s에 넣었다 (%s)", one.job_id, worker.run_id, one.state
+            )
+
+    def _remember_delegation_ack(self, ack: DelegationAck) -> None:
+        self.seen_delegations.remember(ack.job_id, ack)
+        self.pending_delegation_acks = [
+            one for one in self.pending_delegation_acks if one.job_id != ack.job_id
+        ]
+        self.pending_delegation_acks.append(ack)
+
+    def _waiting_delegation(self, job_id: str) -> Worker | None:
+        """그 위임을 기다리는 일꾼. 없으면 `None` (지나갔거나 끝난 실행이다).
+
+        **`run_id`로 찾지 않는다** — 작업 id가 그 자리의 열쇠이고(멱등 키가 그것으로 지어졌다)
+        그 실행이 정말 **지금 그것을** 기다리는지는 작업 id로만 알 수 있다.
+        """
+        for found in self.workers.values():
+            if found.waits_for_delegation(job_id):
+                return found
+        return None
 
     def _acks_delivered(self) -> None:
         """실어 올린 ack가 Center에 닿았다 — 멱등 기억이 **그때부터** 잊을 준비를 한다.
@@ -1201,6 +1327,9 @@ class Agent:
         self.pending_approval_acks.clear()  # 올렸다
         self.pending_message_acks.clear()  # 올렸다
         self.pending_delegation_acks.clear()  # 올렸다
+        with self._design_lock:
+            self.pending_check_results.clear()  # 올렸다
+            self.pending_build_results.clear()  # 올렸다
         self.next_in_s = answer.next_heartbeat_s
         self.last_response = answer
         if answer.paused != self.paused:
@@ -1221,9 +1350,10 @@ class Agent:
         self.apply_approvals(list(answer.approvals))
         self.apply_messages(list(answer.messages))
         # **작업보다 뒤다** — 둘 다 자리를 쓰는데, 자리가 없을 때 작업은 `rejected`로 닫히고
-        # (거절은 다시 싣지 않는다, C4) 위임 결과는 **ack하지 않으면 다시 내려온다**. 거꾸로
-        # 두면 멀쩡한 작업이 큐에서 사라진다.
+        # 맡긴 결과는 **ack하지 않으면 다시 내려온다**.
         self.apply_delegations(list(answer.delegations))
+        # **설계 일은 마지막이다** — 자리를 쓰지 않으므로 작업·결재보다 급하지 않다 (C17).
+        self.take_design(checks=list(answer.checks), builds=list(answer.builds))
 
     def restart_ready(self) -> bool:
         """재시작해도 되나 (ADR-0117) — 자리를 쥔 실행이 없고 **올릴 ack가 없다**.

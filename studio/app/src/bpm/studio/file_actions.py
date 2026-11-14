@@ -99,10 +99,6 @@ def open_definition(window: MainWindow, path_text: str) -> None:
             window.say(LAID_OUT)
         # STU-14가 고를 거리는 **정의를 열 때** 받는다 (노드를 고를 때마다 두드리지 않게).
         window.refresh_catalog()
-        entry = process.entry_definition
-        window.properties.run_location = (
-            entry.process.info.run_location if entry is not None and entry.process is not None else None
-        )
 
     window.canvas.load_xml(path.read_text(encoding="utf-8"), then=done)
 

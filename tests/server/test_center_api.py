@@ -45,8 +45,7 @@ def package(**over: Any) -> PackageInfo:
         "id": "erp.order-entry",
         "version": "2.1.0",
         "kind": "bpm_process",
-        "run_location": "pc",
-        "status": "approved",
+                "status": "approved",
         "content_hash": HASH,
         "uploaded_by": "studio-key",
         "uploaded_at": NOW,
@@ -58,7 +57,7 @@ def deployment_envelope(private: Ed25519PrivateKey, **over: Any) -> Any:
     payload: dict[str, Any] = {
         "kind": "deployment",
         "deployment_id": "dep_3f9a1c07",
-        "target": {"type": "bot_ui", "id": "bui_a81c22d0"},
+        "target": {"type": "server_runner", "id": "bui_a81c22d0"},
         "bpm_process_id": "erp.order-entry",
         "version": "2.1.0",
         "content_hash": HASH,
@@ -69,7 +68,7 @@ def deployment_envelope(private: Ed25519PrivateKey, **over: Any) -> Any:
 def job(**over: Any) -> JobCreateRequest:
     base: dict[str, Any] = {
         "bpm_process_id": "erp.order-entry",
-        "target": {"type": "bot_ui", "id": "bui_a81c22d0"},
+        "target": {"type": "server_runner", "id": "bui_a81c22d0"},
         "inputs": {"주문번호": "PO-2608-001"},
     }
     return JobCreateRequest.model_validate(base | over)
@@ -107,43 +106,11 @@ def test_hash_must_match_the_package() -> None:
     assert codes == ["hash_mismatch"]
 
 
-def test_target_type_must_match_run_location() -> None:
-    """PC 패키지를 서버 실행기에 배포하거나 그 반대를 막는다.
-
-    **코드는 `wrong_target` 하나다** (ADR-0047) — C2 V6이 같은 조건에 쓰는 이름이고 Center가
-    답하는 이름이다. `target_mismatch`는 **작업 쪽**(모르는 대상 종류)에만 남는다.
-    """
-    private, key = admin()
-    env = deployment_envelope(private, target={"type": "server_runner", "id": "srv_1"})
-    codes = [v.code for v in validate_deployment(env, package=package(run_location="pc"), keys=[key], now=NOW)]
-    assert codes == ["wrong_target"]
-
-    env = deployment_envelope(private)  # bot_ui 대상
-    codes = [v.code for v in validate_deployment(env, package=package(run_location="server"), keys=[key], now=NOW)]
-    assert codes == ["wrong_target"]
-
-
-def test_a_pc_deployment_cannot_target_everything() -> None:
-    """**`"*"`는 서버 실행기만** (C2 §배포 대상 규칙, ADR-0046).
-
-    `DeploymentTarget.matches`가 그렇게 맞추니 PC 쪽 `"*"`는 **모든 PC가 V6으로 거부할** 봉투다.
-    받아 두면 CON-03이 거짓 ⛔로 차고 운영자는 승인·해시·키를 뒤진다(막은 것은 대상인데).
-    """
-    private, key = admin()
-    env = deployment_envelope(private, target={"type": "bot_ui", "id": "*"})
-    codes = [v.code for v in validate_deployment(env, package=package(), keys=[key], now=NOW)]
-    assert codes == ["wrong_target"]
-
-    # PC를 하나 적으면 통과한다 — 막는 것은 `"*"`뿐이다.
-    one = deployment_envelope(private, target={"type": "bot_ui", "id": "bui_a81c22d0"})
-    assert validate_deployment(one, package=package(), keys=[key], now=NOW) == []
-
-
 def test_an_unregistered_target_is_refused() -> None:
     """**등록되지 않은 PC에는 배포하지 않는다** (ADR-0049) — 404 `target_not_found`.
 
     찾아보는 것은 Center이고 여기로는 **이미 읽어 온 사실**이 온다 (`package`와 같은 결,
-    ADR-0047 §다시 볼 조건 ②). 등록 전에는 `bot_ui_id`가 없으니(Center가 등록에서 만든다)
+    ADR-0047 §다시 볼 조건 ②). 등록 전에는 `server_runner_id`가 없으니(Center가 등록에서 만든다)
     명부에 없는 id는 **미리 배포해 둔 것이 아니라 오타**다.
     """
     private, key = admin()
@@ -165,23 +132,6 @@ def test_an_unregistered_target_is_refused() -> None:
     )
 
 
-def test_a_wrong_target_wins_over_a_missing_one() -> None:
-    """**「대상이 틀렸다」가 「대상이 없다」를 이긴다** (ADR-0049).
-
-    PC 배포의 `"*"`는 그 id도 등록되어 있지 않지만, 운영자가 할 일은 「대상을 하나 적는다」다 —
-    「`*`라는 PC가 없다」고 하면 없는 PC를 찾아 헤맨다.
-    """
-    private, key = admin()
-    env = deployment_envelope(private, target={"type": "bot_ui", "id": "*"})
-    problems = validate_deployment(
-        env, package=package(), keys=[key], now=NOW, target_registered=False
-    )
-    assert [v.code for v in problems] == ["wrong_target", "target_not_found"]
-    picked = deployment_refusal(problems)
-    assert picked is not None
-    assert (picked[0], picked[1].code) == (409, "wrong_target")
-
-
 def test_a_server_deployment_passes_now_that_m7_is_on() -> None:
     """**스위치를 켰다** (M7 조각 4-①) — 서버 실행기가 배포를 설치하고 작업을 돌린다.
 
@@ -189,7 +139,7 @@ def test_a_server_deployment_passes_now_that_m7_is_on() -> None:
     """
     private, key = admin()
     env = deployment_envelope(private, target={"type": "server_runner", "id": "*"})
-    pkg = package(run_location="server")
+    pkg = package()
     assert validate_deployment(env, package=pkg, keys=[key], now=NOW) == []
     # 끄면 그대로 막는다 — 자리는 **하나**이고 배포와 작업이 같은 값을 본다 (ADR-0047).
     codes = [
@@ -213,10 +163,7 @@ def test_every_deployment_rule_has_a_status_in_the_table() -> None:
         (deployment_envelope(private), package(status="candidate"), None),
         (deployment_envelope(private), package(status="deprecated"), None),
         (deployment_envelope(private, content_hash=OTHER_HASH), package(), None),
-        (deployment_envelope(private, target={"type": "bot_ui", "id": "*"}), package(), None),
-        (deployment_envelope(private), package(run_location="server"), None),
-        (deployment_envelope(private, target={"type": "server_runner", "id": "srv_1"}),
-         package(run_location="server"), None),
+        (deployment_envelope(private, target={"type": "nowhere", "id": "x"}), package(), None),
         (deployment_envelope(private), package(), False),
     )
     found = {
@@ -232,7 +179,7 @@ def test_every_deployment_rule_has_a_status_in_the_table() -> None:
         v.code
         for v in validate_deployment(
             deployment_envelope(private, target={"type": "server_runner", "id": "srv_1"}),
-            package=package(run_location="server"),
+            package=package(),
             keys=[key],
             now=NOW,
             server_runner_available=False,
@@ -259,7 +206,7 @@ def test_the_contract_picks_the_status_not_the_caller() -> None:
     # 「아직 없는 기능」은 **상태가 아니라 기능**이라 422다 (스위치를 끄면 그 길이 돈다).
     env = deployment_envelope(private, target={"type": "server_runner", "id": "srv_1"})
     picked = deployment_refusal(validate_deployment(
-        env, package=package(run_location="server"), keys=[key], now=NOW,
+        env, package=package(), keys=[key], now=NOW,
         server_runner_available=False,
     ))
     assert picked is not None
@@ -290,7 +237,7 @@ def test_bad_signature_is_caught_before_anything_else_matters() -> None:
     private, key = admin()
     env = deployment_envelope(private)
     tampered = env.model_copy(
-        update={"payload": env.payload | {"target": {"type": "bot_ui", "id": "bui_attacker"}}}
+        update={"payload": env.payload | {"target": {"type": "server_runner", "id": "bui_attacker"}}}
     )
     codes = [v.code for v in validate_deployment(tampered, package=package(), keys=[key], now=NOW)]
     assert "bad_signature" in codes
@@ -307,13 +254,8 @@ def test_wrong_kind_envelope_is_caught() -> None:
 # ─────────────── 작업 ───────────────
 
 
-def test_bot_ui_target_requires_an_id() -> None:
-    """어느 PC인지 Center가 고를 수 없다."""
-    with pytest.raises(ValidationError, match="id가 필요하다"):
-        JobTarget(type="bot_ui")
-
-
-def test_server_runner_target_may_omit_the_id() -> None:
+def test_the_target_may_omit_the_id() -> None:
+    """실행기는 Center가 고른다 (C5) — `"*"`도 같은 뜻이다."""
     assert JobTarget(type="server_runner").id is None
     assert JobTarget(type="server_runner", id="*").id == "*"
 
@@ -400,7 +342,7 @@ def test_deployment_check_is_skipped_without_center_state() -> None:
         ("pending", (200, None)),
         ("dispatched", (202, None)),
         ("queued", (202, None)),
-        ("accepted", (409, "already_started")),
+        ("accepted", (202, None)),
         ("cancelled", (409, "not_cancellable")),
         ("expired", (409, "not_cancellable")),
         ("무언가_새로운_상태", (409, "not_cancellable")),
@@ -408,22 +350,6 @@ def test_deployment_check_is_skipped_without_center_state() -> None:
 )
 def test_cancel_outcome_table(state: str, expected: tuple[int, str | None]) -> None:
     assert cancel_outcome(state) == expected
-
-
-def test_a_started_server_run_can_be_cancelled_but_a_pc_one_cannot() -> None:
-    """**가르는 것은 대상 종류 하나다** ([ADR-0063](../../docs/decisions/0063-stopping-a-running-server-run.md)).
-
-    서버 실행은 **화면을 만지지 않으므로**(C1 R2) 엔진 취소가 곧 `cancelled` 기록이다. PC
-    실행은 자리를 끝까지 쥐고(ADR-0014) 화면을 만지는 중일 수 있어 도중에 끊으면 **화면이
-    반쯤 바뀐 채 남는다** — 그래서 Center에서는 멈추지 않는다 (현장 사람이 BUI-04에서 멈춘다).
-    """
-    assert cancel_outcome("accepted", "server_runner") == (202, None)
-    assert cancel_outcome("accepted", "bot_ui") == (409, "already_started")
-    # **모르는 것을 열어 주지 않는다** — 대상을 주지 않으면 옛 규칙대로 본다.
-    assert cancel_outcome("accepted") == (409, "already_started")
-    # 다른 상태는 대상 종류와 무관하다 (표에 줄 하나가 늘 뿐이다).
-    assert cancel_outcome("queued", "server_runner") == cancel_outcome("queued", "bot_ui")
-    assert cancel_outcome("cancelled", "server_runner") == (409, "not_cancellable")
 
 
 # ─────────────── 목록 ───────────────
@@ -443,12 +369,11 @@ def test_package_info_embeds_the_c1_manifest() -> None:
 
     m = Manifest.model_validate(
         {"schema": 1, "kind": "bpm_process", "id": "erp.order-entry", "version": "2.1.0",
-         "run_location": "pc", "entry": "process/main.bpmn", "process_id": "order_entry",
+         "entry": "process/main.bpmn", "process_id": "order_entry",
          "requires": {}, "human": {},
          "built": {"by": "studio", "at": NOW, "core": "0.3.0", "spec_version": 1}, "content_hash": HASH}
     )
     info = package(manifest=m.to_json_dict(), preflight={"warnings": ["W1"], "blocked": []})
     assert info.manifest is not None
-    # 패키지 행의 run_location은 매니페스트에서 옮겨 적은 값이다 — 둘이 같아야 한다.
-    assert info.manifest.run_location == info.run_location == "pc"
+    assert info.manifest.id == info.id and info.manifest.process_id == "order_entry"
     assert info.preflight.warnings == ["W1"]

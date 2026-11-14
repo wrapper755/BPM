@@ -120,7 +120,7 @@ def tab_texts(panel: Any) -> list[str]:
     return [panel.tabs.tabText(i) for i in range(panel.tabs.count())]
 
 
-PROCESS = {"run_location": "pc", "inputs": [{"name": "금액", "type": "number", "required": True}]}
+PROCESS = {"inputs": [{"name": "금액", "type": "number", "required": True}]}
 
 
 def test_the_definition_gets_a_defaults_tab() -> None:

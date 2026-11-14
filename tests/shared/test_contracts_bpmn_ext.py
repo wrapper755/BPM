@@ -36,7 +36,7 @@ ROOT = Path(__file__).resolve().parents[2]
 EXAMPLES = ROOT / "docs" / "08-business-examples"
 
 
-def wrap(body: str, *, process_json: str = '{"run_location": "pc"}') -> str:
+def wrap(body: str, *, process_json: str = "{}") -> str:
     """최소 BPMN 한 벌. 본문만 바꿔 가며 규칙을 시험한다."""
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -113,7 +113,6 @@ def test_read_process_reads_chk_elements() -> None:
     )
     process = read_process(xml)
     assert process.id == "Proc_t"
-    assert process.info.run_location == "pc"
     task = process.node("Task_Ai")
     assert task is not None
     assert task.prop("aiTask").domain == "llm"
@@ -215,7 +214,7 @@ def _sourced(source: str, kind: str) -> str:
              '<bpm:approval>{"title": "일괄 승인", "assignees": "감독자"}</bpm:approval>'
              "</bpmn:extensionElements></bpmn:userTask>"),
         process_json=(
-            f'{{"run_location": "server", "inputs": [{{"name": "감독자", "type": "{kind}", "source": "{source}"}}]}}'
+            f'{{"inputs": [{{"name": "감독자", "type": "{kind}", "source": "{source}"}}]}}'
         ),
     )
 
@@ -265,7 +264,7 @@ def _batch(*, before: str = "", show: str = '["건들"]', approval: bool = True)
             + call + '<bpmn:endEvent id="End" />'
             + "".join(f'<bpmn:sequenceFlow id="f{i}" sourceRef="{a}" targetRef="{b}" />'
                       for i, (a, b) in enumerate(zip(steps, steps[1:], strict=False))))
-    return wrap(line(body), process_json='{"run_location": "server"}')
+    return wrap(line(body))
 
 
 def _b16(xml: str) -> list[Any]:
@@ -362,47 +361,23 @@ def test_b11_sees_what_the_file_list_makes_and_reads() -> None:
     """`store_as`·`count_as`는 그 뒤에서 쓸 수 있고, `folder`의 `{변수}`는 읽는 것이다."""
     spec = '{"folder": "{감시폴더}", "store_as": "파일", "count_as": "건수"}'
     body = line(file_list(spec), '<bpmn:scriptTask id="T2"><bpmn:script>수 = 건수</bpmn:script></bpmn:scriptTask>')
-    declared = '{"run_location": "pc", "inputs": [{"name": "감시폴더", "type": "string"}]}'
+    declared = '{"inputs": [{"name": "감시폴더", "type": "string"}]}'
     assert "B11" not in codes(wrap(body, process_json=declared))
     assert "B11" in codes(wrap(body)), "선언하지 않은 `감시폴더`를 읽으면 경고한다"
 
 
-def test_b6_server_cannot_run_pc_only_things() -> None:
-    xml = wrap(
-        line('<bpmn:serviceTask id="T"><bpmn:extensionElements>'
-             '<bpm:aiTask>{"goal": "x", "domain": "web"}</bpm:aiTask>'
-             "</bpmn:extensionElements></bpmn:serviceTask>"),
-        process_json='{"run_location": "server"}',
-    )
-    assert "B6" in codes(xml)
-    # PC면 괜찮다.
-    assert "B6" not in codes(wrap(
-        line('<bpmn:serviceTask id="T"><bpmn:extensionElements>'
-             '<bpm:aiTask>{"goal": "x", "domain": "web"}</bpm:aiTask>'
-             "</bpmn:extensionElements></bpmn:serviceTask>")))
+def test_b6_refuses_web_and_desktop_ai_tasks() -> None:
+    """돌릴 자리가 없는 판이다 (ADR-0114·0144) — B6은 그 둘만 본다."""
+    def xml(domain: str) -> str:
+        return wrap(
+            line('<bpmn:serviceTask id="T"><bpmn:extensionElements>'
+                 f'<bpm:aiTask>{{"goal": "x", "domain": "{domain}"}}</bpm:aiTask>'
+                 "</bpmn:extensionElements></bpmn:serviceTask>")
+        )
 
-
-def test_b6_a_confirmation_cannot_run_on_the_server() -> None:
-    """확인(manualTask)은 늘 현장이다 — 패키지 R2(`human.confirmation`)와 같은 판정이어야
-    시험 실행은 되는데 올리기만 막히는 일이 없다."""
-    task = line('<bpmn:manualTask id="C"><bpmn:extensionElements>'
-                '<bpm:approval>{"title": "확인"}</bpm:approval>'
-                "</bpmn:extensionElements></bpmn:manualTask>")
-    found = [v for v in validate(read_process(wrap(task, process_json='{"run_location": "server"}'))) if v.rule == "B6"]
-    assert found and any(item.startswith("C:") for item in found[0].items)
-    assert "B6" not in codes(wrap(task))
-
-
-def test_b6_asks_the_host_about_extension_task_locations() -> None:
-    """어느 태스크 종류가 PC 전용인지 플랫폼은 스스로 모른다 (ADR-0018)."""
-    xml = wrap(
-        line('<bpmn:serviceTask id="T"><bpmn:extensionElements>'
-             '<bpm:task type="ui_task" extension="ui-automation">{}</bpm:task>'
-             "</bpmn:extensionElements></bpmn:serviceTask>"),
-        process_json='{"run_location": "server"}',
-    )
-    assert "B6" not in codes(xml)  # 알려 주지 않으면 건너뛴다
-    assert "B6" in codes(xml, task_type_locations={"ui_task": ["pc"]})
+    assert "B6" in codes(xml("web"))
+    assert "B6" in codes(xml("desktop"))
+    assert "B6" not in codes(xml("llm"))
 
 
 def test_b7_warns_about_the_old_key_fields_and_still_reads_them() -> None:
@@ -415,7 +390,7 @@ def test_b7_warns_about_the_old_key_fields_and_still_reads_them() -> None:
     assert "B7" not in codes(wrap(line(plain)))
 
     old = wrap(line(task('{"app_id": "erp", "operation": "read", "key_ref": "ERP_Reader"}')),
-               process_json='{"run_location": "pc", "service_keys": {"erp": "erp-reader"}}')
+               process_json='{"service_keys": {"erp": "erp-reader"}}')
     found = [v for v in validate(read_process(old)) if v.rule == "B7"]
     assert len(found) == 1 and not found[0].blocks, "경고 한 줄이다 — 이름 규칙은 더 보지 않는다"
     assert found[0].code == "old_key_field"
@@ -592,13 +567,6 @@ def test_b13_warns_about_webhook_sending_everything() -> None:
     assert len(found) == 1 and found[0].severity == "warning"
 
 
-def test_b13_warns_about_long_field_approvals() -> None:
-    xml = wrap(line('<bpmn:userTask id="Ap"><bpmn:extensionElements>'
-                    '<bpm:approval>{"title": "t", "location": "field", "expires": "P3D"}</bpm:approval>'
-                    "</bpmn:extensionElements></bpmn:userTask>"))
-    assert "B13" in [v.rule for v in validate(read_process(xml))]
-
-
 def test_b14_parallel_branches_must_match() -> None:
     body = (
         '<bpmn:startEvent id="Start" /><bpmn:parallelGateway id="Split" />'
@@ -626,7 +594,7 @@ def test_b14_timer_start_cannot_need_inputs() -> None:
             "<bpmn:timeCycle>0 9 * * 1-5</bpmn:timeCycle></bpmn:timerEventDefinition></bpmn:startEvent>",
         ),
         process_json=(
-            '{"run_location": "server", '
+            '{'
             '"inputs": [{"name": "대상월", "type": "string", "required": true}]}'
         ),
     )
@@ -645,24 +613,21 @@ def test_b14_matches_rule_against_dmn_and_call_against_target() -> None:
     assert "B14" in codes(xml, dmn_decisions={})  # 결정이 패키지에 없다
 
 
-# ─────────────────────────── PC 위임 (ADR-0062) ───────────────────────────
+# ─────────────────────────── 맡기기 (ADR-0082) ───────────────────────────
 
-#: 위임 호출 하나. `calledElement`는 **읽는 사람을 위한 것**이라 패키지에 없어도 된다.
+#: 맡기는 호출 하나. `calledElement`는 **읽는 사람을 위한 것**이라 패키지에 없어도 된다.
 DELEGATION = (
     '<bpmn:callActivity id="Call_Erp" calledElement="Proc_erp_input">'
     "<bpmn:extensionElements><bpm:call>"
-    '{"delegate": {"bpm_process_id": "fin.erp-input", "version": "1.2.0", "bot_ui": "담당자PC"}, '
+    '{"delegate": {"bpm_process_id": "fin.erp-input", "version": "1.2.0"}, '
     '"input": {"전표번호": "청구번호"}, "output": {"입력결과": "결과코드"}}'
     "</bpm:call></bpmn:extensionElements></bpmn:callActivity>"
 )
-SERVER = (
-    '{"run_location": "server", "inputs": ['
-    '{"name": "청구번호", "type": "string"}, {"name": "담당자PC", "type": "string"}]}'
-)
+SERVER = '{"inputs": [{"name": "청구번호", "type": "string"}]}' 
 
 
 def test_a_delegated_call_is_not_looked_for_in_the_package() -> None:
-    """**대상이 다른 패키지다** (ADR-0062) — 패키지 안에서 찾으면 멀쩡한 그림을 거부한다."""
+    """**대상이 다른 패키지다** (ADR-0082) — 패키지 안에서 찾으면 멀쩡한 그림을 거부한다."""
     xml = wrap(line(DELEGATION), process_json=SERVER)
     found = read_process(xml)
     call = found.nodes[1].prop("call")
@@ -672,13 +637,7 @@ def test_a_delegated_call_is_not_looked_for_in_the_package() -> None:
     assert "B14" not in codes(xml, called_processes={})
 
 
-def test_a_delegated_call_only_works_from_a_server_process() -> None:
-    """PC에서 위임하면 **PC가 PC를 기다린다** (ADR-0014 — 자리를 끝까지 쥔다)."""
-    found = validate(read_process(wrap(line(DELEGATION))))  # 기본은 run_location: pc
-    assert [v.code for v in found if v.rule == "B14"] == ["delegation_not_from_pc"]
-
-
-def test_a_delegated_call_is_matched_against_what_that_bot_declares() -> None:
+def test_a_delegated_call_is_matched_against_what_that_process_declares() -> None:
     """받을 값은 **그 BPM 프로세스가 선언한 `outputs`**와 맞춰 본다 (C1). **모르면 건너뛴다.**"""
     xml = wrap(line(DELEGATION), process_json=SERVER)
     assert "B14" not in codes(xml, delegated_outputs={"fin.erp-input": ("결과코드", "처리시각")})
@@ -689,16 +648,6 @@ def test_a_delegated_call_is_matched_against_what_that_bot_declares() -> None:
     assert "B14" not in codes(xml)
     # 다른 BPM 프로세스의 것만 알아도 막지 않는다.
     assert "B14" not in codes(xml, delegated_outputs={"other.bot": ()})
-
-
-def test_the_pc_that_runs_it_can_come_from_a_variable() -> None:
-    """`bot_ui`는 **식**이다 — 담당자 PC처럼 업무 값이 고르므로 읽기로 센다 (B11)."""
-    found = read_process(wrap(line(DELEGATION), process_json=SERVER))
-    node = found.nodes[1]
-    assert {"청구번호", "담당자PC"} <= read_vars(node, found.flows)
-    # 선언하지 않았으면 B11이 말해 준다 (경고다 — 경로 어림이라 막지 않는다).
-    plain = wrap(line(DELEGATION), process_json='{"run_location": "server"}')
-    assert "B11" in codes(plain)
 
 
 # ─────────────────────────── 시험 케이스 형식 ───────────────────────────

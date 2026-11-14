@@ -93,7 +93,6 @@ def test_platform_does_not_depend_on_extensions() -> None:
     platform = [
         "bpm-core",
         "bpm-studio",
-        "bpm-bot-ui",
         "bpm-server-runner",
         "bpm-center",
     ]

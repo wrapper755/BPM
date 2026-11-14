@@ -3,7 +3,7 @@ import { DataTable, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
 import type { AccountInfo } from "@bpm/api-types/c5-account-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
-import { fullTime } from "@/app/bot-uis/page";
+import { fullTime } from "@/lib/time";
 import { AccountMenu, NewAccount } from "./tools";
 
 /**

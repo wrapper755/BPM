@@ -54,7 +54,6 @@ MODES = (
     (MODE_PARALLEL, "함께"),
 )
 
-PC_RUNS_IN_TURN = "PC BPM 프로세스에서는 함께 그려도 차례로 돕니다 (ADR-0087)."
 NO_RESULT = "「한 건의 결과」가 없으면 모은 목록은 늘 빈 목록입니다."
 SAME_NAME = "같은 이름이 두 칸에 있습니다: {name} — 한 번 돌 때마다 서로를 덮습니다."
 
@@ -68,11 +67,9 @@ class LoopEditor(QWidget):
         self,
         parent: QWidget | None = None,
         *,
-        run_location: str | None = None,
         names: QStringListModel | None = None,
     ) -> None:
         super().__init__(parent)
-        self.run_location = run_location
         self._loaded: dict[str, Any] = {}
         self._quiet = False
 
@@ -100,9 +97,6 @@ class LoopEditor(QWidget):
         for line in (self.collection_box, self.item_box, self.result_box, self.collect_box):
             attach(line, names)
 
-        self.pc_note = QLabel(PC_RUNS_IN_TURN, self)
-        self.pc_note.setWordWrap(True)
-        set_role(self.pc_note, "muted")
         self.warning = QLabel("", self)
         self.warning.setWordWrap(True)
         set_role(self.warning, "error")
@@ -118,7 +112,6 @@ class LoopEditor(QWidget):
         mode_layout = QVBoxLayout(modes)
         _tight(mode_layout)
         mode_layout.addLayout(row)
-        mode_layout.addWidget(self.pc_note)
 
         self.fields = QGroupBox("목록과 결과", self)
         form = QFormLayout(self.fields)
@@ -236,7 +229,6 @@ class LoopEditor(QWidget):
     def _refresh(self) -> None:
         on = self.mode() != MODE_NONE
         self.fields.setVisible(on)
-        self.pc_note.setVisible(self.mode() == MODE_PARALLEL and self.run_location != "server")
         self.problems()
 
 
@@ -258,7 +250,6 @@ __all__ = [
     "MODE_PARALLEL",
     "MODE_SEQUENTIAL",
     "NO_RESULT",
-    "PC_RUNS_IN_TURN",
     "SAME_NAME",
     "TAB_LABEL",
     "LoopEditor",

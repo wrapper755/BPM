@@ -35,7 +35,7 @@ export function currentKey<T extends Pick<CenterKeyInfo, "state" | "created_at">
 }
 
 /**
- * Bot·서버 실행기가 보고에 싣는 키 앞자리로 그 키를 찾는다 (CON-03·CON-12 상세의 「API 키」).
+ * Studio·서버 실행기가 보고에 싣는 키 앞자리로 그 키를 찾는다 (CON-03·CON-12 상세의 「API 키」).
  * 묶인 대상의 id는 기계 id라 화면의 id와 다르다 — 앞자리(16자)로 잇는다.
  */
 export function keyByPrefix<T extends Pick<CenterKeyInfo, "type" | "prefix" | "state" | "created_at">>(

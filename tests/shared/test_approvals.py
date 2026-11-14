@@ -20,7 +20,6 @@ from bpm.contracts import (
     apply_defaults,
     request_id_for,
     validate_answer,
-    validate_approval_create,
 )
 from bpm.contracts.approvals import (
     AUTO_WITHDRAW_REASONS,
@@ -72,13 +71,6 @@ def test_node_instance_starts_at_one() -> None:
         request(request_id=f"apr_{RUN}_Task_approve_0", node_instance=0)
 
 
-def test_confirmation_is_not_accepted_by_center() -> None:
-    """확인은 화면 앞 사람만 답할 수 있어 Center로 올리지 않는다."""
-    assert validate_approval_create(request()) == []
-    v = validate_approval_create(request(layer="confirmation"))
-    assert [x.code for x in v] == ["confirmation_not_allowed"]
-
-
 def test_review_is_kept_as_is() -> None:
     """`review`는 원칙 6의 예외 — 결재자가 판단하려면 업무 값이 필요하다."""
     req = request(review={"거래처": "주식회사 예시", "금액": 1100000, "항목": ["A", "B"]})
@@ -109,7 +101,7 @@ def test_unknown_state_is_accepted() -> None:
 def test_auto_withdraw_reasons() -> None:
     """답할 수는 있지만 전달될 곳이 없는 결재를 결재함에 남기지 않는다."""
     assert AUTO_WITHDRAW_REASONS["run_finished"] == "run_ended"
-    assert AUTO_WITHDRAW_REASONS["bot_ui_lost"] == "host_lost"
+    assert AUTO_WITHDRAW_REASONS["runner_lost"] == "host_lost"
 
 
 # ─────────────── 폼이 없을 때: 승인 / 반려 ───────────────
@@ -232,7 +224,6 @@ def test_apply_defaults_without_a_form_is_a_copy() -> None:
     answer = {"decision": "approve"}
     assert apply_defaults(None, answer) == answer
     assert apply_defaults(None, answer) is not answer
-
 
 
 # ─────────────────── 답을 변수로 (C6 — M5 조각 14에서 드러났다) ───────────────────

@@ -8,7 +8,7 @@ EXAMPLES = []
 EXAMPLES.append(Example(
     id="BX-10", file="bx10_vendor_onboarding_review", name="신규 거래처 등록 심사", dept="구매·영업·물류",
     origin="프로토타입 시나리오 1 (끝남 — 케이스 3/3) → 검토를 서비스 앱으로 바꿔 다시 씀", 
-    run_location="server", trigger="메시지 `vendor_registration` — 구매 포털의 등록 신청",
+    trigger="메시지 `vendor_registration` — 구매 포털의 등록 신청",
     background="""
 신규 거래처가 등록을 신청하면 서류(사업자등록증, 통장 사본, 신용평가서, 해외 거래처면 수출입 신고서)를 확인한다. **해당하는 점검만** 골라 동시에 돈다: 모든 거래처는 서류 확인, 거래 예상액이 5천만 원 이상이면 신용 점검, 해외 거래처면 제재 목록 점검. 고른 점검이 모두 끝나면 구매팀장이 승인하고 ERP에 거래처를 등록한다.
 """,
@@ -63,7 +63,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-11", file="bx11_bid_collection", name="입찰 접수와 마감", dept="구매·영업·물류",
     origin="프로토타입 시나리오 5(입찰 마감, 제안만 됨) → 새로 설계",
-    run_location="server", trigger="작업 지시 — 입찰 공고 발행 시",
+    trigger="작업 지시 — 입찰 공고 발행 시",
     background="""
 입찰 공고를 낸 뒤 공급사 견적을 마감 시각까지 받는다. 견적이 올 때마다 기록하고, 마감 시각이 되면 접수를 닫는다. 공고가 취소되면(구매 시스템이 이 입찰번호로 「입찰 취소」 메시지를 보냄) 접수를 멈추고 응찰사에 취소를 알린다. 마감 후 AI가 견적을 비교표로 정리하고 구매팀이 낙찰사를 고른다.
 """,
@@ -125,7 +125,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-12", file="bx12_shipping_fee", name="배송비 계산", dept="구매·영업·물류",
     origin="프로토타입 시나리오 6 (제안만 됨) + 기능 예제 discount_policy.dmn", 
-    run_location="server", trigger="BPM 프로세스 호출 — 견적(BX-15)·주문 처리에서 부름",
+    trigger="BPM 프로세스 호출 — 견적(BX-15)·주문 처리에서 부름",
     background="""
 지역·무게·회원 등급으로 배송비를 정한다. 다른 BPM 프로세스가 호출해 쓰는 **공유 BPM 프로세스**다. 공유 BPM 프로세스는 부르는 쪽 패키지에 **복사되어** 들어간다 (용어집). 규칙이 바뀌면 이 원본과 DMN을 고치고, 부르는 BPM 프로세스들을 다시 패키징·배포한다. 분기마다 현업이 표만 고치는 것이 목표다 (프로토타입 시나리오 6).
 """,
@@ -159,7 +159,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-13", file="bx13_return_processing", name="반품 처리", dept="구매·영업·물류",
     origin="프로토타입 시나리오 7 (제안만 됨 — 폴더 감시 조건 시작 → 여기서는 메시지 시작)",
-    run_location="server", trigger="메시지 `return_request` — 쇼핑몰 반품 신청",
+    trigger="메시지 `return_request` — 쇼핑몰 반품 신청",
     background="""
 고객이 반품을 신청하면 사유를 AI로 분류하고(단순 변심/불량/오배송), 물류센터에서 「입고 완료」 메시지가 올 때까지 기다린다. 입고 검수 결과에 따라 환불하거나 고객에게 반품 불가를 알린다. 14일 안에 입고되지 않으면 신청을 자동 취소한다.
 """,
@@ -207,7 +207,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-15", file="bx15_quotation", name="견적서 작성", dept="구매·영업·물류",
     origin="새로 설계", 
-    run_location="server", trigger="메시지 `quote_request` — CRM의 견적 요청",
+    trigger="메시지 `quote_request` — CRM의 견적 요청",
     background="""
 영업 담당이 CRM에서 견적을 요청하면 품목 단가를 ERP에서 가져오고, 배송비는 공유 BPM 프로세스 BX-12를 호출해 정한다. 할인율이 10%를 넘으면 영업팀장 결재를 받는다. 견적서 문서를 만들어 CRM에 첨부한다.
 """,
@@ -248,52 +248,48 @@ EXAMPLES.append(Example(
 
 # ───────────────────────────── BX-16 ─────────────────────────────
 EXAMPLES.append(Example(
-    id="BX-16", file="bx16_reorder_proposal", name="재고 발주 제안 (서버) → 발주서 출력 준비 (PC)", dept="구매·영업·물류",
-    origin="새로 설계 — 서버와 PC를 나누는 대표 예", 
-    run_location="server", trigger="타이머 — 매일 07:00",
+    id="BX-16", file="bx16_reorder_proposal", name="재고 발주 제안 → 발주서 출력 준비", dept="구매·영업·물류",
+    origin="새로 설계 — 계산·결재·사람 확인이 한 줄에 놓이는 예",
+    trigger="타이머 — 매일 07:00",
     background="""
-재고 데이터를 API로 읽어 안전재고 아래로 떨어진 품목의 발주 수량을 계산하고 구매 담당이 확인한다. 확정된 발주서는 **구매팀 PC의 프린터로 뽑는다** — 서버는 그 PC 앞의 일(용지 넣기)을 할 수 없다. 그래서 서버 BPM 프로세스가 그 한 부분만 **PC에 맡긴다** — 「수동 확인」 PC BPM 프로세스(FX-19)를 `bpm:call.delegate`로 부르고([ADR-0062](../decisions/0062-pc-delegation.md)), 사람이 확인하면 **`확인됨`을 받아** 이어 간다. 어느 PC에서 돌릴지는 **Center가 고른다**(그 BPM 프로세스가 배포된 활성 PC 중 대기열이 짧은 곳) — 그림에 PC 이름을 적지 않는다.
+재고 데이터를 API로 읽어 안전재고 아래로 떨어진 품목의 발주 수량을 계산하고 구매 담당이 확인한다. 확정된 발주서는 **구매팀이 프린터로 뽑는다** — 그 일은 사람이 하므로 BPM 프로세스는 **확인 하나로 기다린다**(`manualTask`). 담당자가 Center 결재함에서 「확인」을 누르면 이어 간다.
 
-실패·거절·만료는 **오류 경계**로 온다. 여기서는 담당자에게 메일로 알리고 끝낸다 — 발주서는 사람이 직접 뽑는다.
+반려하면 발주서를 뽑지 않고 끝낸다 — 담당자에게 메일로 알린다.
 """,
-    why_location="계산·결재는 서버, PC 앞의 일만 PC — **업무를 두 BPM 프로세스로 쪼갠다.** PC 쪽은 짧게 끝나 실행 자리를 오래 잡지 않는다.",
+    why_location="계산·결재·확인이 모두 서버에서 돈다 — 사람이 답하는 자리는 Center 결재함이다 (ADR-0144).",
     nodes=[
         start("Start", "매일 07:00", kind="timer", cycle="0 7 * * 1-5"),
         svc("Task_Stock", "재고 읽기", "wms", "list_stock", {}, {"재고": "items"}),
         script("Task_Calc", "발주량 계산", "제안 = [dict(품목=x.code, 수량=x.safety * 2 - x.qty) for x in 재고 if x.qty < x.safety]\n제안수 = len(제안)"),
         xgw("Gw_Any", "제안 있음?"),
-        appr("Approve_Order", "발주 확인", "발주 제안 확인", ["제안"], [fld("승인", "제안대로 발주합니까?", "bool", True), fld("메모", "메모")], location="center"),
+        appr("Approve_Order", "발주 확인", "발주 제안 확인", ["제안"], [fld("승인", "제안대로 발주합니까?", "bool", True), fld("메모", "메모")]),
         xgw("Gw_Order", "발주?"),
         script("Task_Confirm", "확정", "확정 = 제안"),
-        call("Call_Print", "출력 준비 (PC 위임)", "Proc_fx19_manual_task_pc",
-             {}, {"출력준비": "확인됨"},
-             delegate=dict(bpm_process_id="fx19-manual-task-pc")),
-        script("Task_Note", "발주 기록", "발주건수 = len(확정)"),
-        mail("Task_Failed", "출력 준비 실패 알림", ["purchasing@example.com"], "발주서 출력 준비 실패",
-             "발주 {제안수}건의 발주서 출력 준비가 끝나지 않았습니다. 사유: {error_message}\n직접 뽑아 주세요."),
+        appr("Manual_Print", "출력 준비", "발주서를 프린터로 뽑아 주세요", ["확정"], [], manual=True),
+        script("Task_Note", "발주 기록", "발주건수 = len(확정)\n출력준비 = True"),
+        mail("Task_Failed", "발주 보류 알림", ["purchasing@example.com"], "발주 보류",
+             "발주 {제안수}건이 보류되었습니다. 필요하면 직접 뽑아 주세요."),
         end("End"),
     ],
     flows=[f("Start", "Task_Stock"), f("Task_Stock", "Task_Calc"), f("Task_Calc", "Gw_Any"),
            f("Gw_Any", "Approve_Order", "제안수 > 0", "있음"), f("Gw_Any", "End", default=True, name="없음"),
-           f("Approve_Order", "Gw_Order"), f("Gw_Order", "Task_Confirm", "승인", "발주"), f("Gw_Order", "End", default=True, name="보류"),
-           f("Task_Confirm", "Call_Print"), f("Call_Print", "Task_Note"), f("Task_Note", "End"),
-           f("Bnd_Delegation", "Task_Failed"), f("Task_Failed", "End")],
-    boundaries=[bnd("Bnd_Delegation", "Call_Print", "error", "위임 실패", error="DELEGATION_FAILED")],
+           f("Approve_Order", "Gw_Order"), f("Gw_Order", "Task_Confirm", "승인", "발주"),
+           f("Gw_Order", "Task_Failed", default=True, name="보류"),
+           f("Task_Confirm", "Manual_Print"), f("Manual_Print", "Task_Note"), f("Task_Note", "End"),
+           f("Task_Failed", "End")],
     extensions=[{"id": "wms", "version": ">=1,<2"}],
-    variables=[("출력준비", "bool", "Call_Print (PC 위임)", "FX-19에서 사람이 확인했나")],
-    cases=[Case("부족 2품목", {}, {"제안수": 2, "발주건수": 2, "출력준비": True}, {"Approve_Order": {"승인": True}},
-                "모의 WMS가 2품목을 안전재고 아래로 돌려준다. PC 위임 결과는 케이스가 적는다",
-                delegations={"Call_Print": {"확인됨": True}}),
-           Case("PC 입력이 실패", {}, {"제안수": 2}, {"Approve_Order": {"승인": True}},
-                "위임 결과를 **적어 두지 않으면** 그 자리에서 실패다 — 오류 경계가 받는 것을 본다",
-                delegations={})],
-    features=["서버 + PC로 **한 부분만 맡기기** (`bpm:call.delegate`)", "위임 실패를 오류 경계로 받기", "결재 반려 시 발주 안 함"],
-    lessons=["한 BPM 프로세스 안에 서버 일과 PC 일을 섞지 않는다 — 실행 위치는 BPM 프로세스 단위이고(ADR-0015), **PC가 필요한 한 부분은 위임으로 떼어 낸다** (ADR-0062).",
-             "위임 대상은 **패키지 안의 정의가 아니다** — 따로 올리고 따로 배포한 PC BPM 프로세스이다. 그래서 `requires.libs`에 들어가지 않고, 검사도 패키지 안에서 찾지 않는다 (B14).",
-             "**받을 값은 대상이 `outputs`로 선언해야 한다** (C1) — 선언하지 않으면 현장에서 값이 올라오지 않는다 (C4 `JobAck.outputs`가 선언한 것만 거른다). FX-19에 `확인됨`을 선언해 두었다.",
-             "**어느 PC인지 적지 않는다** — 비우면 Center가 고른다(배포된·활성인·대기열이 짧은 곳). 그림에 PC 이름을 적으면 배포가 정하는 자리를 그림이 가로챈다 (ADR-0049).",
-             "`bpm_process_id`에 적는 것은 **패키지 id**다 (C1 `id`) — 예제 파일 이름이 아니다. 밑줄은 들어갈 수 없어(`^[a-z0-9][a-z0-9._-]{0,99}$`) FX-19의 패키지 id는 `fx19-manual-task-pc`다. 처음에는 파일 이름을 그대로 적어 두었는데, Center가 `no_deployment`로 거절해서야 드러났다 — **글자로만 가리키는 자리는 시험이 돌려 봐야 안다**. 지금은 생성기가 짝을 대조한다.",
-             "전에는 이 자리를 **사내 확장 서비스 앱**(`center-jobs`, Center 작업 지시 API를 감싼 것)으로 메우고 있었다 — 계약에 위임 요소가 없던 때의 우회였고, ADR-0062가 그 공백을 닫았다.",
-             "맡기는 대상은 ERP 화면 입력(BX-17, UI 태스크)이었다 — UI 자동화 확장을 걷으며(ADR-0114) 사람이 PC 앞에서 하는 확인(FX-19)으로 바꿨다. 위임의 모양은 그대로다."],
+    variables=[("출력준비", "bool", "Task_Note", "사람이 발주서를 뽑았나")],
+    cases=[Case("부족 2품목", {}, {"제안수": 2, "발주건수": 2, "출력준비": True},
+                {"Approve_Order": {"승인": True}, "Manual_Print": {"decision": "approve"}},
+                "모의 WMS가 2품목을 안전재고 아래로 돌려준다"),
+           Case("보류", {}, {"제안수": 2}, {"Approve_Order": {"승인": False}},
+                "반려하면 발주서를 뽑지 않고 알림만 보낸다")],
+    features=["결재 뒤 **사람 확인**(`manualTask`)으로 기다리기", "결재 반려 시 발주 안 함", "타이머 시작"],
+    lessons=["사람이 손으로 해야 하는 일은 **확인 하나로** 기다린다 — 결재와 같은 창(C6)이고 칸이 없다.",
+             "**확인에는 담당자가 없다** (B12 경고) — 그 실행을 보는 사람 누구나 답한다.",
+             "전에는 이 자리를 **PC 위임**으로 메우고 있었다 — 서버 BPM 프로세스가 PC BPM 프로세스(FX-19)를 "
+             "`bpm:call.delegate`로 불러 사람이 그 PC 앞에서 확인했다(ADR-0062). PC 실행기를 걷으면서"
+             "(ADR-0144) 확인이 **Center 결재함**으로 왔고, 그러면 맡길 데가 없으므로 같은 그림 안의 확인이 되었다.",
+             "그보다 앞서는 **사내 확장 서비스 앱**(`center-jobs`, Center 작업 지시 API를 감싼 것)으로 메웠다 — "
+             "계약에 위임 요소가 없던 때의 우회였다."],
 ))
-

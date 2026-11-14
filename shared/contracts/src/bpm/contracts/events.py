@@ -8,7 +8,9 @@
 
 from __future__ import annotations
 
+import secrets
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from pydantic import Field
@@ -20,11 +22,22 @@ MAX_BATCH_LINES = 500
 MAX_BATCH_BYTES = 1024 * 1024
 
 RunId = Annotated[str, Field(pattern=r"^(run|test)_\d{8}_\d{6}_[0-9a-f]{6}$")]
-"""`run_<YYYYMMDD>_<HHMMSS>_<hex6>` (운영), `test_…` (Studio 시험 실행)."""
+"""`run_<YYYYMMDD>_<HHMMSS>_<hex6>` (운영), `test_…` (시험 실행)."""
+
+
+def new_run_id(*, now: datetime | None = None, test: bool = False) -> str:
+    """C3 `run_id` 하나 — **패턴과 같은 자리에 둔다**.
+
+    짓는 쪽이 둘이다: 실행하는 쪽(`core.run_state`가 이것을 쓴다)과 **Center**(시험 실행의 id를
+    정한다, C17·ADR-0146). 각자 지으면 한쪽이 패턴을 어겨 **실행 기록을 보낼 때야 드러난다** —
+    실제로 그랬다(`test_<hex8>`로 지었더니 엔진이 첫 줄에서 멈췄다).
+    """
+    at = (now or datetime.now(UTC)).strftime("%Y%m%d_%H%M%S")
+    return f"{'test' if test else 'run'}_{at}_{secrets.token_hex(3)}"
 
 #: 종류별 `data` 필수 키. 알려진 종류만 있고, **모르는 종류는 검사하지 않는다**.
 REQUIRED_DATA_KEYS: dict[str, frozenset[str]] = {
-    "run_started": frozenset({"bpm_process_id", "version", "run_location", "executor", "mode", "source"}),
+    "run_started": frozenset({"bpm_process_id", "version", "executor", "mode", "source"}),
     "node_state": frozenset({"state"}),
     "log": frozenset({"level", "message"}),
     "agent": frozenset({"step", "action"}),
@@ -48,23 +61,17 @@ KNOWN_KINDS = frozenset(REQUIRED_DATA_KEYS) | {"data"}
 """`data`(업무 값)는 실행 설정에서 명시적으로 켠 경우에만 보낸다 (README 원칙 6)."""
 
 # 아래는 모두 **열린 문자열**의 알려진 값일 뿐이다 (README 원칙 10).
-KNOWN_EXECUTORS = frozenset({"bot_ui", "server_runner", "studio"})
+KNOWN_EXECUTORS = frozenset({"server_runner", "studio"})
 KNOWN_MODES = frozenset({"autonomous", "deterministic"})
-#: 시작 출처 (C4 `source`와 같은 값). **`delegation`은 PC 위임으로 시작된 PC 실행이다**
-#: ([ADR-0062](../decisions/0062-pc-delegation.md) — 예약을 풀었다).
-KNOWN_SOURCES = frozenset(
-    {"job", "manual", "watch", "schedule", "message", "test", "delegation"}
-)
+#: 시작 출처 (C4 `source`와 같은 값).
+KNOWN_SOURCES = frozenset({"job", "manual", "watch", "schedule", "message", "test", "delegation"})
 KNOWN_NODE_STATES = frozenset({"started", "completed", "failed", "skipped", "replayed", "waiting"})
 KNOWN_RUN_STATUSES = frozenset({"success", "failed", "cancelled"})
-#: `run_waiting.waiting_for`. **`delegation`은 PC 위임을 기다리는 것**이고 짝 칸은
-#: `job_id`다 (ADR-0062 — 예약을 풀었다). **`external_task`는 긴 외부 작업**이고 짝 칸은 `task_id`다
+#: `run_waiting.waiting_for`. **`external_task`는 긴 외부 작업**이고 짝 칸은 `task_id`다
 #: (ADR-0103). C12 `waiting[]`과 **같은 말**이다.
 KNOWN_WAITING_FOR = frozenset({"approval", "message", "timer", "delegation", "external_task"})
 #: `run_resumed.reason` — **무엇이 깨웠나**. 회수(`withdraw`)도 답은 아니지만 이어 간 것이다
-#: (C6·ADR-0038). **`delegation`은 PC 위임의 결과가 돌아온 것**이다 (ADR-0062 — 실패·거절로
-#: 돌아와 오류 경계로 가는 길도 이어 간 것이다). 보내는 쪽이 이 밖의 값을 쓰면 화면이 모르는
-#: 글을 그대로 보인다.
+#: (C6·ADR-0038). 보내는 쪽이 이 밖의 값을 쓰면 화면이 모르는 글을 그대로 보인다.
 KNOWN_RESUME_REASONS = frozenset(
     {"answer", "message", "timer", "restart", "withdraw", "delegation", "external_task"}
 )
@@ -130,7 +137,6 @@ class RunInfo(ContractModel):
     status: str = "running"  # running|waiting|success|failed|cancelled (열린 문자열)
     bpm_process_id: str | None = None
     version: str | None = None
-    run_location: str | None = None
     executor: str | None = None
     mode: str | None = None
     source: str | None = None
@@ -148,15 +154,14 @@ class RunInfo(ContractModel):
     #: **보낸 쪽이 넣었을 때만** 있다 — 없으면 「확인만은 모른다」다(0이 아니다). 결재 수는
     #: `human_requests - confirmations`다.
     confirmations: int | None = None
-    #: **이 PC 실행을 맡긴 서버 실행** (C3 `run_started.parent_run_id`, ADR-0062). PC 위임으로
-    #: 시작된 실행에만 있다 — CON-01이 이것으로 서버 실행과 오간다. **보낸 쪽이 적은 값**이라
-    #: Center는 `run_started`에서 읽어 요약에 담아 둔다 (줄을 다시 읽지 않는다).
+    #: **이 실행을 맡긴 실행** (C3 `run_started.parent_run_id`, ADR-0082). 맡아서 시작된
+    #: 실행에만 있다 — CON-01이 이것으로 둘을 오간다. **보낸 쪽이 적는 값**이다.
     parent_run_id: str | None = None
-    #: 어느 PC가 보냈나 (CON-01 「PC 실행기」 필터·열). **Center가 읽을 때 채운다** —
+    #: 어느 실행기가 보냈나 (CON-01 「실행기」 필터·열). **Center가 읽을 때 채운다** —
     #: 보내는 쪽은 적지 않는다(신원은 키다, C4). Studio·토큰이 보낸 기록에는 없다.
-    bot_ui_id: str | None = None
+    runner_id: str | None = None
     #: **업무 자리** (C16, ADR-0125 §4) — Center가 읽을 때 그 실행의 작업에서 붙인다. `run_started`에는
-    #: 칸이 없다. 작업 없이 시작한 실행(Studio·PC 실행기 수동)에는 없다.
+    #: 칸이 없다. 작업 없이 시작한 실행(Studio 시험 실행)에는 없다.
     company: str | None = None
     department: str | None = None
     staff: str | None = None

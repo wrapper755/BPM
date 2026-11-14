@@ -18,7 +18,6 @@ export interface PackageInfo {
   name?: string | null;
   place?: Place | null;
   preflight?: PreflightSummary;
-  run_location?: string | null;
   signed_at?: string | null;
   signed_by?: string | null;
   status: string;
@@ -29,8 +28,6 @@ export interface PackageInfo {
 }
 /**
  * 패키지 매니페스트 (C1 최상위).
- *
- * `kind="bpm_process"`이고 `run_location`이 없으면 **`server`로 채운다** (서버 우선, 호환 규칙).
  */
 export interface Manifest {
   built: Built;
@@ -47,7 +44,6 @@ export interface Manifest {
   process_id?: string | null;
   provides?: Provides | null;
   requires: Requires;
-  run_location?: ("server" | "pc") | null;
   /**
    * 이 계약의 schema 번호
    */
@@ -67,11 +63,10 @@ export interface Built {
   [k: string]: unknown;
 }
 /**
- * 사람 개입 종류. 서버 실행 가능 여부(R2) 판정에 쓴다.
+ * 사람 개입 종류 — 결재와 확인 (C6). 둘 다 Center 결재함에서 답한다 (ADR-0144).
  */
 export interface HumanNeeds {
   approval_center?: boolean;
-  approval_field?: boolean;
   confirmation?: boolean;
   [k: string]: unknown;
 }
@@ -113,7 +108,6 @@ export interface ProvidedProcess {
   name?: string | null;
   process_id: string;
   reads?: string[];
-  run_location?: ("server" | "pc") | null;
   writes?: string[];
   [k: string]: unknown;
 }
@@ -163,12 +157,11 @@ export interface ServiceAppNeed {
   [k: string]: unknown;
 }
 /**
- * 확장이 기여한 태스크 종류와, 그 확장 정의에 적힌 실행 위치. R2 판정에 쓴다.
+ * 확장이 기여한 태스크 종류 (C13). 배포 때 그 확장이 깔려 있나를 Center가 본다.
  */
 export interface TaskTypeNeed {
   extension: string;
   id: string;
-  run_locations?: string[] | null;
   [k: string]: unknown;
 }
 /**

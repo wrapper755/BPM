@@ -796,13 +796,6 @@
         "label": {
           "title": "Label",
           "type": "string"
-        },
-        "run_locations": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Run Locations",
-          "type": "array"
         }
       },
       "required": [

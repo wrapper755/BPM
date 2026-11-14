@@ -29,10 +29,9 @@ import {
   sortGroups,
   statusFilterOf,
   type BotRow,
-  deployedPcs,
+  deployedRunners,
   elapsed,
   percent,
-  placeOf,
   queueReason,
   readinessLabel,
   resumes,
@@ -116,7 +115,7 @@ describe("summarize", () => {
     const one = summarize([
       run({ confirmations: 2 }),
       run({ confirmations: 0 }),
-      run(), // 옛 PC 실행기 — 그 칸이 없다
+      run(), // 옛 실행기 — 그 칸이 없다
     ]).get(`${BOT}@1.0.0`)!;
     expect([one.sample, one.confirmations, one.confirm_sample]).toEqual([3, 2, 2]);
     expect(percent(one.confirmations, one.confirm_sample)).toBe("100%");
@@ -139,34 +138,33 @@ describe("summarize", () => {
   });
 });
 
-describe("deployedPcs", () => {
+describe("deployedRunners", () => {
   function deployment(over: Partial<DeploymentInfo> = {}): DeploymentInfo {
     return {
       deployment_id: `dep_${Math.random()}`,
       bpm_process_id: BOT,
       version: "1.0.0",
-      target: { type: "bot_ui", id: "bui_1111" },
+      target: { type: "server_runner", id: "srv_1111" },
       ...over,
     } as DeploymentInfo;
   }
 
-  it("같은 PC에 두 번 걸려 있으면 **PC 수보다 건수가 크다**", () => {
-    const found = deployedPcs([deployment(), deployment()], BOT, "1.0.0");
-    expect(found).toEqual({ pcs: 1, deployments: 2 });
+  it("같은 실행기에 두 번 걸려 있으면 **실행기 수보다 건수가 크다**", () => {
+    const found = deployedRunners([deployment(), deployment()], BOT, "1.0.0");
+    expect(found).toEqual({ runners: 1, deployments: 2 });
   });
 
-  it("다른 판·다른 프로세스·서버 대상은 세지 않는다 (열 이름이 「배포된 PC 실행기」다)", () => {
-    const found = deployedPcs(
+  it("다른 판·다른 프로세스는 세지 않는다", () => {
+    const found = deployedRunners(
       [
-        deployment({ target: { type: "bot_ui", id: "bui_2222" } }),
+        deployment(),
         deployment({ version: "2.0.0" }),
         deployment({ bpm_process_id: "other" }),
-        deployment({ target: { type: "server_runner", id: "*" } }),
       ],
       BOT,
       "1.0.0",
     );
-    expect(found).toEqual({ pcs: 1, deployments: 1 });
+    expect(found).toEqual({ runners: 1, deployments: 1 });
   });
 });
 
@@ -242,22 +240,22 @@ describe("runnerStatus", () => {
 
 describe("serverDeployments", () => {
   it("id를 주지 않으면 **서버 배포 전부**다 (대기열은 어느 실행기에도 묶이지 않았다)", () => {
-    // PC 봉투가 섞이면 같은 BPM 프로세스의 PC 상한을 서버 대기열의 「BPM 프로세스별 상한 n」으로 보인다.
+    // 모르는 종류의 봉투가 섞이면 그 상한을 서버 대기열의 「BPM 프로세스별 상한 n」으로 보인다.
     const found = serverDeployments([
       serverDeployment(),
       serverDeployment({ deployment_id: "dep_other", target: { type: "server_runner", id: "srv_99999999" } }),
-      serverDeployment({ deployment_id: "dep_pc", max_concurrency: 1, target: { type: "bot_ui", id: "bui_1" } }),
+      serverDeployment({ deployment_id: "dep_x", max_concurrency: 1, target: { type: "모르는_종류", id: "x_1" } }),
     ]).map((one) => one.deployment_id);
     expect(found).toEqual(["dep_1", "dep_other"]);
   });
 
-  it("이 실행기 것과 전체(`*`) 것을 함께, PC 배포는 빼고", () => {
+  it("이 실행기 것과 전체(`*`) 것을 함께, 모르는 종류는 빼고", () => {
     const found = serverDeployments(
       [
         serverDeployment(),
         serverDeployment({ deployment_id: "dep_any", target: { type: "server_runner", id: "*" } }),
         serverDeployment({ deployment_id: "dep_other", target: { type: "server_runner", id: "srv_99999999" } }),
-        serverDeployment({ deployment_id: "dep_pc", target: { type: "bot_ui", id: RUNNER } }),
+        serverDeployment({ deployment_id: "dep_x", target: { type: "모르는_종류", id: RUNNER } }),
       ],
       RUNNER,
     ).map((one) => one.deployment_id);
@@ -456,15 +454,6 @@ describe("resumes", () => {
   });
 });
 
-describe("placeOf", () => {
-  it("PC라고 적은 것만 PC — 생략은 서버다 (C1 서버 우선)", () => {
-    expect(placeOf("pc")).toBe("pc");
-    expect(placeOf("server")).toBe("server");
-    expect(placeOf(null)).toBe("server");
-    expect(placeOf(undefined)).toBe("server");
-  });
-});
-
 // ─────────────────────────── CON-02 「일정」·CON-01 「외부 작업」 ───────────────────────────
 
 describe("CON-02 일정 (C5 §일정)", () => {
@@ -476,11 +465,10 @@ describe("CON-02 일정 (C5 §일정)", () => {
     timezone: "Asia/Seoul",
     last_missed: 0,
   } as ScheduleInfo;
-  const pc = { ...server, bpm_process_id: "fin.tax", target_type: "bot_ui", target_id: "pc_1" } as ScheduleInfo;
+  const other = { ...server, bpm_process_id: "fin.tax", target_type: "something" } as ScheduleInfo;
 
-  it("탭은 대상 종류로 가른다", () => {
-    expect(schedulesOf([server, pc], "server")).toEqual([server]);
-    expect(schedulesOf([server, pc], "pc")).toEqual([pc]);
+  it("대상이 실행기인 것만 본다", () => {
+    expect(schedulesOf([server, other])).toEqual([server]);
   });
 
   it("결과는 작업 상태, 거부는 코드, 읽지 못한 식은 다시 올리라고 한다", () => {
@@ -523,7 +511,7 @@ function version(id: string, ver: string, over: Partial<BotRow> = {}): BotRow {
     run_location: null,
     blocked: 0,
     blocked_codes: [],
-    pcs: 0,
+    runners: 0,
     deployments: 0,
     missing: [],
     ...NO_RUNS,

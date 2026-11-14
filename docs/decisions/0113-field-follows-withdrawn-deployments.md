@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · PC 실행기 쪽은 걷었다 — 서버 실행기의 `reconcile`만 남는다 ([ADR-0144](0144-remove-the-pc-runner.md)) |
 | 날짜 | 2026-10-31 |
 | 관련 | 계약 C2(§검증 규칙 V2·V5), C4(`deployments`·`readiness`), C5(§패키지 지원 종료), C12(§설치), [ADR-0007](0007-client-initiated-communication.md), [ADR-0013](0013-api-keys.md), [ADR-0014](0014-one-bot-per-pc.md), [ADR-0046](0046-no-wildcard-pc-deployment.md), [ADR-0063](0063-stopping-a-running-server-run.md), 09-gaps §3-22·§3-23 |
 

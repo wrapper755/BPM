@@ -10,7 +10,6 @@
   <bpmn:process id="Proc_bx10_vendor_onboarding_review" name="신규 거래처 등록 심사" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "ext-credit",

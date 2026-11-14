@@ -71,9 +71,9 @@ def key_id_for(public_key: bytes) -> str:
 
 
 class DeploymentTarget(ContractModel):
-    """`{type: "bot_ui" | "server_runner", id}`. 서버 배포는 `id`에 `"*"`를 쓸 수 있다."""
+    """`{type: "server_runner", id}`. `id`에 `"*"`를 쓸 수 있다 (ADR-0144)."""
 
-    type: str  # 열린 문자열 (알려진 값: bot_ui, server_runner)
+    type: str  # 열린 문자열 (알려진 값: server_runner)
     id: str
 
     def matches(self, *, kind: str, id: str) -> bool:
@@ -267,7 +267,7 @@ def verify_time(envelope: Envelope, *, now: str, check_not_before: bool) -> list
 def verify_target(envelope: Envelope, *, runner_kind: str, runner_id: str) -> list[Violation]:
     """V6 — 이 배포가 나에게 온 것인가 (실행하는 쪽만).
 
-    `runner_kind`는 `bot_ui` 또는 `server_runner`, `runner_id`는 자기 id.
+    `runner_kind`는 `server_runner`, `runner_id`는 자기 id.
     서버 실행기 대상의 `"*"`는 모든 서버 실행기와 맞는다.
     """
     if envelope.kind != "deployment":

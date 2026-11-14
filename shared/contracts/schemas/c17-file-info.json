@@ -1,0 +1,37 @@
+{
+  "$id": "urn:bpm:contracts:c17-file-info",
+  "additionalProperties": true,
+  "description": "작업 폴더 안 파일 하나 (탐색기가 그린다).",
+  "properties": {
+    "path": {
+      "title": "Path",
+      "type": "string"
+    },
+    "revision": {
+      "title": "Revision",
+      "type": "string"
+    },
+    "size_bytes": {
+      "minimum": 0,
+      "title": "Size Bytes",
+      "type": "integer"
+    },
+    "updated_at": {
+      "title": "Updated At",
+      "type": "string"
+    },
+    "updated_by": {
+      "title": "Updated By",
+      "type": "string"
+    }
+  },
+  "required": [
+    "path",
+    "size_bytes",
+    "revision",
+    "updated_at",
+    "updated_by"
+  ],
+  "title": "FileInfo",
+  "type": "object"
+}

@@ -131,7 +131,7 @@ def builtin_tool_descriptions() -> dict[str, str]:
 
 
 class AiTaskEditor(QWidget):
-    """AI 태스크 하나. `run_location`이 `server`면 웹·데스크톱을 끈다."""
+    """AI 태스크 하나. **웹·데스크톱은 늘 꺼져 있다** (돌릴 자리가 없다 — ADR-0114·0144)."""
 
     changed = Signal()
 
@@ -139,7 +139,6 @@ class AiTaskEditor(QWidget):
         self,
         parent: QWidget | None = None,
         *,
-        run_location: str | None = None,
         names: QStringListModel | None = None,
         specs: ReplaySpecs | None = None,
         node_id: str = "",
@@ -147,7 +146,6 @@ class AiTaskEditor(QWidget):
         loop_item: str = "",
     ) -> None:
         super().__init__(parent)
-        self.run_location = run_location
         #: 목표 미리보기의 후보 — 「변수」 탭의 고를 거리 (같은 모델을 본다).
         self.names = names
         #: 이 태스크의 명세를 찾는 자리 (`None`이면 열린 BPM 프로세스가 없다).
@@ -494,7 +492,7 @@ class AiTaskEditor(QWidget):
         domain = self.domain()
         if not domain:
             errors.append(f"대상 환경을 모릅니다: {self._loaded.get('domain')} — 하나를 고르세요.")
-        elif domain in PC_ONLY_DOMAINS and self.run_location == "server":
+        elif domain in PC_ONLY_DOMAINS:
             errors.append(SERVER_NO_SCREEN)
         if not self.goal_box.toPlainText().strip():
             warnings.append("목표가 비어 있습니다.")
@@ -763,14 +761,11 @@ class AiTaskEditor(QWidget):
         self._refresh_goal_preview()
         self._show_spec()
         domain = self.domain()
-        on_server = self.run_location == "server"
         for value in PC_ONLY_DOMAINS:
             one = self.domain_picks[value]
-            # 서버에서는 끈다 — **이미 골라 둔 것은 지우지 않는다** (결재의 「현장」과 같은 결).
-            one.setEnabled(not on_server or one.isChecked())
-        notes = []
-        if on_server:
-            notes.append(SERVER_NO_SCREEN)
+            # **늘 끈다** — 돌릴 자리가 없다. 이미 골라 둔 것은 지우지 않는다 (옛 그림이 있다).
+            one.setEnabled(one.isChecked())
+        notes = [SERVER_NO_SCREEN]
         if domain in PC_ONLY_DOMAINS:
             notes.append(NO_SCREEN_ENVIRONMENT)
         self.domain_note.setText(" ".join(notes))

@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 (2026-10-25) |
+| 상태 | 대체됨([ADR-0143](0143-design-happens-in-the-console.md)) — 원래 수락 (2026-10-25). 설계자는 콘솔 로그인으로 들어온다 (Studio용 키가 없다) |
 | 날짜 | 2026-10-25 |
 | 관련 | [ADR-0092](0092-keys-are-issued-and-delivered-by-center.md) §2를 대체한다, [ADR-0090](0090-center-admin-accounts.md)(계정은 콘솔 관리자용으로만 남는다), [ADR-0077](0077-tool-ui.md), 계약 C4(§등록 요청과 승인)·C5·C7, 화면 STU-10·CON-11·CON-14 |
 

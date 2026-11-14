@@ -10,7 +10,6 @@
   <bpmn:process id="Proc_bx31_request_triage" name="업무 요청 접수·분배" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "ticketing",

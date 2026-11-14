@@ -18,7 +18,7 @@ export interface DeploymentClaim {
   [k: string]: unknown;
 }
 /**
- * `{type: "bot_ui" | "server_runner", id}`. 서버 배포는 `id`에 `"*"`를 쓸 수 있다.
+ * `{type: "server_runner", id}`. `id`에 `"*"`를 쓸 수 있다 (ADR-0144).
  */
 export interface DeploymentTarget {
   id: string;

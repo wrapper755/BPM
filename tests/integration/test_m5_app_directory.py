@@ -27,7 +27,6 @@ from center_admin import register_extension
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
 
-from bpm.bot_ui.center_client import CenterClient, CenterProblem, Unreachable
 from bpm.center import signer as center_signer
 from bpm.center.app import create_app
 from bpm.center.settings import Settings
@@ -44,6 +43,7 @@ from bpm.core.app_directory import (
     to_json_dict,
 )
 from bpm.core.services import OpCall
+from bpm.server_runner.center_client import CenterClient, CenterProblem, Unreachable
 
 TOKEN = "t-admin"
 ADMIN = {"Authorization": f"Bearer {TOKEN}"}
@@ -205,7 +205,6 @@ def manifest(found: dict[str, Any] | None = None, **over: Any) -> Manifest:
         "name": "세금계산서 처리",
         "entry": "process/main.bpmn",
         "process_id": "Proc_main",
-        "run_location": "server",
         "requires": requires,
         "human": {},
         "built": {"by": "studio", "at": AT, "core": "0.1.0", "spec_version": 1},
@@ -327,26 +326,6 @@ def test_a_builtin_extension_is_not_checked_here(client: TestClient) -> None:
 # ─────────────────────────── PC 실행기가 받아 온다 (C7) ───────────────────────────
 
 
-def test_bot_ui_fetches_and_writes_what_the_bot_uses(
-    client: TestClient, ocr: tuple[int, type[Ocr]], tmp_path: Path
-) -> None:
-    port, _ = ocr
-    found = definition(port)
-    assert register(client, found).status_code == 201
-
-    made = DirectoryCache.using(
-        tmp_path / "data", CenterClient(base_url="http://center", api_key=TOKEN, client=client)
-    )
-    path = made.write_for(manifest(found), path=tmp_path / "run.services.json", keys=public_keys(client))
-
-    assert path is not None
-    body = json.loads(path.read_text(encoding="utf-8"))
-    assert [one["definition"]["id"] for one in body["extensions"]] == [APP]
-    assert body["keys"], "Admin 공개키가 함께 간다 (실행기가 다시 검증한다)"
-    # 파일 그대로 실행기가 읽어 검증한다.
-    assert set(read_directory(path).externals) == {APP}
-
-
 def test_an_unreachable_center_uses_what_we_held(
     client: TestClient, ocr: tuple[int, type[Ocr]], tmp_path: Path
 ) -> None:
@@ -393,30 +372,6 @@ def test_a_revoked_definition_is_dropped(
     after.refresh(externals=[APP])
     assert after.cached()["extensions"] == []
     assert "철회됐을 수 있습니다" in " ".join(after.problems)
-
-
-def test_only_what_the_manifest_asks_for_goes_in_the_file(
-    client: TestClient, ocr: tuple[int, type[Ocr]], tmp_path: Path
-) -> None:
-    """**필요한 것만 준다** — 다른 BPM 프로세스가 쓰는 확장의 정의는 담지 않는다."""
-    port, _ = ocr
-    found = definition(port)
-    other = definition(port, id="ext-credit", name="외부 신용")
-    for one in (found, other):
-        assert register(client, one).status_code == 201
-
-    made = DirectoryCache.using(
-        tmp_path / "data", CenterClient(base_url="http://center", api_key=TOKEN, client=client)
-    )
-    path = made.write_for(manifest(found), path=tmp_path / "run.services.json", keys=public_keys(client))
-    assert path is not None
-    body = json.loads(path.read_text(encoding="utf-8"))
-    assert [one["definition"]["id"] for one in body["extensions"]] == [APP]
-
-
-def test_a_bot_that_calls_nothing_gets_no_file(tmp_path: Path) -> None:
-    made = DirectoryCache(data_dir=tmp_path / "data")
-    assert made.write_for(manifest(), path=tmp_path / "run.services.json", keys=[]) is None
 
 
 def test_what_the_manifest_asks_for(ocr: tuple[int, type[Ocr]]) -> None:
@@ -531,99 +486,6 @@ def services_file(path: Path, client: TestClient, key: Any, found: dict[str, Any
         encoding="utf-8",
     )
     return path
-
-
-def test_the_runner_calls_the_external_app_through_the_adapter_consumer(
-    ocr: tuple[int, type[Ocr]], tmp_path: Path
-) -> None:
-    """한 바퀴 — 패키지 → 엔진 → **Center(C15)** → 어댑터 일꾼 → **진짜 외부 앱** → 변수 → C3 기록.
-
-    실행하는 쪽(Studio 키, `test_…` 실행)은 외부 앱의 주소도 키도 모른다. 키는 **어댑터 일꾼의
-    설정**(`BPM_ADAPTER__EXT__EXT_OCR__KEY`)에만 있고, 외부 앱이 받은 `Authorization`이 그것이다.
-    """
-    import httpx  # noqa: PLC0415
-    from consumers import enroll, serve, start  # noqa: PLC0415
-
-    from bpm.adapter_consumer.adapter import ext_env  # noqa: PLC0415
-    from bpm.adapter_consumer.main import service_of  # noqa: PLC0415
-    from bpm.bot_ui.runner_main import Runner  # noqa: PLC0415
-    from bpm.core.engine import State  # noqa: PLC0415
-    from bpm.core.packages import InstalledBot  # noqa: PLC0415
-    from bpm.core.run_env import make_env  # noqa: PLC0415
-    from bpm.core.run_log import RunLog, log_path  # noqa: PLC0415
-    from bpm.core.services import CenterServiceCaller  # noqa: PLC0415
-
-    port, echo = ocr
-    found = definition(port)
-    store = Store(tmp_path / "center.sqlite3")
-    app = create_app(
-        Settings(db_path=tmp_path / "center.sqlite3", package_dir=tmp_path / "pkg", admin_token=TOKEN), store=store
-    )
-    url, server, thread = serve(app)
-    try:
-        with httpx.Client(base_url=url, timeout=30) as http:
-            tokens = enroll(http, topics=[APP], folder=tmp_path / "adapter")
-            studio = http.post("/api/v1/center-keys", json={"name": "설계자", "type": "studio"}, headers=ADMIN)
-            studio_key = str(studio.json()["key"])
-        # 어댑터 일꾼이 **제 정의를 들고 있다가** 뜰 때 올린다 (ADR-0122) — `start()`의 `publish`가 올린다.
-        service = service_of(
-            found, environ={ext_env(APP, "KEY"): "ocr-secret-1", "BPM_ADAPTER__ALLOW_PRIVATE_NETWORK": "1"}
-        )
-        _, stop = start([service], center_url=url, tokens=tokens)
-        try:
-            package = InstalledBot.read(package_at(tmp_path / "bot", found))
-            data_dir = tmp_path / "data"
-            runner = Runner(
-                run_id="test_20261008_090000_a1b2c3",
-                package=package,
-                data_dir=data_dir,
-                inputs={"파일": "https://files.example.com/a.pdf"},
-                env=make_env(
-                    package,
-                    output_dir=tmp_path / "out",
-                    readable=(),
-                    llm_model="",
-                    services=CenterServiceCaller(base_url=url, token=studio_key, caller_type="studio"),
-                ),
-            )
-            assert runner.drive(deadline_s=30) is State.DONE
-        finally:
-            stop.set()
-    finally:
-        server.should_exit = True
-        thread.join(timeout=5)
-    assert runner.run is not None
-    assert runner.run.variables["사업자번호"] == "123-45-67890"
-    assert echo.seen["headers"]["authorization"] == "Bearer ocr-secret-1", "키는 어댑터 일꾼의 설정에서 왔다"
-
-    calls = [one for one in RunLog.read(log_path(data_dir, runner.run_id)) if one.kind == "service_call"]
-    assert len(calls) == 1
-    assert calls[0].data["app_id"] == "ext-ocr"
-    assert calls[0].data["key_ref"] == "", "키가 없다 — 참조 이름도 기록에 가지 않는다 (ADR-0102)"
-    assert "123-45-67890" not in json.dumps(calls[0].data, ensure_ascii=False), "업무 값은 기록에 없다"
-
-
-def test_the_runner_refuses_to_start_when_the_definition_changed(
-    client: TestClient, key: Any, ocr: tuple[int, type[Ocr]], tmp_path: Path
-) -> None:
-    """**실행 전에** 거절한다 — 중간에 알면 이미 한 일을 되돌릴 수 없다 (C1)."""
-    from bpm.bot_ui.runner_main import app_directory, refuse_unusable
-    from bpm.core.engine import EngineError
-    from bpm.core.packages import InstalledBot
-
-    port, _ = ocr
-    approved = definition(port)
-    package = InstalledBot.read(package_at(tmp_path / "bot", approved))
-    # Center에는 새 판이 올라와 있다 — 승인받은 그 정의가 아니다.
-    newer = definition(port, version="1.1.0")
-    path = services_file(tmp_path / "run.services.json", client, key, newer)
-
-    with pytest.raises(EngineError) as caught:
-        refuse_unusable(package, app_directory(path))
-    assert caught.value.code == "extension_definition_unusable"
-
-
-# ─────────────────────────── 외부 확장 주소·키 — Center에 없다 (ADR-0102) ───────────────────────────
 
 
 @pytest.mark.parametrize(

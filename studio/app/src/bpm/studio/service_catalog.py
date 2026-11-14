@@ -122,16 +122,15 @@ class CallTarget:
     """Call Activity가 부를 것 하나 (STU-04 「호출」).
 
     셋 다 같은 모양이다 — 이 패키지의 정의·설치된 공유 정의(`id` = BPMN process id)와
-    위임으로 부르는 BPM 프로세스(`id` = 패키지 id, C14 `delegate.bpm_process_id`).
+    맡겨서 부르는 BPM 프로세스(`id` = 패키지 id, C14 `delegate.bpm_process_id`).
     """
 
     id: str
     name: str = ""
     #: 어디서 왔나 — 화면에 그대로 보인다 (「이 패키지」·「공유 (`<id>@<판>`)」).
     where: str = ""
-    #: BPM 프로세스의 실행 위치 (C1). **판마다 다르면 `None`** — 모른다.
-    run_location: str | None = None
-    #: BPM 프로세스의 진입 process id (C1) — 위임 호출의 `calledElement`에 적는다 (C14 — 읽는 사람에게 뜻이 있다).
+    #: BPM 프로세스의 진입 process id (C1) — 맡기는 호출의 `calledElement`에 적는다 (C14 — 읽는 사람에게 뜻이 있다).
+    #: **판마다 다르면 `None`** — 모른다.
     process_id: str | None = None
     inputs: tuple[CallInput, ...] = ()
     outputs: tuple[str, ...] = ()
@@ -149,7 +148,6 @@ def target_of(process: BpmnProcess, where: str) -> CallTarget:
         id=process.id,
         name=process.name or "",
         where=where,
-        run_location=process.info.run_location,
         process_id=process.id,
         inputs=tuple(
             CallInput(one.name, one.required, one.has_default, not one.from_caller) for one in process.info.inputs
@@ -159,16 +157,15 @@ def target_of(process: BpmnProcess, where: str) -> CallTarget:
 
 
 #: 위임 대상의 실행 위치 표기 (STU-04 「호출」).
-RUN_LOCATION_LABEL = {"server": "서버", "pc": "PC"}
 
 
 def delegation_targets(packages: Iterable[PackageInfo]) -> dict[str, CallTarget]:
-    """BPM 프로세스 패키지 목록 → 위임 대상 (C1 매니페스트, ADR-0062).
+    """BPM 프로세스 패키지 목록 → 맡길 대상 (C1 매니페스트, ADR-0082).
 
     **판이 여럿이면 합친다** (`declared_outputs`와 같은 결 — 그림이 판을 비우면 「배포된 판」이고
     어느 판일지 여기서는 모른다). 출력은 어느 판이든 선언한 것, 필수 입력은 **어느 판이든 필수**인
     것(경고만 한다), Center가 넣는 입력은 **모든 판이 그렇게 선언한** 것(막는 쪽이라 좁게 잡는다).
-    실행 위치·`process_id`가 판마다 다르면 모른다(`None`). 매니페스트 없는 줄은 건너뛴다.
+    `process_id`가 판마다 다르면 모른다(`None`). 매니페스트 없는 줄은 건너뛴다.
     """
     found: dict[str, list[PackageInfo]] = {}
     for one in packages:
@@ -177,7 +174,6 @@ def delegation_targets(packages: Iterable[PackageInfo]) -> dict[str, CallTarget]
     out: dict[str, CallTarget] = {}
     for bot, rows in sorted(found.items()):
         manifests = [row.manifest for row in rows if row.manifest is not None]
-        locations = {m.run_location for m in manifests}
         process_ids = {m.process_id for m in manifests}
         names: dict[str, list[ManifestInput]] = {}
         for m in manifests:
@@ -193,12 +189,10 @@ def delegation_targets(packages: Iterable[PackageInfo]) -> dict[str, CallTarget]
             )
             for name, decls in names.items()
         )
-        location = next(iter(locations)) if len(locations) == 1 else None
         out[bot] = CallTarget(
             id=bot,
             name=next((row.name for row in reversed(rows) if row.name), ""),
-            where=RUN_LOCATION_LABEL.get(location or "", ""),
-            run_location=location,
+            where="",
             process_id=next(iter(process_ids)) if len(process_ids) == 1 else None,
             inputs=inputs,
             outputs=tuple(sorted({name for m in manifests for name in m.outputs})),
@@ -213,7 +207,7 @@ class Catalog:
     apps: tuple[App, ...] = ()
     #: 받지 못한 것들 (화면이 그대로 보인다).
     problems: tuple[str, ...] = ()
-    #: **PC 위임으로 부를 수 있는 BPM 프로세스**의 `bpm_process_id` → 그 패키지가 선언한 `outputs`
+    #: **맡겨서 부를 수 있는 BPM 프로세스**의 `bpm_process_id` → 그 패키지가 선언한 `outputs`
     #: (C1 → C14 B14, ADR-0062). 실행 전 검사가 「그 BPM 프로세스가 돌려주지 않는 값을 받는다」를
     #: 그림에서 보려면 **남의 패키지 매니페스트**가 필요하고, 그것을 아는 것은 Center뿐이다.
     #: **못 받으면 비어 있고**, 그러면 B14가 그 대조를 건너뛴다 (모르는 것으로 막지 않는다).
@@ -503,7 +497,6 @@ __all__ = [
     "KIND_BPM_PROCESS",
     "KIND_C11",
     "KIND_EXTERNAL",
-    "RUN_LOCATION_LABEL",
     "declared_outputs",
     "delegation_targets",
     "target_of",

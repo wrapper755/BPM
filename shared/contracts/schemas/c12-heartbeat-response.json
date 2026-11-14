@@ -105,20 +105,66 @@
       "title": "ApprovalDispatch",
       "type": "object"
     },
-    "DelegationResult": {
+    "BuildDispatch": {
       "additionalProperties": true,
-      "description": "끝난 PC 위임 하나 (C12 §PC 위임) — 하트비트 응답으로 내려간다.\n\n**`outputs`가 업무 값이다** — 원칙 6의 명시한 예외이고, 올라오는 것은 그 BPM 프로세스가 **선언한\n`outputs`만**이다 (C1). `state`가 `finished`가 아니면 실행기가 오류 경계로 넘긴다.",
+      "description": "내려온 짓기 지시 하나 (C12 `builds[]`). 검사와 같은 결 — **작업이 아니다**.",
       "properties": {
-        "job_id": {
-          "title": "Job Id",
+        "build_id": {
+          "title": "Build Id",
           "type": "string"
         },
-        "outputs": {
-          "additionalProperties": true,
-          "title": "Outputs",
-          "type": "object"
+        "kind": {
+          "default": "bpm_process",
+          "title": "Kind",
+          "type": "string"
         },
-        "pc_run_id": {
+        "revision": {
+          "title": "Revision",
+          "type": "string"
+        },
+        "workspace_id": {
+          "title": "Workspace Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "build_id",
+        "workspace_id",
+        "revision"
+      ],
+      "title": "BuildDispatch",
+      "type": "object"
+    },
+    "CheckDispatch": {
+      "additionalProperties": true,
+      "description": "내려온 검사 지시 하나 (C12 `checks[]`). **작업이 아니다** — 실행 id도 C3 사건도 없다.",
+      "properties": {
+        "check_id": {
+          "title": "Check Id",
+          "type": "string"
+        },
+        "revision": {
+          "title": "Revision",
+          "type": "string"
+        },
+        "workspace_id": {
+          "title": "Workspace Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "check_id",
+        "workspace_id",
+        "revision"
+      ],
+      "title": "CheckDispatch",
+      "type": "object"
+    },
+    "DelegationResult": {
+      "additionalProperties": true,
+      "description": "끝난 맡기기 하나 (C12 §맡기기) — 하트비트 응답으로 내려간다.\n\n**`outputs`가 업무 값이다** — 원칙 6의 명시한 예외이고, 올라오는 것은 그 BPM 프로세스가 **선언한\n`outputs`만**이다 (C1). `state`가 `finished`가 아니면 실행기가 오류 경계로 넘긴다.",
+      "properties": {
+        "child_run_id": {
           "anyOf": [
             {
               "type": "string"
@@ -128,7 +174,16 @@
             }
           ],
           "default": null,
-          "title": "Pc Run Id"
+          "title": "Child Run Id"
+        },
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "outputs": {
+          "additionalProperties": true,
+          "title": "Outputs",
+          "type": "object"
         },
         "reason": {
           "anyOf": [
@@ -218,6 +273,17 @@
         "requested_by": {
           "title": "Requested By",
           "type": "string"
+        },
+        "test": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrialTarget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "version": {
           "anyOf": [
@@ -386,6 +452,48 @@
       ],
       "title": "Sealed",
       "type": "object"
+    },
+    "TrialTarget": {
+      "additionalProperties": true,
+      "description": "시험 작업이 돌릴 것 — C4 `JobDispatch.test`에 실려 내려간다.\n\n**이 칸이 있으면 시험 작업이다** (ADR-0146). 배포가 없으므로 `bpm_process_id`·`version`은\n작업공간이 말해 주는 값이고, 실행기는 `revision`으로 묶음을 집어 간다.",
+      "properties": {
+        "case": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Case"
+        },
+        "mode": {
+          "default": "autonomous",
+          "title": "Mode",
+          "type": "string"
+        },
+        "revision": {
+          "title": "Revision",
+          "type": "string"
+        },
+        "run_id": {
+          "default": "",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "workspace_id": {
+          "title": "Workspace Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "workspace_id",
+        "revision"
+      ],
+      "title": "TrialTarget",
+      "type": "object"
     }
   },
   "$id": "urn:bpm:contracts:c12-heartbeat-response",
@@ -414,11 +522,25 @@
       "title": "Approvals",
       "type": "array"
     },
+    "builds": {
+      "items": {
+        "$ref": "#/$defs/BuildDispatch"
+      },
+      "title": "Builds",
+      "type": "array"
+    },
     "cancel_jobs": {
       "items": {
         "type": "string"
       },
       "title": "Cancel Jobs",
+      "type": "array"
+    },
+    "checks": {
+      "items": {
+        "$ref": "#/$defs/CheckDispatch"
+      },
+      "title": "Checks",
       "type": "array"
     },
     "delegations": {

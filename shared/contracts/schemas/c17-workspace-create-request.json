@@ -1,0 +1,113 @@
+{
+  "$defs": {
+    "Place": {
+      "additionalProperties": true,
+      "description": "업무 자리 — BPM 프로세스(패키지 id)마다 하나. **회사는 적지 않는다** — 패키지의 회사다.",
+      "properties": {
+        "department": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Department"
+        },
+        "scope": {
+          "title": "Scope",
+          "type": "string"
+        },
+        "staff": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Staff"
+        }
+      },
+      "required": [
+        "scope"
+      ],
+      "title": "Place",
+      "type": "object"
+    }
+  },
+  "$id": "urn:bpm:contracts:c17-workspace-create-request",
+  "additionalProperties": true,
+  "description": "`POST /api/v1/workspaces` — 빈 한 벌을 만든다.\n\n`company`를 비우면 **부르는 계정의 회사**다 (C16). 만든 뒤에는 바뀌지 않는다.",
+  "properties": {
+    "company": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Company"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "place": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Place"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "schema": {
+      "description": "이 계약의 schema 번호",
+      "title": "Schema",
+      "type": "integer"
+    },
+    "version": {
+      "default": "0.1.0",
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "name"
+  ],
+  "title": "WorkspaceCreateRequest",
+  "type": "object"
+}

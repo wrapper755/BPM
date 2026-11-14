@@ -13,12 +13,10 @@ import { namesOf, orgName } from "@/lib/organization";
  * 값은 **실행하는 쪽이 보낸 이벤트에서** 나온다 (C3). Center가 받을 때 요약을 만들어 두므로
  * 목록을 그릴 때 줄을 다시 읽지 않는다.
  *
- * 좁히기는 상태·BPM 프로세스·**실행 위치**·**PC 실행기**·**최근 n건**이다. 「PC 실행기」는 C3 `RunInfo.bot_ui_id`
- * 인데 **Center가 읽을 때 채우는 값**이다 (보낸 키 → C4 키 묶기) — 보내는 쪽이 제 id를 적지
- * 않는다. 고를 거리(이름)는 CON-03과 같은 `GET /bot-uis`에서 오고, **그 목록을 못 받아도
- * 좁히기는 돈다**(id를 그대로 보인다).
+ * 좁히기는 상태·BPM 프로세스·**실행기**·**최근 n건**이다. 「실행기」는 C3 `RunInfo.runner_id`인데
+ * **Center가 읽을 때 채우는 값**이다 (보낸 키 → C4 키 묶기) — 보내는 쪽이 제 id를 적지 않는다.
  *
- * Studio가 보낸 기록에는 `bot_ui_id`가 **없다** — 그 키에 묶인 PC가 없어서다. 화면은 「—」로
+ * Studio가 보낸 기록에는 `runner_id`가 **없다** — 그 키에 묶인 실행기가 없어서다. 화면은 「—」로
  * 보이고 「실행한 쪽」이 `Studio`라고 말한다.
  *
  * 셈 열(AI 태스크·재생·결재·확인)은 `run_finished`가 세어 보낸 것이다 — **도는 중에는
@@ -36,15 +34,12 @@ export const LABEL: Record<string, string> = {
 
 const CHOICES = ["", "running", "waiting", "success", "failed", "cancelled"];
 
-/** C3 `executor` → 화면 표기 (「PC 실행기 또는 서버 실행기」 열). **어느 PC인지는 모른다.** */
+/** C3 `executor` → 화면 표기 (「실행한 쪽」 열). */
 const EXECUTOR: Record<string, string> = {
-  bot_ui: "Bot",
   server_runner: "서버 실행기",
   studio: "Studio",
 };
 
-/** 「실행 위치」 좁히기 (C1·C3 `run_location`). */
-const PLACES = ["", "pc", "server"];
 /** 「최근 n건」 — 화면 설계서의 10~500, 기본 100. */
 const LIMITS = [10, 50, 100, 200, 500];
 const DEFAULT_LIMIT = 100;
@@ -54,13 +49,9 @@ function tally(value: number | null | undefined): string {
   return value === null || value === undefined ? "—" : String(value);
 }
 
-/** PC 실행기 목록을 못 받았을 때 (U3 — 좁히기는 그래도 돈다). */
-export const NO_BOT_UI_LIST =
-  "Bot 목록을 받지 못해 이름 대신 id로 보입니다 — 좁히기는 그대로 됩니다.";
-
-/** Studio·토큰이 보낸 기록에는 PC가 없다는 말 (U3 — 「—」 옆에 까닭을 둔다). */
-export const NO_PC_NOTE =
-  "「Bot」가 비어 있는 기록은 PC가 아닌 쪽(Studio 시험 실행)이 보낸 것입니다.";
+/** Studio가 보낸 기록에는 실행기가 없다는 말 (U3 — 「—」 옆에 까닭을 둔다). */
+export const NO_RUNNER_NOTE =
+  "「실행기」가 비어 있는 기록은 실행기가 아닌 쪽(Studio 시험 실행)이 보낸 것입니다.";
 
 export function time(value: string | null | undefined): string {
   if (!value) return "—";
@@ -118,18 +109,13 @@ function ProcessName({
   return <span title={id}>{names.get(`${id}@${version ?? ""}`) ?? id}</span>;
 }
 
-export function where(value: string | null | undefined): string {
-  return value === "pc" ? "PC" : value === "server" ? "서버" : "—";
-}
-
 export default async function RunsPage({
   searchParams,
 }: {
   searchParams: Promise<{
     status?: string;
     bpm_process_id?: string;
-    run_location?: string;
-    bot_ui_id?: string;
+    runner_id?: string;
     limit?: string;
   }>;
 }) {
@@ -144,8 +130,7 @@ export default async function RunsPage({
     const listing = await center.runs({
       status: query.status,
       bpm_process_id: query.bpm_process_id,
-      run_location: query.run_location,
-      bot_ui_id: query.bot_ui_id,
+      runner_id: query.runner_id,
       limit: Number(query.limit) || DEFAULT_LIMIT,
     });
     rows = listing.runs ?? [];
@@ -154,19 +139,6 @@ export default async function RunsPage({
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
   }
 
-  // 고를 거리(이름)는 CON-03과 **같은 것**을 읽는다. **못 받아도 목록은 그린다** — 이름이
-  // 없으면 id로 보이고, 좁히기는 그대로 된다 (U3).
-  let pcs: Array<{ bot_ui_id: string; name: string }> = [];
-  let pcFailure: string | null = null;
-  try {
-    pcs = (await center.botUis()).map((one) => ({
-      bot_ui_id: one.bot_ui_id,
-      name: one.name ?? one.bot_ui_id,
-    }));
-  } catch {
-    pcFailure = NO_BOT_UI_LIST;
-  }
-  const pcName = new Map(pcs.map((one) => [one.bot_ui_id, one.name]));
   const org = await loadOrgNames();
   const processNames = await loadProcessNames();
 
@@ -189,15 +161,8 @@ export default async function RunsPage({
       ),
     },
     { key: "version", header: "버전", width: "10ch", cell: (row) => row.version ?? "—" },
-    { key: "run_location", header: "실행 위치", width: "10ch", cell: (row) => where(row.run_location) },
     { key: "executor", header: "실행한 쪽", width: "12ch", cell: (row) => EXECUTOR[row.executor ?? ""] ?? "—" },
-    {
-      key: "bot_ui_id",
-      header: "Bot",
-      width: "14ch",
-      // 이름을 모르면 **id를 보인다** — 「—」로 지우면 PC를 아는데도 모르는 것처럼 된다.
-      cell: (row) => (row.bot_ui_id ? (pcName.get(row.bot_ui_id) ?? row.bot_ui_id) : "—"),
-    },
+    { key: "runner_id", header: "실행기", width: "16ch", cell: (row) => row.runner_id ?? "—" },
     // 자리는 Center가 그 실행의 작업에서 붙인다 (C16) — Studio 시험 실행·작업 없는 실행은 「—」.
     { key: "company", header: "회사", width: "12ch", cell: (row) => orgName(row.company, org.company) },
     { key: "department", header: "부서", width: "12ch", cell: (row) => orgName(row.department, org.department) },
@@ -255,33 +220,13 @@ export default async function RunsPage({
           />
         </label>
         <label className="flex flex-col gap-1 text-body-sm">
-          실행 위치
-          <select
-            name="run_location"
-            defaultValue={query.run_location ?? ""}
+          실행기
+          <input
+            name="runner_id"
+            defaultValue={query.runner_id ?? ""}
+            placeholder="(전체)"
             className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
-          >
-            {PLACES.map((one) => (
-              <option key={one || "all"} value={one}>
-                {one ? where(one) : "(전체)"}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-body-sm">
-          Bot
-          <select
-            name="bot_ui_id"
-            defaultValue={query.bot_ui_id ?? ""}
-            className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
-          >
-            <option value="">(전체)</option>
-            {pcs.map((one) => (
-              <option key={one.bot_ui_id} value={one.bot_ui_id}>
-                {one.name}
-              </option>
-            ))}
-          </select>
+          />
         </label>
         <label className="flex flex-col gap-1 text-body-sm">
           최근 n건
@@ -304,7 +249,7 @@ export default async function RunsPage({
           좁히기
         </Button>
       </form>
-      <p className="mb-4 text-body-sm text-text-muted">{pcFailure ?? NO_PC_NOTE}</p>
+      <p className="mb-4 text-body-sm text-text-muted">{NO_RUNNER_NOTE}</p>
 
       {failure ? (
         <ErrorBanner message={failure} />
@@ -317,7 +262,7 @@ export default async function RunsPage({
             caption="실행 목록"
             empty={{
               title: "조건에 맞는 실행이 없습니다.",
-              hint: "Studio 시험 실행이나 Bot이 보낸 기록이 여기 쌓입니다.",
+              hint: "Studio 시험 실행이나 서버 실행기가 보낸 기록이 여기 쌓입니다.",
             }}
           />
           {rows.length > 0 ? <p className="text-body-sm text-text-muted">{total}건</p> : null}

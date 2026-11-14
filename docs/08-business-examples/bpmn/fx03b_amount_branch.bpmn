@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx03b_amount_branch" name="금액 분기 (호출 대상)" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [
     "구분"

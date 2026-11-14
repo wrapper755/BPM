@@ -4,7 +4,7 @@
 | --- | --- |
 | 상태 | 수락 |
 | 날짜 | 2026-10-20 |
-| 관련 | [ADR-0080](0080-approval-assignees.md)(결재 담당자), [ADR-0079](0079-virtual-worker-is-an-intake-bot.md), [ADR-0013](0013-api-keys.md)(키는 쓰임마다 따로), [ADR-0062](0062-pc-delegation.md) §6(`requested_by`의 예약값), [C6](../03-contracts/C6-approvals.md), [C7](../03-contracts/C7-resources-center-keys.md) §Center API 키, [C5](../03-contracts/C5-packages-deployments-jobs.md) §인증·행위자, [C4](../03-contracts/C4-bot-ui-center.md) `ApprovalDispatch`, [C3](../03-contracts/C3-run-events.md) `human_answered` |
+| 관련 | [ADR-0080](0080-approval-assignees.md)(결재 담당자), [ADR-0079](0079-virtual-worker-is-an-intake-bot.md), [ADR-0013](0013-api-keys.md)(키는 쓰임마다 따로), [ADR-0062](0062-pc-delegation.md) §6(`requested_by`의 예약값), [C6](../03-contracts/C6-approvals.md), [C7](../03-contracts/C7-resources-center-keys.md) §Center API 키, [C5](../03-contracts/C5-packages-deployments-jobs.md) §인증·행위자, [C4](../03-contracts/C4-runner-center.md) `ApprovalDispatch`, [C3](../03-contracts/C3-run-events.md) `human_answered` |
 
 ## 배경
 

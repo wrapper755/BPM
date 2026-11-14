@@ -61,11 +61,10 @@ def cross_check(examples: list[Example]) -> list[str]:
             if n.kind == "call":
                 tgt = n.props["called"].removeprefix("Proc_")
                 if n.props.get("delegate"):
-                    # **PC 위임은 패키지 안에서 찾지 않는다** (C14 B14) — 대상은 따로 올리고
-                    # 따로 배포한 BPM 프로세스이다. `called`는 읽는 사람을 위한 표시이고 `called` 목록
-                    # (= `requires.libs`로 가는 공유 정의)에 들어가서는 안 된다.
+                    # **맡기기는 패키지 안에서 찾지 않는다** (C14 B14) — 대상은 따로 올리고
+                    # 따로 배포한 BPM 프로세스이다.
                     if tgt in e.called:
-                        errs.append(f"{e.id}: 위임 대상 {tgt}는 called 목록에 넣지 않는다 (다른 패키지다)")
+                        errs.append(f"{e.id}: 맡긴 대상 {tgt}는 called 목록에 넣지 않는다 (다른 패키지다)")
                     continue
                 if tgt not in files:
                     errs.append(f"{e.id}: 호출 대상 {tgt} 없음")
@@ -75,8 +74,6 @@ def cross_check(examples: list[Example]) -> list[str]:
                 if not any(d.id == n.props["task"]["decision"] for d in e.decisions) and n.props["task"]["decision"] not in dmn:
                     errs.append(f"{e.id}: DMN {n.props['task']['decision']} 없음")
         errs += deep_check(e, {x.file: x for x in examples}, {d.id: d for x in examples for d in x.decisions})
-        if e.run_location not in ("server", "pc"):
-            errs.append(f"{e.id}: run_location")
         if not e.cases:
             errs.append(f"{e.id}: 케이스 없음")
     return errs
@@ -131,23 +128,20 @@ def deep_check(e: Example, by_file: dict, dmns: dict) -> list[str]:
     if sorted({n.props["called"].removeprefix("Proc_") for n in plain}) != sorted(set(e.called)):
         errs.append(f"{e.id}: called 목록과 호출 노드가 다름")
 
-    # **PC 위임 ↔ 대상 BPM 프로세스** (C14 `bpm:call.delegate`, ADR-0062) — 대상은 다른 패키지라 플랫폼
+    # **맡기기 ↔ 대상 BPM 프로세스** (C14 `bpm:call.delegate`, ADR-0082) — 대상은 다른 패키지라 플랫폼
     # 검사는 들여다보지 않지만, 여기서는 **대상도 예제**라 짝을 맞춰 볼 수 있다. 이 자리가
     # 그래야 하는 까닭: 패키지 id는 **글자로만 가리키는 자리**라 틀려도 실행할 때까지 숨는다
     # (BX-16이 파일 이름을 적어 두었던 일 — 그 예제의 「배운 것」에 있다).
     for n in [one for one in calls if one.props.get("delegate")]:
-        if e.run_location != "server":
-            errs.append(f"{e.id}: {n.id} 위임은 실행 위치가 server일 때만 쓴다 (B14)")
         pkg = n.props["delegate"]["bpm_process_id"]
         tgt = next((x for x in by_file.values() if x.file.replace("_", "-") == pkg), None)
         if tgt is None:
-            errs.append(f"{e.id}: {n.id} 위임 대상 패키지 id `{pkg}`에 맞는 예제가 없다 "
+            errs.append(f"{e.id}: {n.id} 맡긴 대상 패키지 id `{pkg}`에 맞는 예제가 없다 "
                         f"(패키지 id는 예제 파일 이름의 `_`를 `-`로 바꾼 것이다 — C1 `id`)")
             continue
         if tgt is e:
-            # **자기 자신에게 위임하지 않는다** (C1 R12) — 끝나지 않는 되부름이다. 대상은 PC BPM 프로세스이든
-            # 서버 BPM 프로세스이든 된다 — 어디서 도는지는 대상 패키지가 정한다 (ADR-0082).
-            errs.append(f"{e.id}: {n.id} 자기 자신에게 위임한다 (C1 R12)")
+            # **자기 자신에게 맡기지 않는다** (C1 R12) — 끝나지 않는 되부름이다.
+            errs.append(f"{e.id}: {n.id} 자기 자신에게 맡긴다 (C1 R12)")
         t = n.props["task"]
         tin = {i[0] for i in tgt.inputs}
         if set(t["input"]) - tin:
@@ -160,7 +154,7 @@ def deep_check(e: Example, by_file: dict, dmns: dict) -> list[str]:
             errs.append(f"{e.id}: {n.id}가 {tgt.id}의 필수 입력 {sorted(need)}를 넘기지 않음")
         if not tgt.outputs:
             # **선언하지 않으면 값이 돌아오지 않는다** (C4 `JobAck.outputs`가 선언한 것만 거른다).
-            errs.append(f"{e.id}: {n.id} 위임 대상 {tgt.id}가 outputs를 선언하지 않았다 — 값이 돌아올 수 없다")
+            errs.append(f"{e.id}: {n.id} 맡긴 대상 {tgt.id}가 outputs를 선언하지 않았다 — 값이 돌아올 수 없다")
         bad = [v for v in t["output"].values() if v not in tgt.outputs]
         if bad:
             errs.append(f"{e.id}: {n.id} 출력 {bad}가 {tgt.id} outputs에 없음")
@@ -169,7 +163,7 @@ def deep_check(e: Example, by_file: dict, dmns: dict) -> list[str]:
                 continue
             extra = set(c.delegations[n.id]) - set(tgt.outputs)
             if extra:
-                errs.append(f"{e.id}: 케이스 「{c.name}」 {n.id}의 위임 결과 {sorted(extra)}가 {tgt.id} outputs에 없음")
+                errs.append(f"{e.id}: 케이스 「{c.name}」 {n.id}의 맡긴 결과 {sorted(extra)}가 {tgt.id} outputs에 없음")
             missing = set(t["output"].values()) - set(c.delegations[n.id])
             if missing:
                 # 읽는 이름이 오지 않으면 **업무 실패**다 (C14 — 빈 값으로 이어 가지 않는다).
@@ -260,9 +254,9 @@ def outputs() -> dict[Path, str]:
     for fname, title, exs in GROUPS:
         cards = [BANNER, "", f"# {title} 예제", "",
                  "[← 예제 목록](README.md) · 작성 규칙: [writing-guide.md](writing-guide.md)", "",
-                 "| id | 이름 | 실행 위치 | 시작 |", "| --- | --- | --- | --- |"]
+                 "| id | 이름 | 시작 |", "| --- | --- | --- |"]
         for e in exs:
-            cards.append(f"| [{e.id}](#{slug(e)}) | {e.name} | {'서버' if e.run_location == 'server' else 'PC'} | {e.trigger.split(' — ')[0]} |")
+            cards.append(f"| [{e.id}](#{slug(e)}) | {e.name} | {e.trigger.split(' — ')[0]} |")
         cards.append("")
         for e in exs:
             bp = f"bpmn/{e.file}.bpmn"
@@ -310,9 +304,6 @@ def coverage(examples: list[Example]) -> list[str]:
     def bnd(kind, inter=None):
         return lambda e: any(b.kind == kind and (inter is None or b.interrupting == inter) for b in bnds(e))
 
-    def appr_loc(loc):
-        return lambda e: any(n.kind in ("appr", "manual") and n.props["task"]["location"] == loc for n in nodes(e))
-
     def ext(pred):
         return lambda e: any(pred(x["id"]) for x in e.extensions)
 
@@ -327,8 +318,8 @@ def coverage(examples: list[Example]) -> list[str]:
         ("결재 (userTask)", has("appr")), ("수동 확인 (manualTask)", has("manual")),
         ("메일 보내기", has("mail")), ("웹훅 보내기", has("hook")), ("메시지 받기 (receiveTask)", has("recv")),
         ("BPM 프로세스 호출", lambda e: any(n.kind == "call" and not n.props.get("delegate") for n in nodes(e))),
-        ("위임 (`bpm:call.delegate`)", lambda e: any(n.kind == "call" and n.props.get("delegate") for n in nodes(e))),
-        ("일괄 기동 (반복 위임)", lambda e: any(n.kind == "call" and n.props.get("delegate") and n.props.get("loop") for n in nodes(e))),
+        ("맡기기 (`bpm:call.delegate`)", lambda e: any(n.kind == "call" and n.props.get("delegate") for n in nodes(e))),
+        ("일괄 기동 (반복 맡기기)", lambda e: any(n.kind == "call" and n.props.get("delegate") and n.props.get("loop") for n in nodes(e))),
         ("하위 프로세스", has("sub")),
         ("배타 게이트웨이", has("xgw")), ("포함 게이트웨이", has("igw")), ("병렬 게이트웨이", has("pgw")),
         ("중간 던지기 — 이정표(없음)", has("throw", kind="none")), ("중간 던지기·받기 — 신호", lambda e: has("throw", kind="signal")(e) or has("catch", kind="signal")(e)),
@@ -347,8 +338,6 @@ def coverage(examples: list[Example]) -> list[str]:
         ("파일 목록 (`bpm:fileList`)", has("flist")),
     ]
     plat_rows = [
-        ("실행 위치 서버", lambda e: e.run_location == "server"), ("실행 위치 PC", lambda e: e.run_location == "pc"),
-        ("결재 위치 Center 결재함", appr_loc("center")), ("결재 위치 현장(PC)", appr_loc("field")),
         ("외부 확장 (HTTP 어댑터)", ext(lambda i: i.startswith("ext-"))),
         ("사내 확장 서비스 앱", ext(lambda i: not i.startswith("ext-"))),
         ("한 프로세스에 서비스 앱 여러 개", lambda e: len({n.props["task"]["app_id"] for n in nodes(e) if n.kind == "svc"}) > 1),
@@ -399,16 +388,16 @@ def first_milestone(e: Example) -> str:
 
 def set_milestone(e: Example) -> None:
     m = first_milestone(e)
-    tail = "M5 Center 배포 → M7 서버 실행기" if e.run_location == "server" else "M5 Center 배포 → PC 실행기 실행"
+    tail = "M5 Center 배포 → M7 서버 실행기"
     e.milestone = f"**{m}** Studio 시험 실행에서 처음 통과 → {tail}"
 
 
 def readme(examples: list[Example]) -> str:
     L = [BANNER, "", (HERE / "readme_intro.txt").read_text(encoding="utf-8").rstrip(), "", "## 목록", ""]
     for fname, title, exs in GROUPS:
-        L += [f"### {title} ([{fname}]({fname}))", "", "| id | 이름 | 실행 위치 | 시작 | 확장 | 이 예제로 확인하는 것 |", "| --- | --- | --- | --- | --- | --- |"]
+        L += [f"### {title} ([{fname}]({fname}))", "", "| id | 이름 | 시작 | 확장 | 이 예제로 확인하는 것 |", "| --- | --- | --- | --- | --- |"]
         for e in exs:
-            L.append(f"| [{e.id}]({fname}#{slug(e)}) | {e.name} | {'서버' if e.run_location == 'server' else 'PC'} | {e.trigger.split(' — ')[0]} | "
+            L.append(f"| [{e.id}]({fname}#{slug(e)}) | {e.name} | {e.trigger.split(' — ')[0]} | "
                      f"{', '.join(x['id'] for x in e.extensions) or '—'} | {'; '.join(e.features[:3])} |")
         L.append("")
     L += coverage(examples)

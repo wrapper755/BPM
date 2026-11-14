@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_bx35_voc_weekly" name="VOC 주간 분석" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "ext-helpdesk",

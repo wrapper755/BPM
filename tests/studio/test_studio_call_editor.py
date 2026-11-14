@@ -22,8 +22,6 @@ from bpm.studio.call_editor import (  # noqa: E402
     BOUNDARY_NOTE,
     MODE_DELEGATE,
     MODE_LOCAL,
-    PC_NO_DELEGATE,
-    SERVER_BOT_NO_PC,
     CallEditor,
     local_targets,
 )
@@ -47,12 +45,11 @@ PC_BOT = CallTarget(
     id="erp-entry",
     name="ERP 입력",
     where="PC",
-    run_location="pc",
     process_id="Proc_erp_entry",
     inputs=(CallInput("전표번호", required=True),),
     outputs=("결과코드",),
 )
-SERVER_BOT = CallTarget(id="batch-item", run_location="server", process_id="Proc_batch_item", outputs=("결과",))
+SERVER_BOT = CallTarget(id="batch-item", process_id="Proc_batch_item", outputs=("결과",))
 BOTS = {one.id: one for one in (PC_BOT, SERVER_BOT)}
 LOCAL_CALL: dict[str, Any] = {"input": {"지역": "고객.지역"}, "output": {"비용": "배송비"}}
 
@@ -67,12 +64,10 @@ def _app() -> Any:
 def loaded(
     body: dict[str, Any],
     *,
-    run_location: str | None = "server",
     targets: dict[str, CallTarget] | None = None,
     bots: dict[str, CallTarget] | None = None,
 ) -> CallEditor:
     made = CallEditor(
-        run_location=run_location,
         targets={SHIPPING.id: SHIPPING} if targets is None else targets,
         bots=BOTS if bots is None else bots,
     )
@@ -101,13 +96,12 @@ def test_a_local_call_is_shown() -> None:
 def test_a_delegation_is_shown() -> None:
     body = {
         "calledElement": "Proc_erp_entry",
-        "call": {"delegate": {"bpm_process_id": "erp-entry", "version": "1.2.0", "bot_ui": "담당자PC"}},
+        "call": {"delegate": {"bpm_process_id": "erp-entry", "version": "1.2.0"}},
     }
     made = loaded(body)
     assert made.mode() == MODE_DELEGATE
     assert made.bot_id() == "erp-entry"
     assert made.version_box.text() == "1.2.0"
-    assert made.bot_ui_box.text() == "담당자PC"
     assert made.delegate_box.isVisibleTo(made)
     assert made.dump() == body
 
@@ -134,7 +128,7 @@ def _example_targets() -> dict[str, BpmnProcess]:
 def test_every_example_call_round_trips_and_is_not_blocked() -> None:
     """업무 예제의 호출이 **손대지 않으면 같은 본문으로** 돌아오고, 고칠 것 없이 막히지 않는다.
 
-    대상은 예제 폴더의 정의들이다. 위임 대상은 생성기의 이름 규칙(`Proc_<id>`)으로 그 정의를 찾아
+    대상은 예제 폴더의 정의들이다. 맡길 대상은 생성기의 이름 규칙(`Proc_<id>`)으로 그 정의를 찾아
     BPM 프로세스로 세운다 — 그래야 출력·입력 대조까지 진짜 예제로 밟는다.
     """
     processes = _example_targets()
@@ -155,11 +149,11 @@ def test_every_example_call_round_trips_and_is_not_blocked() -> None:
                 found = processes["Proc_" + bot.replace("-", "_")]
                 bots[bot] = CallTarget(**{**target_of(found, "").__dict__, "id": bot})
             body = {"calledElement": node.called_element or "", "call": call}
-            made = loaded(body, run_location=drawn.info.run_location, targets=targets, bots=bots)
+            made = loaded(body, targets=targets, bots=bots)
             assert made.dump() == body, f"{path.name}:{node.id}"
             errors, _ = made.problems()
             assert errors == [], f"{path.name}:{node.id}: {errors}"
-    assert seen >= 9 and delegated >= 2, "예제의 호출·위임을 찾았다"
+    assert seen >= 8 and delegated >= 1, "예제의 호출·맡기기를 찾았다"
 
 
 # ── 막는 것 ──
@@ -179,24 +173,9 @@ def test_a_target_outside_the_package_is_shown_and_blocked() -> None:
 
 def test_unknown_targets_skip_the_check() -> None:
     """열린 BPM 프로세스가 없으면(`None`) 모른다 — 모르는 것으로 막지 않는다."""
-    made = CallEditor(run_location="server", targets=None)
+    made = CallEditor(targets=None)
     made.load({"calledElement": "Proc_x", "call": {"output": {"a": "b"}}})
     assert made.problems()[0] == []
-
-
-def test_delegation_is_off_for_pc_processes_and_blocked_if_present() -> None:
-    made = loaded({"calledElement": "Proc_ship", "call": {}}, run_location="pc")
-    assert not made.mode_picks[MODE_DELEGATE].isEnabled()
-    assert made.mode_note.text() == PC_NO_DELEGATE
-    written = loaded({"call": {"delegate": {"bpm_process_id": "erp-entry"}}}, run_location="pc")
-    assert written.mode_picks[MODE_DELEGATE].isEnabled(), "적힌 위임은 끄지 않는다"
-    assert PC_NO_DELEGATE in written.problems()[0]
-
-
-def test_a_drawing_without_run_location_cannot_delegate() -> None:
-    """B14와 같은 판정이다 — 적지 않은 것은 `server`가 아니다."""
-    made = loaded({"call": {"delegate": {"bpm_process_id": "erp-entry"}}}, run_location=None)
-    assert PC_NO_DELEGATE in made.problems()[0]
 
 
 def test_an_empty_bot_is_blocked() -> None:
@@ -204,14 +183,6 @@ def test_an_empty_bot_is_blocked() -> None:
     made.mode_picks[MODE_DELEGATE].setChecked(True)
     made.bot_box.setEditText("")
     assert "맡길 BPM 프로세스를 고르세요 (bpm_process_id)." in made.problems()[0]
-
-
-def test_a_pc_expression_for_a_server_bot_is_blocked() -> None:
-    made = loaded({"call": {"delegate": {"bpm_process_id": "batch-item", "bot_ui": "'pc-1'"}}})
-    assert SERVER_BOT_NO_PC in made.problems()[0]
-    made.bot_ui_box.setText("")
-    assert made.problems()[0] == []
-    assert not made.bot_ui_box.isEnabled(), "비우면 꺼진다"
 
 
 @pytest.mark.parametrize(
@@ -316,24 +287,19 @@ def _package(version: str, **manifest: Any) -> PackageInfo:
 
 def test_delegation_targets_merge_versions() -> None:
     found = delegation_targets([
-        _package("1.0.0", run_location="pc", outputs=["a"], inputs=[
+        _package("1.0.0", outputs=["a"], inputs=[
             {"name": "x", "type": "str", "required": True},
             {"name": "who", "type": "str", "source": "staff.id"},
         ]),
-        _package("1.1.0", run_location="pc", outputs=["b"], inputs=[
+        _package("1.1.0", outputs=["b"], inputs=[
             {"name": "who", "type": "str", "source": "staff.id"},
         ]),
     ])["erp-entry"]
     assert found.outputs == ("a", "b")
-    assert found.run_location == "pc" and found.where == "PC" and found.process_id == "Proc_erp_entry"
+    assert found.where == "" and found.process_id == "Proc_erp_entry"
     by_name = {one.name: one for one in found.inputs}
     assert by_name["x"].required and not by_name["x"].from_center
     assert by_name["who"].from_center, "모든 판이 Center 출처로 선언했다"
-
-
-def test_delegation_targets_forget_a_run_location_that_differs() -> None:
-    found = delegation_targets([_package("1.0.0", run_location="pc"), _package("2.0.0", run_location="server")])
-    assert found["erp-entry"].run_location is None
 
 
 def test_local_targets_include_installed_libs(tmp_path: Path) -> None:
@@ -360,7 +326,6 @@ def panel_with(body: dict[str, Any], *, chk: dict[str, Any] | None = None) -> An
     from bpm.studio.service_catalog import Catalog  # noqa: PLC0415
 
     panel = Properties()
-    panel.run_location = "server"
     panel.call_targets = lambda: {SHIPPING.id: SHIPPING}
     panel.catalog = Catalog(bots=BOTS)
     panel.show_element({

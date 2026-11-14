@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 (2026-10-17) |
+| 상태 | 대체됨([ADR-0143](0143-design-happens-in-the-console.md)) — 원래 수락 (2026-10-17). 판 찍기는 서버 이미지가 하고 `core.build_info`만 남는다 |
 | 날짜 | 2026-10-17 |
 | 관련 | [ADR-0024](0024-desktop-packaging-extensions.md)(묶기), 계약 C4 `versions`·C12 `versions`, `packaging/build.py`, `.github/workflows/desktop.yml` |
 

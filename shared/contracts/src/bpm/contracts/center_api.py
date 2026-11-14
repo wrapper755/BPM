@@ -14,22 +14,13 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Annotated, Any
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from bpm.contracts._base import ContractModel, Sha256, Timestamp, Violation
-from bpm.contracts.bot_ui import (
-    CurrentRun,
-    DeploymentResult,
-    ExtensionState,
-    Queue,
-    Readiness,
-    Runtimes,
-    Versions,
-)
 from bpm.contracts.manifest import Manifest
 from bpm.contracts.organization import STAFF_PREFIX, Place
 from bpm.contracts.resources import MissingResource
-from bpm.contracts.signing import TARGET_ANY, AdminKey, Envelope, verify, verify_time
+from bpm.contracts.signing import AdminKey, Envelope, verify, verify_time
 
 #: 헤더 이름 — 문자열을 코드 곳곳에 흩어 두지 않는다 (프로토타입에서 문서의 `X-Bot-Id`와
 #: 코드의 `?bot_id=`가 어긋났다).
@@ -59,7 +50,7 @@ MAX_PACKAGE_MB = 50
 MAX_NOTE_CHARS = 500
 IDEMPOTENCY_WINDOW_DAYS = 7
 
-#: `BotUiInfo.deployment_results`에 싣는 최근 배치 결정 건수 (CON-03).
+#: `ServerRunnerInfo.deployment_results`에 싣는 최근 배치 결정 건수 (CON-12).
 RECENT_RESULTS = 20
 
 # 아래는 모두 **열린 문자열**의 알려진 값이다 (README 원칙 10).
@@ -67,27 +58,19 @@ KNOWN_PACKAGE_STATUSES = frozenset({"candidate", "approved", "deprecated", "revo
 #: `DependentInfo.relation` — C1 `requires`의 어느 칸으로 참조하나.
 KNOWN_DEPENDENT_RELATIONS = frozenset({"lib"})
 KNOWN_JOB_STATES = frozenset({"pending", "dispatched", "queued", "accepted", "rejected", "expired", "cancelled"})
-KNOWN_REJECT_REASONS = frozenset(
-    {"queue_full", "no_deployment", "not_ready", "bot_ui_shutdown", "bot_ui_lost",
-     "server_location", "cancelled_on_pc"}
-)
+KNOWN_REJECT_REASONS = frozenset({"queue_full", "no_deployment", "not_ready", "runner_lost"})
 KNOWN_QUEUED_REASONS = frozenset({"global_limit", "per_bot_limit", "paused"})
 KNOWN_CANCEL_RESULTS = frozenset({"cancelled", "refused_already_started"})
-KNOWN_TARGET_TYPES = frozenset({"bot_ui", "server_runner"})
+KNOWN_TARGET_TYPES = frozenset({"server_runner"})
 # `missing_resources`의 값 목록은 C7이 소유한다 (`resources.KNOWN_MISSING_TYPES`).
 KNOWN_AUTH_KINDS = frozenset(
-    {"read_token", "admin_token", "studio_key", "bot_ui_key", "server_runner_key", "integration_key"}
+    {"read_token", "admin_token", "studio_key", "server_runner_key", "integration_key"}
 )
 
-#: 실행 위치 → 배포·작업 대상 종류 (C2 "배포 대상 규칙").
-TARGET_TYPE_FOR_RUN_LOCATION = {"pc": "bot_ui", "server": "server_runner"}
-
-#: `requested_by`의 예약값 앞머리 — **PC 위임이 만든 작업**이다 (`server_bot:<run_id>`,
-#: [ADR-0062](../decisions/0062-pc-delegation.md) §6).
+#: `requested_by`의 예약값 앞머리 — **맡기기가 만든 작업**이다 (`server_bot:<run_id>`, ADR-0082).
 #:
-#: **자리는 여기 하나다** — 적는 쪽(Center의 위임 API)과 읽는 쪽(PC 실행기가 「이 작업이 위임인가」를
-#: 가른다)이 같은 글을 봐야 한다. 두 자리에 적어 두면 한쪽을 고치는 날 **PC가 위임을 평범한
-#: 작업으로 돌려** 결과를 아무도 못 받는다.
+#: **자리는 여기 하나다** — 적는 쪽(Center의 맡기기 API)과 읽는 쪽(실행기가 「이 작업이
+#: 맡은 것인가」를 가른다)이 같은 글을 봐야 한다.
 DELEGATION_REQUESTER_PREFIX = "server_bot:"
 
 
@@ -112,10 +95,10 @@ def timer_requester(expression: str) -> str:
 
 
 def job_source(requested_by: str | None) -> str:
-    """작업을 받아 띄운 실행의 출처 (C3 `run_started.source`·C4 `queue[].source`).
+    """작업을 받아 띄운 실행의 출처 (C3 `run_started.source`).
 
-    위임이면 `delegation`, 일정이면 `schedule`, 그 밖은 `job`이다 — 말해 주는 것은 `requested_by`
-    하나다. PC 실행기와 서버 실행기가 이 함수를 같이 쓴다.
+    맡은 것이면 `delegation`, 일정이면 `schedule`, 그 밖은 `job`이다 — 말해 주는 것은
+    `requested_by` 하나다.
     """
     found = requested_by or ""
     if found.startswith(DELEGATION_REQUESTER_PREFIX):
@@ -139,7 +122,7 @@ def on_behalf_violation(name: str) -> Violation | None:
 
 
 def delegated_run(requested_by: str | None) -> str | None:
-    """`requested_by`가 PC 위임이면 **맡긴 서버 실행**, 아니면 `None` (PC 실행기가 읽는다)."""
+    """`requested_by`가 맡기기면 **맡긴 실행**, 아니면 `None` (실행기가 읽는다)."""
     found = requested_by or ""
     if not found.startswith(DELEGATION_REQUESTER_PREFIX):
         return None
@@ -208,7 +191,6 @@ class PackageInfo(ContractModel):
     version: str
     kind: str
     name: str | None = None
-    run_location: str | None = None  # bpm_process에만 있다
     status: str  # 열린 문자열 (KNOWN_PACKAGE_STATUSES)
     content_hash: Sha256
     uploaded_by: str
@@ -257,46 +239,6 @@ class NodeLabel(ContractModel):
     name: str | None = None
     #: BPMN 요소 이름 (`serviceTask`·`exclusiveGateway` …).
     kind: str
-
-
-class BotUiKey(ContractModel):
-    """그 PC 실행기가 쓰는 Center API 키 (C7). **원문·해시는 주지 않는다.**"""
-
-    prefix: str
-    expires_at: Timestamp | None = None
-    state: str  # active / expired / revoked
-
-
-class BotUiInfo(ContractModel):
-    """`GET /bot-uis`의 한 줄 (CON-03).
-
-    상태 값은 **PC 실행기가 하트비트로 보고한 그대로**다 (C4). Center가 더하는 것은 온라인
-    판정(`online`)과 키 정보(`key`)뿐이다.
-    """
-
-    bot_ui_id: str
-    name: str
-    os: str
-    machine_id: str
-    versions: Versions  # 등록할 때 반드시 받는다 (C4 `register`)
-    runtimes: Runtimes | None = None
-    registered_at: Timestamp
-    last_seen_at: Timestamp | None = None
-    #: 마지막 하트비트가 90초 이내인가 (C4 「온라인 판정」).
-    online: bool = False
-    disabled: bool = False
-    #: 아래는 마지막 하트비트의 내용. 아직 하트비트가 없으면 비어 있다.
-    status: str | None = None
-    current_run: CurrentRun | None = None
-    queue: Queue | None = None
-    readiness: list[Readiness] = Field(default_factory=list)
-    extensions: list[ExtensionState] = Field(default_factory=list)
-    #: 최근 배치 결정 (CON-03). **Center가 쌓아 둔 것**이다 — 하트비트 한 주기만 올라오는
-    #: 값이라 흘려보내면 「왜 설치가 안 됐나」가 남지 않는다. 최신순 최대 `RECENT_RESULTS`건.
-    deployment_results: list[DeploymentResult] = Field(default_factory=list)
-    key: BotUiKey | None = None
-    #: 그 PC가 속한 회사 (C16 — 등록을 승인할 때 정한다).
-    company: str | None = None
 
 
 # ─────────────────────────── 배포 ───────────────────────────
@@ -367,11 +309,10 @@ def validate_deployment(
     - 서명 C2 V1~V4와 V5a(`expired`). **`not_before`가 미래인 예약 배포도 받는다** (V5b는 실행하는 쪽).
     - 패키지가 `approved`다 (`not_approved`) — `deprecated`는 따로 알린다 (`deprecated`).
     - 봉투의 해시가 패키지와 같다 (`hash_mismatch`).
-    - **대상이 틀렸다 — `wrong_target` 하나다** (C2 V6과 같은 이름이다):
-      `target.type`이 패키지의 `run_location`과 맞지 않거나, **PC 배포의 `target.id`가 `"*"`**
-      (ADR-0046 — `"*"`는 서버 실행기만 쓴다, C2 §배포 대상 규칙). 둘 다 받아 두면 **모든 PC가
-      V6으로 거부할** 봉투라 결과가 같다. `target_mismatch`는 **작업 쪽 코드**다 (모르는 대상 종류).
-    - **대상 PC가 등록되어 있지 않다** (`target_not_found`, ADR-0049) — 찾아보는 것은 Center이고
+    - **대상이 틀렸다 — `wrong_target` 하나다** (C2 V6과 같은 이름이다): `target.type`이
+      `server_runner`가 아니다 (실행기가 한 종류다 — ADR-0144). `target_mismatch`는 **작업 쪽
+      코드**다 (모르는 대상 종류).
+    - **대상 실행기가 등록되어 있지 않다** (`target_not_found`, ADR-0049) — 찾아보는 것은 Center이고
       여기로는 `target_registered`로 **이미 읽어 온 사실**이 온다 (`package`와 같은 결,
       ADR-0047 §다시 볼 조건 ②). **`None`은 「묻지 않았다」**라 거절하지 않는다 — 서버 실행기
       대상처럼 찾아볼 표가 없는 것을 막지 않으려고다.
@@ -405,39 +346,25 @@ def validate_deployment(
         )
 
     target_type = str(envelope.payload.get("target", {}).get("type", ""))
-    expected = TARGET_TYPE_FOR_RUN_LOCATION.get(package.run_location or "")
-    if expected is not None and target_type != expected:
+    if target_type != "server_runner":
+        # 실행기는 서버 실행기 하나다 (ADR-0144) — `"*"`도 그쪽만 받는다 (C2, ADR-0046).
         out.append(
             Violation(
                 rule="C5",
                 code="wrong_target",
-                message=f"run_location={package.run_location}이면 대상은 {expected}다 (받은 값 {target_type})",
-            )
-        )
-    if (
-        str(envelope.payload.get("target", {}).get("id") or "") == TARGET_ANY
-        and target_type != "server_runner"
-    ):
-        # **`"*"`는 서버 실행기만** (C2, ADR-0046) — `DeploymentTarget.matches`가 그렇게 맞추므로
-        # PC 쪽 `"*"`는 **모든 PC가 V6 `wrong_target`으로 거부할** 봉투다. 받아 두면 CON-03이
-        # 거짓 ⛔로 찬다.
-        out.append(
-            Violation(
-                rule="C5",
-                code="wrong_target",
-                message=f'{target_type} 배포에는 전체 대상("{TARGET_ANY}")이 없다 — 대상을 하나 적는다',
+                message=f"대상 종류는 server_runner다 (받은 값 {target_type or '없음'})",
             )
         )
     if target_registered is False:
-        # **「대상이 틀렸다」가 「대상이 없다」를 이긴다** (ADR-0049) — PC 배포의 `"*"`는 그 id도
-        # 등록되어 있지 않지만 답은 `wrong_target`이다(할 일이 「대상을 하나 적는다」이고
-        # 「`*`라는 PC가 없다」는 엉뚱한 말이다). 그래서 **대상 검사 뒤에** 담는다 —
-        # `deployment_refusal()`은 앞의 것으로 답하고 나머지는 `detail`에 남는다.
+        # **「대상이 틀렸다」가 「대상이 없다」를 이긴다** (ADR-0049) — 종류가 틀린 봉투는 그 id도
+        # 등록되어 있지 않지만 답은 `wrong_target`이다(할 일이 「종류를 고친다」이고 「그런 실행기가
+        # 없다」는 엉뚱한 말이다). 그래서 **대상 검사 뒤에** 담는다 — `deployment_refusal()`은
+        # 앞의 것으로 답하고 나머지는 `detail`에 남는다.
         out.append(
             Violation(
                 rule="C5",
                 code="target_not_found",
-                message=f"등록되지 않은 PC다: {envelope.payload.get('target', {}).get('id')}",
+                message=f"등록되지 않은 실행기다: {envelope.payload.get('target', {}).get('id')}",
             )
         )
     if target_type == "server_runner" and not server_runner_available:
@@ -477,12 +404,6 @@ class JobTarget(ContractModel):
 
     type: str  # 열린 문자열 (KNOWN_TARGET_TYPES)
     id: str | None = None
-
-    @model_validator(mode="after")
-    def _bot_ui_needs_id(self) -> JobTarget:
-        if self.type == "bot_ui" and not self.id:
-            raise ValueError("bot_ui 대상에는 id가 필요하다 (어느 PC인지 Center가 고를 수 없다)")
-        return self
 
 
 class JobCreateRequest(ContractModel):
@@ -538,7 +459,7 @@ class ScheduleInfo(ContractModel):
 
     bpm_process_id: str
     version: str
-    target_type: str  # `bot_ui` | `server_runner`
+    target_type: str  # `server_runner` 하나다 (ADR-0144)
     target_id: str | None = None  # PC면 그 PC, 서버면 없음
     expression: str
     timezone: str
@@ -597,31 +518,22 @@ def validate_job_create(
     return out
 
 
-def cancel_outcome(state: str, target_type: str | None = None) -> tuple[int, str | None]:
+def cancel_outcome(state: str) -> tuple[int, str | None]:
     """작업 상태 → 취소 요청의 응답 코드와 오류 `code` (C5 「취소」 표).
 
     - `pending` → 200 (바로 `cancelled`)
     - `dispatched`·`queued` → 202 (하트비트로 빼내야 한다. 그사이 시작했으면 `accepted` 유지)
-    - `accepted` → **대상이 서버 실행기면 202**, PC면 409 `already_started`
+    - `accepted` → 202 (실행기가 다음 하트비트에 그 실행을 닫는다)
     - 그 밖 → 409 `not_cancellable`
 
-    **가르는 것은 대상 종류 하나다** ([ADR-0063](../decisions/0063-stopping-a-running-server-run.md)).
-    서버 실행은 **화면을 만지지 않으므로**(C1 R2가 UI 태스크를 막는다) 엔진 취소가 곧
-    `cancelled` 기록이다. PC 실행은 자리를 끝까지 쥐고(ADR-0014) 화면을 만지는 중일 수 있어
-    **그대로 거절한다** — 도중에 끊으면 화면이 반쯤 바뀐 채 남는다(기록에 `cancelled`가 남아도
-    되돌려지지 않는다). 현장 사람이 BUI-04에서 멈추는 것은 **그 사람이 화면을 보고 있어서** 다르다.
-
-    `target_type`을 주지 않으면 **옛 규칙대로** 본다 (PC와 같다 — 모르는 것을 열어 주지 않는다).
+    **대상 종류를 보지 않는다** — 자리가 하나다
+    ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)). 서버 실행은 화면을 만지지 않으므로
+    (C1 R2가 웹·데스크톱 AI 태스크를 막는다) 엔진 취소가 곧 `cancelled` 기록이다.
+    **Center가 혼자 `cancelled`로 적지는 않는다** — 정말 멈췄는지는 실행기만 알고
+    ack가 상태를 옮긴다 (ADR-0063).
     """
     if state == "pending":
         return 200, None
-    if state in ("dispatched", "queued"):
+    if state in ("dispatched", "queued", "accepted"):
         return 202, None
-    if state == "accepted":
-        # 서버 실행기는 **이미 멈출 수 있다** (C12 — 하트비트 `cancel_jobs`를 받아 실행을 닫고
-        # 맡긴 PC 위임까지 거둔다). Center가 혼자 `cancelled`로 적지 않는 것은 `dispatched`와
-        # 같은 결이다 — 정말 멈췄는지는 **현장만 안다** (ack가 상태를 옮긴다).
-        if target_type == "server_runner":
-            return 202, None
-        return 409, "already_started"
     return 409, "not_cancellable"

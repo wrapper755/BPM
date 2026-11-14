@@ -22,7 +22,6 @@ from PySide6.QtCore import QStringListModel, Qt, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QButtonGroup,
     QComboBox,
     QFormLayout,
     QGroupBox,
@@ -32,7 +31,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QPushButton,
-    QRadioButton,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -57,17 +55,6 @@ FIELDS_TIP = "답한 값은 같은 이름의 변수가 됩니다. 칸이 없으�
 #: 폼 칸 타입 (C6 `KNOWN_FIELD_TYPES`) — 보이는 순서.
 FIELD_TYPES = ("text", "number", "bool", "choice")
 
-#: 「데스크톱」의 뜻 — 서버에서는 꺼지고 툴팁이 까닭으로 바뀐다.
-FIELD_TIP = "현장 PC의 결재 창에서만 답합니다."
-#: `bpm:approval.location` (C14 `APPROVAL_LOCATIONS`) — 보이는 글과 뜻(툴팁).
-LOCATIONS = (
-    ("follow", "설정", "PC 실행기의 「결재를 Center로 올리기」 설정을 따릅니다."),
-    ("center", "서버", "Center 결재함으로 올립니다."),
-    ("field", "데스크톱", FIELD_TIP),
-)
-#: 「결재 위치」 묶음의 툴팁 — 설명 줄을 두지 않는다 (STU-04 결재 탭).
-LOCATION_TIP = "여기서 정한 것이 PC 실행기 설정보다 우선합니다."
-SERVER_NO_FIELD = "서버 BPM 프로세스는 현장 결재를 쓸 수 없습니다 (실행 전 검사 B6)."
 
 #: 담당자를 적는 두 갈래 (ADR-0080 — 이름 배열이거나 변수 이름 하나).
 ASSIGNEE_NAMES = "names"
@@ -85,7 +72,7 @@ DESCRIPTION_LINES = 5
 
 
 class ApprovalEditor(QWidget):
-    """결재·확인 하나. `run_location`이 `server`면 「현장 PC에서만」을 끈다."""
+    """결재·확인 하나 — 답하는 자리는 Center 결재함이다 (ADR-0144)."""
 
     changed = Signal()
 
@@ -93,11 +80,9 @@ class ApprovalEditor(QWidget):
         self,
         parent: QWidget | None = None,
         *,
-        run_location: str | None = None,
         names: QStringListModel | None = None,
     ) -> None:
         super().__init__(parent)
-        self.run_location = run_location
         self._loaded: dict[str, Any] = {}
         self._quiet = False
 
@@ -142,14 +127,6 @@ class ApprovalEditor(QWidget):
         # 채운 단추는 영역마다 하나 (스타일 가이드 §3 Button).
         self.drop_field.setObjectName("Secondary")
 
-        self.location_picks: dict[str, QRadioButton] = {}
-        self.location_group = QButtonGroup(self)
-        for value, text, tip in LOCATIONS:
-            one = QRadioButton(text, self)
-            one.setToolTip(tip)
-            self.location_picks[value] = one
-            self.location_group.addButton(one)
-        self.location_picks["follow"].setChecked(True)
 
         self.assignee_mode = QComboBox(self)
         self.assignee_mode.addItem("이름 목록 (쉼표)", ASSIGNEE_NAMES)
@@ -163,7 +140,7 @@ class ApprovalEditor(QWidget):
         self.answered_by_box.setPlaceholderText("변수 이름 — 비우면 만들지 않습니다")
         self.answered_by_box.setToolTip(
             "답한 사람의 이름이 이 변수에 들어갑니다 — 콘솔이면 계정 이름, 대리 답이면 그 사람, "
-            "현장이면 PC 실행기 표시 이름. 반려여도 채웁니다."
+            "현장이면 실행기 표시 이름. 반려여도 채웁니다."
         )
         self.answered_via_box = QLineEdit(self)
         self.answered_via_box.setPlaceholderText("변수 이름 — 비우면 만들지 않습니다")
@@ -185,7 +162,6 @@ class ApprovalEditor(QWidget):
         self._no_names = QStringListModel(self)
 
         self._wire()
-        self._refresh_location()
         self._refresh_show_buttons()
         self._refresh_assignee_pick()
 
@@ -196,7 +172,6 @@ class ApprovalEditor(QWidget):
         layout.setSpacing(SPACE_3)
         layout.addWidget(self._content_box())
         layout.addWidget(self._fields_box(), 1)
-        layout.addWidget(self._location_box())
         layout.addWidget(self._who_box())
         layout.addWidget(self.warning)
 
@@ -238,15 +213,6 @@ class ApprovalEditor(QWidget):
         column.addWidget(self.fields, 1)
         return box
 
-    def _location_box(self) -> QGroupBox:
-        box = QGroupBox("결재 위치", self)
-        column = QVBoxLayout(box)
-        _tight(column)
-        box.setToolTip(LOCATION_TIP)
-        for one in self.location_picks.values():
-            column.addWidget(one)
-        return box
-
     def _who_box(self) -> QGroupBox:
         box = QGroupBox("담당자·기한·답한 사람", self)
         form = QFormLayout(box)
@@ -275,7 +241,6 @@ class ApprovalEditor(QWidget):
         delete.setContext(Qt.ShortcutContext.WidgetShortcut)
         delete.activated.connect(self.drop_show_names)
         self.fields.itemChanged.connect(self._touched)
-        self.location_group.buttonToggled.connect(self._touched)
         self.assignee_mode.currentIndexChanged.connect(self._touched)
         self.assignee_mode.currentIndexChanged.connect(lambda _at: self._refresh_assignee_pick())
         self.add_field.clicked.connect(lambda: self._add_row({}))
@@ -308,8 +273,6 @@ class ApprovalEditor(QWidget):
         for found in body.get("fields") or []:
             if isinstance(found, Mapping):
                 self._add_row(found)
-        location = str(body.get("location") or "follow")
-        self.location_picks.get(location, self.location_picks["follow"]).setChecked(True)
         assignees = body.get("assignees")
         if isinstance(assignees, str):
             self.assignee_mode.setCurrentIndex(self.assignee_mode.findData(ASSIGNEE_VARIABLE))
@@ -322,7 +285,6 @@ class ApprovalEditor(QWidget):
         self.answered_by_box.setText(str(body.get("answered_by_as") or ""))
         self.answered_via_box.setText(str(body.get("answered_via_as") or ""))
         self._quiet = False
-        self._refresh_location()
 
     def dump(self) -> dict[str, Any]:
         """`bpm:approval` 본문 — **읽은 것 위에** 고친 칸만 얹는다."""
@@ -331,9 +293,6 @@ class ApprovalEditor(QWidget):
         _put(out, "description", self.description_box.toPlainText().strip() or None)
         _put(out, "show", self.show_names() or None)
         _put(out, "fields", [one for one, _ in self._rows()] or None)
-        location = self.location()
-        # 기본값(`follow`)은 적지 않는다 — 읽은 그림에 있었으면 그대로 둔다.
-        _put(out, "location", location if location != "follow" or "location" in self._loaded else None)
         _put(out, "assignees", self._assignees())
         _put(out, "expires", self.expires_box.text().strip() or None)
         _put(out, "answered_by_as", self.answered_by_box.text().strip() or None)
@@ -355,8 +314,6 @@ class ApprovalEditor(QWidget):
             if key and key in seen:
                 errors.append(f"폼 칸 키가 겹칩니다: {key}")
             seen.add(key)
-        if self.location() == "field" and self.run_location == "server":
-            errors.append(SERVER_NO_FIELD)
         if self._assignees() is not None and self.assignee_mode.currentData() == ASSIGNEE_VARIABLE:
             name = self.assignee_box.text().strip()
             if not name.isidentifier():
@@ -407,15 +364,11 @@ class ApprovalEditor(QWidget):
         self._say_show("")
         self._touched()
 
-    def location(self) -> str:
-        return next((v for v, one in self.location_picks.items() if one.isChecked()), "follow")
-
     # ── 안쪽 ──
 
     def _touched(self, *_args: object) -> None:
         if self._quiet:
             return
-        self._refresh_location()
         self.changed.emit()
 
     def _refresh_show_buttons(self) -> None:
@@ -427,13 +380,6 @@ class ApprovalEditor(QWidget):
     def _say_show(self, text: str) -> None:
         self.show_note.setText(text)
         self.show_note.setVisible(bool(text))
-
-    def _refresh_location(self) -> None:
-        """서버에서는 「데스크톱」을 끄고 까닭을 그 툴팁에 적는다 — **이미 골라 둔 것은 지우지 않는다**."""
-        on_server = self.run_location == "server"
-        field = self.location_picks["field"]
-        field.setEnabled(not on_server or field.isChecked())
-        field.setToolTip(SERVER_NO_FIELD if on_server else FIELD_TIP)
 
     def _add_row(self, found: Mapping[str, Any]) -> None:
         quiet, self._quiet = self._quiet, True
@@ -586,8 +532,6 @@ def _show_rows(table: QTableWidget, rows: int) -> None:
 __all__ = [
     "FIELD_COLUMNS",
     "FIELD_TYPES",
-    "LOCATIONS",
-    "SERVER_NO_FIELD",
     "TAB_APPROVAL",
     "TAB_CONFIRMATION",
     "VISIBLE_ROWS",

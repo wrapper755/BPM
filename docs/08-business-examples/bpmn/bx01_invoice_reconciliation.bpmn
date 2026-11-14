@@ -10,7 +10,6 @@
   <bpmn:process id="Proc_bx01_invoice_reconciliation" name="월별 청구서 대사" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

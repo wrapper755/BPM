@@ -2,7 +2,6 @@
 
 | 경로 | 인증 |
 | --- | --- |
-| `POST /bot-ui/enroll`, `GET /bot-ui/enroll/{id}` | 없음 — 내려 주는 키는 요청의 공개키로 봉해 있다 |
 | `POST /server-runner/enroll`, `GET /server-runner/enroll/{id}` | 위와 같다 |
 | `POST /studio/enroll`, `GET /studio/enroll/{id}` | 위와 같다 (ADR-0093) |
 | `GET /enrollments` | 읽기·관리자 |
@@ -18,7 +17,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 
 from bpm.center import enrollments
-from bpm.center.api.bot_ui import _json
+from bpm.center.api.body import read_json as _json
 from bpm.center.auth import Caller, require_admin, require_read
 from bpm.center.errors import ApiError
 from bpm.center.storage import Store
@@ -43,22 +42,6 @@ def _open_mode(request: Request) -> bool:
     return open_mode
 
 
-@router.post("/bot-ui/enroll", status_code=201)
-async def post_bot_ui_enroll(request: Request) -> Any:
-    return enrollments.request(
-        _store(request),
-        kind="bot_ui",
-        body=await _json(request),
-        remote_addr=_remote(request),
-        open_mode=_open_mode(request),
-    )
-
-
-@router.get("/bot-ui/enroll/{enrollment_id}")
-def get_bot_ui_enroll(request: Request, enrollment_id: str) -> Any:
-    return enrollments.status(_store(request), enrollment_id, kind="bot_ui")
-
-
 @router.post("/server-runner/enroll", status_code=201)
 async def post_runner_enroll(request: Request) -> Any:
     return enrollments.request(
@@ -79,7 +62,7 @@ def get_runner_enroll(request: Request, enrollment_id: str) -> Any:
 
 @router.post("/studio/enroll", status_code=201)
 async def post_studio_enroll(request: Request) -> Any:
-    """Studio의 등록 요청 (C5 §Studio 등록 요청과 승인, ADR-0093) — PC 실행기와 같은 길이다."""
+    """Studio의 등록 요청 (C5 §Studio 등록 요청과 승인, ADR-0093) — 실행기와 같은 길이다."""
     return enrollments.request(
         _store(request),
         kind="studio",
@@ -102,7 +85,7 @@ def list_enrollments(request: Request, type: str | None = None, state: str | Non
     found_all = enrollments.listing(_store(request), kind=type, states=states)
     if found.company is None:
         return found_all
-    # 회사가 정해진 쪽 (C16): **아직 회사가 없는 요청**(대기 중인 PC 실행기·Studio)은 제 회사로 승인할 수
+    # 회사가 정해진 쪽 (C16): **아직 회사가 없는 요청**(대기 중인 서버 실행기·Studio)은 제 회사로 승인할 수
     # 있으니 보이고, 결정된 것은 제 회사 것만. 서버 실행기는 Center 공용이라 보이지 않는다.
     return [
         one

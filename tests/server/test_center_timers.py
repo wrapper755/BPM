@@ -129,7 +129,6 @@ def _manifest(triggers: list[dict[str, Any]]) -> Manifest:
             "id": "x.timer",
             "version": VERSION,
             "name": "x",
-            "run_location": "server",
             "entry": "process/main.bpmn",
             "process_id": "P",
             "triggers": triggers,
@@ -196,31 +195,13 @@ def register_runner(center: TestClient, n: int = 1) -> tuple[str, str]:
     return str(made.json()["server_runner_id"]), key
 
 
-def register_pc(center: TestClient, n: int) -> tuple[str, str]:
-    key = _key(center, name=f"PC {n}", kind="bot_ui")
-    made = center.post(
-        "/api/v1/bot-ui/register",
-        json={
-            "schema": 1,
-            "machine_id": f"{n:02d}" * 32,
-            "name": f"PC {n}",
-            "os": "windows-11-23H2",
-            "versions": {"bot_ui": "0.1.0", "core": "0.1.0"},
-        },
-        headers={"Authorization": f"Bearer {key}"},
-    )
-    assert made.status_code < 400, made.text
-    return str(made.json()["bot_ui_id"]), key
-
-
-def package_zip(*, bot: str, path: Path, where: str, expression: str) -> bytes:
+def package_zip(*, bot: str, path: Path, expression: str) -> bytes:
     manifest: dict[str, Any] = {
         "schema": 1,
         "kind": "bpm_process",
         "id": bot,
         "version": VERSION,
         "name": bot,
-        "run_location": where,
         "entry": "process/main.bpmn",
         "process_id": "P",
         "triggers": [{"kind": "timer", "expression": expression}],
@@ -244,10 +225,10 @@ def package_zip(*, bot: str, path: Path, where: str, expression: str) -> bytes:
     return made(json.dumps(manifest, ensure_ascii=False))
 
 
-def upload(center: TestClient, *, bot: str, path: Path, where: str, expression: str) -> None:
+def upload(center: TestClient, *, bot: str, path: Path, expression: str) -> None:
     sent = center.post(
         "/api/v1/packages",
-        files={"file": ("p.zip", package_zip(bot=bot, path=path, where=where, expression=expression), ZIP)},
+        files={"file": ("p.zip", package_zip(bot=bot, path=path, expression=expression), ZIP)},
         headers=ADMIN,
     )
     assert sent.status_code in (200, 201), sent.text
@@ -280,7 +261,7 @@ def fires(store: Store) -> list[Any]:
 def training(center: TestClient, store: Store) -> str:
     """BX-23(매주 수요일 10시)을 서버 실행기에 배포했다 — 10월 26일(월)에."""
     runner_id, _ = register_runner(center)
-    upload(center, bot=TRAINING_BOT, path=TRAINING, where="server", expression="0 10 * * 3")
+    upload(center, bot=TRAINING_BOT, path=TRAINING, expression="0 10 * * 3")
     server = {"type": "server_runner", "id": runner_id}
     deploy(center, store, bot=TRAINING_BOT, target=server, at=seoul(2026, 10, 26, 9))
     return runner_id
@@ -324,7 +305,7 @@ def test_missed_turns_fire_once_the_latest(center: TestClient, store: Store, tra
 
 def test_turns_before_the_deployment_do_not_count(center: TestClient, store: Store) -> None:
     runner_id, _ = register_runner(center)
-    upload(center, bot=TRAINING_BOT, path=TRAINING, where="server", expression="0 10 * * 3")
+    upload(center, bot=TRAINING_BOT, path=TRAINING, expression="0 10 * * 3")
     # 수요일 10시 반에 배포했다 — 그날 10시는 배포 전이다.
     server = {"type": "server_runner", "id": runner_id}
     deploy(center, store, bot=TRAINING_BOT, target=server, at=seoul(2026, 10, 28, 10, 30))
@@ -346,16 +327,6 @@ def test_two_server_runners_still_make_one_job(center: TestClient, store: Store,
     other, _ = register_runner(center, 2)
     deploy(center, store, bot=TRAINING_BOT, target={"type": "server_runner", "id": other}, at=seoul(2026, 10, 27, 9))
     assert len(sweep(store, seoul(2026, 10, 28, 10, 1))) == 1
-
-
-def test_a_pc_bot_gets_a_job_per_deployed_pc(center: TestClient, store: Store) -> None:
-    first, _ = register_pc(center, 1)
-    second, _ = register_pc(center, 2)
-    upload(center, bot=INVOICE_BOT, path=INVOICE, where="pc", expression="0 9 1 * *")
-    for pc in (first, second):
-        deploy(center, store, bot=INVOICE_BOT, target={"type": "bot_ui", "id": pc}, at=seoul(2026, 10, 20, 9))
-    made = sweep(store, seoul(2026, 11, 1, 9, 0, 10))
-    assert sorted(job(center, one)["target"]["id"] for one in made) == sorted([first, second])
 
 
 def test_a_claimed_turn_without_a_job_is_finished_with_the_same_key(
@@ -405,7 +376,7 @@ def test_the_sweep_runs_once_a_minute(store: Store, center: TestClient, training
 def test_the_heartbeat_sweeps_and_hands_the_job_down(center: TestClient, store: Store) -> None:
     """하트비트가 쓸고 **그 하트비트로** 작업이 내려간다 — 작업 지시 없이 (ADR-0110)."""
     runner_id, key = register_runner(center)
-    upload(center, bot=TRAINING_BOT, path=TRAINING, where="server", expression="* * * * *")
+    upload(center, bot=TRAINING_BOT, path=TRAINING, expression="* * * * *")
     deploy(center, store, bot=TRAINING_BOT, target={"type": "server_runner", "id": runner_id},
            at=datetime.now(UTC) - timedelta(days=1))
     beat = center.post(

@@ -6,8 +6,6 @@
  * 실행하는 쪽이 보고한 런타임 (C4 등록·하트비트, C12).
  */
 export interface RuntimeResource {
-  browsers?: string[];
-  desktop_backend?: string | null;
   extensions?: {
     [k: string]: unknown;
   }[];

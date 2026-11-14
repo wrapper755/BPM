@@ -5,12 +5,12 @@
 | 관리자 토큰 | 전부 |
 | 읽기 토큰 | **없다** — 콘솔 「보기 전용」은 목록·정보까지다 (파일은 받지 않는다) |
 | Studio 키 | 전부 — 올린 쪽이고, 공유 BPM 프로세스·툴팩을 가져다 쓴다 |
-| PC 실행기·서버 실행기 키 | **자기에게 배포된 것만** (고르는 기준은 `envelopes_for`와 같다) |
+| 서버 실행기 키 | **자기에게 배포된 것만** (고르는 기준은 `envelopes_for`와 같다) |
 | 연동용 키 | 없다 — 작업만 만든다 |
 
 세 모듈 위에 앉으므로 **따로 둔다**. `api.packages`는 `api.deployments`가 이미 import하고
 있어(상태 상수) 거기에 배포 조회를 넣으면 순환 import다. 여기는 아무도 import하지 않는
-끝자리라 `auth`·`bot_ui`·`deployments`를 한자리에서 볼 수 있다.
+끝자리라 `auth`·`server_runner`·`deployments`를 한자리에서 볼 수 있다.
 
 **「없다」와 「자기 것이 아니다」를 같은 코드로 답한다** (403 `forbidden`, C5 오류표). 어느
 패키지가 Center에 있는지를 권한 없는 키에게 알려 주지 않는다 — 404로 가르면 그것이 곧
@@ -21,13 +21,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from bpm.center.api import bot_ui, deployments, server_runner
+from bpm.center.api import deployments, server_runner
 from bpm.center.auth import PACKAGE_KEY_TYPE, Caller
 from bpm.center.errors import ApiError
 from bpm.center.storage import Store
 
 #: 자기에게 배포된 것만 받는 키 종류 → 배포 대상 종류 (C2 §배포 대상 규칙).
-TARGET_OF = {"bot_ui": "bot_ui", "server_runner": "server_runner"}
+TARGET_OF = {"server_runner": "server_runner"}
 
 
 def _target(store: Store, key: Any) -> tuple[str | None, str]:
@@ -36,9 +36,6 @@ def _target(store: Store, key: Any) -> tuple[str | None, str]:
     **묻는 길은 등록한 쪽이 쥔다** (`id_for_key`) — 키 이름을 대상 id로 흉내 내지 않는다.
     등록 전이면 `None`이고, 그때는 받을 수 있는 배포도 없다.
     """
-    if key.type == "bot_ui":
-        found = bot_ui.id_for_key(store, key.key_id)
-        return found, "이 키로 등록된 PC 실행기가 없다 — 먼저 register를 부르세요"
     found = server_runner.id_for_key(store, key.key_id)
     return found, "이 키로 등록된 서버 실행기가 없다 — 먼저 register를 부르세요"
 

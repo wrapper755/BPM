@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 대체됨([ADR-0144](0144-remove-the-pc-runner.md)) — 원래 수락. 나눠 보낼 PC BPM 프로세스가 없다 |
 | 날짜 | 2026-10-18 |
 | 관련 | [ADR-0016](0016-server-first.md) §3, [ADR-0022](0022-studio-canvas.md), [ADR-0062](0062-pc-delegation.md), [ADR-0018](0018-extensions.md), C14 `chk:call.delegate`, STU-06, 09-gaps §7-4 |
 

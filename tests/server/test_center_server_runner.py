@@ -131,7 +131,7 @@ def test_register_is_idempotent(client: TestClient) -> None:
 
 def test_only_a_server_runner_key_is_accepted(client: TestClient) -> None:
     """다른 종류의 키는 403 `wrong_key_type` (C12)."""
-    for other in ("bot_ui", "studio", "integration"):
+    for other in ("studio", "integration", "relay"):
         key = issue(client, name=f"{other} 키", key_type=other)
         response = client.post(f"{RUNNER}/register", json=register_body(), headers=auth(key))
         assert response.status_code == 403, other
@@ -149,7 +149,7 @@ def test_max_concurrency_comes_from_the_runner(client: TestClient) -> None:
     register(client, key, max_concurrency=3)
     listed = client.get("/api/v1/server-runners", headers=READ).json()
     # 하트비트 전에는 **등록할 때 말한 상한**을 보인다 (보고된 상태가 없다).
-    assert listed[0]["capacity"] == {"max": 3, "running": 0}
+    assert listed[0]["capacity"] == {"max": 3, "running": 0, "test_max": 0, "test_running": 0}
     assert listed[0]["status"] == "offline" and listed[0]["online"] is False
 
 
@@ -230,7 +230,7 @@ def test_heartbeat_reports_capacity_and_waiting(client: TestClient) -> None:
         ],
     )
     listed = client.get("/api/v1/server-runners", headers=READ).json()[0]
-    assert listed["capacity"] == {"max": 10, "running": 1}
+    assert listed["capacity"] == {"max": 10, "running": 1, "test_max": 0, "test_running": 0}
     assert [r["run_id"] for r in listed["running"]] == ["run_20261013_090000_aa11bb"]
     assert [w["run_id"] for w in listed["waiting"]] == ["run_20261013_080000_cc22dd"]
     assert listed["online"] is True and listed["status"] == "running"
@@ -246,7 +246,7 @@ def test_a_self_contradicting_heartbeat_is_refused(client: TestClient) -> None:
         headers=auth(key),
     )
     assert response.status_code == 422 and response.json()["code"] == "input_invalid"
-    assert "running[] 길이" in response.json()["detail"]["problems"][0]
+    assert "운영 실행 수" in response.json()["detail"]["problems"][0]
 
 
 def test_extensions_are_kept_until_they_change(client: TestClient, store: Store) -> None:
@@ -579,7 +579,7 @@ def test_a_rejected_job_is_not_resent(client: TestClient, store: Store) -> None:
 
 
 def test_a_lost_runner_job_says_runner_lost(client: TestClient, store: Store) -> None:
-    """맞추기 규칙의 사유는 **호스트마다 다르다** — 서버에 「bot_ui_lost」라고 적지 않는다."""
+    """맞추기 규칙의 사유는 **호스트마다 다르다** — 서버에 「runner_lost」라고 적지 않는다."""
     key = issue(client)
     runner_id = register(client, key)["server_runner_id"]
     _insert_job(store, job_id="job_a", target_id=runner_id, state=jobs_api.ACCEPTED)

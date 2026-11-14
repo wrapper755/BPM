@@ -6,7 +6,6 @@
  * `GET /companies…` — 셈은 읽을 때 센다.
  */
 export interface CompanyInfo {
-  bot_uis?: number;
   created_at: string;
   departments?: number;
   id: string;

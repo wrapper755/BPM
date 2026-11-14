@@ -9,26 +9,12 @@ from typing import Any
 import pytest
 from ci_scope import is_server_side
 
-from bpm.bot_ui.credentials import Credentials
-
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """`tests/server/`의 시험에 `server` 표시를 붙인다 — Windows CI가 뺀다 (`ci_scope.py`, ADR-0104·0129)."""
+    """`tests/server/`의 시험에 `server` 표시를 붙인다 (`ci_scope.py`, ADR-0129)."""
     for item in items:
         if is_server_side(item.path):
             item.add_marker(pytest.mark.server)
-
-
-@pytest.fixture(autouse=True)
-def _bot_ui_data_dir_is_temporary(tmp_path_factory: pytest.TempPathFactory, monkeypatch: Any) -> Iterator[Path]:
-    """**어느 시험도 개발 PC의 PC 실행기 데이터 폴더를 쓰지 않는다.**
-
-    기본 위치(Windows `%LOCALAPPDATA%` 밑 `bpm/bot-ui`)에 쓰면, 그 PC에서 진짜 PC 실행기를 띄웠을 때 시험이 남긴
-    주소·이름으로 뜬다 (이슈 #3에서 실제로 그랬다). `BPM_BOT_UI__DATA_DIR`는 설정이 읽는 덮어쓰기다.
-    """
-    path = tmp_path_factory.mktemp("bot-ui-data")
-    monkeypatch.setenv("BPM_BOT_UI__DATA_DIR", str(path))
-    yield path
 
 
 @pytest.fixture(autouse=True)
@@ -145,22 +131,3 @@ class FakeAutostart:
         self._enabled = False
 
 
-class FakeCredentials(Credentials):
-    """OS 비밀 저장소 대신 메모리. 시험이 개발 PC의 키링을 건드리지 않게."""
-
-    def __init__(self, key: str | None = None) -> None:
-        super().__init__()
-        self._values: dict[str, str] = {"center_api_key": key} if key else {}
-
-    @property
-    def available(self) -> bool:
-        return True
-
-    def get(self, name: str, *, env: str | None = None) -> str | None:
-        return self._values.get(name)
-
-    def set(self, name: str, value: str) -> None:
-        self._values[name] = value
-
-    def delete(self, name: str) -> None:
-        self._values.pop(name, None)

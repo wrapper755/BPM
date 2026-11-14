@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ErrorBanner, StatusBadge } from "@bpm/ui";
 import type { JobInfo } from "@bpm/api-types/c5-job-info";
-import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { cancelControl } from "@/lib/jobs";
@@ -12,7 +11,6 @@ import {
   STATE_LABEL,
   botLabel,
   delegatedFrom,
-  location,
   reason,
   stateNote,
   targetName,
@@ -48,16 +46,14 @@ export default async function JobPage({
   const asked = await searchParams;
 
   let job: JobInfo | null = null;
-  let botUis: BotUiInfo[] = [];
   let failure: string | null = null;
   try {
     job = await center.job(decodeURIComponent(jobId));
-    botUis = await center.botUis();
   } catch (cause) {
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
   }
 
-  const note = job ? stateNote(job, botUis) : null;
+  const note = job ? stateNote(job) : null;
   const from = job ? delegatedFrom(job) : null;
   const withoutInputs = job ? Object.fromEntries(Object.entries(job).filter(([key]) => key !== "inputs")) : {};
 
@@ -70,8 +66,7 @@ export default async function JobPage({
       {failure ? <ErrorBanner message={failure} /> : null}
       {asked.created ? (
         <p className="mb-4 text-body text-status-completed-fg">
-          작업을 만들었습니다. {job?.target.type === "server_runner" ? "서버 실행기가" : "Bot이"} 다음
-          하트비트에 받아 갑니다.
+          작업을 만들었습니다. 서버 실행기가 다음 하트비트에 받아 갑니다.
         </p>
       ) : null}
 
@@ -84,8 +79,7 @@ export default async function JobPage({
                 {note ? <span className="text-body-sm text-text-muted">{note}</span> : null}
               </div>
             </Row>
-            <Row label="실행 위치">{location(job)}</Row>
-            <Row label="Bot">{targetName(job, botUis)}</Row>
+            <Row label="실행기">{targetName(job)}</Row>
             <Row label="프로세스">{botLabel(job)}</Row>
             <Row label="요청자">
               {from ? (
@@ -115,7 +109,7 @@ export default async function JobPage({
 
           {found.mode === "admin" && cancelControl(job) ? (
             <div>
-              <CancelJob jobId={job.job_id} control={cancelControl(job)} explain />
+              <CancelJob jobId={job.job_id} control={cancelControl(job)} />
             </div>
           ) : null}
 

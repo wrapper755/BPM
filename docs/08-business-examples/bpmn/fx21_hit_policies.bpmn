@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx21_hit_policies" name="결정표 적중 정책 (UNIQUE·ANY)" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

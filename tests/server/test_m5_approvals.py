@@ -1,12 +1,11 @@
 """결재 한 바퀴 — 올리기 → 결재함 → 답하기 → 하트비트 (C4·C6, M5 조각 5).
 
-진짜 Center를 in-process로 띄우고 **진짜 PC 실행기 키로** 결재를 올린다. 현장 연결(엔진이
-`where=center`를 고르고 실행기가 올리는 길)은 다음 조각이라, 여기서는 C6의 경계인
-`POST /approvals`를 직접 두드린다.
+진짜 Center를 in-process로 띄우고 **진짜 서버 실행기 키로** 결재를 올린다. 여기서는 C6의
+경계인 `POST /approvals`를 직접 두드린다.
 
 거듭 보는 것 다섯.
 
-1. **확인은 올라오지 않는다** — `layer=confirmation`은 422다 (화면 앞 사람만 답할 수 있다).
+1. **확인은 올라오지 않는다** — `layer=confirmation`은 422다 (C6).
 2. **답은 올린 키에게만** 내려간다 — 남의 실행·남의 결재는 403이다.
 3. **거절은 되돌림이다** — 실행하는 쪽이 받아들이지 못하면 곧바로 `open`으로 돌아간다.
 4. **답할 곳이 없어지면 자동으로 회수한다** — 실행이 끝나거나 대기열을 잃으면.
@@ -67,7 +66,7 @@ def client(tmp_path: Path, store: Store) -> Iterator[TestClient]:
         yield found
 
 
-def issue_key(client: TestClient, *, name: str = "현장 PC 1", key_type: str = "bot_ui") -> str:
+def issue_key(client: TestClient, *, name: str = "서버 1", key_type: str = "server_runner") -> str:
     answer = client.post(
         "/api/v1/center-keys", json={"name": name, "type": key_type}, headers=ADMIN
     )
@@ -75,19 +74,19 @@ def issue_key(client: TestClient, *, name: str = "현장 PC 1", key_type: str = 
     return str(answer.json()["key"])
 
 
-def register(client: TestClient, raw: str, *, name: str = "현장 PC 1", seed: str = "pc1") -> str:
+def register(client: TestClient, raw: str, *, name: str = "서버 1", seed: str = "srv1") -> str:
     body = {
         "schema": 1,
         "machine_id": hashlib.sha256(seed.encode()).hexdigest(),
         "name": name,
-        "os": "windows-11-23H2",
-        "versions": {"bot_ui": "0.1.0", "core": "0.1.0"},
+        "os": "ubuntu-24.04",
+        "versions": {"server_runner": "0.1.0", "core": "0.1.0"},
     }
     answer = client.post(
-        "/api/v1/bot-ui/register", json=body, headers={"Authorization": f"Bearer {raw}"}
+        "/api/v1/server-runner/register", json=body, headers={"Authorization": f"Bearer {raw}"}
     )
     assert answer.status_code == 200, answer.text
-    return str(answer.json()["bot_ui_id"])
+    return str(answer.json()["server_runner_id"])
 
 
 def request_body(**over: Any) -> dict[str, Any]:
@@ -111,9 +110,8 @@ def request_body(**over: Any) -> dict[str, Any]:
 def heartbeat_body(**over: Any) -> dict[str, Any]:
     body: dict[str, Any] = {
         "schema": 1,
-        "status": "waiting_approval",
-        "current_run": None,
-        "queue": {"max": 20, "items": []},
+        "status": "running",
+        "capacity": {"max": 10, "running": 0},
     }
     body.update(over)
     return body
@@ -121,10 +119,10 @@ def heartbeat_body(**over: Any) -> dict[str, Any]:
 
 @pytest.fixture
 def host(client: TestClient) -> dict[str, Any]:
-    """등록된 PC 실행기 하나와 그 키 — 결재를 올리는 쪽."""
+    """등록된 서버 실행기 하나와 그 키 — 결재를 올리는 쪽."""
     raw = issue_key(client)
-    bot_ui_id = register(client, raw)
-    return {"raw": raw, "auth": {"Authorization": f"Bearer {raw}"}, "bot_ui_id": bot_ui_id}
+    runner_id = register(client, raw)
+    return {"raw": raw, "auth": {"Authorization": f"Bearer {raw}"}, "runner_id": runner_id}
 
 
 def put(client: TestClient, host: dict[str, Any], **over: Any) -> dict[str, Any]:
@@ -139,21 +137,30 @@ def put(client: TestClient, host: dict[str, Any], **over: Any) -> dict[str, Any]
 def test_an_approval_lands_in_the_inbox(client: TestClient, host: dict[str, Any]) -> None:
     made = put(client, host)
     assert made["state"] == "open"
-    assert made["host"]["id"] == host["bot_ui_id"]
-    assert made["host"]["name"] == "현장 PC 1", "실행하는 곳의 이름이 보인다 (CON-04)"
+    assert made["host"]["id"] == host["runner_id"]
+    assert made["host"]["name"] == "서버 1", "실행하는 곳의 이름이 보인다 (CON-04)"
     assert made["review"] == REVIEW, "검토 자료는 올라온다 (원칙 6의 예외)"
 
     [listed] = client.get("/api/v1/approvals", headers=READ_AUTH).json()
     assert listed["request_id"] == REQUEST
 
 
-def test_a_confirmation_is_refused(client: TestClient, host: dict[str, Any]) -> None:
-    """**확인은 Center로 올라오지 않는다** — 화면 앞 사람만 답할 수 있다 (C6)."""
+def test_a_confirmation_comes_to_the_inbox_too(client: TestClient, host: dict[str, Any]) -> None:
+    """**확인도 결재함으로 온다** (ADR-0144) — 답할 사람 앞의 창이 없어졌다."""
     answer = client.post(
         "/api/v1/approvals", json=request_body(layer="confirmation"), headers=host["auth"]
     )
+    assert answer.status_code == 201, answer.text
+    assert answer.json()["layer"] == "confirmation"
+
+
+def test_an_unknown_layer_is_refused(client: TestClient, host: dict[str, Any]) -> None:
+    """결재함이 어떻게 보여야 할지 모르는 것은 받아 두지 않는다 (C6 `unknown_layer`)."""
+    answer = client.post(
+        "/api/v1/approvals", json=request_body(layer="무언가"), headers=host["auth"]
+    )
     assert answer.status_code == 422
-    assert answer.json()["code"] == "confirmation_not_allowed"
+    assert answer.json()["code"] == "unknown_layer"
 
 
 def test_a_request_id_that_does_not_match_the_node_is_refused(
@@ -189,7 +196,7 @@ def test_another_key_cannot_raise_an_approval_on_my_request(
 ) -> None:
     """**남의 결재를 가로채지 못한다** (C6 §소유)."""
     put(client, host)
-    stranger = issue_key(client, name="딴 PC", key_type="bot_ui")
+    stranger = issue_key(client, name="딴 서버", key_type="server_runner")
     answer = client.post(
         "/api/v1/approvals", json=request_body(), headers={"Authorization": f"Bearer {stranger}"}
     )
@@ -198,14 +205,14 @@ def test_another_key_cannot_raise_an_approval_on_my_request(
 
 def test_another_keys_run_is_refused(client: TestClient, host: dict[str, Any]) -> None:
     """실행 기록이 먼저 올라와 있으면 C3 소유와 대조한다 (C6 `run_owner_mismatch`)."""
-    stranger = issue_key(client, name="딴 PC", key_type="bot_ui")
-    register(client, stranger, name="딴 PC", seed="pc2")
+    stranger = issue_key(client, name="딴 서버", key_type="server_runner")
+    register(client, stranger, name="딴 서버", seed="srv2")
     # 남의 키로 그 실행의 기록을 먼저 올린다 → 그 실행의 주인이 된다.
     sent = client.post(
         f"/api/v1/runs/{RUN}/events",
         json=[{"schema": 1, "run_id": RUN, "seq": 1, "ts": "2026-10-06T09:15:00+09:00",
-               "kind": "run_started", "data": {"bpm_process_id": BOT, "version": "1.0.0", "run_location": "pc",
-                        "executor": "bot_ui", "mode": "deterministic", "source": "job"}}],
+               "kind": "run_started", "data": {"bpm_process_id": BOT, "version": "1.0.0",
+                        "executor": "server_runner", "mode": "deterministic", "source": "job"}}],
         headers={"Authorization": f"Bearer {stranger}"},
     )
     assert sent.status_code == 200, sent.text
@@ -292,19 +299,6 @@ def test_an_expired_approval_cannot_be_answered(client: TestClient, host: dict[s
 # ─────────────────────────── 회수 (C6 DELETE) ───────────────────────────
 
 
-def test_the_host_withdraws_when_answered_in_the_field(
-    client: TestClient, host: dict[str, Any]
-) -> None:
-    """현장에서 먼저 답했으면 올린 쪽이 거둔다 — **실행에는 영향이 없다** (C6)."""
-    put(client, host)
-    answer = client.delete(
-        f"/api/v1/approvals/{REQUEST}?reason=answered_in_field", headers=host["auth"]
-    )
-    assert answer.status_code == 200
-    assert answer.json()["state"] == "withdrawn"
-    assert answer.json()["withdraw_reason"] == "answered_in_field"
-
-
 def test_the_host_cannot_claim_an_admin_reason(client: TestClient, host: dict[str, Any]) -> None:
     put(client, host)
     answer = client.delete(
@@ -315,7 +309,7 @@ def test_the_host_cannot_claim_an_admin_reason(client: TestClient, host: dict[st
 
 def test_someone_elses_approval_cannot_be_withdrawn(client: TestClient, host: dict[str, Any]) -> None:
     put(client, host)
-    stranger = issue_key(client, name="딴 PC", key_type="bot_ui")
+    stranger = issue_key(client, name="딴 서버", key_type="server_runner")
     answer = client.delete(
         f"/api/v1/approvals/{REQUEST}?reason=run_ended",
         headers={"Authorization": f"Bearer {stranger}"},
@@ -349,8 +343,8 @@ def test_a_finished_run_takes_its_approvals_with_it(
         f"/api/v1/runs/{RUN}/events",
         json=[
             {"schema": 1, "run_id": RUN, "seq": 1, "ts": "2026-10-06T09:15:00+09:00",
-             "kind": "run_started", "data": {"bpm_process_id": BOT, "version": "1.0.0", "run_location": "pc",
-                        "executor": "bot_ui", "mode": "deterministic", "source": "job"}},
+             "kind": "run_started", "data": {"bpm_process_id": BOT, "version": "1.0.0",
+                        "executor": "server_runner", "mode": "deterministic", "source": "job"}},
             {"schema": 1, "run_id": RUN, "seq": 2, "ts": "2026-10-06T09:20:00+09:00",
              "kind": "run_finished", "data": {"status": "failed", "duration_s": 12.5, "ai_tasks": 0,
                         "replayed_tasks": 0, "ui_tasks": 0, "service_calls": 0,
@@ -375,19 +369,18 @@ def test_a_lost_queue_takes_its_approvals_with_it(
         cur.execute(
             "INSERT INTO jobs (job_id, bpm_process_id, version, target_type, target_id, inputs_json,"
             " owner, body_hash, requested_by, requested_at, state, run_id, misses)"
-            " VALUES ('job_11112222', ?, '1.0.0', 'bot_ui', ?, '{}', 'actor:관리자', 'h',"
+            " VALUES ('job_11112222', ?, '1.0.0', 'server_runner', ?, '{}', 'actor:관리자', 'h',"
             " '관리자', '2026-10-06T09:00:00+09:00', 'accepted', ?, 1)",
-            (BOT, host["bot_ui_id"], RUN),
+            (BOT, host["runner_id"], RUN),
         )
     put(client, host)
 
     # 대기열·실행 자리에 보이지 않는 하트비트 한 번 더 → 두 번 연속이라 잃은 것으로 본다.
-    client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=host["auth"])
+    client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=host["auth"])
 
-    assert jobs.info_of(store, store.row("SELECT * FROM jobs")).state_reason == "bot_ui_lost"
+    assert jobs.info_of(store, store.row("SELECT * FROM jobs")).state_reason == "runner_lost"
     found = client.get(f"/api/v1/approvals/{REQUEST}", headers=READ_AUTH).json()
     assert found["state"] == "withdrawn" and found["withdraw_reason"] == "host_lost"
-
 
 
 def finish_run(client: TestClient, host: dict[str, Any], *, status: str = "cancelled") -> None:
@@ -396,8 +389,8 @@ def finish_run(client: TestClient, host: dict[str, Any], *, status: str = "cance
         f"/api/v1/runs/{RUN}/events",
         json=[
             {"schema": 1, "run_id": RUN, "seq": 1, "ts": "2026-10-06T09:15:00+09:00",
-             "kind": "run_started", "data": {"bpm_process_id": BOT, "version": "1.0.0", "run_location": "pc",
-                        "executor": "bot_ui", "mode": "deterministic", "source": "job"}},
+             "kind": "run_started", "data": {"bpm_process_id": BOT, "version": "1.0.0",
+                        "executor": "server_runner", "mode": "deterministic", "source": "job"}},
             {"schema": 1, "run_id": RUN, "seq": 2, "ts": "2026-10-06T09:20:00+09:00",
              "kind": "run_finished", "data": {"status": status, "duration_s": 12.5, "ai_tasks": 0,
                         "replayed_tasks": 0, "ui_tasks": 0, "service_calls": 0,
@@ -415,17 +408,17 @@ def test_a_refused_withdrawal_does_not_reopen_the_approval(client: TestClient, h
     """
     put(client, host)
     finish_run(client, host)
-    down = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=host["auth"]).json()
+    down = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=host["auth"]).json()
     assert [one["state"] for one in down["approvals"]] == ["withdrawn"]
 
     client.post(
-        "/api/v1/bot-ui/heartbeat",
+        "/api/v1/server-runner/heartbeat",
         json=heartbeat_body(approval_acks=[{"request_id": REQUEST, "accepted": False, "reason": "not_waiting"}]),
         headers=host["auth"],
     )
     found = client.get(f"/api/v1/approvals/{REQUEST}", headers=READ_AUTH).json()
     assert found["state"] == "withdrawn" and found["withdraw_reason"] == "run_ended"
-    again = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=host["auth"]).json()
+    again = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=host["auth"]).json()
     assert again["approvals"] == [], "받아 간 것으로 적었다 — 다시 내려가지 않는다"
 
 
@@ -437,7 +430,7 @@ def test_a_refused_answer_of_an_ended_run_is_withdrawn_not_reopened(
     client.post(f"/api/v1/approvals/{REQUEST}/answer", json={"answer": {"approved": True}}, headers=ADMIN)
     finish_run(client, host)  # 이미 답했으니 `run_ended`로 거두지 않는다
     client.post(
-        "/api/v1/bot-ui/heartbeat",
+        "/api/v1/server-runner/heartbeat",
         json=heartbeat_body(approval_acks=[{"request_id": REQUEST, "accepted": False, "reason": "not_waiting"}]),
         headers=host["auth"],
     )
@@ -466,7 +459,7 @@ def test_the_heartbeat_sweeps_open_approvals_of_ended_runs(client: TestClient, h
     """답을 기다리지 않아도 **하트비트가 쓸어 거둔다** — 결재함에 남지 않는다."""
     finish_run(client, host)
     put(client, host)
-    client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=host["auth"])
+    client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=host["auth"])
     assert client.get("/api/v1/approvals?state=open", headers=READ_AUTH).json() == []
     found = client.get(f"/api/v1/approvals/{REQUEST}", headers=READ_AUTH).json()
     assert found["state"] == "withdrawn" and found["withdraw_reason"] == "run_ended"
@@ -478,7 +471,7 @@ def test_the_heartbeat_sweeps_open_approvals_of_ended_runs(client: TestClient, h
 def test_the_answer_rides_the_heartbeat(client: TestClient, host: dict[str, Any]) -> None:
     """한 바퀴 — 올리기 → 답하기 → **현장이 받아 간다**."""
     put(client, host)
-    assert client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=host["auth"]).json()[
+    assert client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=host["auth"]).json()[
         "approvals"
     ] == [], "답이 없으면 내려갈 것도 없다"
 
@@ -487,16 +480,16 @@ def test_the_answer_rides_the_heartbeat(client: TestClient, host: dict[str, Any]
         json={"answer": {"approved": True, "memo": "좋음"}},
         headers=ADMIN,
     )
-    down = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=host["auth"]).json()
+    down = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=host["auth"]).json()
     assert [one["request_id"] for one in down["approvals"]] == [REQUEST]
     assert down["approvals"][0]["answer"] == {"approved": True, "memo": "좋음"}
 
     # **ack가 올 때까지 다시 실린다.**
-    again = client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=host["auth"]).json()
+    again = client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=host["auth"]).json()
     assert len(again["approvals"]) == 1
 
     done = client.post(
-        "/api/v1/bot-ui/heartbeat",
+        "/api/v1/server-runner/heartbeat",
         json=heartbeat_body(approval_acks=[{"request_id": REQUEST, "accepted": True}]),
         headers=host["auth"],
     ).json()
@@ -508,10 +501,10 @@ def test_a_refused_answer_goes_back_to_open(client: TestClient, host: dict[str, 
     """**거절은 되돌림이다** (C6) — 사유를 남기고 다시 답할 수 있게 연다."""
     put(client, host)
     client.post(f"/api/v1/approvals/{REQUEST}/answer", json={"answer": {"approved": True}}, headers=ADMIN)
-    client.post("/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=host["auth"])
+    client.post("/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=host["auth"])
 
     client.post(
-        "/api/v1/bot-ui/heartbeat",
+        "/api/v1/server-runner/heartbeat",
         json=heartbeat_body(
             approval_acks=[{"request_id": REQUEST, "accepted": False, "reason": "폼이 바뀌었습니다"}]
         ),
@@ -529,14 +522,14 @@ def test_a_refused_answer_goes_back_to_open(client: TestClient, host: dict[str, 
     ).status_code == 200
 
 
-def test_another_bot_ui_cannot_ack_my_approval(client: TestClient, host: dict[str, Any]) -> None:
+def test_another_runner_cannot_ack_my_approval(client: TestClient, host: dict[str, Any]) -> None:
     put(client, host)
     client.post(f"/api/v1/approvals/{REQUEST}/answer", json={"answer": {"approved": True}}, headers=ADMIN)
 
-    stranger = issue_key(client, name="딴 PC", key_type="bot_ui")
-    register(client, stranger, name="딴 PC", seed="pc2")
+    stranger = issue_key(client, name="딴 서버", key_type="server_runner")
+    register(client, stranger, name="딴 서버", seed="srv2")
     client.post(
-        "/api/v1/bot-ui/heartbeat",
+        "/api/v1/server-runner/heartbeat",
         json=heartbeat_body(approval_acks=[{"request_id": REQUEST, "accepted": True}]),
         headers={"Authorization": f"Bearer {stranger}"},
     )
@@ -630,7 +623,7 @@ def test_a_relay_answer_records_the_person_and_the_route(client: TestClient, hos
     assert (found["answered_by"], found["answered_via"]) == ("김감독", "chaeksachat")
 
     [dispatched] = client.post(
-        "/api/v1/bot-ui/heartbeat", json=heartbeat_body(), headers=host["auth"]
+        "/api/v1/server-runner/heartbeat", json=heartbeat_body(), headers=host["auth"]
     ).json()["approvals"]
     assert (dispatched["answered_by"], dispatched["answered_via"]) == ("김감독", "chaeksachat")
 
@@ -680,7 +673,7 @@ def test_a_relay_key_does_nothing_but_approvals(client: TestClient, host: dict[s
     assert client.get("/api/v1/resources", headers=mine).status_code == 403
     assert client.get("/api/v1/runs", headers=mine).status_code == 403
     assert client.post(f"/api/v1/runs/{RUN}/events", json=[], headers=mine).status_code == 403
-    job = {"bpm_process_id": BOT, "target": {"type": "bot_ui", "id": host["bot_ui_id"]}, "inputs": {}}
+    job = {"bpm_process_id": BOT, "target": {"type": "bot_ui", "id": host["runner_id"]}, "inputs": {}}
     assert client.post("/api/v1/jobs", json=job, headers=mine).status_code == 403
 
 
@@ -700,8 +693,9 @@ def test_requested_by_comes_from_the_job_that_started_the_run(
         cur.execute(
             "INSERT INTO jobs (job_id, bpm_process_id, version, target_type, target_id, inputs_json, owner,"
             " body_hash, requested_by, requested_at, state, run_id)"
-            " VALUES ('job_0000abcd', ?, '1.0.0', 'bot_ui', ?, '{}', 'key:x', 'h', 'intake-key', ?, 'accepted', ?)",
-            (BOT, host["bot_ui_id"], "2026-10-06T09:15:00+00:00", RUN),
+            " VALUES ('job_0000abcd', ?, '1.0.0', 'server_runner', ?, '{}', 'key:x', 'h',"
+            " 'intake-key', ?, 'accepted', ?)",
+            (BOT, host["runner_id"], "2026-10-06T09:15:00+00:00", RUN),
         )
     assert client.get(f"/api/v1/approvals/{REQUEST}", headers=READ_AUTH).json()["requested_by"] == "intake-key"
 

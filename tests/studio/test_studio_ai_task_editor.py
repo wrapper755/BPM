@@ -44,8 +44,8 @@ def _app() -> Any:
     yield QApplication.instance() or QApplication([])
 
 
-def loaded(body: dict[str, Any], *, run_location: str | None = None) -> AiTaskEditor:
-    made = AiTaskEditor(run_location=run_location)
+def loaded(body: dict[str, Any]) -> AiTaskEditor:
+    made = AiTaskEditor()
     made.load(body)
     return made
 
@@ -198,6 +198,7 @@ def test_the_outline_goes_only_into_an_empty_goal() -> None:
 
 
 def test_desktop_shows_the_app_and_writes_it() -> None:
+    """옛 그림의 `desktop`은 읽고 쓴다 — 다만 **적용은 막는다** (돌릴 자리가 없다, ADR-0144)."""
     made = loaded({"goal": "g", "domain": "llm"})
     assert made.app_box.isHidden()
     made.domain_picks["desktop"].setChecked(True)
@@ -205,7 +206,7 @@ def test_desktop_shows_the_app_and_writes_it() -> None:
     assert any("띄울 앱" in w for w in made.problems()[1])
     made.app_box.setText("legacy-erp")
     assert made.dump()["desktop"] == {"app": "legacy-erp"}
-    assert made.problems() == ([], [])
+    assert made.problems()[0] == [SERVER_NO_SCREEN]
 
 
 @pytest.mark.parametrize(
@@ -247,13 +248,14 @@ def test_an_unknown_domain_is_kept_but_blocks_a_change() -> None:
     assert "fax" in made.problems()[0][0]
 
 
-def test_on_the_server_web_and_desktop_are_off() -> None:
-    made = loaded({"goal": "g", "domain": "llm"}, run_location="server")
+def test_web_and_desktop_are_always_off() -> None:
+    """돌릴 자리가 없다 (ADR-0114·0144) — 끄고 까닭을 말한다."""
+    made = loaded({"goal": "g", "domain": "llm"})
     assert not made.domain_picks["web"].isEnabled()
     assert not made.domain_picks["desktop"].isEnabled()
     assert SERVER_NO_SCREEN in made.domain_note.text()
     # 이미 골라 둔 것은 지우지 않는다 — 막고 까닭을 말한다 (B6).
-    made = loaded({"goal": "g", "domain": "desktop", "desktop": {"app": "x"}}, run_location="server")
+    made = loaded({"goal": "g", "domain": "desktop", "desktop": {"app": "x"}})
     assert made.domain_picks["desktop"].isEnabled()
     assert made.problems()[0] == [SERVER_NO_SCREEN]
 
@@ -261,11 +263,10 @@ def test_on_the_server_web_and_desktop_are_off() -> None:
 # ── 속성 패널 ──
 
 
-def panel_with(body: dict[str, Any], *, run_location: str | None = None) -> Any:
+def panel_with(body: dict[str, Any]) -> Any:
     from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
-    panel.run_location = run_location
     panel.show_element({
         "id": "Task_Ai", "type": "ServiceTask", "name": "읽기",
         "chk": {"aiTask": json.dumps(body, ensure_ascii=False)},
@@ -297,8 +298,8 @@ def test_a_blocking_problem_blocks_the_panel() -> None:
     assert changes == {} and problem == "결과 필드 이름을 적으세요."
 
 
-def test_the_panel_passes_the_run_location() -> None:
-    panel = panel_with({"goal": "g", "domain": "llm"}, run_location="server")
+def test_the_panel_hands_the_editor_the_same_rule() -> None:
+    panel = panel_with({"goal": "g", "domain": "llm"})
     editor: Any = panel._editor  # noqa: SLF001
     assert not editor.domain_picks["web"].isEnabled()
 

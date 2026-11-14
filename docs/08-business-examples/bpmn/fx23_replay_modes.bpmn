@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_fx23_replay_modes" name="재생 모드 셋 (plan·full·none)" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

@@ -5,7 +5,7 @@
 수행기는 이 모듈만 보고, 엔진이 수행기를 모아 꽂는다.
 
 **바깥 세계는 `RunEnv` 한 곳으로 모은다** — 파일(`Workspace`), 보내기 어댑터(`Sender`), 같은
-패키지의 DMN 결정. 실행하는 쪽(PC 실행기·Studio 시험 실행·서버 실행기)이 정해서 준다. 주지 않으면
+패키지의 DMN 결정. 실행하는 쪽(서버 실행기·Studio 시험 실행)이 정해서 준다. 주지 않으면
 파일도 못 쓰고 메일도 못 보낸다 — **조용히 아무 데나 쓰거나 안 보내지 않는다** (ADR-0026).
 
 쓰는 쪽은 `bpm.core.engine`에서 한꺼번에 들면 된다 (그쪽이 여기 것을 다시 내보낸다).
@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 from bpm.contracts.approvals import Form
 from bpm.contracts.bpmn_ext import BpmnProcess, Flow, Node
 from bpm.contracts.dmn import Decision
+from bpm.contracts.events import new_run_id as contract_run_id
 from bpm.contracts.replay import ReplayMemory, ReplaySpec
 from bpm.core.agent import Tool
 from bpm.core.delegation import Delegator, NoDelegator
@@ -62,13 +63,11 @@ ERROR_ESCALATED = "ESCALATED"
 #: Center 결재가 답 없이 끝남 — 관리자 회수·만료 (C14·C6, ADR-0038). 오류 경계가 받는다.
 ERROR_APPROVAL_WITHDRAWN = "APPROVAL_WITHDRAWN"
 ERROR_APPROVAL_EXPIRED = "APPROVAL_EXPIRED"
-#: **PC 위임이 끝나지 못했다** — 실패·거절·만료 ([ADR-0062](../decisions/0062-pc-delegation.md)).
-#: 업무 실패라 오류 경계가 받는다 (고쳐야 할 버그가 아니다).
+#: **맡긴 것이 끝나지 못했다** — 실패·거절·만료 (ADR-0082). 업무 실패라 오류 경계가 받는다.
 ERROR_DELEGATION_FAILED = "DELEGATION_FAILED"
-#: 위임이 끝났다고 보는 결과 (C4 작업 ack·C12 `DelegationResult.state`).
+#: 맡기기가 끝났다고 보는 결과 (C4 작업 ack·C12 `DelegationResult.state`).
 DELEGATION_FINISHED = "finished"
-#: 결재를 어디서 답하나 (C3 `human_requested.where`).
-WHERE_FIELD = "field"
+#: 결재를 어디서 답하나 (C3 `human_requested.where`) — 자리가 Center 하나다 (ADR-0144).
 WHERE_CENTER = "center"
 
 #: 실행 폴더 밖을 가리켰다 (ADR-0026). **오류 경계로 받지 않는다** — 그림·설정이 잘못된 것이다.
@@ -80,9 +79,9 @@ CODE_UNSUPPORTED = "node_kind_unsupported"
 WAIT_MESSAGE = "message"
 WAIT_TIMER = "timer"
 WAIT_SIGNAL = "signal"
-#: **PC 위임**을 기다린다 ([ADR-0062](../decisions/0062-pc-delegation.md)). 짝 칸은 `job_id`다.
-WAIT_DELEGATION = "delegation"
 #: **긴 외부 작업**을 기다린다 ([ADR-0103](../decisions/0103-long-external-tasks.md)). 짝 칸은 `task_id`다.
+#: **맡긴 것**을 기다린다 (ADR-0082). 짝 칸은 `job_id`다.
+WAIT_DELEGATION = "delegation"
 WAIT_EXTERNAL_TASK = "external_task"
 
 class State(StrEnum):
@@ -242,7 +241,7 @@ class Pending:
     form: Form | None
     #: 결재자에게 보여 줄 값 (C6 `review` — 원칙 6의 예외다).
     review: dict[str, Any] = field(default_factory=dict)
-    where: str = "field"  # field | center
+    where: str = WHERE_CENTER  # 자리가 하나다 (ADR-0144)
     node_instance: int = 1
     #: C6 `description`·`expires_at` — Center로 올릴 때 쓴다.
     description: str | None = None
@@ -281,6 +280,9 @@ class RunEnv:
     #: AI 태스크의 모델 (ADR-0027). 기본은 **부르지 않고 실패한다**. 주소·키는 이 어댑터만 안다.
     llm: Llm = field(default_factory=NoLlm)
     #: AI 태스크가 빌려 쓸 도구 (`bpm:aiTask.tools`의 이름 → 함수). 확장이 더한다 (M4).
+    #: **맡기기**를 맡는 쪽 (C12 §맡기기, ADR-0082). 기본은 **맡기지 못한다** — 서버 실행기는
+    #: Center에 요청하는 것을, Studio 시험 실행은 케이스가 적어 둔 결과를 꽂는다.
+    delegate: Delegator = field(default_factory=NoDelegator)
     tools: Mapping[str, Tool] = field(default_factory=dict)
     #: 패키지의 재생 명세 (`memory/specs.json`, ADR-0028). 결정 수행이 되밟는다. 없으면 그냥 돈다.
     memory: ReplayMemory | None = None
@@ -289,10 +291,8 @@ class RunEnv:
     extensions: ExtensionTasks = field(default_factory=lambda: NoExtensionTasks())
     #: **PC 위임**을 맡기는 쪽 (C12 §PC 위임, ADR-0062). 기본은 **맡기지 못한다** — 서버
     #: 실행기는 Center에 요청하는 것을, Studio 시험 실행은 케이스가 적어 둔 결과를 꽂는다.
-    delegate: Delegator = field(default_factory=NoDelegator)
-    #: `location: follow` 결재를 어디서 답하나 — **실행하는 쪽의 기본값** (ADR-0038). PC 실행기는
+    #: `location: follow` 결재를 어디서 답하나 — **실행하는 쪽의 기본값** (ADR-0038). 실행기는
     #: BUI-03 「원격 결재」, 서버 실행기는 `center`. 엔진은 설정 파일을 읽지 않는다. 기본은 현장.
-    approval_where: str = "field"
 
 
 @runtime_checkable
@@ -558,18 +558,20 @@ def task_type(node: Node) -> str | None:
 
 
 def new_run_id(*, now: datetime | None = None, test: bool = False) -> str:
-    """C3 `run_id` — `run_<YYYYMMDD>_<HHMMSS>_<hex6>` (시험 실행은 `test_`)."""
-    at = (now or utc_now()).strftime("%Y%m%d_%H%M%S")
-    return f"{'test' if test else 'run'}_{at}_{secrets.token_hex(3)}"
+    """C3 `run_id` — **짓는 규칙은 계약에 있다** (패턴과 같은 자리, `contracts.events`).
+
+    짓는 쪽이 둘이라서다: 여기(실행하는 쪽)와 **Center**(시험 실행의 id를 정한다, C17).
+    """
+    return contract_run_id(now=now or utc_now(), test=test)
 
 
 __all__ = [
+    "WAIT_DELEGATION",
+    "ERROR_DELEGATION_FAILED",
     "DELEGATION_FINISHED",
     "ERROR_APPROVAL_EXPIRED",
-    "ERROR_DELEGATION_FAILED",
     "ERROR_APPROVAL_WITHDRAWN",
     "WHERE_CENTER",
-    "WHERE_FIELD",
     "BUILTIN_NOW",
     "BUILTIN_RUN_ID",
     "BUILTIN_TODAY",
@@ -601,7 +603,6 @@ __all__ = [
     "State",
     "TaskFailed",
     "Token",
-    "WAIT_DELEGATION",
     "WAIT_EXTERNAL_TASK",
     "WAIT_MESSAGE",
     "WAIT_SIGNAL",

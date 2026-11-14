@@ -10,7 +10,7 @@
 
 규칙 둘이 이 모듈의 모양을 정했다.
 
-- **서버를 부르지 않는다.** PC 실행기는 하트비트마다 돌려 `readiness`에 싣는다 (C4) — 한 번이 비싸면
+- **서버를 부르지 않는다.** 실행기는 하트비트마다 돌려 `readiness`에 싣는다 (C4) — 한 번이 비싸면
   주기가 느려진다. 확장 점검도 같은 약속을 진다 (`PreflightCheck` 규약).
 - **점검이 실행을 막지 않는다.** 점검 하나가 터지면 그것만 빼고 사유를 `skipped`에 남긴다. 막는
   것은 `severity`가 `block`인 **결과**이고, 그것으로 멈출지는 부르는 쪽이 정한다.
@@ -28,7 +28,6 @@ from bpm.contracts._semver import InvalidVersion, satisfies
 from bpm.contracts.manifest import PC_ONLY_DOMAINS, Manifest
 from bpm.core.extensions import ExtensionHost
 from bpm.extension_api import (
-    RUN_LOCATION_SERVER,
     SEVERITY_BLOCK,
     ExtensionContext,
     Finding,
@@ -41,9 +40,6 @@ LOG = logging.getLogger(__name__)
 TASK_TYPES_UNSUPPORTED = "task_types_unsupported"
 #: 그 종류의 확장이 **깔려 있는데 사람이 꺼 뒀다** (ADR-0043). 고치는 길이 위와 다르다 — 켜면 된다.
 EXTENSION_TURNED_OFF = "extension_turned_off"
-#: 그 종류가 **깔려 있는데 이 실행 위치에서 못 돈다** (ADR-0064 — 서버에서만 생긴다). 고치는
-#: 길은 또 다르다 — 깔거나 켤 일이 아니라 **실행 위치**나 그림(PC 위임)을 고치는 일이다.
-TASK_TYPES_WRONG_LOCATION = "task_types_wrong_location"
 EXTENSIONS_UNUSABLE = "extensions_unusable"
 MISSING_ENVIRONMENT = "missing_agent_environment"
 #: 실행하는 쪽이 갖춰야 할 설정이 없다 (C1 `requires.settings` — 지금은 `smtp` 하나가 쓰인다).
@@ -89,16 +85,6 @@ def _check_settings(manifest: Manifest, have: Sequence[str]) -> Finding | None:
     )
 
 
-def _here(host: ExtensionHost) -> str:
-    """「어디에서 못 하나」 — 사람이 읽는 자리 이름. 실행 위치를 쥔 호스트는 서버다 (ADR-0064)."""
-    return "서버" if host.run_location == RUN_LOCATION_SERVER else "이 PC"
-
-
-def _what(host: ExtensionHost) -> str:
-    """「무엇을 새 판으로 올리나」 — 서버에서 「PC 실행기를 올리세요」는 할 수 없는 일을 시키는 셈이다."""
-    return "서버 실행기" if host.run_location == RUN_LOCATION_SERVER else "PC 실행기"
-
-
 def _check_task_types(manifest: Manifest, host: ExtensionHost) -> Finding | None:
     """그림이 쓰는 **확장 태스크 종류**를 여기서 수행할 수 있나 (C1 `requires.task_types`, C13).
 
@@ -110,14 +96,15 @@ def _check_task_types(manifest: Manifest, host: ExtensionHost) -> Finding | None
     종류가 없으면 엔진이 `node_kind_unsupported`로 끝낸다 — 재시도로 풀리지 않는 설치 오류라
     오류 경계도 받지 않는다 (`core.nodes`). 그러니 **시작하기 전에** 말한다.
 
-    **까닭 셋을 가른다** — 꺼 뒀다(ADR-0043) / 이 실행 위치에서 못 돈다(ADR-0064) / 없다.
-    고치는 길이 셋 다 달라서, 뭉치면 사람이 **할 수 없는 일**을 하라고 듣는다.
+    **까닭 둘을 가른다** — 꺼 뒀다(ADR-0043) / 없다. 고치는 길이 달라서, 뭉치면 사람이
+    **할 수 없는 일**을 하라고 듣는다. 「이 실행 위치에서 못 돈다」는 셋째 까닭은 PC 실행기와
+    함께 걷었다 (ADR-0144 — 돌 자리가 서버 실행기 하나다).
     """
     missing = [need for need in manifest.requires.task_types if host.task_type(need.id) is None]
     if not missing:
         return None
 
-    # **꺼 둔 것을 먼저 가른다** (ADR-0043) — 켜면 될 일에 「PC 실행기를 다시 깔라」고 하면
+    # **꺼 둔 것을 먼저 가른다** (ADR-0043) — 켜면 될 일에 「실행기를 다시 깔라」고 하면
     # 사람이 할 수 없는 일을 시키는 셈이다. 주인이 깔려 있는데 꺼져 있으면 고치는 길이 다르다.
     off = [
         f"{need.id} ({owner.manifest.name} 확장)"
@@ -133,32 +120,12 @@ def _check_task_types(manifest: Manifest, host: ExtensionHost) -> Finding | None
             fix_hint="확장 목록에서 그 확장을 켜세요",
         )
 
-    # **실행 위치가 아닌 것을 그다음에 가른다** (ADR-0064) — 깔려 있고 켜져 있는데 이 위치에서
-    # 돌 수 없는 것이다. 「깔린 판으로 올리세요」는 틀린 안내다(올려도 그 위치에서는 못 돈다).
-    if (where := host.run_location) is not None:
-        wrong = [
-            f"{need.id} ({owner.manifest.name} 확장 — {', '.join(found.run_locations) or '적힌 위치 없음'})"
-            for need in missing
-            if (owner := host.provider_of(need.id)) is not None
-            and not owner.off
-            and (found := owner.manifest.task_type(need.id)) is not None
-            and where not in found.run_locations
-        ]
-        if wrong:
-            return Finding(
-                id=TASK_TYPES_WRONG_LOCATION,
-                severity=SEVERITY_BLOCK,
-                message=f"그림이 쓰는 태스크 종류 {len(wrong)}개는 이 실행 위치({where})에서 돌 수 없습니다",
-                items=tuple(wrong),
-                fix_hint="실행 위치를 PC로 바꾸거나(STU-06), 그 태스크를 PC 위임으로 보내세요",
-            )
-
     return Finding(
         id=TASK_TYPES_UNSUPPORTED,
         severity=SEVERITY_BLOCK,
-        message=f"그림이 쓰는 태스크 종류 {len(missing)}개를 {_here(host)}에서 수행할 수 없습니다",
+        message=f"그림이 쓰는 태스크 종류 {len(missing)}개를 서버에서 수행할 수 없습니다",
         items=tuple(f"{need.id} ({need.extension} 확장)" for need in missing),
-        fix_hint=f"그 종류를 기여하는 확장이 깔린 {_what(host)} 판으로 올리세요",
+        fix_hint="그 종류를 기여하는 확장이 깔린 서버 실행기 판으로 올리세요",
     )
 
 
@@ -191,7 +158,7 @@ def _check_extensions(manifest: Manifest, host: ExtensionHost) -> Finding | None
         severity=SEVERITY_BLOCK,
         message=f"깔린 확장 {len(bad)}개가 이 BPM 프로세스가 요구하는 판이 아닙니다",
         items=tuple(bad),
-        fix_hint=f"{_what(host)}를 새 판으로 올리거나, 그 판에 맞는 BPM 프로세스를 배포하세요",
+        fix_hint="서버 실행기를 새 판으로 올리거나, 그 판에 맞는 BPM 프로세스를 배포하세요",
     )
 
 
@@ -245,7 +212,7 @@ def check(
 ) -> Preflight:
     """그 BPM 프로세스를 이 PC에서 지금 돌릴 수 있나.
 
-    - `host`: 없으면 확장 점검과 확장 태스크 점검을 건너뛴다 (확장 없는 PC 실행기도 BPM 프로세스는 돈다).
+    - `host`: 없으면 확장 점검과 확장 태스크 점검을 건너뛴다 (확장 없는 실행기도 BPM 프로세스는 돈다).
     - `context`: 확장 id → 그 확장의 바깥 세상. `host`가 있어도 이것이 없으면 **확장 점검만**
       건너뛴다 (플랫폼 점검은 그대로 돈다).
     - `fix_hint`: 옛 칸이다 — 받기만 한다 (서비스 앱 키 점검이 없어졌다, ADR-0102).

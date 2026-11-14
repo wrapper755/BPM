@@ -1,6 +1,6 @@
 """확장 호스트 — 확장을 찾아 기여를 등록한다 (ADR-0018).
 
-**플랫폼은 특정 확장을 모른다.** Studio·PC 실행기·실행기·서버 실행기는 시작할 때 이 호스트를 만들어
+**플랫폼은 특정 확장을 모른다.** Studio·서버 실행기는 시작할 때 이 호스트를 만들어
 엔트리 포인트(`bpm.extensions`)로 찾은 확장 정의(C13)를 읽고, 기여 지점별 목록을 묻는다.
 확장 이름이 플랫폼 코드에 나오지 않는다 (`tests/integration/test_import_direction.py`가 막는다).
 
@@ -42,7 +42,6 @@ from importlib.resources import files
 from typing import Any
 
 from bpm.contracts._base import Violation
-from bpm.contracts.bot_ui import ExtensionState
 from bpm.contracts.extension import (
     ENTRY_POINT_GROUP,
     EXTENSION_FILE,
@@ -61,6 +60,7 @@ from bpm.contracts.extension import (
     validate,
     verify_external,
 )
+from bpm.contracts.runner import ExtensionState
 from bpm.contracts.signing import AdminKey, Envelope
 from bpm.extension_api import (
     API_VERSION,
@@ -144,19 +144,16 @@ class ExtensionHost:
         *,
         api_version: str = API_VERSION,
         off: Iterable[str] = (),
-        run_location: str | None = None,
     ) -> None:
         self.api_version = api_version
         #: 사람이 꺼 둔 확장 id (ADR-0043). **부르는 쪽이 준다** — 플랫폼은 어느 확장인지 모른다.
         self.off = frozenset(off)
-        #: 이 호스트가 도는 **실행 위치** (C1 `run_location`). 주면 그 위치를 `run_locations`에
         #: 적지 않은 태스크 종류는 **기여를 내지 않는다** ([ADR-0064](
         #: ../../../../docs/decisions/0064-extension-tasks-on-the-server.md)).
         #:
         #: **주지 않으면 거르지 않는다** — Studio는 양쪽 그림을 다 편집하고(팔레트에 PC 전용도
-        #: 있어야 한다), PC 실행기는 PC 그림만 받는다. 거르는 쪽은 **서버 실행기**다: 거기서만
+        #: 있어야 한다), 실행기는 PC 그림만 받는다. 거르는 쪽은 **서버 실행기**다: 거기서만
         #: 「깔려 있는데 못 돈다」가 생기고, 걸러 두면 사전 점검이 **시작 전에** 막는다.
-        self.run_location = run_location
         self._loaded: list[LoadedExtension] = []
         self._failures: list[LoadFailure] = []
         self._executors: dict[str, TaskExecutor] = {}
@@ -349,18 +346,8 @@ class ExtensionHost:
         ]
 
     def task_types(self) -> list[Contribution[TaskTypeContribution]]:
-        """Studio 팔레트·속성 편집기, 실행기의 태스크 수행.
-
-        **실행 위치를 쥔 호스트는 그 위치에서 돌 수 있는 것만 낸다** (ADR-0064) — 거르는 자리가
-        하나라서 수행기 찾기(`executor`)·사전 점검·`task_type_locations()`가 같은 것을 본다.
-        「깔려 있는데 못 돈다」를 사전 점검이 따로 말해 주므로(`task_types_wrong_location`) 여기서
-        사라져도 사람이 까닭을 모르지 않는다 — 그 점검은 `provider_of()`로 **걸러지지 않은**
-        목록을 본다.
-        """
-        found = self._gather(lambda m: m.contributes.task_types)
-        if self.run_location is None:
-            return found
-        return [c for c in found if self.run_location in c.value.run_locations]
+        """Studio 팔레트·속성 편집기, 실행기의 태스크 수행."""
+        return self._gather(lambda m: m.contributes.task_types)
 
     def task_type(self, task_type_id: str) -> Contribution[TaskTypeContribution] | None:
         return next((c for c in self.task_types() if c.value.id == task_type_id), None)
@@ -377,15 +364,6 @@ class ExtensionHost:
             for e in self.enabled()
             if e.manifest.service is not None and any(k.purpose == "run" for k in e.manifest.requires_keys)
         )
-
-    def task_type_locations(self) -> dict[str, list[str]]:
-        """`{태스크 종류: [실행 위치]}` — C14 B6·C1 R2가 「서버에서 되나」를 묻는 표다.
-
-        **여기 없는 종류는 「모른다」**다 (꺼 둔 확장은 기여를 하나도 내지 않는다 — ADR-0043).
-        받는 쪽은 모르는 것을 막지 않는다: 모르는 것을 막으면 확장을 깔지 않은 PC에서 만든
-        올바른 그림·패키지가 거부된다.
-        """
-        return {c.value.id: list(c.value.run_locations) for c in self.task_types()}
 
     def studio_editors(self) -> list[Contribution[StudioEditorContribution]]:
         return self._gather(lambda m: m.contributes.studio_editors)
@@ -511,14 +489,13 @@ def load_host(
     api_version: str = API_VERSION,
     group: str = ENTRY_POINT_GROUP,
     off: Iterable[str] = (),
-    run_location: str | None = None,
 ) -> ExtensionHost:
     """설치된 확장을 모두 읽은 호스트 하나 — 실행하는 쪽이 시작할 때 부르는 길.
 
     끌 id는 **부르는 쪽이 준다** (ADR-0043 — 그 앱의 설정에서 온다). 실행 위치도 그렇다
     (ADR-0064 — 서버 실행기만 준다).
     """
-    host = ExtensionHost(api_version=api_version, off=off, run_location=run_location)
+    host = ExtensionHost(api_version=api_version, off=off)
     host.load_entry_points(group=group)
     return host
 

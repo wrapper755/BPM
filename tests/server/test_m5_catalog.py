@@ -129,7 +129,6 @@ def package_zip(requires: dict[str, Any] | None = None) -> bytes:
         "id": "erp.order-entry",
         "version": "1.0.0",
         "name": "주문 입력",
-        "run_location": "pc",
         "entry": "process/main.bpmn",
         "process_id": "Proc_main",
         "requires": requires or {},

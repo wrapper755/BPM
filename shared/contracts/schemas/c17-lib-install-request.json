@@ -1,0 +1,27 @@
+{
+  "$id": "urn:bpm:contracts:c17-lib-install-request",
+  "additionalProperties": true,
+  "description": "`POST /api/v1/workspaces/{id}/libs` — 공유 BPM 프로세스를 `libs/`에 푼다 (ADR-0048).",
+  "properties": {
+    "package_id": {
+      "title": "Package Id",
+      "type": "string"
+    },
+    "schema": {
+      "description": "이 계약의 schema 번호",
+      "title": "Schema",
+      "type": "integer"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "package_id",
+    "version"
+  ],
+  "title": "LibInstallRequest",
+  "type": "object"
+}

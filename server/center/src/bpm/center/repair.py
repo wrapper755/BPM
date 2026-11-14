@@ -23,7 +23,6 @@ RETIRED = "retired:"
 
 #: 표마다 id 칸과 「다시 쓰지 않게」 하는 칸.
 _TABLES = {
-    "bot_uis": ("bot_ui_id", "disabled"),
     "server_runners": ("server_runner_id", "paused"),
 }
 

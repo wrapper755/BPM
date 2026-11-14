@@ -15,13 +15,13 @@ from bpm.contracts import (
     staff_principal,
 )
 from bpm.contracts.accounts import KNOWN_ROLES, ROLE_COMPANY_ADMIN
-from bpm.contracts.bot_ui import JobDispatch
 from bpm.contracts.bpmn_ext import InputDecl, ProcessInfo
 from bpm.contracts.organization import (
     CODE_PLACE_NOT_FOR_LIB,
     CODE_PLACE_OUTSIDE_COMPANY,
     StaffRequest,
 )
+from bpm.contracts.runner import JobDispatch
 from bpm.core.engine import sourced_inputs
 
 DEPARTMENTS = {"sales": "company1", "other-sales": "company2"}

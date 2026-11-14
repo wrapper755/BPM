@@ -112,7 +112,6 @@ def package_zip(
         "id": bot,
         "version": VERSION,
         "name": "금액 갈래",
-        "run_location": "server",
         "entry": "process/main.bpmn",
         "process_id": process_id,
         "requires": requires or {},
@@ -235,7 +234,7 @@ def test_a_job_runs_to_the_end_and_center_knows(
     kinds = [one["kind"] for one in events["events"]]
     assert kinds[0] == "run_started" and kinds[-1] == "run_finished"
     first = events["events"][0]["data"]
-    assert first["run_location"] == "server" and first["executor"] == "server_runner"
+    assert first["executor"] == "server_runner"
     assert first["job_id"] == job["job_id"]
     assert first["bpm_process_id"] == job["bpm_process_id"], "작업과 같은 이름 — 패키지 id다 (ADR-0086)"
     assert events["events"][-1]["data"]["status"] == "success"

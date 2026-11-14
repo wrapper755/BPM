@@ -83,17 +83,6 @@ export async function logout(): Promise<void> {
   redirect("/login");
 }
 
-export async function setBotUiDisabled(botUiId: string, disabled: boolean): Promise<ActionResult> {
-  try {
-    await (disabled ? center.disableBotUi(botUiId) : center.enableBotUi(botUiId));
-  } catch (cause) {
-    return { error: message(cause) };
-  }
-  // 목록과 상세가 **둘 다** 이 값을 보인다 — `layout`이라야 아래 경로까지 함께 새로 그린다.
-  revalidatePath("/bot-uis", "layout");
-  return {};
-}
-
 /**
  * 서버 실행기 일시 중지·다시 시작 (CON-12, C12).
  *
@@ -227,11 +216,8 @@ export async function withdrawApproval(requestId: string): Promise<ActionResult>
  */
 export async function createJob(form: FormData): Promise<void> {
   const bot = String(form.get("bot") ?? "");
-  const botUi = String(form.get("bot_ui") ?? "");
   const version = String(form.get("version") ?? "");
-  // 서버 BPM 프로세스는 실행기를 고르지 않는다 — Center가 빈자리로 보낸다 (C5 `JobTarget`).
-  const server = form.get("place") === "server";
-  const picked = `bot=${encodeURIComponent(bot)}&bot_ui=${encodeURIComponent(botUi)}&version=${encodeURIComponent(version)}`;
+  const picked = `bot=${encodeURIComponent(bot)}&version=${encodeURIComponent(version)}`;
   const back = (query: string): Route => `/jobs/new?${picked}&${query}` as Route;
 
   let inputs: Record<string, unknown>;
@@ -250,7 +236,8 @@ export async function createJob(form: FormData): Promise<void> {
   try {
     const job = await center.createJob({
       bpm_process_id: bot,
-      target: server ? { type: "server_runner", id: "*" } : { type: "bot_ui", id: botUi },
+      // 실행기를 고르지 않는다 — Center가 빈자리로 보낸다 (C5 `JobTarget`).
+      target: { type: "server_runner", id: "*" },
       inputs,
       // 비우면 그 대상에 배포된 버전으로 Center가 채운다 (C5).
       version: version || null,
@@ -264,7 +251,7 @@ export async function createJob(form: FormData): Promise<void> {
   }
   revalidatePath("/jobs", "layout");
   // 서버 작업은 CON-12의 「대기열」에도 보인다.
-  if (server) revalidatePath("/server-runners", "layout");
+  revalidatePath("/server-runners", "layout");
   redirect(`/jobs/${encodeURIComponent(made)}?created=1` as Route);
 }
 
@@ -348,7 +335,6 @@ export async function deletePackage(packageId: string, version: string): Promise
 
 /** 키 동작은 그 키가 가리키는 화면에 있다 (ADR-0124) — 그 화면들을 다시 그린다. */
 function revalidateKeys() {
-  revalidatePath("/bot-uis", "layout");
   revalidatePath("/server-runners", "layout");
 }
 
@@ -378,7 +364,6 @@ export async function decideEnrollment(
   } catch (cause) {
     return { error: message(cause) };
   }
-  revalidatePath("/bot-uis", "layout");
   revalidatePath("/server-runners", "layout");
   revalidatePath("/bots");
   return {};
@@ -455,7 +440,6 @@ export async function deprecatePackage(packageId: string, version: string): Prom
 export async function createDeployment(form: FormData): Promise<void> {
   const bot = String(form.get("bot") ?? "");
   const [botId = "", version = ""] = bot.split("@");
-  const place = String(form.get("place") ?? "pc");
   const back = (query: string): Route => `/deployments/new?${query}` as Route;
   const keep = `bot=${encodeURIComponent(bot)}`;
   const fail = (said: string): never => redirect(back(`${keep}&error=${encodeURIComponent(said)}`));
@@ -473,18 +457,11 @@ export async function createDeployment(form: FormData): Promise<void> {
   };
 
   if (!botId || !version) fail("배포할 프로세스와 버전을 고르세요.");
-  let targets: Array<{ type: string; id: string }>;
-  let limit: number | undefined;
-  if (place === "server") {
-    const runner = String(form.get("runner") ?? "").trim();
-    targets = [{ type: "server_runner", id: runner || "*" }];
-    const raw = String(form.get("max_concurrency") ?? "").trim();
-    limit = raw ? Number(raw) : undefined;
-    if (limit !== undefined && !(Number.isInteger(limit) && limit >= 1)) fail("동시 실행 상한은 1 이상의 정수입니다.");
-  } else {
-    targets = form.getAll("bot_ui").map((one) => ({ type: "bot_ui", id: String(one) })).filter((one) => one.id);
-    if (targets.length === 0) fail("배포할 Bot을 하나 이상 고르세요.");
-  }
+  const runner = String(form.get("runner") ?? "").trim();
+  const targets: Array<{ type: string; id: string }> = [{ type: "server_runner", id: runner || "*" }];
+  const raw = String(form.get("max_concurrency") ?? "").trim();
+  const limit = raw ? Number(raw) : undefined;
+  if (limit !== undefined && !(Number.isInteger(limit) && limit >= 1)) fail("동시 실행 상한은 1 이상의 정수입니다.");
 
   const done: string[] = [];
   for (const target of targets) {

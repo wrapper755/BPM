@@ -23,7 +23,6 @@ from bpm.studio.approval_editor import (  # noqa: E402
     COL_KEY,
     COL_REQUIRED,
     COL_TYPE,
-    SERVER_NO_FIELD,
     VISIBLE_ROWS,
     ApprovalEditor,
 )
@@ -40,7 +39,6 @@ BODY: dict[str, Any] = {
         {"key": "보완일수", "label": "보완 일수", "type": "number", "default": 3},
         {"key": "긴급", "label": "긴급", "type": "bool", "default": False},
     ],
-    "location": "center",
     "assignees": ["김영업", "이현업"],
     "expires": "P3D",
 }
@@ -68,7 +66,6 @@ def test_everything_in_the_drawing_is_shown() -> None:
     assert [k.currentText() for k in kinds if isinstance(k, QComboBox)] == ["choice", "text", "number", "bool"]
     required = made.fields.item(0, COL_REQUIRED)
     assert required is not None and required.checkState() == Qt.CheckState.Checked
-    assert made.location() == "center"
     assert made.assignee_box.text() == "김영업, 이현업"
     assert made.expires_box.text() == "P3D"
 
@@ -119,19 +116,6 @@ def test_a_choice_without_choices_is_refused() -> None:
     body = {"title": "t", "fields": [{"key": "a", "label": "a", "type": "choice"}]}
     errors, _ = loaded(body).problems()
     assert errors and "선택지" in errors[0]
-
-
-def test_field_approval_is_off_on_the_server() -> None:
-    """B6과 같은 판정 — 서버에서는 현장 결재를 쓸 수 없다."""
-    made = loaded(run_location="server")
-    assert not made.location_picks["field"].isEnabled()
-    assert made.location_picks["field"].toolTip() == SERVER_NO_FIELD  # 설명 줄이 아니라 툴팁
-
-    # 그림에 이미 적혀 있으면 **지우지 않고** 막는다 (조용히 바꾸지 않는다).
-    stuck = loaded({**BODY, "location": "field"}, run_location="server")
-    assert stuck.location() == "field"
-    errors, _ = stuck.problems()
-    assert SERVER_NO_FIELD in errors
 
 
 def test_assignees_can_be_a_variable() -> None:

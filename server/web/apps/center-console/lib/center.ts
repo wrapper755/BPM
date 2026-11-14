@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import type { CompanyInfo } from "@bpm/api-types/c16-company-info";
 import type { DepartmentInfo } from "@bpm/api-types/c16-department-info";
 import type { StaffInfo } from "@bpm/api-types/c16-staff-info";
-import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
 import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import type { ApprovalInfo } from "@bpm/api-types/c6-approval-info";
 import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
@@ -47,7 +46,7 @@ import type { OrgKind } from "./organization";
 
 export const CENTER_URL = process.env.BPM_CONSOLE__CENTER_URL ?? "http://localhost:8800";
 
-/** 위 막대에 보일 주소 — 사람이 PC 실행기·Studio에 적는 바깥 주소다. 콘솔이 부르는 주소는 컨테이너 이름일 수 있다. */
+/** 위 막대에 보일 주소 — 사람이 Studio·서버 실행기에 적는 바깥 주소다. 콘솔이 부르는 주소는 컨테이너 이름일 수 있다. */
 export const CENTER_PUBLIC_URL = process.env.BPM_CONSOLE__CENTER_PUBLIC_URL || CENTER_URL;
 
 export class CenterError extends Error {
@@ -139,10 +138,6 @@ const pkg = (packageId: string, version: string) =>
   `/api/v1/packages/${encodeURIComponent(packageId)}/${encodeURIComponent(version)}`;
 
 export const center = {
-  botUis: () => call<BotUiInfo[]>("/api/v1/bot-uis"),
-  disableBotUi: (id: string) => call<unknown>(`/api/v1/bot-uis/${id}/disable`, { method: "POST" }),
-  enableBotUi: (id: string) => call<unknown>(`/api/v1/bot-uis/${id}/enable`, { method: "POST" }),
-
   /**
    * 서버 실행기 목록 (C12·CON-12). **목록 하나가 상세의 재료까지 들고 온다** — 실행 중·기다리는
    * 실행·준비 상태·확장·최근 배치 결정이 모두 한 줄에 있어 상세가 따로 부를 길이 없다.
@@ -249,10 +244,10 @@ export const center = {
   withdrawApproval: (requestId: string) =>
     call<ApprovalInfo>(`/api/v1/approvals/${encodeURIComponent(requestId)}`, { method: "DELETE" }),
 
-  /** 배포 목록 (C5). `botUi`를 주면 그 PC에 걸린 것만 — `*` 배포도 함께 온다. */
-  deployments: (query: { botUi?: string; active?: boolean } = {}) => {
+  /** 배포 목록 (C5). `runner`를 주면 그 실행기에 걸린 것만 — `*` 배포도 함께 온다. */
+  deployments: (query: { runner?: string; active?: boolean } = {}) => {
     const search = new URLSearchParams();
-    if (query.botUi) search.set("bot_ui", query.botUi);
+    if (query.runner) search.set("runner", query.runner);
     if (query.active !== undefined) search.set("active", String(query.active));
     const suffix = search.size > 0 ? `?${search}` : "";
     return call<DeploymentInfo[]>(`/api/v1/deployments${suffix}`);
@@ -364,12 +359,12 @@ export const center = {
    * 등록 요청 (C5 §등록 승인, ADR-0092) — CON-03·CON-12 「승인 대기」, CON-11. 기본은 대기 중인 것만.
    * 사람은 키를 보지 않는다 — 승인 응답에도 원문이 없다.
    */
-  enrollments: (type: "bot_ui" | "server_runner" | "studio") =>
+  enrollments: (type: "server_runner" | "studio") =>
     call<EnrollmentInfo[]>(`/api/v1/enrollments?type=${type}`),
   /** 모든 상태의 등록 요청 — CON-16 「앱 로그」가 이력으로 읽는다 (C5 `state`는 쉼표로 여럿). */
   enrollmentHistory: () =>
     call<EnrollmentInfo[]>("/api/v1/enrollments?state=pending,approved,rejected,expired"),
-  /** 승인 — PC 실행기·Studio는 **회사를 정해** 들인다 (C16). 서버 실행기는 회사를 보내지 않는다. */
+  /** 승인 — Studio는 **회사를 정해** 들인다 (C16). 서버 실행기는 회사를 보내지 않는다. */
   approveEnrollment: (id: string, name?: string, company?: string) =>
     call<EnrollmentDecision>(`/api/v1/enrollments/${encodeURIComponent(id)}/approve`, {
       method: "POST",
@@ -401,9 +396,8 @@ export const center = {
     query: {
       status?: string;
       bpm_process_id?: string;
-      run_location?: string;
-      /** 어느 PC가 보낸 기록인가 (C3 — Center가 보낸 키로 푼다). */
-      bot_ui_id?: string;
+      /** 어느 실행기가 보낸 기록인가 (C3 — Center가 보낸 키로 푼다). */
+      runner_id?: string;
       limit?: number;
     } = {},
   ) => {

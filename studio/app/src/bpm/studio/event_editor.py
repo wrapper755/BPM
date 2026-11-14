@@ -38,7 +38,6 @@ from bpm.contracts.schedule import cycle_problem
 from bpm.core.run_state import (
     ERROR_APPROVAL_EXPIRED,
     ERROR_APPROVAL_WITHDRAWN,
-    ERROR_DELEGATION_FAILED,
     ERROR_ESCALATED,
     ERROR_SEND_FAILED,
     ERROR_TASK_FAILED,
@@ -58,7 +57,6 @@ ERROR_CODES = (
     ERROR_ESCALATED,
     ERROR_APPROVAL_WITHDRAWN,
     ERROR_APPROVAL_EXPIRED,
-    ERROR_DELEGATION_FAILED,
 )
 
 #: 캔버스가 주는 정의 이름(`TimerEventDefinition`에서 앞뒤를 뗀 것) → 사람의 말.

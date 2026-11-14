@@ -125,11 +125,10 @@ def test_building_keeps_the_fields_the_table_does_not_know() -> None:
 
 def test_the_patch_writes_the_whole_process_back() -> None:
     """**통째로 되돌려 쓴다** — 실행 위치·확장처럼 이 탭이 모르는 칸이 사라지지 않는다."""
-    info = info_of(run_location="server", extensions=[{"id": "ui-automation", "version": ">=1"}], outputs=["옛것"])
+    info = info_of(extensions=[{"id": "ui-automation", "version": ">=1"}], outputs=["옛것"])
     body = json.loads(
         process_patch(info, [InputRow(name="담당", type="string", source="staff.name")], ["결과"])
     )
-    assert body["run_location"] == "server"
     assert body["extensions"][0]["id"] == "ui-automation"
     wanted = {"name": "담당", "type": "string", "required": False, "source": "staff.name"}
     assert body["inputs"] == [wanted]
@@ -212,7 +211,7 @@ def test_a_center_source_pins_and_locks_the_type(app: Any) -> None:
 
 
 def test_applying_emits_the_whole_process_and_a_problem_blocks_it(app: Any) -> None:
-    info = info_of(run_location="pc", inputs=[{"name": "건", "type": "string"}])
+    info = info_of(inputs=[{"name": "건", "type": "string"}])
     tab = shown(app, info)
     got: list[str] = []
     tab.applying.connect(got.append)
@@ -223,7 +222,6 @@ def test_applying_emits_the_whole_process_and_a_problem_blocks_it(app: Any) -> N
     assert tab.unapplied and tab.apply_button.isEnabled()
     assert tab.apply() is True
     body = json.loads(got[-1])
-    assert body["run_location"] == "pc"
     assert body["inputs"][0]["default"] == "기본"
 
     item.setText(NAME, "1번")
@@ -482,7 +480,7 @@ def test_applying_goes_through_the_canvas_and_undoes_in_one_step(window: Any) ->
     assert tab.apply() is True
     assert wait_for(lambda: "새출력" in read_process(window.canvas.save_xml()).info.outputs)
     drawn = read_process(window.canvas.save_xml()).info
-    assert drawn.run_location == read_process(before).info.run_location, "모르는 칸은 남는다"
+    assert drawn.extensions == read_process(before).info.extensions, "모르는 칸은 남는다"
     assert path.read_text(encoding="utf-8") == before, "파일로 가는 것은 「저장」이다"
     assert wait_for(lambda: not tab.unapplied)
 

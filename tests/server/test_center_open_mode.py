@@ -58,24 +58,28 @@ def machine(seed: str) -> str:
     return hashlib.sha256(seed.encode()).hexdigest()
 
 
-def bot_body(public_key: str, *, seed: str = "pc1") -> dict[str, Any]:
+def bot_body(public_key: str, *, seed: str = "srv1") -> dict[str, Any]:
     return {
         "schema": 1,
         "machine_id": machine(seed),
-        "name": "현장 PC 1",
-        "os": "windows-11-23H2",
-        "versions": {"bot_ui": "0.1.0", "core": "0.1.0"},
+        "name": "서버 1",
+        "os": "ubuntu-24.04",
+        "versions": {"server_runner": "0.1.0", "core": "0.1.0"},
         "public_key": public_key,
     }
 
 
 def runner_body(public_key: str) -> dict[str, Any]:
+    return bot_body(public_key, seed="srv2")
+
+
+def studio_body(public_key: str) -> dict[str, Any]:
     return {
         "schema": 1,
-        "machine_id": machine("srv1"),
-        "name": "서버 1",
+        "machine_id": machine("stu1"),
+        "name": "설계 PC",
         "os": "ubuntu-24.04",
-        "versions": {"server_runner": "0.1.0", "core": "0.1.0"},
+        "versions": {"studio": "0.1.0", "core": "0.1.0"},
         "public_key": public_key,
     }
 
@@ -110,9 +114,9 @@ def test_healthz_says_whether_it_is_open(open_client: TestClient, shut_client: T
 # ─────────────── 등록 요청 ───────────────
 
 
-def test_an_enrolling_pc_is_approved_where_it_asks(open_client: TestClient) -> None:
+def test_an_enrolling_runner_is_approved_where_it_asks(open_client: TestClient) -> None:
     private, public = new_keypair()
-    found = enroll(open_client, bot_body(public), kind="bot-ui")
+    found = enroll(open_client, bot_body(public), kind="server-runner")
     # 승인 대기를 지나지 않는다 — 봉한 키가 그 답에 실려 온다.
     assert found.state == "approved"
     assert found.sealed_key is not None
@@ -123,9 +127,9 @@ def test_an_enrolling_pc_is_approved_where_it_asks(open_client: TestClient) -> N
     assert [one["decided_by"] for one in listed] == ["open_mode"]
     # 받은 키로 바로 등록한다 — 그 뒤는 평소와 같다.
     registered = open_client.post(
-        f"{API}/bot-ui/register",
-        json={"schema": 1, "machine_id": machine("pc1"), "name": "현장 PC 1", "os": "windows-11-23H2",
-              "versions": {"bot_ui": "0.1.0", "core": "0.1.0"}},
+        f"{API}/server-runner/register",
+        json={"schema": 1, "machine_id": machine("srv1"), "name": "서버 1", "os": "ubuntu-24.04",
+              "versions": {"server_runner": "0.1.0", "core": "0.1.0"}, "max_concurrency": 3},
         headers={"Authorization": f"Bearer {raw}"},
     )
     assert registered.status_code in (200, 201), registered.text
@@ -133,12 +137,7 @@ def test_an_enrolling_pc_is_approved_where_it_asks(open_client: TestClient) -> N
 
 def test_studio_and_the_server_runner_come_in_the_same_way(open_client: TestClient) -> None:
     _, public = new_keypair()
-    studio = enroll(
-        open_client,
-        {"schema": 1, "machine_id": machine("stu1"), "name": "설계 PC", "os": "windows-11-23H2",
-         "versions": {"studio": "0.1.0", "core": "0.1.0"}, "public_key": public},
-        kind="studio",
-    )
+    studio = enroll(open_client, studio_body(public), kind="studio")
     assert studio.state == "approved"
     runner = enroll(open_client, runner_body(public), kind="server-runner")
     assert runner.state == "approved"
@@ -154,18 +153,18 @@ def test_a_wrong_join_token_is_still_refused_when_open(open_client: TestClient) 
     assert response.json()["code"] == "join_token_invalid"
 
 
-def test_two_companies_leave_the_pc_waiting_but_not_the_server_runner(open_client: TestClient) -> None:
+def test_two_companies_leave_studio_waiting_but_not_the_server_runner(open_client: TestClient) -> None:
     """누구의 장비인지는 짐작하지 않는다 (C16) — 서버 실행기는 Center 공용이라 상관없다."""
     made = open_client.post(f"{API}/companies", json={"id": "company2", "name": "회사2"}, headers=ADMIN)
     assert made.status_code in (200, 201), made.text
     _, public = new_keypair()
-    assert enroll(open_client, bot_body(public), kind="bot-ui").state == "pending"
+    assert enroll(open_client, studio_body(public), kind="studio").state == "pending"
     assert enroll(open_client, runner_body(public), kind="server-runner").state == "approved"
 
 
 def test_a_shut_center_still_waits_for_an_approval(shut_client: TestClient) -> None:
     _, public = new_keypair()
-    found = enroll(shut_client, bot_body(public), kind="bot-ui")
+    found = enroll(shut_client, bot_body(public), kind="server-runner")
     assert found.state == "pending"
     assert found.sealed_key is None
 

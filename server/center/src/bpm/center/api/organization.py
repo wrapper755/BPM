@@ -17,7 +17,7 @@ from typing import Any
 from fastapi import APIRouter, Request, Response
 
 from bpm.center import organization
-from bpm.center.api.bot_ui import _json
+from bpm.center.api.body import read_json as _json
 from bpm.center.auth import (
     PACKAGE_KEY_TYPE,
     Caller,

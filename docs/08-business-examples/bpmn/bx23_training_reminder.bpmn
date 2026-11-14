@@ -9,7 +9,6 @@
   <bpmn:process id="Proc_bx23_training_reminder" name="필수 교육 이수 독려" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [
     {
       "id": "lms",

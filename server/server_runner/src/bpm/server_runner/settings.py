@@ -1,6 +1,6 @@
 """서버 실행기 설정 — 환경변수 `BPM_SERVER_RUNNER__*` (ADR-0011).
 
-**화면이 없으므로 설정 파일도 없다** — 서버는 환경변수·compose로 설정한다 (PC 실행기의 BUI-03에
+**화면이 없으므로 설정 파일도 없다** — 서버는 환경변수·compose로 설정한다 (실행기의 BUI-03에
 해당하는 자리가 없다). 기본값은 여기 한 곳에만 둔다 (`docs/04-setup.md` §6).
 
 **비밀은 여기 두지 않는다** — Center API 키는 `credentials.py`가 환경변수나 OS 비밀 저장소에서
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import platformdirs
 
-from bpm.contracts.server_runner import DEFAULT_MAX_CONCURRENCY
+from bpm.contracts.server_runner import DEFAULT_MAX_CONCURRENCY, DEFAULT_MAX_TEST_CONCURRENCY
 from bpm.core import legacy_names
 from bpm.core.senders import (
     DEFAULT_ATTACHMENT_MB,
@@ -33,7 +33,7 @@ DEFAULT_HEARTBEAT_S = 10
 DEFAULT_RETRY_S = 30
 #: 외부 작업을 **이만큼 기다려 끝나지 않으면** 기다림으로 넘기고 자리를 놓는다 (초, ADR-0103).
 DEFAULT_PARK_AFTER_S = 20.0
-#: 기본 모델 (ADR-0027). **이 앱의 기본값은 이 앱이 가진다** — PC 실행기의 것을 import하지 않는다
+#: 기본 모델 (ADR-0027). **이 앱의 기본값은 이 앱이 가진다** — 실행기의 것을 import하지 않는다
 #: (앱끼리 import하지 않는다). 둘이 어긋나면 `docs/04-setup.md` §6의 표가 원본이다.
 DEFAULT_LLM_MODEL = "qwen2.5:7b"
 
@@ -70,6 +70,10 @@ class Settings:
     name: str = ""
     #: 한 번에 도는 실행 수의 상한 (C12 `max_concurrency`, 기본 10).
     max_concurrency: int = DEFAULT_MAX_CONCURRENCY
+    #: **시험 실행의 자리는 따로다** (C17, ADR-0146) — 운영과 서로 빌려주지 않으므로 그 기계가
+    #: 한꺼번에 도는 최대는 `max_concurrency + max_test_concurrency`다. **0이면 시험을 받지
+    #: 않는다** (운영만 하는 실행기를 그렇게 둔다).
+    max_test_concurrency: int = DEFAULT_MAX_TEST_CONCURRENCY
     heartbeat_s: int = DEFAULT_HEARTBEAT_S
     retry_s: int = DEFAULT_RETRY_S
     data_path: Path = field(default_factory=data_dir)
@@ -97,7 +101,7 @@ class Settings:
     park_after_s: float = DEFAULT_PARK_AFTER_S
 
     def smtp(self) -> SmtpConfig:
-        """보내기 설정 한 벌 — **PC 실행기와 같은 모양**이다 (`core.senders`)."""
+        """보내기 설정 한 벌 — 실행기의 모양이다 (`core.senders`)."""
         return SmtpConfig(
             host=self.smtp_host,
             port=self.smtp_port,
@@ -128,12 +132,16 @@ class Settings:
     @classmethod
     def from_env(cls) -> Settings:
         limit = _env("MAX_CONCURRENCY")
+        test_limit = _env("MAX_TEST_CONCURRENCY")
         heartbeat = _env("HEARTBEAT_S")
         retry = _env("RETRY_S")
         return cls(
             center_url=_env("CENTER_URL") or DEFAULT_CENTER_URL,
             name=_env("NAME") or "",
             max_concurrency=max(1, int(limit)) if limit else DEFAULT_MAX_CONCURRENCY,
+            max_test_concurrency=(
+                max(0, int(test_limit)) if test_limit else DEFAULT_MAX_TEST_CONCURRENCY
+            ),
             heartbeat_s=max(1, int(heartbeat)) if heartbeat else DEFAULT_HEARTBEAT_S,
             retry_s=max(1, int(retry)) if retry else DEFAULT_RETRY_S,
             data_path=data_dir(),

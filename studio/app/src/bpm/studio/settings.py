@@ -52,7 +52,7 @@ def data_dir() -> Path:
     if override:
         return Path(override)
     # 옛 이름(Chaeksas)의 폴더가 있으면 처음 뜰 때 옮긴다 (ADR-0130). **제 폴더만** 옮긴다 — Windows는
-    # 대소문자를 가리지 않아 PC 실행기와 윗 폴더를 나눠 쓴다.
+    # 대소문자를 가리지 않아 윗 폴더 이름을 가른다.
     return legacy_names.adopt_dir(
         Path(platformdirs.user_data_dir(APP_NAME, APP_AUTHOR)) / "studio",
         Path(platformdirs.user_data_dir(*legacy_names.OLD_STUDIO_DATA)) / "studio",
@@ -88,7 +88,7 @@ class Settings:
     #: STU-10 「일반」의 「기본 폴더」 — 새 BPM 프로세스가 만들어지는 자리. 비우면 `<data_dir>/workspace`.
     workspace_root: str = ""
     #: STU-15에서 **사람이 꺼 둔** 확장 id ([ADR-0043](../../../../../docs/decisions/0043-turned-off-extensions.md)).
-    #: **Studio의 것이다** — PC 실행기는 제 설정에 따로 둔다 (개발 도구의 실험이 현장 실행을 멈추지
+    #: **Studio의 것이다** — 실행기는 제 설정에 따로 둔다 (개발 도구의 실험이 현장 실행을 멈추지
     #: 않는다). 판은 적지 않는다 — 올려도 꺼 둔 채로 있는 것이 사람의 뜻이다.
     disabled_extensions: tuple[str, ...] = ()
     #: STU-10 「외형」의 테마 (ADR-0073). 모르는 값은 `apply_theme`이 「시스템 따름」으로 읽는다.

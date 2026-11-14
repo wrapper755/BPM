@@ -35,14 +35,20 @@ export interface ServerRunnerInfo {
  * 자리 셈. **`running`은 기다리는 실행을 뺀 수**다 (ADR-0054 §5).
  *
  * Center가 빈자리를 `max - running`으로 계산한다 (C12 §Center가 작업을 나누는 규칙).
+ *
+ * **시험 자리는 따로 센다** ([ADR-0146](../../../../../docs/decisions/0146-design-work-has-its-own-lane.md)) —
+ * 운영과 **서로 빌려주지 않는다**. 빌려주면 「설계자가 돌려 보는 동안 운영 작업이 밀리지 않는다」가
+ * 그 자리에서 깨진다. 보고하지 않으면 0이고, 0이면 **그 실행기는 시험을 받지 않는다**.
  */
 export interface Capacity {
   max: number;
   running: number;
+  test_max?: number;
+  test_running?: number;
   [k: string]: unknown;
 }
 /**
- * 배포 적용 결정 (CON-03 「최근 배치 결정」). 실행이 아니므로 C3로 보내지 않는다.
+ * 배포 적용 결정 (CON-12 「최근 배치 결정」). 실행이 아니므로 C3로 보내지 않는다.
  */
 export interface DeploymentResult {
   at: string;
@@ -58,8 +64,7 @@ export interface DeploymentResult {
  *
  * **`enabled`와 `off`는 다른 것을 말한다** ([ADR-0043](../../../../../docs/decisions/0043-turned-off-extensions.md)):
  * `off`는 **사람이 껐다**(멀쩡한데 일부러 안 쓴다), `enabled=false`인데 `off`가 아니면 **흠이
- * 있다**(정의·판이 맞지 않는다). 화면이 「꺼짐」과 「호환 안 됨」을 가르는 자리다. 뜻을 바꾸지
- * 않고 칸을 더한 것이라 옛 PC 실행기가 보낸 값(`off` 없음)도 그대로 읽힌다.
+ * 있다**(정의·판이 맞지 않는다). 화면이 「꺼짐」과 「호환 안 됨」을 가르는 자리다.
  */
 export interface ExtensionState {
   definition_hash?: string | null;

@@ -331,7 +331,7 @@ def _shared_child(
     return Item(
         id=f"{info.id}@{info.version}/{process.process_id}",
         label=process.name or process.process_id,
-        kind=process.run_location or "",
+        kind="",
         note=_shared_note(process),
         tip=process.process_id,
         create=None if off else _call_activity(process),

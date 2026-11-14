@@ -6,10 +6,9 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:bpm="urn:chaeksas:bpmn:1"
   id="Defs_fx19_manual_task_pc" targetNamespace="urn:chaeksas:examples" exporter="bpm-examples" exporterVersion="1">
-  <bpmn:process id="Proc_fx19_manual_task_pc" name="수동 확인 (PC)" isExecutable="true">
+  <bpmn:process id="Proc_fx19_manual_task_pc" name="수동 확인" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "pc",
   "extensions": [],
   "outputs": [
     "확인됨"
@@ -28,8 +27,7 @@
   "show": [
     "오늘"
   ],
-  "fields": [],
-  "location": "field"
+  "fields": []
 }</bpm:approval>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_01</bpmn:incoming>

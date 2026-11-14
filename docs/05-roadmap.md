@@ -16,11 +16,12 @@
 | M3 | 실행 코어 | **끝** | BPMN 실행, AI 태스크, 실행 이벤트, Studio 최소 | M1 |
 | M4 | UI 자동화 | **걷었다 — 다시 들인다** ([ADR-0114](decisions/0114-remove-ui-automation.md)) | (없음) | M2, M3 |
 | M5 | 배포·결재·서비스 앱 | **끝** | 서명·배포, 작업 지시, 결재 창구, 리소스 목록, 서비스 앱 태스크 | M2, M3 |
-| M6 | 첫 릴리스 | **진행 중** (시나리오 3은 UI 자동화를 다시 들일 때까지 멈춤, 남은 하나는 현장 PC 사람 몫) | 시나리오 3 Windows 현장 PC 통과 (1·2·4는 M7, ADR-0055) | M5 |
-| M7 | 서버 실행 | **끝** | 서버 실행기, 서버 BPM 프로세스 동시 실행, 상태 저장·재개, PC 위임, CON-12 | M6 |
-| M8 | 건넬 수 있게, 고칠 수 있게 | **진행 중** (남은 둘은 현장 PC 사람 몫) | Windows 설치 파일(빌드·CI 산출물·자동 시작·판 올리기), Center 저장소 옮기기 수단 | M7 |
+| M6 | 첫 릴리스 | **멈춤** (시나리오 3은 UI 자동화를 다시 들일 때까지 — ADR-0114·0144) | 시나리오 3 현장 통과 (1·2·4는 M7, ADR-0055) | M5 |
+| M7 | 서버 실행 | **끝** | 서버 실행기, 동시 실행, 상태 저장·재개, 맡기기, CON-12 | M6 |
+| M8 | 건넬 수 있게, 고칠 수 있게 | **멈춤** (PC 실행기를 걷어 남은 둘이 사라졌다 — ADR-0144) | Windows 설치 파일(빌드·CI 산출물·판 올리기), Center 저장소 옮기기 수단 | M7 |
 | M9 | 바깥 기능은 Pull로 | **끝** (조각 1~6과 C14·C1의 옛 키 칸 — ADR-0102·0103) | C15 외부 작업, 일꾼이 된 서비스 앱, 어댑터 일꾼, 주소·키 칸 없는 CON-07 | M7 |
 | M10 | 세 기둥 — AI 작업·외부 작업·통합 일꾼 | **진행 중** (조각 1~6 끝, 7은 Company1 저장소 — ADR-0135) | 일꾼 종류 칸, 통합 일꾼과 AI 작업 뼈대, 보상, 일꾼 콘솔. 업무 처리기는 Company1로 | M9 |
+| M11 | 하나의 웹 — Studio를 콘솔로, PC 실행기 걷기 | **진행 중** (조각 0~3a 끝 — ADR-0143·0144·0145) | PC 실행기 걷기, 콘솔 안의 웹 편집기, Dataiku 결의 콘솔 | M10 |
 
 ## M0. 문서 기준선
 
@@ -39,7 +40,7 @@
 - [x] 확장 모델: 내장·사내·외부, 기여 지점, HTTP 어댑터 ([ADR-0018](decisions/0018-extensions.md), [C13](03-contracts/C13-extension-manifest.md))
 - [x] 웹 화면 Next.js, 디자인 토큰 하나 ([ADR-0017](decisions/0017-web-nextjs-design-system.md)), 스타일 가이드 초안 ([07-style-guide](07-style-guide.md))
 - [x] 스타일 가이드·토큰 검토 (`design/preview.html`)
-- [x] 계약 초안: [C1](03-contracts/C1-package-manifest.md), [C3](03-contracts/C3-run-events.md), [C4](03-contracts/C4-bot-ui-center.md), [C11](03-contracts/C11-service-app-common.md)
+- [x] 계약 초안: [C1](03-contracts/C1-package-manifest.md), [C3](03-contracts/C3-run-events.md), [C4](03-contracts/C4-runner-center.md), [C11](03-contracts/C11-service-app-common.md)
 - [x] 계약 C1~C6·C10·C11 독립 검토 반영 → 합의
 - [x] 계약 초안: [C7](03-contracts/C7-resources-center-keys.md), C8, C9 (둘은 [ADR-0114](decisions/0114-remove-ui-automation.md)로 지웠다), [C12](03-contracts/C12-server-runner-center.md)(M7)
 - [x] C7·C8·C9·C13 독립 검토 반영 → 합의 (C12는 M7 전에 검토)
@@ -146,8 +147,9 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 
 ## M8. 건넬 수 있게, 고칠 수 있게
 
-> 상태: **진행 중** — 코드로 할 것은 다 했다. 남은 둘은 **현장 PC에서 사람이** 한다(설치한 PC 실행기의
-> 자동 시작 확인, 설치 파일로 M6의 「1시간 환경 구성」 다시 하기). 거리 둘을 **A → B 순서**로 두었다.
+> 상태: **멈춤** — 코드로 할 것은 다 했고, 남아 있던 둘(설치한 PC 실행기의 자동 시작 확인, 설치
+> 파일로 M6의 「1시간 환경 구성」 다시 하기)은 **PC 실행기를 걷으면서 사라졌다** ([ADR-0144](decisions/0144-remove-the-pc-runner.md)).
+> Studio 쪽 산출물은 M11 조각 5에서 함께 걷는다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)).
 
 **A. Windows 설치 파일** — 묶는 방법은 [ADR-0024](decisions/0024-desktop-packaging-extensions.md)가
 정했고 `core`가 PyInstaller 훅까지 준다(빌드 인자를 적지 않는다). 제품 쪽 빌드는 `packaging/build.py`다.
@@ -155,10 +157,10 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 제품 쪽 빌드 하나로 Studio·PC 실행기 실행 파일이 나온다 (깔린 확장·`extension.json`이 함께 들어간다 — S5가 본 것) — **된다** (`packaging/build.py`, 조각 1): PyInstaller onedir 둘, **확장 인자 0개**(`core`의 훅이 엔트리 포인트를 훑는다 — 지금은 깔린 확장이 없어 `--selftest`가 확장 0개를 정상으로 본다, ADR-0114), Windows에서만 매니페스트(DPI Per-Monitor v2). 개발 PC(Linux aarch64)에서 PC 실행기 356MB·62초, Studio 1008MB·81초
 - [x] CI가 **Windows 산출물을 만든다** — `.github/workflows/desktop.yml`(「데스크톱 산출물」)이 **수동 실행·`v*` 태그에만** 돈다 (푸시마다 묶지 않는다). Windows·Linux 둘을 묶고 `--selftest`로 검사한 뒤 산출물을 올린다. **Windows 묶음을 정말 확인했다** (런 38873092925 — PC 실행기 160MB·86초, Studio 598MB·109초, 셀프테스트 통과). 그 전에 **Windows 전용 흠 둘**이 드러났다: 빌드 자신의 한글 `print`, 그리고 **PyInstaller 자식 안**의 훅이 찍는 한글 — 둘 다 이제 Linux에서 잡히는 시험이 막는다
 - [x] **설치 파일이 나온다** — **된다** ([ADR-0068](decisions/0068-installer-inno-setup-per-user.md)): Inno Setup, **사용자별**(관리자 권한 없이 `%LOCALAPPDATA%\Programs\BPM\<앱>`), Studio·PC 실행기 둘, 서명 없음. 스크립트는 `packaging/installer/bpm.iss` 하나이고 앱마다 다른 값은 `build.py --installer`가 넘긴다. 덮어쓸 때 옛 `_internal`을 먼저 지운다. **산출물 워크플로가 조용히 설치 → 설치된 앱으로 `--selftest`(판·확장) → 조용히 제거까지 해 본다** — 첫 시도에 통과했다 (런 39004329132): 설치 파일 **PC 실행기 63MB·Studio 205MB**, 설치 → 검사 → 제거 7.8초·16.7초. Inno Setup은 러너에 이미 있었다
-- [ ] 설치한 PC 실행기가 **자동 시작**으로 뜬다 — 거는 것은 앱(BUI-03 토글 → 작업 스케줄러)이고 설치 파일은 **제거할 때 지운다**(`autostart.TASK_NAME`). 설치한 실행 파일 자리로 등록되는지는 **현장 PC에서** 본다 (사람 몫과 함께)
+- [~] 설치한 PC 실행기의 **자동 시작** — **사라졌다**: PC 실행기를 걷었다 ([ADR-0144](decisions/0144-remove-the-pc-runner.md))
 - [x] **「판 올리기」를 정한다** — **정했다** ([ADR-0069](decisions/0069-upgrading-by-reinstall.md)): **사람이 설치 파일로 다시 깐다**(Studio·PC 실행기). Center는 PC마다 판을 보여 줄 뿐 프로그램을 내려 주지 않고, 그래서 서명 봉투도 두지 않는다. 언제(도는 BPM 프로세스·대기열이 빈 때 — CON-03 「비활성화」로 만든다)와 실패 때 되돌리기(옛 설치 파일)는 사람이 정한다. 순서는 `docs/04-setup.md` §6-3
 - [x] 산출물에 **판이 찍혀** 있고 C4·C12 `versions`가 그것을 올린다 — **된다** ([ADR-0067](decisions/0067-build-stamp.md)): 판은 **빌드가 정한다**(`--version` > `v*` 태그 > `<core 판>+g<커밋>[.dirty]`)이고 실행 파일 옆 `bpm-build.json`에 찍혀 `core.build_info`가 읽는다. C4 `versions.build`(`{commit, built_at}`)가 있으면 묶은 것, 없으면 체크아웃이다 — CON-03이 그것을 보인다. **고치다가 흠 둘이 드러났다**: 묶은 PC 실행기가 `bot_ui`·`core`를 `0.0.0`으로 올리고 있었고(dist-info가 안 들어갔다), 서버 실행기는 판이 코드에 적혀 있었다. 빌드가 **되읽어** 판과 `core`의 판을 확인한다
-- [ ] 사람이 그 설치 파일로 **현장 PC에 넣어** M6의 「1시간 환경 구성」을 다시 해 본다 (시나리오 3은 UI 자동화를 다시 들인 뒤)
+- [~] 사람이 그 설치 파일로 **현장 PC에 넣어** M6의 「1시간 환경 구성」을 다시 해 본다 — **사라졌다**: 현장 PC에 깔 것이 없다 ([ADR-0144](decisions/0144-remove-the-pc-runner.md))
 
 **B. 저장소 옮기기 수단** — Center 저장소의 표·열을 고치는 길은 `center/migrations.py` 하나다
 ([ADR-0065](decisions/0065-center-schema-migrations.md)).
@@ -205,11 +207,28 @@ Windows에서 확신이 없는 것부터 작게 확인한다. 각 스파이크�
 - [x] 조각 6 — **일꾼 콘솔 = 서비스 앱 콘솔** — **됐다**: 통합 일꾼이 같은 관리 API를 낸다(`bpm.unified_consumer.admin` — 모든 토픽의 일감을 한 사용 기록에 남기고 작업 줄에 `topic`·`kind`, 관리자 토큰 `BPM_CONSUMER__ADMIN_TOKEN`·포트 8770). SVC-01 「토픽」(여럿일 때만)·「종류」 열, SVC-03 「토픽」 열 — `tests/server/test_unified_consumer.py`
 - [ ] 조각 7 — **Company1 저장소에서**: 장면 코드를 업무 처리기로 옮기고 BPM 패키지에 고정, NowView 걷기 (운영 반영은 따로 묻는다) — **운영까지 됐다**(2026-11-08): 장면 코드가 Company1 `worker/`(`company1_worker`, 엔트리 포인트 `bpm.consumer_handlers` = `company1`, BPM 패키지 `52cb5672` 고정)로 갔다(wrapper755/Company1#1). 운영(hetzner)은 Center 24판, 일꾼은 systemd `company1-worker`(BPM 통합 일꾼 + 처리기, 작업 상태는 데이터 폴더의 SQLite — Postgres는 쓰지 않는다)이고 NowView 유닛·파일·DB를 지웠다. 운영 사이트 재생으로 새 회차의 장면 1이 인계까지 돌았다(약 2분). NowView 시절 회차는 옮기지 않고 지웠다. **남은 것(사용자 몫)**: GitHub NowView 저장소 삭제, Cloudflare의 `www.nowview.work` 호스트 이름 걷기(2026-11-08 사용자 결정)
 
+## M11. 하나의 웹 — Studio를 콘솔로, PC 실행기 걷기
+
+> 상태: **진행 중** — 조각 0~3a가 끝났다. 결정은 [ADR-0143](decisions/0143-design-happens-in-the-console.md)(설계가
+> 콘솔 안에서)·[ADR-0144](decisions/0144-remove-the-pc-runner.md)(PC 실행기 걷기)·[ADR-0145](decisions/0145-console-is-workspace-shaped.md)(콘솔의 틀)다.
+> **데스크톱에서 그려 올리는 것도, 현장 PC에서 돌리는 것도 존재 이유를 잃었다** — 업무는 서버에서
+> 돌고(ADR-0016) PC가 필요한 일은 RPA뿐이며 그것은 **데스크톱 일꾼**이 C15 Pull로 가져가는 쪽이다.
+
+- [x] 조각 0 — **결정 셋** (ADR-0143·0144·0145). 옛 결정 서른둘의 상태를 `대체됨`으로 옮겼다
+- [x] 조각 1 — **계약**: C4가 「실행기 ↔ Center 공통」이 되고(경로는 C12 하나), C1 `run_location`·R10·R2의 실행 위치 갈래, C14 `bpm:process.run_location`·`bpm:approval.location`·`bpm:call.delegate.bot_ui`, C2 배포 대상 `bot_ui`, C3 `run_location`, C5 §PC 실행기 현황, C13 `run_locations`를 걷었다. **확인은 Center 결재함으로** 온다 (C6 `layer` 둘, 모르는 층은 `unknown_layer`)
+- [x] 조각 2 — **PC 실행기 걷기**: `bot/` 전부, 제어 파일(ADR-0031), `core.processes`·`core.outputs`, `shared/qt`의 결재 창(CMN-01), Center `api/bot_ui.py`·`bot_uis` 표(옮기기 28판), Windows CI 잡(ADR-0104·0108). **맡기기는 남는다** — 대상이 서버 실행기 하나다 (ADR-0082). 예제는 **FX-19가 서버 + 결재함 확인**, BX-16의 맡기기는 걷었다
+- [x] 조각 3a — **오라클 이사**: Studio의 Qt 없는 부분(`workspace`·`cases`·`packaging`·`receiver`·`runner`·실행 전 검사)을 **`core.testrun`**으로 옮겼다. `CaseRun`은 **`pump()`를 부르는 쪽이 민다**(QTimer가 아니다) — Studio는 그 위의 Qt 어댑터다. 오라클 둘이 **Qt 없이** 돈다: `tests/shared/test_m3_acceptance.py`(묶음 29개 + 재생)와 이미 있던 `tests/server/test_m7_server_rerun.py`(예제 49개)
+- [x] 조각 3b — **서버 시험 실행·검사·짓기**: 계약 [C17](03-contracts/C17-workspaces.md)(작업공간) 초안을 쓰고 **미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다**(시험 작업은 `jobs[]`로 가고 **자리만 따로**, 검사와 짓기는 **작업이 아니라** 하트비트의 작은 칸, 지은 zip은 **Center가 제 이름으로** 등록한다). **도는 것**: 계약 모델(`contracts.workspace`), Center의 작업공간 저장·파일·묶음·가져오기(30판)와 **시험 실행**(31판 — 줄에 세우고 내려보내고 진행·판정·배운 것을 적는다), 실행기의 **시험 모드**(`testmode.py` — 묶음을 받아 풀고 `core.testrun`으로 돌려 C17로 올린다). 거리 하나를 끝까지 보는 시험이 섰다(`tests/server/test_server_runner_testmode.py` — 예제 FX-03b와 그 케이스). **실행 전 검사와 짓기도 돈다**(32판 — 하트비트의 `checks[]`·`builds[]`, 검사는 묶음과 함께 담아 되묻지 않고, 지은 zip은 `POST …/builds/{id}/artifact`로 받아 **C5와 같은 함수**로 등록한다). **남은 것**: 공유 BPM 프로세스 설치(`POST …/libs`)와 **화면**(조각 4) — 지금 설계를 사람이 할 길은 데스크톱 Studio뿐이다
+- [ ] 조각 4 — **웹 편집기** (CON-20): 캔버스(`bpmn-canvas`)·작업공간·속성 편집기·표 편집·시험 실행·「배포 후보로 만들기」
+- [ ] 조각 5 — **Qt 걷기**: `studio/`·`shared/qt`·`packaging/`·`desktop.yml`·`core.selftest`
+- [ ] 조각 6 — **Dataiku 모양**: 좌측 아이콘 레일 + 작업공간 탭, 토큰·구성요소, 화면 열여덟
+- [ ] 조각 7 — **문서 마무리**
+
 ## 나중에 (범위 밖, 기록만)
 
-UI 자동화 확장 다시 들이기([ADR-0114](decisions/0114-remove-ui-automation.md) — M4 자리), 서버 실행의 헤드리스 웹 조작, OIDC 로그인, LLM 비용 집계, 실행 기록 보존 정책, 무인 실행(Windows 서비스 모드, S4 결과에 따라), 멀티 테넌시.
+UI 자동화 확장 다시 들이기([ADR-0114](decisions/0114-remove-ui-automation.md) — M4 자리, **RPA 데스크톱 일꾼**으로 — [ADR-0144](decisions/0144-remove-the-pc-runner.md)), 서버 실행의 헤드리스 웹 조작, OIDC 로그인, LLM 비용 집계, 실행 기록 보존 정책, 무인 실행(Windows 서비스 모드, S4 결과에 따라), 멀티 테넌시.
 
 **PostgreSQL 전환은 M8에서 「옮기지 않는다」로 정했다** ([ADR-0070](decisions/0070-center-stays-on-sqlite.md) — 옮길 조건 셋을 적어 두었다).
 **헤드리스 웹 조작은 더 멀어졌다** — [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)가
 「서버는 로컬 런타임을 띄우지 않는다」로 정했으므로, 열려면 **사이드카 같은 새 결정**부터
-필요하다. 그 수요는 **PC 위임**(ADR-0062)이 받고 있다.
+필요하다. 그 수요는 **RPA 데스크톱 일꾼**이 받게 된다 ([ADR-0144](decisions/0144-remove-the-pc-runner.md) §나중에).

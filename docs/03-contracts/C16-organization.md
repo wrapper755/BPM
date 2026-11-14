@@ -11,7 +11,7 @@
 
 ## 목적
 
-Center 안에 **회사 > 부서 > 직원** 조직을 두고, Studio·PC 실행기를 회사에 묶으며, BPM 프로세스를 **회사·부서·직원 중 한 자리**에 놓는다 — 자리는 **Studio가 올릴 때 고르고 매니페스트에 실려 서명된다**(C1 `place`, ADR-0127). Center는 올릴 때 검사하고 승인할 때 보여 준다. 이것이 없으면 「누가 무슨 업무를 하나」를 볼 자리가 없고, 여러 회사가 한 Center를 쓸 때 서로의 것이 섞인다.
+Center 안에 **회사 > 부서 > 직원** 조직을 두고, Studio를 회사에 묶으며, BPM 프로세스를 **회사·부서·직원 중 한 자리**에 놓는다 — 자리는 **Studio가 올릴 때 고르고 매니페스트에 실려 서명된다**(C1 `place`, ADR-0127). Center는 올릴 때 검사하고 승인할 때 보여 준다. 이것이 없으면 「누가 무슨 업무를 하나」를 볼 자리가 없고, 여러 회사가 한 Center를 쓸 때 서로의 것이 섞인다.
 
 ## 전송
 
@@ -30,7 +30,7 @@ Center 안에 **회사 > 부서 > 직원** 조직을 두고, Studio·PC 실행�
 | `name` | str | ✓ | 화면 이름 (1~100자) | 1 |
 | `state` | str | | `active`(기본) / `stopped` (열린 문자열). 멈춘 회사는 새 작업·배포·승인을 받지 않는다 | 1 |
 
-CompanyInfo는 `created_at`·`updated_at`과 셈(`departments`·`staff`·`processes`·`bot_uis`·`studios`)을 더한다 — 읽을 때 센다. 하나 읽기에서는 `work[]`·`recent_runs[]`(아래 StaffInfo와 같은 모양)도 더하는데 **회사 공통 자리의 것만**이다 — 부서·직원 자리 업무와 그 실행은 그쪽 상세가 준다(CON-13 [W]·[R]).
+CompanyInfo는 `created_at`·`updated_at`과 셈(`departments`·`staff`·`processes`·`studios`)을 더한다 — 읽을 때 센다. 하나 읽기에서는 `work[]`·`recent_runs[]`(아래 StaffInfo와 같은 모양)도 더하는데 **회사 공통 자리의 것만**이다 — 부서·직원 자리 업무와 그 실행은 그쪽 상세가 준다(CON-13 [W]·[R]).
 
 ### DepartmentRequest / DepartmentInfo
 
@@ -79,10 +79,10 @@ StaffInfo는 하나 읽기에서 `work[]`(이 직원 자리 업무 — `{bpm_pro
 | C5 | 배포 | — | PC 대상의 회사 ≠ 패키지의 회사이면 422 `company_mismatch` (`validate_deployment`) |
 | C5 | `JobInfo` | `company`, `department?`, `staff?` | **만들 때의 자리**를 작업 행에 적는다 |
 | C5 | 작업 지시·C12 메시지 시작 | — | 자리의 회사·부서·직원이 멈췄으면 409 `owner_stopped` |
-| C5 | 등록 승인 (`POST /enrollments/{id}/approve`, CON-03 「승인 대기」 — Studio·PC 실행기) | 본문 `{company}` | **필수**. 회사 관리자는 제 회사만 |
+| C5 | 등록 승인 (`POST /enrollments/{id}/approve` — Studio) | 본문 `{company}` | **필수**. 회사 관리자는 제 회사만 |
 | C5 | `BotUiInfo`·Studio 키 | `company` | 서버 실행기에는 없다(Center 공용) |
 | C5 | 관리자 계정 | `role` 값 `company_admin`, `company?` | `company_admin`은 회사 필수, `viewer`는 선택, `admin`은 없음 |
-| C5·C3 | 모든 목록 (`/packages`·`/deployments`·`/jobs`·`/runs`·`/approvals`·`/bot-uis`·`/studios`·조직) | `?company=` | 회사가 있는 계정은 **늘 그 회사로 걸린다**(쿼리가 이기지 않는다) |
+| C5·C3 | 모든 목록 (`/packages`·`/deployments`·`/jobs`·`/runs`·`/approvals`·`/studios`·조직) | `?company=` | 회사가 있는 계정은 **늘 그 회사로 걸린다**(쿼리가 이기지 않는다) |
 | C3 | `RunInfo` | `company`, `department?`, `staff?` | Center가 읽을 때 그 실행의 작업에서 붙인다. `run_started`에는 칸이 없다 |
 | C12 | `JobDispatch` | `place?` = `{company: {id, name}, department?: {id, name}, staff?: {id, name}}` | 서버 작업을 내려줄 때 붙인다. 저장하지 않는다 |
 | C14·C1 | `inputs[].source` | `company.id`·`company.name`·`department.id`·`department.name`·`staff.id`·`staff.name` (모두 `string`) | Center가 넣는 값 출처. 부르는 쪽은 줄 수 없다(`input_not_from_caller`). 그 자리에 없는 것은 `None` |

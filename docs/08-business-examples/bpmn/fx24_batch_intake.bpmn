@@ -10,7 +10,6 @@
   <bpmn:process id="Proc_fx24_batch_intake" name="일괄 기동 — 접수 BPM 프로세스" isExecutable="true">
     <bpmn:extensionElements>
       <bpm:process>{
-  "run_location": "server",
   "extensions": [],
   "outputs": [],
   "inputs": [

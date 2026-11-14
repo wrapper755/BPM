@@ -7,7 +7,7 @@ import type { DepartmentInfo } from "@bpm/api-types/c16-department-info";
 import type { StaffInfo } from "@bpm/api-types/c16-staff-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
-import { fullTime } from "@/app/bot-uis/page";
+import { fullTime } from "@/lib/time";
 import { LABEL as RUN_LABEL, time } from "@/app/runs/page";
 import { packageHref } from "@/app/packages/page";
 import {

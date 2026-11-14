@@ -8,7 +8,7 @@
 **이 모듈에 두 쪽이 있다.**
 
 - **받아 두는 쪽** (`DirectoryCache`) — Center에서 정의·봉투를 받아 들고 있다가, 그 BPM 프로세스가 쓰는
-  것만 골라 준다. PC 실행기는 **파일로** 실행 프로세스에 건네고, **서버 실행기는 제가
+  것만 골라 준다. 실행기는 **파일로** 실행 프로세스에 건네고, **서버 실행기는 제가
   Center를 부르므로** 파일을 거치지 않고 바로 짓는다 (`directory_for`).
 - **읽는 쪽** (`AppDirectory`·`build`·`read_directory`) — 받은 것을 **다시 검증한다**.
 
@@ -262,7 +262,7 @@ class DirectoryCache:
     ) -> Path | None:
         """그 BPM 프로세스가 쓸 명부를 **파일로** 쓴다 → 실행기의 `--services`. 쓸 것이 없으면 `None`.
 
-        PC 실행기가 자식 프로세스에 건네는 길이다 (ADR-0031). 서버 실행기는 `directory_for`다.
+        실행기가 자식 프로세스에 건네는 길이다 (ADR-0031). 서버 실행기는 `directory_for`다.
         """
         body = self.body_for(manifest, keys=keys, refresh=refresh)
         if body is None:

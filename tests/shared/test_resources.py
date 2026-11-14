@@ -32,7 +32,6 @@ def manifest(**over: Any) -> Manifest:
         "kind": "bpm_process",
         "id": "erp.order-entry",
         "version": "2.1.0",
-        "run_location": "pc",
         "entry": "process/main.bpmn",
         "process_id": "order_entry",
         "requires": {},
@@ -157,7 +156,7 @@ def adapter_op(name: str, *, modes: list[str] | None = None, server_ok: bool = T
 
 def test_an_external_app_called_like_a_service_app_counts_as_registered() -> None:
     """외부 확장을 `bpm:serviceCall`로 부르면 C1에는 `service_apps`로 적힌다 — 「등록되지 않음」이 아니다."""
-    m = manifest(run_location="server", requires={"service_apps": [
+    m = manifest(requires={"service_apps": [
         {"app_id": "nowview-sc01", "operations": ["validate_source", "compare", "gone", "auto"]}]})
     found = index(extensions=[external(
         adapter_op("validate_source"), adapter_op("compare", server_ok=False),
@@ -191,14 +190,15 @@ def test_operation_must_support_deterministic() -> None:
     assert [x.reason for x in missing(m, have)] == ["not_deterministic"]
 
 
-def test_server_ok_is_only_required_for_server_processes() -> None:
-    """C1 R8 — 서버 BPM 프로세스는 `server_ok` 작업만 부를 수 있다."""
+def test_server_ok_is_required_of_every_operation() -> None:
+    """C1 R8 — BPM 프로세스는 `server_ok` 작업만 부를 수 있다 (실행 자리가 서버 하나다, ADR-0144)."""
     requires = {"service_apps": [{"app_id": "ui-automation", "operations": ["plan"], "key_ref": "erp"}]}
     have = index(service_apps=[app(op("plan", server_ok=False))])
 
-    assert missing(manifest(run_location="pc", requires=requires), have) == []  # PC는 상관없다
-    v = missing(manifest(run_location="server", requires=requires, human={}), have)
+    v = missing(manifest(requires=requires), have)
     assert [x.reason for x in v] == ["not_server_ok"]
+    ok = index(service_apps=[app(op("plan", server_ok=True))])
+    assert missing(manifest(requires=requires), ok) == []
 
 
 def test_contributed_resource_not_found() -> None:
@@ -229,7 +229,6 @@ def test_several_misses_are_all_reported() -> None:
 def test_only_some_misses_block_deployment() -> None:
     """서비스 앱이 잠시 응답이 없다고 배포를 막지는 않는다 (업로드는 경고만)."""
     m = manifest(
-        run_location="server",
         human={},
         requires={
             "extensions": [{"id": "ui-automation", "version": ">=0.4,<0.5"}],

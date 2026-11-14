@@ -47,7 +47,6 @@ def builtin(**over: Any) -> dict[str, Any]:
                     "id": "ocr_task",
                     "label": "문서 인식",
                     "executor": {"entry": "doc_ocr.client:OcrExecutor"},
-                    "run_locations": ["pc", "server"],
                 }
             ]
         },
@@ -155,7 +154,7 @@ def test_catalog_is_schema_versioned() -> None:
 @pytest.mark.parametrize(
     ("key", "value"),
     [
-        ("task_types", [{"id": "t", "label": "t", "run_locations": ["pc"]}]),
+        ("task_types", [{"id": "t", "label": "t"}]),
         ("studio.editors", [{"task_type": "t", "entry": "x:Y"}]),
         ("configuration", [{"key": "k", "label": "k", "scope": "bot_ui"}]),
         ("preflight", [{"id": "p", "entry": "x:Y"}]),
@@ -384,14 +383,6 @@ def test_api_is_required_for_code_tiers() -> None:
     assert "api_missing" in codes(definition)
 
 
-def test_task_type_needs_run_locations() -> None:
-    definition = builtin()
-    definition["contributes"]["task_types"][0]["run_locations"] = []
-    assert "run_locations_missing" in codes(definition)
-    definition["contributes"]["task_types"][0]["run_locations"] = ["laptop"]
-    assert "unknown_run_location" in codes(definition)
-
-
 def test_builtin_editor_needs_an_entry() -> None:
     definition = builtin()
     definition["contributes"]["task_types"][0]["editor"] = {"kind": "builtin"}
@@ -501,7 +492,6 @@ def test_e6_envelope_for_another_extension_is_refused() -> None:
     other = {**definition, "id": "ext-other"}
     # 해시가 먼저 걸린다 — id를 바꾸면 내용이 달라지므로.
     assert [v.code for v in verify_external(other, envelope, keys=keys)] == ["hash_mismatch"]
-
 
 
 # ─────────────────────────── AI 환경 (ADR-0037) ───────────────────────────

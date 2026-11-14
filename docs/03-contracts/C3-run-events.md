@@ -4,20 +4,20 @@
 | --- | --- |
 | 상태 | **구현됨** (2026-10-09). 모델·전송·보여 주기와 선택 칸까지 부르는 쪽이 있다 |
 | schema | 1 |
-| 보내는 쪽 → 받는 쪽 | PC 실행기(실행 중 BPM 프로세스)·서버 실행기·Studio(선택) → Center |
+| 보내는 쪽 → 받는 쪽 | 서버 실행기(실행 중 BPM 프로세스)·Studio(선택) → Center |
 | 코드 위치 | `shared/contracts/src/bpm/contracts/events.py` (import `bpm.contracts.events`, [ADR-0019](../decisions/0019-package-names.md)) |
 | JSON Schema | [`c3-run-event.json`](../../shared/contracts/schemas/c3-run-event.json) · [`c3-event-batch-response.json`](../../shared/contracts/schemas/c3-event-batch-response.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
 | 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0014](../decisions/0014-one-bot-per-pc.md), [0015](../decisions/0015-run-location.md), [0041](../decisions/0041-extension-run-events.md), [0114](../decisions/0114-remove-ui-automation.md) |
 
 ## 목적
 
-실행 한 번(`run_id`)에서 일어난 일을 한 형식으로 남긴다. 같은 이벤트가 Studio 로그 탭, PC 실행기 「실행 기록」, Center 콘솔 실행 로그(CON-01)·BPM 프로세스 현황 준비도(CON-02)에 쓰인다. 실행하는 쪽은 로컬 파일(`runs/<run_id>.jsonl`)에 먼저 쓰고, Center에 닿을 때 묶어서 보낸다.
+실행 한 번(`run_id`)에서 일어난 일을 한 형식으로 남긴다. 같은 이벤트가 Studio 로그 탭, Center 콘솔 실행 로그(CON-01)·BPM 프로세스 현황 준비도(CON-02)에 쓰인다. 실행하는 쪽은 로컬 파일(`runs/<run_id>.jsonl`)에 먼저 쓰고, Center에 닿을 때 묶어서 보낸다.
 
 ## 전송
 
 - 방식: HTTP `POST /api/v1/runs/{run_id}/events`, 본문은 이벤트 배열 (로컬 jsonl의 줄들).
-- 인증: `Authorization: Bearer <Center API 키>`. **보낸 쪽(PC 실행기 / 서버 실행기 / Studio)은 키로 정해진다.** 프로토타입처럼 `bot_id`를 쿼리로 받지 않는다 (사칭 방지).
-- 소유: Center는 `run_id`를 **처음 이벤트를 보낸 키**에 묶는다. 다른 키로 같은 `run_id`에 보내면 403 `run_owner_mismatch` (다른 PC 실행기의 실행 기록을 덮지 못하게).
+- 인증: `Authorization: Bearer <Center API 키>`. **보낸 쪽(서버 실행기 / Studio)은 키로 정해진다.** 프로토타입처럼 `bot_id`를 쿼리로 받지 않는다 (사칭 방지).
+- 소유: Center는 `run_id`를 **처음 이벤트를 보낸 키**에 묶는다. 다른 키로 같은 `run_id`에 보내면 403 `run_owner_mismatch` (남의 실행 기록을 덮지 못하게).
 - 멱등성: `(run_id, seq)`가 키. 같은 줄을 다시 보내면 무시하고 `duplicates`로 센다. 그래서 보내는 쪽은 실패하면 같은 배치를 그대로 다시 보내면 된다.
 - 크기 한도: 한 배치 500줄, 1 MB. 넘으면 413.
 - 순서: 한 `run_id` 안에서 `seq`는 1부터 1씩 는다. 빠진 번호가 있어도 받는다 (나중에 채워질 수 있음).
@@ -40,7 +40,7 @@
 
 | kind | 언제 | `data` 필수 키 | `data` 선택 키 |
 | --- | --- | --- | --- |
-| `run_started` | 실행 시작 (항상 seq 1) | `bpm_process_id`(**패키지 id** — C1 `id`. 그림의 process id가 아니다, [ADR-0086](../decisions/0086-run-identity-is-the-package-id.md)), `version`, `run_location`(`pc`\|`server`), `executor`(`bot_ui`\|`server_runner`\|`studio`), `mode`(`autonomous`\|`deterministic`), `source`(시작 출처, C4 `source`와 같은 값: `job`\|`manual`\|`watch`\|`schedule`(**Center의 일정이 만든 작업** — `requested_by`가 `timer:`, [ADR-0110](../decisions/0110-center-keeps-the-schedule.md))\|`message`\|`test`\|**`delegation`**(위임으로 받은 작업 — PC·서버)) | `job_id`, `parent_run_id`(**맡긴 서버 실행** — 위임으로 시작된 실행에만, [ADR-0062](../decisions/0062-pc-delegation.md)·[ADR-0082](../decisions/0082-batch-start.md)), `queued_s`(대기열에서 기다린 초, PC), `case_id`(Studio 시험 실행의 케이스 이름) |
+| `run_started` | 실행 시작 (항상 seq 1) | `bpm_process_id`(**패키지 id** — C1 `id`. 그림의 process id가 아니다, [ADR-0086](../decisions/0086-run-identity-is-the-package-id.md)), `version`, `executor`(`server_runner`\|`studio`), `mode`(`autonomous`\|`deterministic`), `source`(시작 출처, C4 `source`와 같은 값: `job`\|`manual`\|`watch`\|`schedule`(**Center의 일정이 만든 작업** — `requested_by`가 `timer:`, [ADR-0110](../decisions/0110-center-keeps-the-schedule.md))\|`message`\|`test`\|**`delegation`**(맡아서 받은 작업)) | `job_id`, `parent_run_id`(**맡긴 실행** — 맡아서 시작된 실행에만, [ADR-0082](../decisions/0082-batch-start.md)), `queued_s`(대기열에서 기다린 초), `case_id`(Studio 시험 실행의 케이스 이름) |
 | `node_state` | 노드 상태가 바뀜 | `state`(`started`\|`completed`\|`failed`\|`skipped`\|`replayed`\|`waiting`) | `task_type`(`ai_task`\|`service_task`\|`approval`\|확장 태스크 종류 id\|…), `error_code`, `message`(한 줄) |
 | `log` | 사람이 읽는 한 줄 | `level`(`info`\|`warn`\|`error`), `message` | |
 | `agent` | AI 태스크의 단계 하나 | `step`, `action`(`plan`\|`tool`\|`extract`\|`finish`) | `tool`, `summary`(값 제외) |
@@ -51,18 +51,18 @@
 | `human_timeout` | 시간 초과 | `request_id` | |
 | `human_withdrawn` | 답 없이 끝남 — Center에서 회수되었거나 만료됨 (C6, [ADR-0038](../decisions/0038-approval-request-channel.md)) | `request_id`, `reason`(`admin_withdraw`\|`expired`\|`host_lost`, 열린 문자열) | |
 | `run_waiting` | (서버) 상태를 저장하고 기다리기 시작 | `waiting_for`(`approval`\|`message`\|`timer`\|**`delegation`**\|**`external_task`**) | `request_id`, `until`, `job_id`(**위임일 때 그 작업** — C12 `waiting[]`의 짝 칸과 같다), `task_id`(**긴 외부 작업일 때 그 일감** — C15, [ADR-0103](../decisions/0103-long-external-tasks.md)) |
-| `run_resumed` | (서버) 저장된 실행을 이어 감 | `after_s` | `reason`(`answer`\|`message`\|`timer`\|`restart`\|`withdraw`\|**`delegation`**(PC 위임의 결과가 돌아왔다, [ADR-0062](../decisions/0062-pc-delegation.md))\|**`external_task`**(외부 작업이 끝났다 — 실패·만료로 돌아온 것도, [ADR-0103](../decisions/0103-long-external-tasks.md))) |
+| `run_resumed` | (서버) 저장된 실행을 이어 감 | `after_s` | `reason`(`answer`\|`message`\|`timer`\|`restart`\|`withdraw`\|**`delegation`**(맡긴 것의 결과가 돌아왔다, [ADR-0082](../decisions/0082-batch-start.md))\|**`external_task`**(외부 작업이 끝났다 — 실패·만료로 돌아온 것도, [ADR-0103](../decisions/0103-long-external-tasks.md))) |
 | `run_finished` | 실행 끝 (항상 마지막) | `status`(`success`\|`failed`\|`cancelled`), `duration_s`, `ai_tasks`, `replayed_tasks`, `service_calls`, `human_requests` | `error_code`, `error_message`(한 줄), `confirmations` |
 
-- **`human_requests`는 결재와 확인을 합친 수**다. 확인만 따로 세는 `confirmations`는 **선택 칸**이다 — 아는 쪽(보내는 쪽)이 `human_requested`의 `layer`로 센다. **옛 PC 실행기는 넣지 않고**, 받는 쪽은 그때 「확인만은 모른다」로 다룬다(0으로 보지 않는다 — 「확인이 없었다」와 「세지 않았다」는 다르다). 결재 수는 `human_requests - confirmations`다 (칸을 둘 두지 않는다).
+- **`human_requests`는 결재와 확인을 합친 수**다. 확인만 따로 세는 `confirmations`는 **선택 칸**이다 — 아는 쪽(보내는 쪽)이 `human_requested`의 `layer`로 센다. **넣지 않은 쪽이 있으면** 받는 쪽은 「확인만은 모른다」로 다룬다(0으로 보지 않는다 — 「확인이 없었다」와 「세지 않았다」는 다르다). 결재 수는 `human_requests - confirmations`다 (칸을 둘 두지 않는다).
 - 배포 적용 결정은 실행이 아니므로 실행 이벤트로 보내지 않는다 → C4 하트비트의 `deployment_results` (CON-03 「최근 배치 결정」).
 - `kind`와 `data`의 값 목록(`state`, `source`, `layer`, `status` 등)은 모두 **열린 문자열**이다 (README 원칙 10).
 - PC BPM 프로세스는 결재·확인을 기다리는 동안 `node_state: waiting`만 남긴다 (`run_waiting`은 서버만 쓴다 — 실행 자리를 쥐고 있으므로).
 - **`run_resumed`는 `run_waiting`과 짝이다.** 짝을 못 찾으면(이 판 전에 담긴 실행을 되살릴 때) **보내지 않는다** — `after_s`가 필수 칸이라 0을 넣어야 하는데, 0은 「바로 이어 갔다」라서 「얼마나 기다렸는지 모른다」와 같은 값이 된다 (선택 칸 규칙과 같은 결). **`after_s`는 보내는 쪽이 센다** — 받는 쪽은 두 줄의 시각 차로 다시 세지 않는다.
 - 기다림이 끝났다고 **`run_waiting`을 지우거나 고치지 않는다** (줄은 더하기만 한다) — 「지금 기다리는 중인가」는 C4·C12 하트비트의 `waiting[]`이 말하고, 이 두 줄은 **지나간 기다림**을 남긴다. 받는 쪽은 둘이 **한 배치에 함께 올 것**을 셈해야 한다 (보내기는 하트비트 뒤다) — `run_resumed`를 뒤에 두고도 상태가 「기다리는 중」이면 이어 간 실행이 CON-01에서 영원히 멈춰 보인다.
 - 업무 값 기록은 기본으로 끈다. 실행 설정에서 명시적으로 켠 경우에만 `kind: "data"`(`data.vars`: 이름→값)를 보낸다 (principle 6).
-- **PC 위임은 두 실행을 잇는다** ([ADR-0062](../decisions/0062-pc-delegation.md)) — 맡겨진 PC 실행의 `run_started`에 `source: delegation`과 `parent_run_id`(맡긴 서버 실행)가 있고, Center가 그것을 읽어 `RunInfo.parent_run_id`에 담는다(줄을 다시 읽지 않는다). 그래서 CON-01이 서버 실행 ↔ PC 실행을 오갈 수 있다. 반대 방향은 작업의 `requested_by: server_bot:<run_id>`다 (C5).
-- **선택 칸은 아는 쪽이 준다** — `job_id`·`queued_s`는 PC 실행기(작업 지시와 대기열을 그쪽만 안다), `case_id`는 Studio다. **모르면 넣지 않는다**: 0·빈 글을 넣으면 「대기 없이 바로 돌았다」와 「모른다」가 같은 값이 되고, 화면이 둘을 가를 수 없다. `queued_s`는 소수 셋째 자리까지이고 **음수를 적지 않는다** (시계가 거꾸로 가면 0).
+- **맡기기는 두 실행을 잇는다** ([ADR-0082](../decisions/0082-batch-start.md)) — 맡겨진 실행의 `run_started`에 `source: delegation`과 `parent_run_id`(맡긴 실행)가 있고, Center가 그것을 읽어 `RunInfo.parent_run_id`에 담는다(줄을 다시 읽지 않는다). 그래서 CON-01이 두 실행을 오갈 수 있다. 반대 방향은 작업의 `requested_by: server_bot:<run_id>`다 (C5).
+- **선택 칸은 아는 쪽이 준다** — `job_id`·`queued_s`는 실행기(작업 지시와 대기열을 그쪽만 안다), `case_id`는 Studio다. **모르면 넣지 않는다**: 0·빈 글을 넣으면 「대기 없이 바로 돌았다」와 「모른다」가 같은 값이 되고, 화면이 둘을 가를 수 없다. `queued_s`는 소수 셋째 자리까지이고 **음수를 적지 않는다** (시계가 거꾸로 가면 0).
 
 ## 확장이 남기는 이벤트
 
@@ -86,8 +86,8 @@
 [
   {"schema": 1, "run_id": "run_20261001_101500_a1b2c3", "seq": 1, "ts": "2026-10-01T10:15:00+09:00",
    "kind": "run_started",
-   "data": {"bpm_process_id": "legal.contract-seal", "version": "2.1.0", "run_location": "pc",
-            "executor": "bot_ui", "mode": "deterministic", "source": "job", "job_id": "job_8f3e", "queued_s": 42}},
+   "data": {"bpm_process_id": "legal.contract-seal", "version": "2.1.0",
+            "executor": "server_runner", "mode": "deterministic", "source": "job", "job_id": "job_8f3e", "queued_s": 42}},
   {"schema": 1, "run_id": "run_20261001_101500_a1b2c3", "seq": 2, "ts": "2026-10-01T10:15:01+09:00",
    "kind": "node_state", "node_id": "Task_check_original", "data": {"state": "started"}},
   {"schema": 1, "run_id": "run_20261001_101500_a1b2c3", "seq": 3, "ts": "2026-10-01T10:15:20+09:00",
@@ -108,7 +108,7 @@
 
 | 경로 | 돌려주는 것 |
 | --- | --- |
-| `GET /api/v1/runs?status=&bpm_process_id=&run_location=&bot_ui_id=&limit=` | `RunListing` — 최근 실행부터. 좁히기는 상태·BPM 프로세스·**실행 위치**·**PC 실행기**, `limit` 기본 50·최대 500 |
+| `GET /api/v1/runs?status=&bpm_process_id=&runner_id=&limit=` | `RunListing` — 최근 실행부터. 좁히기는 상태·BPM 프로세스·**실행기**, `limit` 기본 50·최대 500 |
 | `GET /api/v1/runs/{run_id}` | `RunInfo` 하나. 없으면 404 `run_not_found` |
 | `GET /api/v1/runs/{run_id}/events` | `RunEventsResponse` — **`seq` 차례로** 전부 (타임라인이 순서를 만든다) |
 
@@ -118,16 +118,16 @@
 | --- | --- | --- | --- |
 | `run_id` | str | ✓ | |
 | `status` | str | ✓ | `running`\|`waiting`\|`success`\|`failed`\|`cancelled` (열린 문자열) |
-| `bpm_process_id`, `version`, `run_location`, `executor`, `mode`, `source` | str | | `run_started`의 `data`에서 추린 것 |
+| `bpm_process_id`, `version`, `executor`, `mode`, `source` | str | | `run_started`의 `data`에서 추린 것 |
 | `started_at` | str | ✓ | 첫 이벤트의 `ts` (`run_started`가 아직 없으면 받은 시각) |
 | `finished_at`, `duration_s`, `error_code` | | | `run_finished`에서 |
 | `ai_tasks`, `replayed_tasks`, `service_calls`, `human_requests`, `confirmations` | int | | `run_finished`의 셈 그대로 (CON-01 목록 열). **끝나지 않은 실행은 없다** — 줄을 다시 읽어 세지 않는다. `confirmations`는 보낸 쪽이 넣었을 때만 있다 |
-| `bot_ui_id` | str | | **어느 PC가 보냈나.** Center가 **읽을 때 채운다** — 보내는 쪽은 적지 않는다 |
+| `runner_id` | str | | **어느 실행기가 보냈나.** Center가 **읽을 때 채운다** — 보내는 쪽은 적지 않는다 |
 | `events` | int | ✓ | 지금까지 받은 줄 수 |
 
 **요약은 받을 때 만든다** — 목록을 그릴 때마다 줄을 다시 읽지 않는다. 그래서 셈은 `run_finished`가 와야 채워진다 (도는 중에는 비어 있고 화면이 「—」로 보인다). 늦게 온 배치가 끝난 실행을 「도는 중」으로 되돌리지 않는다 (상태는 뒤로 가지 않는다).
 
-**`bot_ui_id`는 본문에서 받지 않는다.** 신원은 키다 (C4) — 보내는 쪽이 제 id를 적으면 남의 PC를 사칭할 수 있다. Center는 `run_id`를 **보낸 키**에 묶어 두므로(C3 소유) 읽을 때 그 키가 묶인 PC 실행기를 찾아 채운다 (`missing_resources`·`dependents`와 같은 결 — **읽을 때 센다**. 저장하면 키를 다시 묶을 때 낡는다). Studio나 토큰이 보낸 기록에는 **없다** (그 키에 묶인 PC가 없다).
+**`runner_id`는 본문에서 받지 않는다.** 신원은 키다 (C4) — 보내는 쪽이 제 id를 적으면 남을 사칭할 수 있다. Center는 `run_id`를 **보낸 키**에 묶어 두므로(C3 소유) 읽을 때 그 키가 묶인 실행기를 찾아 채운다 (`missing_resources`·`dependents`와 같은 결 — **읽을 때 센다**. 저장하면 키를 다시 묶을 때 낡는다). Studio나 토큰이 보낸 기록에는 **없다** (그 키에 묶인 실행기가 없다).
 
 ## 오류
 
@@ -152,6 +152,7 @@
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-12 | 1 | **PC 실행기를 걷었다** — `run_started.run_location`과 `RunInfo.run_location`을 걷고, `executor`는 `server_runner`\|`studio` 둘이고, `RunInfo.bot_ui_id` → **`runner_id`**, 실행 목록의 좁히기도 `?runner_id=`다. `source: delegation`·`parent_run_id`는 **남는다** (맡기기, ADR-0082) | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-11-01 | 1 | `GET /runs?virtual_worker=`를 걷었다(가상 직원을 없앴다). `RunInfo`에 `company`·`department`·`staff`(C16 — Center가 읽을 때 채운다, 아직 비어 있다) | [0125](../decisions/0125-organization-and-work-placement.md) |
 | 2026-10-31 | 1 | **`ui_session` 종류와 `run_finished`·`RunInfo`의 `ui_tasks` 셈을 걷었다** — 내보내던 UI 자동화 확장이 없다. 받는 쪽은 옛 줄의 `ui_session`을 모르는 종류로, `ui_tasks`를 모르는 칸으로 받아 둔다(원칙 3) | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-30 | 1 | `source: schedule`을 **쓰는 쪽이 생겼다** — Center의 일정이 만든 작업(`requested_by` `timer:<식>`)으로 시작한 실행이다. 값은 처음부터 있었다 | [0110](../decisions/0110-center-keeps-the-schedule.md) |

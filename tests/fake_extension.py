@@ -36,7 +36,6 @@ DEFINITION: dict[str, Any] = {
                 "label": "시험 태스크",
                 "editor": {"kind": "builtin", "entry": "fake_extension:FakeTaskEditor"},
                 "executor": {"entry": "fake_extension:FakeTaskExecutor"},
-                "run_locations": ["pc"],
             }
         ],
         "preflight": [{"id": "always-ok", "entry": "fake_extension:FakePreflight"}],

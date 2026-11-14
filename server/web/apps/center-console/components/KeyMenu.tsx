@@ -14,7 +14,7 @@ const ACTION_LABEL: Record<KeyAction, string> = {
 
 /**
  * 키 하나의 「...」 (CON-11 「키 동작」) — **그 키에만** 건다. 폐기된 키는 「삭제...」만 있다(되살리지 않는다).
- * 그 키가 가리키는 것을 보는 화면(Bot·Studio·서버 실행기·일꾼 폴더)이 그린다 — 키만 모아 보는 화면은 없다 (ADR-0124).
+ * 그 키가 가리키는 것을 보는 화면(Studio·서버 실행기·일꾼 폴더)이 그린다 — 키만 모아 보는 화면은 없다 (ADR-0124).
  * 확인 창에는 이름·앞자리·연결된 대상을 보여 고른 키가 맞는지 한 번 더 보게 한다.
  */
 export function KeyMenu({ row }: { row: CenterKeyInfo }) {

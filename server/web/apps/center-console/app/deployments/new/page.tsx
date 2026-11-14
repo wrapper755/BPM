@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { Button, ErrorBanner } from "@bpm/ui";
-import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
 import type { PackageInfo } from "@bpm/api-types/c5-package-info";
 import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import { CenterError, center, session } from "@/lib/center";
@@ -31,13 +30,11 @@ export default async function NewDeploymentPage({
   const bot = asked.bot ?? "";
 
   let approved: PackageInfo[] = [];
-  let botUis: BotUiInfo[] = [];
   let runners: ServerRunnerInfo[] = [];
   let failure: string | null = asked.error ?? null;
   try {
-    [approved, botUis, runners] = await Promise.all([
+    [approved, runners] = await Promise.all([
       center.packages({ kind: "bpm_process" }).then((all) => all.filter((one) => one.status === "approved")),
-      center.botUis(),
       center.serverRunners(),
     ]);
   } catch (cause) {
@@ -45,9 +42,6 @@ export default async function NewDeploymentPage({
   }
   approved.sort((a, b) => a.id.localeCompare(b.id) || a.version.localeCompare(b.version));
   const picked = approved.find((one) => `${one.id}@${one.version}` === bot);
-  const server = picked?.run_location === "server";
-  // 비활성 PC에는 배포를 보내지 않는다 (C4 `disabled`) — 고를 거리에서 뺀다.
-  const pcs = botUis.filter((one) => !one.disabled).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <Shell mode={found.mode} actor={found.actor} current="/deployments">
@@ -84,11 +78,8 @@ export default async function NewDeploymentPage({
       {picked ? (
         <form action={createDeployment} className="flex max-w-2xl flex-col gap-4">
           <input type="hidden" name="bot" value={bot} />
-          <input type="hidden" name="place" value={server ? "server" : "pc"} />
-
-          {server ? (
-            <fieldset className="flex flex-col gap-3 rounded-lg border border-border-default bg-bg-surface p-3">
-              <legend className="px-1 text-body font-medium">대상 — 서버 실행기</legend>
+          <fieldset className="flex flex-col gap-3 rounded-lg border border-border-default bg-bg-surface p-3">
+            <legend className="px-1 text-body font-medium">대상 — 서버 실행기</legend>
               <label className="flex flex-col gap-1 text-body-sm">
                 <span className="text-text-muted">실행기</span>
                 <select name="runner" defaultValue="" className={FIELD}>
@@ -106,25 +97,7 @@ export default async function NewDeploymentPage({
                 </span>
                 <input type="number" name="max_concurrency" min={1} className={FIELD} />
               </label>
-            </fieldset>
-          ) : (
-            <fieldset className="flex flex-col gap-2 rounded-lg border border-border-default bg-bg-surface p-3">
-              <legend className="px-1 text-body font-medium">대상 — Bot (여럿 고를 수 있습니다)</legend>
-              {pcs.length === 0 ? (
-                <p className="text-body-sm text-text-muted">
-                  등록된 Bot이 없습니다. PC에서 PC 실행기를 한 번 Center에 연결해야 배포할 수 있습니다.
-                </p>
-              ) : (
-                pcs.map((one) => (
-                  <label key={one.bot_ui_id} className="flex items-center gap-2 text-body">
-                    <input type="checkbox" name="bot_ui" value={one.bot_ui_id} />
-                    {one.name}
-                    <span className="text-text-muted">{one.online ? "● 온라인" : "○ 오프라인"}</span>
-                  </label>
-                ))
-              )}
-            </fieldset>
-          )}
+          </fieldset>
 
           <div className="flex flex-wrap gap-3">
             <label className="flex flex-col gap-1 text-body-sm">

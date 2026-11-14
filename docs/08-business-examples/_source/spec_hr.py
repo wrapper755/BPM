@@ -8,7 +8,7 @@ EXAMPLES = []
 EXAMPLES.append(Example(
     id="BX-20", file="bx20_employee_onboarding", name="입사자 온보딩", dept="인사·총무",
     origin="프로토타입 시나리오 2 (끝남 — 케이스 3/3, 재생 3/3)", 
-    run_location="server", trigger="메시지 `new_hire` — 인사 시스템의 입사 확정",
+    trigger="메시지 `new_hire` — 인사 시스템의 입사 확정",
     background="""
 입사 확정이 오면 계정 준비(메일·메신저·그룹웨어)를 하위 프로세스로 묶어 진행한다. 계정 준비가 이틀 안에 끝나지 않으면 IT팀에 에스컬레이션한다. 계정이 준비되면 AI가 입사자에게 보낼 환영 안내를 쓰고, 장비 지급을 총무팀이 확인한 뒤 입사자와 팀장에게 메일을 보낸다.
 """,
@@ -62,7 +62,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-21", file="bx21_leave_request", name="휴가 신청", dept="인사·총무",
     origin="새로 설계", 
-    run_location="server", trigger="메시지 `leave_request` — 그룹웨어 휴가 신청",
+    trigger="메시지 `leave_request` — 그룹웨어 휴가 신청",
     background="""
 직원이 휴가를 신청하면 잔여 휴가를 확인한다 (공유 BPM 프로세스 BX-24 호출). 잔여가 모자라면 바로 반려, 3일 이하면 팀장 결재, 3일 초과면 팀장 → 부서장 순서로 결재한다. 승인되면 근태 시스템에 등록한다.
 """,
@@ -104,7 +104,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-22", file="bx22_offboarding_access", name="퇴사자 계정 회수", dept="인사·총무",
     origin="새로 설계",
-    run_location="server", trigger="메시지 `employee_left` — 인사 시스템이 퇴사 처리 때 한 사람씩 보냄",
+    trigger="메시지 `employee_left` — 인사 시스템이 퇴사 처리 때 한 사람씩 보냄",
     background="""
 퇴사 처리된 직원 한 사람의 계정을 세 시스템(메일, VPN, ERP)에서 동시에 회수한다. 한 시스템에서 실패해도 다른 시스템 회수는 계속되고, 실패한 것만 모아 보안팀에 알려 수동으로 처리하게 한다.
 """,
@@ -158,7 +158,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-23", file="bx23_training_reminder", name="필수 교육 이수 독려", dept="인사·총무",
     origin="새로 설계", 
-    run_location="server", trigger="타이머 — 매주 수요일 10:00",
+    trigger="타이머 — 매주 수요일 10:00",
     background="""
 법정 필수 교육(개인정보·성희롱 예방 등)의 미이수자를 교육 시스템에서 가져와, 마감까지 남은 날짜에 따라 본인 안내 / 팀장 참조 / 인사팀 보고로 나눠 메일을 보낸다.
 """,
@@ -189,7 +189,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-24", file="bx24_leave_balance", name="잔여 휴가 조회 (공유)", dept="인사·총무",
     origin="새로 설계 — 호출 대상", 
-    run_location="server", trigger="BPM 프로세스 호출 — BX-21 등",
+    trigger="BPM 프로세스 호출 — BX-21 등",
     background="근태 시스템에서 연차 발생·사용 내역을 가져와 잔여 일수를 계산한다. 여러 BPM 프로세스가 호출한다.",
     why_location="API·계산 — 서버.",
     inputs=[("사번", "string", True, "")],

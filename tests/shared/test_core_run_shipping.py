@@ -63,7 +63,7 @@ class FakeCenter:
 
 def write_log(data_dir: Path, run_id: str = RUN, lines: int = 3) -> Path:
     log = RunLog(run_id=run_id, path=log_path(data_dir, run_id))
-    log.emit("run_started", bpm_process_id="fin.invoice", version="1.0.0", run_location="pc",
+    log.emit("run_started", bpm_process_id="fin.invoice", version="1.0.0",
              executor="bot_ui", mode="autonomous", source="manual")
     for i in range(lines - 1):
         log.emit("log", level="info", message=f"{i}번째 줄")

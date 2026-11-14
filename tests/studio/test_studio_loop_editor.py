@@ -40,8 +40,8 @@ def _app() -> Any:
     yield QApplication.instance() or QApplication([])
 
 
-def loaded(mode: str, loop: dict[str, Any] | None, *, run_location: str | None = None) -> LoopEditor:
-    made = LoopEditor(run_location=run_location)
+def loaded(mode: str, loop: dict[str, Any] | None) -> LoopEditor:
+    made = LoopEditor()
     made.load({"multiInstance": mode, "loop": loop})
     return made
 
@@ -142,15 +142,6 @@ def test_the_collection_may_be_the_collected_list() -> None:
     assert made.problems() == ([], [])
 
 
-def test_parallel_on_a_pc_says_it_runs_in_turn() -> None:
-    pc = loaded(MODE_PARALLEL, LOOP, run_location="pc")
-    assert not pc.pc_note.isHidden()
-    server = loaded(MODE_PARALLEL, LOOP, run_location="server")
-    assert server.pc_note.isHidden()
-    pc.mode_picks[MODE_SEQUENTIAL].setChecked(True)
-    assert pc.pc_note.isHidden()
-
-
 def test_turning_it_off_drops_the_body_and_ignores_the_fields() -> None:
     made = loaded(MODE_SEQUENTIAL, LOOP)
     made.item_box.setText("")
@@ -162,11 +153,10 @@ def test_turning_it_off_drops_the_body_and_ignores_the_fields() -> None:
 # ── 속성 패널 ──
 
 
-def panel_with(bpmn_type: str, chk: dict[str, Any], mode: str = "", *, run_location: str | None = None) -> Any:
+def panel_with(bpmn_type: str, chk: dict[str, Any], mode: str = "") -> Any:
     from bpm.studio.properties import Properties  # noqa: PLC0415
 
     panel = Properties()
-    panel.run_location = run_location
     panel.show_element({
         "id": "Task_1", "type": bpmn_type, "name": "신용 조회",
         "multiInstance": mode,
@@ -261,6 +251,3 @@ def test_a_blocking_loop_problem_blocks_the_panel() -> None:
     assert not panel.apply_button.isEnabled()
 
 
-def test_the_panel_passes_the_run_location() -> None:
-    panel = panel_with("ServiceTask", {"loop": LOOP}, MODE_PARALLEL, run_location="pc")
-    assert not panel._loop_editor.pc_note.isHidden()  # noqa: SLF001

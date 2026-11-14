@@ -5,7 +5,7 @@ import { CenterError, center, session } from "@/lib/center";
 import { KINDS_UNSET, cameFrom, kindMismatches, kindsLabel, type AppChoice } from "@/lib/consumers";
 import { IMPL_LABEL, connectedApps, kindsLabel as appKindsLabel, workersOf } from "@/lib/connected-apps";
 import { Shell } from "@/components/Shell";
-import { fullTime } from "@/app/bot-uis/page";
+import { fullTime } from "@/lib/time";
 import { ConsumerMenu, NewConsumer } from "./tools";
 
 /**

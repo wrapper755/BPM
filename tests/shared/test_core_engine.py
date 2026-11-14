@@ -319,7 +319,7 @@ def test_an_approval_waits_and_keeps_the_slot() -> None:
 
     requested = next(e for e in run.log.events if e.kind == "human_requested")
     assert requested.data["layer"] == "approval"
-    assert requested.data["where"] == "field"
+    assert requested.data["where"] == "center"
     # 기다리는 중에는 `node_state: waiting`만 남긴다 (C3 — `run_waiting`은 서버만).
     states = {e.data.get("state") for e in run.log.events if e.kind == "node_state"}
     assert states == {"started", "completed", "waiting"}
@@ -390,7 +390,7 @@ def test_inputs_whose_source_is_the_place_are_filled_from_it() -> None:
     """**업무 자리도 입력 한 줄**이다 — 결재 담당자가 직원 입력에서 온다 (C14, ADR-0099·ADR-0125)."""
     process = sourced_process()
     engine, run = start(
-        process, env=RunEnv(clock=lambda: NOW, approval_where="center"), sourced=sourced_inputs(process.info, FINANCE)
+        process, env=RunEnv(clock=lambda: NOW), sourced=sourced_inputs(process.info, FINANCE)
     )
     assert (run.variables["감독자"], run.variables["회사"]) == ("김감독", "회사1")
     # 그 자리에 없는 것(부서)은 넣지 않는다 — 선언한 입력이라 `None`이다.
@@ -419,7 +419,7 @@ def test_a_required_sourced_input_without_an_owner_does_not_start() -> None:
 def test_an_optional_sourced_input_is_none_and_the_approval_stops() -> None:
     """필수가 아니면 `None`이고, 그것을 담당자로 쓴 결재는 **조용히 담당자 없음이 되지 않는다**."""
     optional = SOURCED_PROPS.replace('"required": true', '"required": false')
-    engine, run = start(sourced_process(process_props=optional), env=RunEnv(clock=lambda: NOW, approval_where="center"))
+    engine, run = start(sourced_process(process_props=optional), env=RunEnv(clock=lambda: NOW))
     assert run.variables["감독자"] is None
     assert engine.run_until_blocked(run) is State.FAILED
     assert run.error is not None and run.error.code == "assignees_missing"
@@ -1018,7 +1018,7 @@ def test_run_started_carries_the_optional_fields_only_when_known() -> None:
     bare = started()
     start(process, bare)
     assert set(bare.events[0].data) == {
-        "bpm_process_id", "version", "run_location", "executor", "mode", "source"
+        "bpm_process_id", "version", "executor", "mode", "source"
     }
 
     told = started()

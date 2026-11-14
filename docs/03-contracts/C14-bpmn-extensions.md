@@ -6,7 +6,7 @@
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | Studio(쓰기) → 패키지(C1 `process/*.bpmn`) → 실행기·서버 실행기(읽기·실행), Center(검사) |
 | 코드 위치 | `bpm.contracts.bpmn_ext` — 모델·`read_process()`·`validate()`. DMN 읽기·판정은 `bpm.contracts.dmn`. 확장 태스크의 속 내용은 각 확장의 `contracts/` |
-| 관련 ADR | [0008](../decisions/0008-map-driver-hands-boundary.md), [0013](../decisions/0013-api-keys.md), [0015](../decisions/0015-run-location.md), [0016](../decisions/0016-server-first.md), [0018](../decisions/0018-extensions.md), [0026](../decisions/0026-file-paths-and-file-list-task.md), [0110](../decisions/0110-center-keeps-the-schedule.md), [0114](../decisions/0114-remove-ui-automation.md) |
+| 관련 ADR | [0008](../decisions/0008-map-driver-hands-boundary.md), [0013](../decisions/0013-api-keys.md), [0016](../decisions/0016-server-first.md), [0018](../decisions/0018-extensions.md), [0026](../decisions/0026-file-paths-and-file-list-task.md), [0110](../decisions/0110-center-keeps-the-schedule.md), [0114](../decisions/0114-remove-ui-automation.md), [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 관련 화면 | STU-04 속성 패널(「JSON」 탭이 이 모델로 검증한다), STU-06, STU-07, STU-14 |
 
 
@@ -47,7 +47,7 @@ BPMN 2.0 파일 안에 우리 태스크의 속성을 적는 방법을 정한다.
 
 | 요소 | JSON 필드 | 뜻 |
 | --- | --- | --- |
-| `bpm:process` | `run_location`(`server`\|`pc`), `extensions`(`[{id, version, definition_hash?}]` — **외부 확장은 `definition_hash`로 정의를 고정한다**: 적어 두면 빌드가 C1 `requires.extensions`로 그대로 옮기고, 받는 쪽이 「승인받은 그 정의인가」를 대조한다. **비워 두면 고정하지 않는다** — 막지 않고 Studio가 경고한다, [ADR-0060](../decisions/0060-pinning-external-definitions.md). 적는 자리는 STU-15다), `inputs`(`[{name, type, required, description, default?, source?}]` — 메시지 본문으로 들어오는 값도 여기에 선언. `source`는 **값을 누가 넣나**, 아래 「입력의 값 출처」), `outputs`(`[name]`) | BPM 프로세스 정보 (STU-06). 패키지 매니페스트(C1)는 빌드 때 이것을 모아 만든다 |
+| `bpm:process` | `extensions`(`[{id, version, definition_hash?}]` — **외부 확장은 `definition_hash`로 정의를 고정한다**: 적어 두면 빌드가 C1 `requires.extensions`로 그대로 옮기고, 받는 쪽이 「승인받은 그 정의인가」를 대조한다. **비워 두면 고정하지 않는다** — 막지 않고 Studio가 경고한다, [ADR-0060](../decisions/0060-pinning-external-definitions.md). 적는 자리는 STU-15다), `inputs`(`[{name, type, required, description, default?, source?}]` — 메시지 본문으로 들어오는 값도 여기에 선언. `source`는 **값을 누가 넣나**, 아래 「입력의 값 출처」), `outputs`(`[name]`) | BPM 프로세스 정보 (STU-06). 패키지 매니페스트(C1)는 빌드 때 이것을 모아 만든다 |
 | `bpm:defaults` | `limits`(`{timeout_s, max_steps}`), `forbidden_actions[]`, `confirm_triggers[]`, `web`(`{profile, session}`), `desktop`(`{app}` — 띄울 앱 이름) | 모든 AI 태스크의 기본값. 태스크에 적은 값이 이긴다 — `limits`는 칸마다, 목록 둘은 태스크에 하나라도 적었으면 그것만 ([ADR-0105](../decisions/0105-ai-task-limits-and-instructions.md)). 확장 태스크(`bpm:task`)에는 `web`·`desktop`이 **속성의 기본값**으로 넘어간다 — 태스크 속성에 같은 이름이 없을 때만 엔진이 채운다 ([ADR-0033](../decisions/0033-desktop-app-and-window.md)) |
 
 ## 태스크 종류와 속성
@@ -57,15 +57,15 @@ BPMN 2.0 파일 안에 우리 태스크의 속성을 적는 방법을 정한다.
 | AI 태스크 | `serviceTask` | `bpm:aiTask` | `goal`(Markdown — `## 상황`·`## 할 일`·`## 판단하지 않는 것`·`## 반환` 권장), `domain`(`llm`\|`api`\|`doc`\|`web`\|`desktop`), `tools[]`, `params`(업무 파라미터, 재생 때 그대로 쓰인다), `results`(`{이름: 타입}`), `replay`(`plan`\|`full`\|`none`, 기본 `plan` — 아래 「재생」), `limits`(`timeout_s`·`max_steps` — 아래 「한도와 지시문」), `forbidden_actions[]`, `confirm_triggers[]`, `web`/`desktop`(환경 설정). **`domain`의 `web`·`desktop`은 낱말로만 남고 돌지 않는다** — 아래 「`web`·`desktop` AI 태스크」 |
 | 서비스 앱 태스크 | `serviceTask` | `bpm:serviceCall` | `app_id`, `operation`, `input`(`{필드: 식}`), `output`(`{변수: 필드}`), `timeout_s`, `retry`(`{max, on: [503, 429]}` — C15 실패 코드 `dependency_down`=503·`rate_limited`=429·`timeout`=504로 읽는다) |
 | 확장 태스크 | `serviceTask` | `bpm:task` `type="<확장 태스크 종류>"` `extension="<id>"` | 그 확장의 계약이 정한 JSON |
-| 결재 | `userTask` | `bpm:approval` | `title`, `description`(**Markdown** — 아래 「결재 설명」), `show`(**변수 이름 배열** — 문자열 하나로 쓰면 검사 오류), `fields[]`(C6 Form과 같다: `{key, label, type: bool\|number\|text\|choice, choices?, required, default?}`), `location`(`follow`\|`center`\|`field`), `expires`(ISO 기간 또는 변수 이름), `assignees`(**결재 담당자** — 이름 배열 또는 변수 이름 하나, 아래 「결재 담당자」), `answered_by_as?`·`answered_via_as?`(**답한 사람**이 들어갈 변수, 아래 「답한 사람」) |
-| 수동 작업 (사람 확인) | `manualTask` | `bpm:approval` | 결재와 같은 형식. 화면에는 「확인」으로 보인다. **늘 현장에서 답한다** (화면 앞 사람만 답할 수 있다, C6) — `location`에 `center`를 적으면 **B12 경고**다. **서버 BPM 프로세스에는 넣을 수 없다** (C1 R2 `human.confirmation=false`) |
+| 결재 | `userTask` | `bpm:approval` | `title`, `description`(**Markdown** — 아래 「결재 설명」), `show`(**변수 이름 배열** — 문자열 하나로 쓰면 검사 오류), `fields[]`(C6 Form과 같다: `{key, label, type: bool\|number\|text\|choice, choices?, required, default?}`), `expires`(ISO 기간 또는 변수 이름), `assignees`(**결재 담당자** — 이름 배열 또는 변수 이름 하나, 아래 「결재 담당자」), `answered_by_as?`·`answered_via_as?`(**답한 사람**이 들어갈 변수, 아래 「답한 사람」) |
+| 수동 작업 (사람 확인) | `manualTask` | `bpm:approval` | 결재와 같은 형식. 화면에는 「확인」으로 보인다. **Center 결재함에서 답한다** (결재와 같은 창구다 — ADR-0144). **담당자가 없다** — 적으면 B12 경고이고, 그 실행을 보는 사람 누구나 답한다 |
 | 스크립트 | `scriptTask` | 표준 `bpmn:script` (`scriptFormat="bpm-expr"`) | 식 언어로 쓴 대입문. 입력은 프로세스 변수, 결과는 대입한 변수 |
 | 규칙 | `businessRuleTask` | `bpm:rule` | `decision`(같은 패키지의 DMN 결정 id), `input`(`{DMN 입력 식 이름: 식}`), `output`(`{변수: DMN 출력}`). DMN은 한 건을 판정한다 — 목록은 반복(아래)으로. 적중 정책 `COLLECT`면 출력이 목록이다 (맞는 줄이 없으면 빈 목록). 아래 「규칙 태스크와 DMN」 |
 | 파일 목록 | `serviceTask` | `bpm:fileList` | `folder`(템플릿 — 아래 「파일 경로」), `pattern`(glob 한 조각, 기본 `*`), `recursive`(기본 false), `sort`(`name`\|`modified`, 기본 `name`), `limit?`, `store_as`(**필수** — 파일 경로 목록), `count_as?`(개수). 디스크를 읽으므로 식의 도우미가 아니라 태스크다 ([ADR-0025](../decisions/0025-expression-language.md) §식에 두지 않는 것, [ADR-0026](../decisions/0026-file-paths-and-file-list-task.md)) |
 | 메일 보내기 | `sendTask` | `bpm:email` | `to[]`, `cc[]`, `subject`, `body`, `attachments[]`(변수 이름), `store_as?`. 아래 「보내기」 |
 | 웹훅 보내기 | `sendTask` | `bpm:webhook` | `url`, `method`, `body`(`all`\|`fields:[..]`\|`template:"…"`), `timeout_s`, `store_as?`. URL은 허용 호스트 규칙(C13 §4-3과 같은 해석기)을 따른다. 아래 「보내기」 |
 | 메시지 받기 | `receiveTask` | 표준 `messageRef` + `bpm:receive` | `correlation`(변수 이름 — 이 값이 같은 메시지만 받는다), `payload[]`(메시지 본문에서 변수로 들어오는 이름 — 검사 B11이 출처로 본다. 메시지 시작은 `bpm:process.inputs`로 선언) |
-| 다른 BPM 프로세스 호출 | `callActivity` | 표준 `calledElement` + `bpm:call` | `input`(`{호출 대상 변수: 식}`), `output`(`{내 변수: 호출 대상 변수}`). **적은 것만 오간다.** 둘 다 비면 오가는 변수 없음 (프로토타입의 "비면 전부"는 없앴다). `delegate?`를 적으면 **PC 위임**이다 (아래) |
+| 다른 BPM 프로세스 호출 | `callActivity` | 표준 `calledElement` + `bpm:call` | `input`(`{호출 대상 변수: 식}`), `output`(`{내 변수: 호출 대상 변수}`). **적은 것만 오간다.** 둘 다 비면 오가는 변수 없음 (프로토타입의 "비면 전부"는 없앴다). `delegate?`를 적으면 **맡기기**다 (아래) |
 
 ### 결재 설명 (`bpm:approval.description`)
 
@@ -86,7 +86,7 @@ BPMN 2.0 파일 안에 우리 태스크의 속성을 적는 방법을 정한다.
 | 없음·빈 배열 | 담당자 없음 — 누구나 콘솔에서 답한다 (지금과 같다) |
 
 - 실행하는 쪽이 결재를 만들 때 풀어 C6 `assignees[]`에 싣는다. 앞뒤 공백을 걷고 NFC로 맞추며, 빈 것과 겹치는 것은 버린다 (`contracts.approvals.normalize_assignees`). **그 변수가 없거나 값이 글자·글자 목록이 아니면 실행 오류**다 — 식 오류와 같은 갈래라 오류 경계로 받지 않는다(조용히 「담당자 없음」이 되면 감독자가 사라진다). 그래서 B11은 그 변수 이름을 **읽기**로 센다.
-- **막지 않는다.** 콘솔은 담당자를 보이고 거르기만 한다. 막는 것은 대리 답 하나다 (C6, [ADR-0081](../decisions/0081-answering-on-behalf.md)). 현장 결재에도 실려 결재 창이 보인다.
+- **막지 않는다.** 콘솔은 담당자를 보이고 거르기만 한다. 막는 것은 대리 답 하나다 (C6, [ADR-0081](../decisions/0081-answering-on-behalf.md)).
 - 확인(`manualTask`)에는 담당자가 없다 — 적으면 B12 경고다(화면 앞 사람이 답한다).
 
 > 상태: 돈다 — 엔진이 결재를 만들 때 풀어 C6 본문에 싣는다 (`core.nodes._assignees`). 변수가 없거나 **값이 `None`이면** `assignees_missing`, 모양이 틀리면 `assignees_invalid`로 실행이 멈춘다 — 담당자 없음은 그림이 빈 배열로 적는다 (가상 직원이 없으면 출처가 가상 직원인 입력이 `None`이다, [ADR-0099](../decisions/0099-input-value-source.md)).
@@ -100,7 +100,7 @@ BPMN 2.0 파일 안에 우리 태스크의 속성을 적는 방법을 정한다.
  "assignees": ["이도윤"], "answered_by_as": "확인자", "answered_via_as": "확인경로"}
 ```
 
-- `answered_by_as`: 답을 넣을 때 **답한 사람**을 그 변수에 적는다. C3 `human_answered.answered_by`와 **같은 값**이다 — 콘솔이면 관리자 계정 이름, 대리 답이면 `X-BPM-On-Behalf-Of`의 이름(Center가 담당자와 대조한 것), 현장이면 PC 실행기의 표시 이름, Studio 시험 실행이면 케이스의 `answered_by[노드 id]`(없으면 「시험 케이스」).
+- `answered_by_as`: 답을 넣을 때 **답한 사람**을 그 변수에 적는다. C3 `human_answered.answered_by`와 **같은 값**이다 — 콘솔이면 관리자 계정 이름, 대리 답이면 `X-BPM-On-Behalf-Of`의 이름(Center가 담당자와 대조한 것), Studio 시험 실행이면 케이스의 `answered_by[노드 id]`(없으면 「시험 케이스」).
 - `answered_via_as`: 대리 답이면 **그 키 이름**(C6 `answered_via`), 아니면 `None`.
 - **반려여도 채운다.** 회수·만료는 답한 사람이 없어 채우지 않는다(그 길은 `APPROVAL_WITHDRAWN`·`APPROVAL_EXPIRED` 오류 경계다).
 - 확인(`manualTask`)에도 적을 수 있다 — `via`는 늘 `None`이다.
@@ -113,8 +113,7 @@ BPMN 2.0 파일 안에 우리 태스크의 속성을 적는 방법을 정한다.
 BPM 프로세스가 받는 정보는 **입력 한 목록**이다. 대부분은 부르는 쪽이 넣지만, **업무 자리(회사·부서·직원)**처럼 Center가 넣는 값도 같은 목록에 한 줄로 선언하고 `source`로 출처만 다르게 적는다 ([ADR-0099](../decisions/0099-input-value-source.md)).
 
 ```json
-{"run_location": "server",
- "inputs": [
+{"inputs": [
    {"name": "인입", "type": "list", "required": true, "description": "{번호, 금액} 목록"},
    {"name": "담당", "type": "string", "required": true, "source": "staff.name"}
  ]}
@@ -122,7 +121,7 @@ BPM 프로세스가 받는 정보는 **입력 한 목록**이다. 대부분은 �
 
 | `source` | 값을 넣는 쪽 | 타입 |
 | --- | --- | --- |
-| (없음) — `caller` | **부르는 쪽** — 작업 `inputs`·메시지 본문·위임 `bpm:call.input`·시험 케이스 | 선언한 대로 |
+| (없음) — `caller` | **부르는 쪽** — 작업 `inputs`·메시지 본문·맡기기 `bpm:call.input`·시험 케이스 | 선언한 대로 |
 | `company.id`·`company.name` | **Center** — 이 BPM 프로세스의 업무 자리(C16)의 회사 | `string` |
 | `department.id`·`department.name` | **Center** — 업무 자리의 부서. 부서 자리 업무·부서가 있는 직원 자리 업무만 있고 나머지는 `None` | `string` |
 | `staff.id`·`staff.name` | **Center** — 업무 자리의 직원. 직원 자리 업무만 있고 나머지는 `None` | `string` |
@@ -136,15 +135,15 @@ BPM 프로세스가 받는 정보는 **입력 한 목록**이다. 대부분은 �
 
 > 상태: 검사·엔진·서버 실행기·Studio가 돈다 — 서버 실행기가 받은 `JobDispatch.place`를 `core.engine.sourced_inputs`로 풀어 넘기고, Studio는 케이스 입력을 출처로 갈라 준다. **Center가 `place`를 붙이는 것은 아직이다**(C16 조각 2).
 
-### PC 위임 (`bpm:call.delegate`)
+### 맡기기 (`bpm:call.delegate`)
 
-서버 BPM 프로세스가 **화면 조작·현장 확인이 필요한 한 부분**을 PC에 맡긴다 ([ADR-0062](../decisions/0062-pc-delegation.md)). 새 태스크 종류를 만들지 않고 호출에 칸 하나를 더한다.
+BPM 프로세스가 한 부분을 **따로 배포된 다른 BPM 프로세스**에 맡긴다 ([ADR-0082](../decisions/0082-batch-start.md)). 새 태스크 종류를 만들지 않고 호출에 칸 하나를 더한다 — `callActivity`는 **같은 패키지 안의 정의만** 부르므로, 패키지를 건너 실행을 띄우는 길은 이것뿐이다.
 
-**대상이 서버 BPM 프로세스이어도 같은 칸이다** ([ADR-0082](../decisions/0082-batch-start.md)) — 어디서 도는지는 **대상 패키지의 `run_location`**(C1)이 정하고 Center가 가른다. 그래서 그림에 대상 종류를 적지 않는다. 반복과 함께 쓰면 **일괄 기동**이다 (아래 §반복).
+맡은 것은 **Center 작업**이 되어 서버 실행기가 돌린다. 반복과 함께 쓰면 **일괄 기동**이다 (아래 §반복).
 
 ```json
 {
-  "delegate": {"bpm_process_id": "fin.erp-input", "version": "1.2.0", "bot_ui": "담당자PC"},
+  "delegate": {"bpm_process_id": "fin.erp-input", "version": "1.2.0"},
   "input": {"전표번호": "청구번호"},
   "output": {"입력결과": "결과코드"}
 }
@@ -152,26 +151,24 @@ BPM 프로세스가 받는 정보는 **입력 한 목록**이다. 대부분은 �
 
 | 칸 | 뜻 |
 | --- | --- |
-| `bpm_process_id` | 부를 **BPM 프로세스 패키지 id** (필수 — PC BPM 프로세스이든 서버 BPM 프로세스이든). **패키지 안의 정의가 아니다** — 따로 올리고 따로 배포한 BPM 프로세스이다. **자기 자신이면 안 된다** (C1 R12 — 끝나지 않는 되부름이다. 그림은 자기 패키지 id를 몰라 매니페스트가 본다) |
+| `bpm_process_id` | 부를 **BPM 프로세스 패키지 id** (필수). **패키지 안의 정의가 아니다** — 따로 올리고 따로 배포한 BPM 프로세스이다. **자기 자신이면 안 된다** (C1 R12 — 끝나지 않는 되부름이다. 그림은 자기 패키지 id를 몰라 매니페스트가 본다) |
 | `version?` | 판. 비우면 **배포된 판** (작업 지시와 같은 규칙 — 둘 이상이면 Center가 `version_ambiguous`) |
-| `bot_ui?` | **어느 PC인가를 정하는 식**(`input`의 값들과 같은 `bpm-expr`). 비우면 **Center가 고른다**(그 판이 배포된, 활성인 PC 실행기 중 대기열이 짧은 곳). **대상이 서버 BPM 프로세스이면 적지 않는다** — 적혀 오면 Center가 거절하고(`bot_ui_for_server`) 업무 실패로 오류 경계에 간다 |
 
-- **`delegate`는 실행 위치가 `server`인 BPM 프로세스에서만 쓸 수 있다** (B14). PC 실행은 그 PC의 자리를 끝까지 쥐므로(ADR-0014) PC가 다른 PC를 기다리면 둘이 서로를 기다릴 수 있다.
 - `calledElement`는 **적어 두면 읽는 사람에게 뜻이 있다**(그 BPM 프로세스의 `process_id`). 검사는 **패키지 안에서 찾지 않는다** — 대상이 다른 패키지라서다.
-- `output`은 그 BPM 프로세스가 **매니페스트에 선언한 `outputs`**와 맞춰 본다 (C1). 매핑은 이 그림에만 있고 PC는 모르므로, 돌아오는 것은 **선언한 `outputs` 전부**이고 고르는 것은 부르는 쪽이다.
-- 실패·거절·만료는 **오류 경계**로 간다. **업무 기한은 그림이 맡는다** — Call Activity에 타이머 경계를 달면 기다리는 동안 켜진다. 위임에 기한 칸을 두지 않는다.
-- 돌리는 쪽(서버 실행기 ↔ Center)의 약속은 C12, 결과가 돌아오는 길은 C4다. **Studio 시험 실행은 케이스의 `delegations`를 쓴다** (아래 — 돌릴 남의 패키지가 없다).
+- `output`은 그 BPM 프로세스가 **매니페스트에 선언한 `outputs`**와 맞춰 본다 (C1). 매핑은 이 그림에만 있고 맡은 쪽은 모르므로, 돌아오는 것은 **선언한 `outputs` 전부**이고 고르는 것은 부르는 쪽이다.
+- 실패·거절·만료는 **오류 경계**로 간다. **업무 기한은 그림이 맡는다** — Call Activity에 타이머 경계를 달면 기다리는 동안 켜진다. 맡기기에 기한 칸을 두지 않는다.
+- 맡기는 쪽(서버 실행기 ↔ Center)의 약속은 C12, 결과가 돌아오는 길은 C4다. **Studio 시험 실행은 케이스의 `delegations`를 쓴다** (아래 — 돌릴 남의 패키지가 없다).
 
 ### 반복 (다중 인스턴스)
 
-- 표준 `bpmn:multiInstanceLoopCharacteristics`(`isSequential`)에 `bpm:loop`(`collection`, `item`, `result`, `collect_into`)를 더한다. AI·UI·서비스 앱·규칙 태스크와 **호출**(Call Activity — 위임 포함, [ADR-0082](../decisions/0082-batch-start.md))에 쓸 수 있다. 호출이면 `result`는 그 `output`이 만드는 내 변수 중 하나다. `result`는 한 번 돈 결과로 쓰는 변수 이름(그 태스크의 출력 중 하나)이고, 모은 목록의 순서는 입력 순서다 (병렬이어도).
+- 표준 `bpmn:multiInstanceLoopCharacteristics`(`isSequential`)에 `bpm:loop`(`collection`, `item`, `result`, `collect_into`)를 더한다. AI·서비스 앱·규칙 태스크와 **호출**(Call Activity — 맡기기 포함, [ADR-0082](../decisions/0082-batch-start.md))에 쓸 수 있다. 호출이면 `result`는 그 `output`이 만드는 내 변수 중 하나다. `result`는 한 번 돈 결과로 쓰는 변수 이름(그 태스크의 출력 중 하나)이고, 모은 목록의 순서는 입력 순서다 (병렬이어도).
 - `collect_into`는 **필수**다. 빠지면 프로토타입처럼 반복이 멈춘다.
-- 병렬(`isSequential=false`)은 **실행 위치가 `server`인 그림에서만** 함께 돈다. PC에서는 차례로 돈다 (실행 자리 하나). 판단은 **도는 그림의** 실행 위치이고 Studio 시험 실행도 같다 ([ADR-0087](../decisions/0087-parallel-loop-on-the-server.md)).
+- 병렬(`isSequential=false`)은 차례마다 토큰 하나로 **함께** 돈다 ([ADR-0087](../decisions/0087-parallel-loop-on-the-server.md)).
   - **「함께」는 기다림이 겹친다는 뜻이다** — 차례마다 토큰이 하나씩 떠 같은 노드를 밟고, 기다리는 것(위임·호출)을 **함께 기다린다**. 엔진은 스레드를 만들지 않으므로 결과를 기다리지 않는 태스크(서비스 앱·AI·규칙)는 차례로 돈 것과 시간이 같다. 동시 상한은 없다 — 맡겨진 자식은 그 BPM 프로세스의 상한을 따른다.
   - 노드의 시작·끝(C3 `node_state` `started`·`completed`)은 **한 번**이고, 그 노드의 경계(타이머·메시지·신호)는 **활동 전체**의 것이다.
-  - **한 건이 업무 실패면 나머지를 거둔다** — 다른 차례가 쥔 것을 걷고 **맡긴 작업은 취소한다**(C5 취소 규칙이 대상 종류로 가른다). 그다음 반복 노드의 오류 경계가 **한 번** 받는다. 중단 경계가 울릴 때도 같다.
+  - **한 건이 업무 실패면 나머지를 거둔다** — 다른 차례가 쥔 것을 걷고 **맡긴 작업은 취소한다**(C5). 그다음 반복 노드의 오류 경계가 **한 번** 받는다. 중단 경계가 울릴 때도 같다.
   - 결재·메시지 받기는 병렬 반복에 넣지 않는다 (위 목록에 없는 종류다 — 결재 요청 id에 차례가 없다).
-- **반복 안의 위임은 차례마다 작업 하나**다 — 위임 요청에 반복 차례(`loop_index`, 0부터)가 실리고 Center가 그것으로 멱등 키를 짓는다 (C12). 그래서 재시작해도 같은 건을 두 번 기동하지 않는다. 한 건의 위임이 `finished`가 아니면 반복 노드의 오류 경계가 받는다 — 차례로 돌면 **남은 건은 기동하지 않고**, 함께 돌면 **맡겨 둔 나머지를 거둔다**. 건별 업무 결과는 자식 BPM 프로세스가 제 그림에서 받아 `outputs`로 돌려준다.
+- **반복 안의 맡기기는 차례마다 작업 하나**다 — 맡기기 요청에 반복 차례(`loop_index`, 0부터)가 실리고 Center가 그것으로 멱등 키를 짓는다 (C12). 그래서 재시작해도 같은 건을 두 번 기동하지 않는다. 한 건이 `finished`가 아니면 반복 노드의 오류 경계가 받는다 — 차례로 돌면 **남은 건은 기동하지 않고**, 함께 돌면 **맡겨 둔 나머지를 거둔다**. 건별 업무 결과는 자식 BPM 프로세스가 제 그림에서 받아 `outputs`로 돌려준다.
 
 ### 규칙 태스크와 DMN
 
@@ -196,7 +193,7 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 
 ### 파일 경로
 
-파일을 읽고 쓰는 자리(`bpm:fileList`, `bpm:dataOutput`)는 **실행 폴더** 둘로 묶는다 ([ADR-0026](../decisions/0026-file-paths-and-file-list-task.md)). 실행하는 쪽(PC 실행기·Studio 시험 실행·서버 실행기)이 정해서 준다.
+파일을 읽고 쓰는 자리(`bpm:fileList`, `bpm:dataOutput`)는 **실행 폴더** 둘로 묶는다 ([ADR-0026](../decisions/0026-file-paths-and-file-list-task.md)). 실행하는 쪽(Studio 시험 실행·서버 실행기)이 정해서 준다.
 
 | 폴더 | 무엇 |
 | --- | --- |
@@ -241,7 +238,7 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 
 ### AI 태스크가 보는 값
 
-**`web`·`desktop` AI 태스크** ([ADR-0114](../decisions/0114-remove-ui-automation.md)): 낱말은 남지만(다시 들일 때 그림을 고치지 않게) **이 판에서는 돌지 않는다** — 화면의 눈과 손을 주는 확장이 없다. 실행하는 쪽의 사전 점검이 **시작 전에** `missing_agent_environment`로 막고, 그래도 엔진에 닿으면 그림·설치 오류(`node_kind_unsupported`)로 멈춘다(경계로 받지 않는다). Studio 편집기는 고를 수는 있지만 「이 판에서 돌릴 수 없다」고 말한다. 서버에서 금지하는 B6은 그대로다. 단계 한도는 태스크의 `limits` → `bpm:defaults.limits` → 기본값 순으로 정한다.
+**`web`·`desktop` AI 태스크** ([ADR-0114](../decisions/0114-remove-ui-automation.md)): 낱말은 남지만(다시 들일 때 그림을 고치지 않게) **이 판에서는 돌지 않는다** — 화면의 눈과 손을 주는 확장이 없다. 실행하는 쪽의 사전 점검이 **시작 전에** `missing_agent_environment`로 막고, 그래도 엔진에 닿으면 그림·설치 오류(`node_kind_unsupported`)로 멈춘다(경계로 받지 않는다). Studio 편집기는 고를 수는 있지만 「이 판에서 돌릴 수 없다」고 말한다. B6이 그림에서 막는다. 단계 한도는 태스크의 `limits` → `bpm:defaults.limits` → 기본값 순으로 정한다.
 
 목표(`goal`)는 값을 적지 않고 **이름으로 가리킨다** (「`청구서`는 PDF 한 장의 경로다」). 그 이름에 실제로 무엇이 들어 있는지는 실행 때 정해지므로, 엔진이 모델에게 함께 준다.
 
@@ -252,9 +249,9 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 
 ### 재생 (결정 수행)
 
-**자율 수행**(Studio 개발 실행)은 AI 태스크가 한 일을 **재생 명세**로 적어 둔다. **결정 수행**(PC 실행기 운영 실행)은 그것을 되밟아 모델을 덜 부르거나 아예 부르지 않는다 ([ADR-0010](../decisions/0010-service-apps.md) §2, [ADR-0028](../decisions/0028-replay-memory.md)).
+**자율 수행**(Studio 개발 실행)은 AI 태스크가 한 일을 **재생 명세**로 적어 둔다. **결정 수행**(운영 실행)은 그것을 되밟아 모델을 덜 부르거나 아예 부르지 않는다 ([ADR-0010](../decisions/0010-service-apps.md) §2, [ADR-0028](../decisions/0028-replay-memory.md)).
 
-- 재생 명세는 **패키지 안 `memory/specs.json`**에 들어간다 (C1 패키지 구성). 배포된 BPM 프로세스는 **읽기만** 한다 — 현장 PC마다 다르게 학습되지 않고, 서명으로 무결성이 보장되며, 「어느 판이 무엇을 재생하는가」가 분명하다.
+- 재생 명세는 **패키지 안 `memory/specs.json`**에 들어간다 (C1 패키지 구성). 배포된 BPM 프로세스는 **읽기만** 한다 — 실행기마다 다르게 학습되지 않고, 서명으로 무결성이 보장되며, 「어느 판이 무엇을 재생하는가」가 분명하다.
 - 명세 하나의 열쇠는 **`(BPM 프로세스 정의 id, 노드 id)`**다. 한 노드에 하나뿐이라, 같은 노드가 한 실행에서 여러 번 돌아도(반복·BX-37) 같은 명세를 쓴다.
 - **도구 인자는 값이 아니라 템플릿으로 적는다.** 기록할 때 인자 값이 그 시점 프로세스 변수의 값과 같으면 `{변수}`로 바꿔 둔다 (기본 규칙 7의 템플릿과 같은 모양). 그래야 입력이 달라져도 같은 명세가 맞는다 — 종류에 따라 달라지는 값을 목표 문장에 넣지 말고 입력·업무 파라미터로 받으라는 것이 이 때문이다.
 
@@ -283,10 +280,10 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 | --- | --- | --- |
 | 타이머 시작 | `timeCycle` — 5필드 cron(`0 9 * * 1-5`, 일 칸 `L`은 그달 마지막 날) 또는 ISO `R[n]/<시작>/<기간>`·`R[n]/<기간>` | **Center의 일정이 이것을 읽는다** — Studio가 C1 `triggers[].expression`으로 옮기고 Center가 차례마다 작업을 만든다 (C5 §일정, [ADR-0110](../decisions/0110-center-keeps-the-schedule.md)). 시간대는 Center 설정, 읽지 못하는 식은 C1 R13이 올릴 때 막는다 |
 | 타이머 경계·중간 | `timeDuration`(ISO `PT30M`, `P3D`) 또는 **변수 이름** | 경계는 `cancelActivity="false"`로 비중단. 경계의 반복(`timeCycle`)은 schema 1에서 지원하지 않는다 |
-| 메시지 시작·받기·경계·중간 받기 | `messageRef` → `bpmn:message name`. 받기 태스크 외의 받기(경계·중간 받기)도 상관 키는 `bpm:receive{correlation}`로 둔다 | 외부 시스템이 Center 메시지 API로 보낸다 (C12, PC는 PC 실행기 메시지 수신). 상관 키가 없으면 메시지 시작만 깨운다 |
+| 메시지 시작·받기·경계·중간 받기 | `messageRef` → `bpmn:message name`. 받기 태스크 외의 받기(경계·중간 받기)도 상관 키는 `bpm:receive{correlation}`로 둔다 | 외부 시스템이 Center 메시지 API로 보낸다 (C12). 상관 키가 없으면 메시지 시작만 깨운다 |
 | 신호 | `signalRef` | 한 실행 안의 가지 사이에서만 |
 | 이정표 | `intermediateThrowEvent`에 **이벤트 정의를 두지 않는다** | 지나가기만 하면서 실행 기록에 `node_state`(`task_type: milestone`)를 남긴다. 「어디까지 왔는지」를 콘솔·Studio가 이것으로 보인다. 노드 `name`이 이정표 이름이다 (id 접두어 `Ms_`) |
-| 오류 경계 | `errorRef` → `bpmn:error errorCode` | 표준 코드: `TASK_FAILED`(AI·확장·서비스 앱 태스크 실패. **서비스 호출이 결과를 모르는 실패**(C15 `outcome_unknown`)면 PC 실행은 이 경계를 이름으로 달아 둔 경우에만 바로 여기로 오고, 달지 않았으면 현장 확인으로 멈춘다 — 「계속」은 `attempt`를 올려 다시 부르고 「중단」이 이 코드의 업무 실패다, [ADR-0107](../decisions/0107-outcome-unknown-asks-a-person.md). 서버는 늘 이 경계다), `SEND_FAILED`(메일·웹훅), `ESCALATED`(UI 태스크 전환 — 확장의 `escalate: confirmation` — 과 AI 태스크의 확인 트리거를 흐름으로 받을 때. **PC 실행에서는 이 경계를 이름으로 달아 둔 경우에만 여기로 오고**, 달지 않았으면 그 자리에서 현장 확인(CMN-01)으로 멈춘다 — 「계속」은 다시 하지 않고 결과 없이 넘어가고 「중단」이 이 코드의 업무 실패다(코드 없는 경계가 받는다, [ADR-0106](../decisions/0106-pc-escalation-asks-a-person.md)). 서버는 늘 이 경계다), `APPROVAL_WITHDRAWN`·`APPROVAL_EXPIRED`(Center 결재가 답 없이 끝남 — 관리자 회수·만료, C6·[ADR-0038](../decisions/0038-approval-request-channel.md)), `DELEGATION_FAILED`(PC 위임이 실패·거절됨, [ADR-0062](../decisions/0062-pc-delegation.md)). 오류 경로에는 `error_code`, `error_message`, `failed_task` 변수가 생긴다 |
+| 오류 경계 | `errorRef` → `bpmn:error errorCode` | 표준 코드: `TASK_FAILED`(AI·확장·서비스 앱 태스크 실패. **서비스 호출이 결과를 모르는 실패**(C15 `outcome_unknown`)도 여기로 온다 — 사람에게 묻는 갈래는 PC 실행기와 함께 걷었다, [ADR-0144](../decisions/0144-remove-the-pc-runner.md)), `SEND_FAILED`(메일·웹훅), `ESCALATED`(확장의 전환 `escalate: confirmation`과 AI 태스크의 확인 트리거 — **늘 이 경계다**), `APPROVAL_WITHDRAWN`·`APPROVAL_EXPIRED`(Center 결재가 답 없이 끝남 — 관리자 회수·만료, C6·[ADR-0038](../decisions/0038-approval-request-channel.md)), `DELEGATION_FAILED`(맡긴 것이 실패·거절됨, [ADR-0082](../decisions/0082-batch-start.md)). 오류 경로에는 `error_code`, `error_message`, `failed_task` 변수가 생긴다 |
 | 조건 시작 | `conditionalEventDefinition` | **schema 1에서 쓰지 않는다** (프로토타입의 폴더 감시). 외부 시스템 메시지나 타이머로 바꾼다 |
 | 보상 경계·보상 던지기 | `compensateEventDefinition` | 아래 「보상」 |
 
@@ -337,7 +334,7 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 - `approvals`는 노드 id → 폼 응답이다. **PC 실행의 전환 확인**(확장 태스크 전환·AI 태스크 확인 트리거)도 **그 태스크의 노드 id**로 적는다 — `{"decision": "approve"}`가 「계속」(결과 없이 넘어간다), `reject`가 「중단」(`ESCALATED`). **적지 않으면 「중단」으로 친다**(기다리지 않는다 — 적지 않은 위임과 같은 결이고, 경계를 시험하는 길이다). `manual` 케이스는 결재처럼 기다린다 ([ADR-0106](../decisions/0106-pc-escalation-asks-a-person.md)). **서비스 호출의 결과 모름 확인**도 같은 자리다 — `approve`가 「다시 부른다」, `reject`·적지 않음이 「중단」(`TASK_FAILED`) ([ADR-0107](../decisions/0107-outcome-unknown-asks-a-person.md)).
 - `answered_by`(선택): 노드 id → **답한 사람** 이름. 그림이 `answered_by_as`로 받는 값이다. 적지 않으면 「시험 케이스」다 — Studio에는 「Studio 사용자」가 없어 지어내지 않는다 ([ADR-0096](../decisions/0096-answerer-into-variables.md)).
 - `inputs`에는 **출처가 업무 자리인 입력도** 다른 입력처럼 적는다 — 현장에서는 Center가 넣는 값을 시험에서는 케이스가 적는다 ([ADR-0099](../decisions/0099-input-value-source.md)).
-- `delegations`(선택): 노드 id → **PC 위임이 돌려주는 값**(그 BPM 프로세스가 선언한 `outputs`). Studio에는 부를 PC BPM 프로세스의 그림이 없고(다른 패키지다) 있다 해도 현장 확인이라 설계자 PC에서 답할 사람이 없으므로, **케이스가 결과를 적는다** — 결재 답·메시지와 같은 결이다 ([ADR-0062](../decisions/0062-pc-delegation.md) §2). **적어 두지 않은 위임은 그 자리에서 실패**다(기다리지 않는다 — 기다리게 두면 끝나지 않는다: 현장 PC도 Center도 없다). 사유 코드는 **`DELEGATION_FAILED`**, 진짜 PC 실행이 실패했을 때와 **같은 것**이다 — 그래서 적어 두지 않는 것이 **그림의 오류 경계를 시험하는 길**이다. `manual`은 이것을 막지 않는다(결재는 사람이 창에서 답할 수 있지만 위임은 Studio에 답할 사람이 없다).
+- `delegations`(선택): 노드 id → **맡긴 것이 돌려주는 값**(그 BPM 프로세스가 선언한 `outputs`). Studio에는 맡길 BPM 프로세스의 그림이 없으므로(다른 패키지다) **케이스가 결과를 적는다** — 결재 답·메시지와 같은 결이다. **적어 두지 않은 것은 그 자리에서 실패**다(기다리지 않는다 — 기다리게 두면 끝나지 않는다). 사유 코드는 **`DELEGATION_FAILED`**, 진짜 실행이 실패했을 때와 **같은 것**이다 — 그래서 적어 두지 않는 것이 **그림의 오류 경계를 시험하는 길**이다. `manual`은 이것을 막지 않는다.
   - 값을 적되 **그림이 읽는 이름을 빼면**(`{}`도 그렇다) 역시 업무 실패다 — 빈 값으로 이어 가지 않는다 (「그 BPM 프로세스의 판이 바뀌었다」가 현장에서 이 꼴이다).
 - `manual: true`인 케이스는 자동 응답이 있어도 쓰지 않고 실제 창을 띄운다. 폼을 사람이 보는지 확인하는 용도다.
 - 수동이 아닌 케이스에서 자동 응답이 없는 결재는 **답하지 않은 채 기다린다** — 타이머 경계(기한 초과)를 시험하는 방법이다. 케이스 전체 시간 제한(Studio 설정, 기본 300초)을 넘으면 그 케이스는 실패다.
@@ -372,18 +369,18 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 | B3 | 배타·포함 게이트웨이의 나가는 흐름 중 조건 없는 것은 `default`로 지정된다. 포함 분기는 포함 합류로 닫는다 | 오류 |
 | B4 | 반복에 `collect_into`가 있다 | 오류 |
 | B5 | 파일 출력에 `store_as`가 있고 `template`·`variables` 중 하나가 있다. `xlsx`에 `template`를 쓰지 않고, `csv`의 `variables`는 이름 하나이며, `append`는 `md`·`txt`·`csv`에만 있다. 파일 목록에 `store_as`가 있고 `pattern`에 경로 구분자가 없다 | 오류 |
-| B6 | 실행 위치가 `server`면 `pc`만 적은 확장 태스크·`web`/`desktop` 도메인 AI 태스크·`location: field` 결재·**확인(`manualTask`)**이 없다 (C1 R2 — 확인은 늘 현장이라 서버에는 답할 사람이 없다, ADR-0015) | 오류 |
+| B6 | `web`/`desktop` 도메인 AI 태스크가 없다 (C1 R2 — 그 판은 아직 돌릴 수 없다, [ADR-0114](../decisions/0114-remove-ui-automation.md)·[ADR-0144](../decisions/0144-remove-the-pc-runner.md)) | 오류 |
 | B7 | 옛 칸 `bpm:serviceCall.key_ref`·`bpm:process.service_keys`가 적혀 있으면 **말한다** — 서비스 앱 키가 없어 아무도 보지 않는다([ADR-0102](../decisions/0102-calling-outside-is-pull.md)). 읽기는 거부하지 않는다(모르는 칸으로 받아 둔다, 원칙 3). 지우려면 STU-04 「JSON」 탭에서 그 칸을 뺀다 | 경고 |
 | B8 | 결과 필드 타입이 `string`·`int`·`number`·`bool`·`list`·`dict`·`date` 중 하나다. 입력의 `source`가 아는 값이고 그 출처의 타입과 맞다(`company.*`·`department.*`·`staff.*`는 모두 `string`). 번호처럼 보이는 문자열(예: 발주번호 `PO-2608-001`)을 `int`로 두면 경고 | 오류 / 경고 |
 | B9 | 연결되지 않은 노드가 없다 (들어오는 흐름·나가는 흐름) | 오류 |
 | B10 | 노드 id가 생성형(`Activity_[0-9a-z]{7}`)이면 경고 | 경고 |
 | B11 | 어떤 경로로는 만들어지지 않는 변수를 읽는다 (예: 한 가지에서만 생기는 결재 칸을 합류 뒤에 읽음, 프로세스 `inputs`에 없는 메시지 본문 변수) | 경고 ([ADR-0039](../decisions/0039-optional-variables-and-b11.md) — 경로 어림이라 막지 않는다) |
-| B12 | 결재 칸 `type`이 C6의 `bool`·`number`·`text`·`choice` 중 하나이고, `choice`에는 `choices`가 있다. 경계 이벤트는 태스크·하위 프로세스에만 붙는다. 파일 출력 `format`·파일 목록 `sort`·AI 태스크 `replay`가 아는 값이고, **도구 없는 AI 태스크에 `replay: full`이 없다**. (같은 규칙의 **경고**: 수동 작업(확인)에 `location: center` — 확인은 늘 현장에서 답한다. 수동 작업에 `assignees` — 확인에는 담당자가 없다) | 오류 |
-| B13 | 웹훅 `body: all` (비밀이 섞일 수 있음), `location: field` 결재에 하루 넘는 시간 제한 | 경고 |
-| B14 | 병렬 분기와 합류의 가지 수가 맞다 (오류 경계의 대체 흐름을 병렬 합류에 바로 이으면 합류가 영원히 기다린다). 규칙 태스크의 `input`·`output`이 DMN 입력·출력 이름과 맞다. 호출의 `output`이 호출 대상의 `outputs`에 있다 — **PC 위임(`delegate`)은 패키지 안에서 찾지 않고** 그 BPM 프로세스가 선언한 `outputs`와 맞춰 보며(알 때만), `delegate`는 **실행 위치가 `server`일 때만** 쓸 수 있다 (자기 자신을 부르지 않는 것은 C1 R12가 본다). 타이머로 시작하는 BPM 프로세스에 기본값 없는 필수 입력이 없다 | 오류 |
+| B12 | 결재 칸 `type`이 C6의 `bool`·`number`·`text`·`choice` 중 하나이고, `choice`에는 `choices`가 있다. 경계 이벤트는 태스크·하위 프로세스에만 붙는다. 파일 출력 `format`·파일 목록 `sort`·AI 태스크 `replay`가 아는 값이고, **도구 없는 AI 태스크에 `replay: full`이 없다**. (같은 규칙의 **경고**: 수동 작업에 `assignees` — 확인에는 담당자가 없다) | 오류 |
+| B13 | 웹훅 `body: all` (비밀이 섞일 수 있음) | 경고 |
+| B14 | 병렬 분기와 합류의 가지 수가 맞다 (오류 경계의 대체 흐름을 병렬 합류에 바로 이으면 합류가 영원히 기다린다). 규칙 태스크의 `input`·`output`이 DMN 입력·출력 이름과 맞다. 호출의 `output`이 호출 대상의 `outputs`에 있다 — **맡기기(`delegate`)는 패키지 안에서 찾지 않고** 그 BPM 프로세스가 선언한 `outputs`와 맞춰 본다(알 때만). 자기 자신을 맡기지 않는 것은 C1 R12가 본다. 타이머로 시작하는 BPM 프로세스에 기본값 없는 필수 입력이 없다 | 오류 |
 | B15 | 식·스크립트가 `bpm-expr` 문법 안에 있고, **도우미 함수 호출의 인자 모양**(인자 수·키워드 이름)이 그 도우미와 맞다 (`세기(전체, '주제')`는 `세기`가 인자 하나만 받으므로 오류) | 오류 |
 | B17 | **보상** — 보상 처리기(`isForCompensation`)가 흐름을 받거나 낸다, 보상 경계가 흐름을 낸다, 보상 경계의 연관이 하나가 아니다, 연관의 대상이 보상 처리기가 아니다, 던지기의 `activityRef`가 같은 범위의 보상 경계 달린 활동이 아니다 (ADR-0135) | 오류 (어느 경계에도 이어지지 않은 처리기는 경고) |
-| B16 | **결재 없는 일괄 기동** — 반복이 붙은 위임 호출에 ① 그 `collection`을 `show`하는 결재를 지나지 않고 닿는 경로가 있거나 ② 그 결재와 반복 사이에 `collection`을 만드는 노드가 있다 (만드는 것은 플랫폼이 아는 것만 센다 — 확장 태스크가 만드는 변수는 모른다). **막는 자리는 없다** — 사람 없이 도는 일괄도 올바른 그림이라 경고로만 알린다 ([ADR-0082](../decisions/0082-batch-start.md)·[ADR-0125](../decisions/0125-organization-and-work-placement.md) §6) | 경고 |
+| B16 | **결재 없는 일괄 기동** — 반복이 붙은 맡기기 호출에 ① 그 `collection`을 `show`하는 결재를 지나지 않고 닿는 경로가 있거나 ② 그 결재와 반복 사이에 `collection`을 만드는 노드가 있다 (만드는 것은 플랫폼이 아는 것만 센다 — 확장 태스크가 만드는 변수는 모른다). **막는 자리는 없다** — 사람 없이 도는 일괄도 올바른 그림이라 경고로만 알린다 ([ADR-0082](../decisions/0082-batch-start.md)·[ADR-0125](../decisions/0125-organization-and-work-placement.md) §6) | 경고 |
 
 `validate()`는 오류와 경고를 **함께** 돌려준다 (`Violation.severity`). Studio 「실행 전 검사」는 오류만으로 실행을 막고(`blocking()`), 경고는 보여 주고 사람이 판단한다.
 
@@ -391,7 +388,6 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 
 | 인자 | 없으면 | 주는 쪽 |
 | --- | --- | --- |
-| `task_type_locations` | B6에서 확장 태스크를 건너뛴다 | 확장 호스트 (C13 `task_types[].run_locations`) |
 | `dmn_decisions` | B14의 DMN 대조를 건너뛴다 | 패키지의 DMN 파일 |
 | `called_processes` | B14의 호출 대조를 건너뛴다 | 패키지의 다른 BPM 프로세스 |
 | `extension_task_vars` | **확장 태스크 뒤에서는 B11이 입을 닫는다** | 확장 (그 태스크가 만드는 변수) |
@@ -420,6 +416,7 @@ B11은 **어림**이다. 식에서 변수를 이름으로 뽑되 문자열 상�
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
 | 2026-11-08 | 1 | 「보상」(보상 경계·처리기·던지기)과 **B17** — 엔진·읽기·검사가 돈다. 표준 BPMN 요소라 schema는 그대로다. `association`·`textAnnotation`은 노드로 읽지 않는다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
+| 2026-11-12 | 1 | **PC 실행기를 걷었다** — `bpm:process.run_location`·`bpm:approval.location`·`bpm:call.delegate.bot_ui` 칸을 걷고, B6을 웹·데스크톱 AI 태스크 하나로 좁히고, B12·B13의 `location` 조항을 걷었다. 확인은 **Center 결재함**에서 답한다. 맡기기(`delegate`)는 **남는다** — 대상이 서버 실행기 하나다 (ADR-0082) | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-11-01 | 1 | **가상 직원을 없앴다** — 값 출처 `virtual_worker.id`·`.name`·`.supervisors`를 걷고 `company.*`·`department.*`·`staff.*`를 더했다(C16). B16은 Studio 경고로만 남는다 | [0125](../decisions/0125-organization-and-work-placement.md) |
 | 2026-10-31 | 1 | UI 태스크(`bpm:task type="ui_task"`) 줄과 B12의 UI 스텝 동작 대조를 걷었다 — UI 자동화 확장이 없다. `domain`의 `web`·`desktop`은 낱말로 남고 사전 점검 `missing_agent_environment`·엔진 `node_kind_unsupported`로 돌지 않는다. B6은 그대로다. 형식(그림)은 그대로다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-30 | 1 | 타이머 시작의 「일정이 읽는다」를 **Center**로 고쳐 적었다 — 서버 실행기·Bot UI에는 그 코드가 없었고 일정은 Center가 쥔다. 식의 문법(`L`·ISO 시작 생략)을 적었다. 그림은 그대로다 | [0110](../decisions/0110-center-keeps-the-schedule.md) |

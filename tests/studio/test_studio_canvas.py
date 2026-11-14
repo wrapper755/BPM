@@ -225,7 +225,6 @@ def test_the_process_info_round_trips_through_the_canvas(canvas: Any) -> None:
     # 옛 칸(`service_keys`, ADR-0102)은 **모르는 칸**이다 — 그것도 왕복해 남아야 한다 (C14 B7이 말한다).
     info = ProcessInfo.model_validate(
         {
-            "run_location": "pc",
             "service_keys": {"ext-credit": "finance-credit"},
             "inputs": [{"name": "금액", "type": "number", "required": True}],
             "outputs": ["승인"],
@@ -239,13 +238,11 @@ def test_the_process_info_round_trips_through_the_canvas(canvas: Any) -> None:
     assert made.get("found") is True
 
     body = json.loads(canvas.call_sync("properties", "Proc_info")["chk"]["process"])
-    assert body["run_location"] == "pc"
     assert body["service_keys"] == {"ext-credit": "finance-credit"}
     assert [one["name"] for one in body["inputs"]] == ["금액"], "창이 모르는 칸도 남는다"
 
     # 저장한 XML을 계약이 다시 읽어도 같다 (글자가 아니라 **뜻**으로 본다).
     again = read_process(canvas.save_xml())
-    assert again.info.run_location == "pc"
     assert again.info.model_extra == {"service_keys": {"ext-credit": "finance-credit"}}
     assert [one.name for one in again.info.inputs] == ["금액"]
     assert again.info.outputs == ["승인"]
@@ -863,7 +860,7 @@ def test_the_defaults_round_trip_beside_the_process_info(canvas: Any) -> None:
     from bpm.contracts.bpmn_ext import Defaults
 
     canvas.create_empty("Proc_defaults", "기본값 시험")
-    process = {"run_location": "server", "outputs": ["결과"]}
+    process = {"outputs": ["결과"]}
     canvas.call_sync("setProperties", "Proc_defaults", {"chk": {"process": json.dumps(process, ensure_ascii=False)}})
     assert canvas.call_sync("properties", "Proc_defaults")["type"] == "Process"
 
@@ -871,7 +868,7 @@ def test_the_defaults_round_trip_beside_the_process_info(canvas: Any) -> None:
     canvas.call_sync("setProperties", "Proc_defaults", {"chk": {"defaults": json.dumps(body, ensure_ascii=False)}})
     drawn = read_process(canvas.save_xml())
     assert drawn.defaults == Defaults.model_validate(body)
-    assert drawn.info.run_location == "server" and drawn.info.outputs == ["결과"]
+    assert drawn.info.outputs == ["결과"]
 
     canvas.call_sync("setProperties", "Proc_defaults", {"chk": {"defaults": None}})
     drawn = read_process(canvas.save_xml())

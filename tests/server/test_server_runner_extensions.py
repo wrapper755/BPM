@@ -4,8 +4,6 @@
 
 - 로컬 런타임은 **띄우지 않는다** — 예약 키 `runtime.<id>.*`가 없다. 런타임은 PC 실행기의
   것이고(C13 칸 이름이 그렇다) 그 예약은 「PC에 하나」를 전제한 배타 잠금이다 (ADR-0014 §4).
-- `run_locations`에 `server`를 적지 않은 태스크 종류는 **수행기를 내지 않고**, 그런 BPM 프로세스는
-  **시작 전에** `not_ready`로 막힌다 (전에는 실행 중에 `node_kind_unsupported`로 죽었다).
 - 설정은 **환경변수뿐**이고(서버에는 설정 파일이 없다) 비밀은 설정에 섞이지 않는다 (ADR-0013).
 """
 
@@ -19,7 +17,6 @@ import pytest
 
 from bpm.core.extensions import ExtensionHost
 from bpm.core.packages import bots_dir
-from bpm.core.preflight import TASK_TYPES_WRONG_LOCATION
 from bpm.extension_api import HOST_SERVER_RUNNER
 from bpm.server_runner import agent as agent_mod
 from bpm.server_runner import extensions as ext_mod
@@ -27,7 +24,7 @@ from bpm.server_runner.center_client import CenterClient
 from bpm.server_runner.credentials import Credentials, extension_config_env
 from bpm.server_runner.settings import Settings
 
-#: 서버에서 돌 수 있다고 적은 종류 하나와 PC 전용 하나 — 둘을 한 확장이 기여한다.
+#: 태스크 종류 둘을 한 확장이 기여한다.
 DEFINITION: dict[str, Any] = {
     "schema": 2,
     "id": "doc-ocr",
@@ -39,24 +36,13 @@ DEFINITION: dict[str, Any] = {
     "service": {"protocol": "bpm-c11", "base_url": "https://ocr.example.com"},
     "contributes": {
         "task_types": [
-            {"id": "ocr_task", "label": "문서 인식", "executor": {"entry": "x:Y"}, "run_locations": ["pc"]},
-            {"id": "sum_task", "label": "요약", "executor": {"entry": "x:Y"}, "run_locations": ["server"]},
-        ],
-        "bot_ui.local_runtimes": [
-            {
-                "id": "worker",
-                "label": "Worker",
-                "entry": "doc_ocr.worker:serve",
-                "default_port": 8899,
-                "health": "/v1/health",
-                "token_dir": True,
-                "start": "on_demand",
-            }
+            {"id": "ocr_task", "label": "문서 인식", "executor": {"entry": "x:Y"}},
+            {"id": "sum_task", "label": "요약", "executor": {"entry": "x:Y"}},
         ],
         "configuration": [
             {"key": "quality", "label": "품질", "scope": "server_runner"},
             {"key": "ocr_key", "label": "키", "scope": "server_runner", "secret": True},
-            {"key": "theme", "label": "테마", "scope": "bot_ui"},
+            {"key": "theme", "label": "테마", "scope": "studio"},
         ],
     },
 }
@@ -68,7 +54,6 @@ BOT: dict[str, Any] = {
     "version": "1.0.0",
     "name": "문서 접수",
     "kind": "bpm_process",
-    "run_location": "server",
     "entry": "main.bpmn",
     "content_hash": "sha256:" + "0" * 64,
     "human": {"approval_center": False, "approval_field": False, "confirmation": False},
@@ -77,8 +62,8 @@ BOT: dict[str, Any] = {
 
 
 def host_with(definition: dict[str, Any] | None = None) -> ExtensionHost:
-    """실행 위치를 쥔 호스트 — `ext_mod.load()`가 짓는 것과 같은 꼴이다."""
-    found = ExtensionHost(run_location="server")
+    """`ext_mod.load()`가 짓는 것과 같은 꼴의 호스트."""
+    found = ExtensionHost()
     found.add_installed(
         json.dumps(definition or DEFINITION).encode("utf-8"),
         origin="test",
@@ -120,9 +105,7 @@ def runner(tmp_path: Path) -> agent_mod.Agent:
 
 
 def test_the_server_gets_no_runtime_keys(runner: agent_mod.Agent) -> None:
-    """**예약 키를 일부러 비운다** (ADR-0064) — 「띄우지 않았는데 자리가 있다」가 되면 수행기가
-    없는 런타임을 두드린다. 확장이 런타임을 선언해도 서버에서는 채우지 않는다.
-    """
+    """**예약 키를 일부러 비운다** (ADR-0064) — 로컬 런타임을 띄우는 자리가 없다 (ADR-0114)."""
     ctx = runner.extensions().context("doc-ocr")
 
     assert ctx.setting("runtime.worker.port") is None
@@ -130,29 +113,11 @@ def test_the_server_gets_no_runtime_keys(runner: agent_mod.Agent) -> None:
     assert ctx.host == HOST_SERVER_RUNNER
 
 
-def test_only_the_task_types_that_declare_the_server_get_an_executor(runner: agent_mod.Agent) -> None:
-    """PC 전용 종류는 서버에서 **없는 것**이다 — 엔진은 설치 오류로 올린다."""
-    tasks = runner.extensions()
-
-    assert tasks.executor("ocr_task") is None
-    assert [c.value.id for c in tasks.host.task_types()] == ["sum_task"]
-
-
 # ─────────────────────── 시작 전에 막는다 (C12 `readiness`) ───────────────────────
 
 
-def test_a_pc_only_task_type_blocks_before_the_run_starts(runner: agent_mod.Agent) -> None:
-    """**이것이 §3-14의 공백이었다** — 전에는 배포·시작까지 가서 실행 중에 죽었다."""
-    install(runner.settings.data_path, task_type="ocr_task")
-
-    found = runner.readiness()
-    assert [one.bpm_process_id for one in found] == ["ocr.intake"]
-    assert found[0].ready is False
-    assert found[0].blocked == [TASK_TYPES_WRONG_LOCATION]
-
-
-def test_a_server_task_type_is_ready(runner: agent_mod.Agent) -> None:
-    """**적어 둔 것은 돈다** — 거짓 차단이 거짓 통과보다 나쁘다."""
+def test_an_installed_task_type_is_ready(runner: agent_mod.Agent) -> None:
+    """**깔려 있는 것은 돈다** — 거짓 차단이 거짓 통과보다 나쁘다."""
     install(runner.settings.data_path, task_type="sum_task")
 
     found = runner.readiness()
@@ -174,7 +139,7 @@ def test_readiness_and_the_run_share_one_host(runner: agent_mod.Agent) -> None:
 
 
 def test_configuration_comes_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    """서버에는 설정 파일이 없다 — 이름 규칙은 **PC 실행기의 것과 같다**."""
+    """서버에는 설정 파일이 없다 — 설정은 환경변수뿐이다."""
     host = host_with()
     monkeypatch.setenv(extension_config_env("doc-ocr", "quality"), "high")
 
@@ -221,4 +186,3 @@ def test_extensions_are_told_the_center_address() -> None:
 def test_nothing_is_turned_off_on_the_server() -> None:
     """끄는 자리는 사람이 누르는 화면이고(ADR-0043) 서버에는 그 화면이 없다."""
     assert ext_mod.load().off == frozenset()
-    assert ext_mod.load().run_location == "server"

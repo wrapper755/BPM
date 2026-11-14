@@ -13,10 +13,8 @@ from pydantic import ValidationError
 
 from bpm.contracts import (
     Built,
-    HeartbeatRequest,
     HumanNeeds,
     Manifest,
-    Queue,
     Requires,
     RunEvent,
     ServiceAppNeed,
@@ -137,51 +135,7 @@ def test_missing_keys_looks_at_a_line_before_it_is_one() -> None:
     assert missing_keys("log", {"level": "warn", "message": "한 줄"}) == []
 
 
-# ─────────────── C4: 열린 상태 값, 실행 자리 1건 ───────────────
-
-
-def heartbeat(**over: Any) -> HeartbeatRequest:
-    base: dict[str, Any] = {
-        "schema": 1,
-        "status": "idle",
-        "current_run": None,
-        "queue": {"max": 20, "items": []},
-    }
-    return HeartbeatRequest.model_validate(base | over)
-
-
-def test_unknown_status_does_not_reject_the_heartbeat() -> None:
-    """프로토타입 결함 — 상태 값이 닫힌 목록이라 모르는 상태 하나로 하트비트 전체가 422였다."""
-    assert heartbeat(status="updating_itself").status == "updating_itself"
-
-
-def test_current_run_cannot_hold_two_runs() -> None:
-    """ADR-0014를 계약으로 강제한다 — 단일 객체라 2건을 표현할 수 없다."""
-    with pytest.raises(ValidationError):
-        heartbeat(current_run=[{"run_id": "a"}, {"run_id": "b"}])
-
-
-def test_current_run_is_required_but_may_be_null() -> None:
-    assert heartbeat().current_run is None
-    with pytest.raises(ValidationError):
-        HeartbeatRequest.model_validate(
-            {"schema": 1, "status": "idle", "queue": {"max": 20}}
-        )
-
-
-def test_queue_is_required() -> None:
-    assert Queue(max=20).items == []
-    with pytest.raises(ValidationError):
-        HeartbeatRequest.model_validate({"schema": 1, "status": "idle", "current_run": None})
-
-
 # ─────────────── C1: 검사 규칙 ───────────────
-
-
-def test_run_location_defaults_to_server() -> None:
-    """서버 우선 (ADR-0016). 생략하면 server로 읽는다."""
-    assert manifest().run_location == "server"
-    assert validate(manifest()) == []
 
 
 def test_r1_missing_entry_is_caught() -> None:
@@ -195,77 +149,22 @@ def test_r1_missing_entry_is_caught() -> None:
     assert v[0].items == ["entry", "process_id"]
 
 
-def test_r1_run_location_on_a_shared_process_package_is_caught() -> None:
-    m = Manifest.model_validate(
-        {"schema": 1, "kind": "process_lib", "id": "a", "version": "1.0.0", "run_location": "pc",
-         "requires": {}, "human": {}, "built": {"by": "studio", "at": TS, "core": "0.3.0", "spec_version": 1},
-         "content_hash": HASH}
-    )
-    assert [x.rule for x in validate(m)] == ["R1"]
-
-
-def test_r2_server_with_pc_only_things_is_caught() -> None:
-    m = manifest(
-        run_location="server",
-        requires=Requires(
-            domains=["llm", "web"],
-            task_types=[TaskTypeNeed(id="ui_task", extension="ui-automation", run_locations=["pc"])],
-        ),
-        human=HumanNeeds(approval_field=True, confirmation=True),
-    )
+def test_r2_web_and_desktop_ai_tasks_are_caught() -> None:
+    """R2 — 서버에서 할 수 없는 것 (웹·데스크톱 AI 태스크, ADR-0114·ADR-0144)."""
+    m = manifest(requires=Requires(domains=["llm", "web"]))
     v = validate(m)
     assert len(v) == 1
     assert v[0].code == "server_incompatible"
-    assert v[0].items == ["domains:web", "task_types:ui_task", "human.approval_field", "human.confirmation"]
+    assert v[0].items == ["domains:web"]
 
 
-def test_r2_does_not_block_a_task_type_whose_run_locations_are_unknown() -> None:
-    """**모르는 것을 막지 않는다** — 실행 위치는 확장 정의만 안다 (C13·ADR-0018).
-
-    확장이 깔려 있지 않은(또는 꺼 둔) PC에서 패키지를 만들면 Studio가 적을 값이 없다. 그때 빈
-    목록을 적으면 「서버에서 안 된다」로 읽혀 **올바른 패키지가 업로드에서 422**를 받는다.
-    그 확장이 **정말 없는** 경우는 배포 때 확장 누락이 막는다 (C7).
-    """
-    unknowns: list[list[str] | None] = [None, []]
-    for unknown in unknowns:
-        m = manifest(
-            run_location="server",
-            requires=Requires(
-                task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr", run_locations=unknown)]
-            ),
-        )
-        assert validate(m) == [], f"모르는 실행 위치({unknown!r})를 막았다"
-
-
-def test_r2_blocks_only_when_the_declaration_leaves_server_out() -> None:
-    """선언된 것이 `server`를 가지면 통과다 — 「확장 태스크가 있다」만으로 막지 않는다."""
-    def made(where: list[str]) -> Manifest:
-        return manifest(
-            run_location="server",
-            requires=Requires(
-                task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr", run_locations=where)]
-            ),
-        )
-
-    assert validate(made(["pc", "server"])) == []
-    assert [x.code for x in validate(made(["pc"]))] == ["server_incompatible"]
-
-
-def test_r2_pc_location_allows_everything() -> None:
+def test_r2_says_nothing_about_people_or_task_types() -> None:
+    """확인·결재는 **Center 결재함**에서 답하고(ADR-0144) 확장 태스크는 서버에서 돈다."""
     m = manifest(
-        run_location="pc",
-        requires=Requires(domains=["desktop"], task_types=[
-            TaskTypeNeed(id="ui_task", extension="ui-automation", run_locations=["pc"])]),
-        human=HumanNeeds(approval_field=True, confirmation=True),
+        requires=Requires(task_types=[TaskTypeNeed(id="ocr_task", extension="doc-ocr")]),
+        human=HumanNeeds(approval_center=True, confirmation=True),
     )
     assert validate(m) == []
-
-
-def test_r3_needs_lib_locations_and_is_skipped_without_them() -> None:
-    m = manifest(run_location="server", requires=Requires(libs=["shared.pc-helper@1.0.0"]))
-    assert validate(m) == []  # 라이브러리 실행 위치를 모르면 건너뛴다
-    v = validate(m, lib_locations={"shared.pc-helper@1.0.0": "pc"})
-    assert [x.code for x in v] == ["delegation_not_supported"]
 
 
 def test_an_old_packages_key_refs_are_read_and_not_looked_at() -> None:
@@ -352,38 +251,20 @@ def test_built_by_stays_an_open_string() -> None:
     assert "cli" in KNOWN_BUILT_BY, "목록은 화면이 풀어 쓸 때 쓴다"
 
 
-def test_r10_only_a_server_bot_can_delegate_to_a_pc() -> None:
-    """**PC 위임은 서버 BPM 프로세스만** 한다 (R10, [ADR-0062](../../docs/decisions/0062-pc-delegation.md)).
-
-    PC 실행은 그 PC의 자리를 끝까지 쥐므로(ADR-0014) PC가 다른 PC를 기다리면 서로를 기다린다.
-    C14 B14가 그림에서 같은 것을 보지만 **매니페스트를 보는 쪽은 그림을 읽지 않는다**.
-    """
-    needs = Requires(delegations=["fin.erp-input@1.2.0"])
-    assert validate(manifest(run_location="server", requires=needs)) == []
-    v = validate(manifest(run_location="pc", requires=needs))
-    assert [(x.rule, x.code) for x in v] == [("R10", "delegation_not_from_pc")]
-    assert v[0].items == ["fin.erp-input@1.2.0"] and v[0].blocks
-
-
 def test_r12_a_bot_does_not_delegate_to_itself() -> None:
-    """**자기 자신에게 위임하지 않는다** (R12, ADR-0082) — 끝나지 않는 되부름이다.
+    """**자기 자신에게 맡기지 않는다** (R12, ADR-0082) — 끝나지 않는 되부름이다.
 
     그림은 자기 패키지 id를 모르므로 매니페스트가 본다 (`id`와 `requires.delegations`가 한 자리다).
     """
-    me = manifest(run_location="server")
-    v = validate(manifest(run_location="server", requires=Requires(delegations=[f"{me.id}@1.0.0", "other.bot"])))
+    me = manifest()
+    v = validate(manifest(requires=Requires(delegations=[f"{me.id}@1.0.0", "other.bot"])))
     assert [(x.rule, x.code) for x in v] == [("R12", "delegation_to_self")]
     assert v[0].items == [f"{me.id}@1.0.0"]
 
 
-def test_r10_says_nothing_when_nothing_is_delegated() -> None:
-    """PC BPM 프로세스는 흔하다 — 위임이 없으면 이 규칙은 입을 닫는다."""
-    assert validate(manifest(run_location="pc")) == []
-
-
 def test_a_delegation_can_leave_the_version_open() -> None:
     """판을 비우면 **배포된 판**이라는 뜻이다 (C14 — 작업 지시와 같은 규칙)."""
-    m = manifest(run_location="server", requires=Requires(delegations=["fin.erp-input"]))
+    m = manifest(requires=Requires(delegations=["fin.erp-input"]))
     assert validate(m) == []
     assert m.requires.delegations == ["fin.erp-input"]
 
@@ -498,7 +379,7 @@ def test_the_contract_status_table_matches_each_document() -> None:
         cells = [one.strip() for one in line.split("|")]
         listed[cells[1].split("]")[0].lstrip("[")] = _status(cells[4])
 
-    assert len(listed) == 13, f"계약 열셋(C1~C7·C11~C16)이 목록에 있어야 한다: {sorted(listed)}"
+    assert len(listed) == 14, f"계약 열넷(C1~C7·C11~C17)이 목록에 있어야 한다: {sorted(listed)}"
     for name, said in sorted(listed.items()):
         found = next(docs.glob(f"{name}-*.md"))
         head = next(x for x in found.read_text(encoding="utf-8").splitlines() if x.startswith("| 상태 |"))

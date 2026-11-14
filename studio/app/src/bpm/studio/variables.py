@@ -4,8 +4,8 @@
 `outputs`(C14)에 산다. 그래서 고치는 자리는 「BPM 프로세스 정보」(STU-06)가 아니라 캔버스 쪽이고,
 쓰기는 **캔버스를 거친다** (ADR-0022 — `bpm:process`를 통째로 되돌려 써서 실행 취소가 한 걸음).
 
-여기 있는 것: 표 한 줄(`InputRow`)과 그 검사·짓기, 그림이 만드는 변수와 「만드는 곳」, 다른 화면이
-고를 거리로 쓰는 이름 목록, 「지금 값」 칸의 글.
+여기 있는 것: 표 한 줄(`InputRow`)과 그 검사·짓기, 「지금 값」 칸의 글. 그림이 만드는 변수와
+고를 거리 이름 목록은 `bpm.core.testrun.variables`에 있고 여기서 다시 내보낸다.
 """
 
 from __future__ import annotations
@@ -18,12 +18,13 @@ from typing import Any
 from bpm.contracts.bpmn_ext import (
     INPUT_SOURCE_CALLER,
     INPUT_SOURCE_TYPES,
-    BpmnProcess,
     InputDecl,
     ProcessInfo,
     is_var_name,
-    produced_vars,
 )
+
+# 그림에서 읽기만 하는 둘은 `core.testrun`에 산다 — 케이스도 같은 함수를 쓴다.
+from bpm.core.testrun.variables import known_names, made_by
 
 #: 타입 콤보의 차례 (C14 `VALUE_TYPES`).
 INPUT_TYPES = ("string", "int", "number", "bool", "list", "dict", "date")
@@ -170,32 +171,6 @@ def process_patch(info: ProcessInfo, inputs: Sequence[InputRow], outputs: Sequen
 def changed(info: ProcessInfo, inputs: Sequence[InputRow], outputs: Sequence[str]) -> bool:
     """표가 그림과 다른가 — 「적용」을 켤지, 적용 안 한 편집이 있나 (화면의 글 그대로 견준다)."""
     return list(inputs) != [InputRow.of(decl) for decl in info.inputs] or list(outputs) != list(info.outputs)
-
-
-def made_by(process: BpmnProcess) -> dict[str, list[str]]:
-    """그림이 만드는 변수 → 만드는 노드(이름, 없으면 id). **계약의 `produced_vars`** 그대로다.
-
-    검사(B11)와 같은 함수라 「여기는 있다는데 검사는 모른다」가 생기지 않는다.
-    """
-    out: dict[str, list[str]] = {}
-    for node in process.all_nodes():
-        for name in sorted(produced_vars(node)):
-            out.setdefault(name, []).append(node.name or node.id)
-    return out
-
-
-def known_names(info: ProcessInfo | None, made: Mapping[str, Sequence[str]]) -> list[str]:
-    """다른 화면의 고를 거리 — 출력, 그다음 그림이 만드는 변수, 그다음 입력 (겹치면 한 번).
-
-    시험 케이스의 「기대 결과」가 이 차례로 보인다 (STU-07) — 비교하는 것은 대개 출력이다.
-    """
-    names: list[str] = []
-    if info is not None:
-        names += list(info.outputs)
-    names += sorted(made)
-    if info is not None:
-        names += [decl.name for decl in info.inputs]
-    return list(dict.fromkeys(name for name in names if name))
 
 
 def value_text(value: Any) -> str:

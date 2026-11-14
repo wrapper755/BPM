@@ -8,7 +8,7 @@ EXAMPLES = []
 EXAMPLES.append(Example(
     id="BX-30", file="bx30_contract_review", name="계약서 검토", dept="운영·법무·IT·고객",
     origin="프로토타입 시나리오 4 (진행 중이던 것 — 호출 3개, 사전 점검까지)", 
-    run_location="server", trigger="메시지 `contract_review` — 전자계약 시스템의 검토 요청",
+    trigger="메시지 `contract_review` — 전자계약 시스템의 검토 요청",
     background="""
 계약서 초안이 오면 조항을 뽑고, 위험도가 높은 세 가지 조항(손해배상·지식재산·해지)을 공유 BPM 프로세스 「조항 검토」(BX-37)로 각각 검토한다. 셋의 결과를 모아 위험 등급을 정하고, 높으면 법무팀 결재를 받는다. 검토 의견서를 만들어 요청 시스템에 돌려준다.
 """,
@@ -57,7 +57,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-37", file="bx37_clause_review", name="조항 검토 (공유)", dept="운영·법무·IT·고객",
     origin="프로토타입 시나리오 4의 호출 대상", 
-    run_location="server", trigger="BPM 프로세스 호출 — BX-30",
+    trigger="BPM 프로세스 호출 — BX-30",
     background="조항 원문과 종류를 받아 사내 표준 조항(업무 파라미터)과 비교하고 위험 점수(0~5)와 수정 제안을 돌려준다.",
     why_location="AI만 — 서버.",
     inputs=[("조항", "string", True, "원문"), ("종류", "string", True, "손해배상/지식재산/해지"),
@@ -86,7 +86,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-31", file="bx31_request_triage", name="업무 요청 접수·분배", dept="운영·법무·IT·고객",
     origin="프로토타입 example_operator(운영 비서) 확장 → 새로 설계", 
-    run_location="server", trigger="메시지 `ops_request` — 사내 요청 메일함·메신저 봇이 보냄",
+    trigger="메시지 `ops_request` — 사내 요청 메일함·메신저 봇이 보냄",
     background="""
 사내 공용 요청 창구(「운영지원」)로 들어오는 자유 형식 요청을 AI가 읽고 종류(장비/권한/시설/기타)와 긴급도를 정해 담당 팀 큐로 보낸다. 판단이 애매하면(AI 확신도 낮음) 사람이 분류한다. 접수 확인을 요청자에게 보낸다.
 """,
@@ -121,7 +121,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-32", file="bx32_customer_inquiry", name="고객 문의 답변 초안", dept="운영·법무·IT·고객",
     origin="새로 설계 — 외부 확장(멱등 아님) 예", 
-    run_location="server", trigger="메시지 `cs_inquiry` — 외부 고객센터 SaaS의 웹훅",
+    trigger="메시지 `cs_inquiry` — 외부 고객센터 SaaS의 웹훅",
     background="""
 외부 고객센터 SaaS에 문의가 들어오면, 사내 FAQ 검색(내장 확장)으로 근거를 찾고 AI가 답변 초안을 쓴다. 상담원이 초안을 고치거나 승인하면 외부 SaaS에 답변을 등록한다. 외부 SaaS의 「답변 등록」은 멱등이 아니다 — 시간 초과 때 자동 재시도하면 고객에게 답이 두 번 갈 수 있다.
 """,
@@ -161,7 +161,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-33", file="bx33_access_request", name="IT 권한 신청", dept="운영·법무·IT·고객",
     origin="새로 설계", 
-    run_location="server", trigger="메시지 `access_request` — 포털 권한 신청",
+    trigger="메시지 `access_request` — 포털 권한 신청",
     background="""
 직원이 시스템 권한을 신청하면 규칙표가 권한 위험도(낮음/중간/높음)와 필요한 결재선을 정한다. 낮음은 팀장만, 중간은 팀장 + 시스템 관리자, 높음은 팀장 + 시스템 관리자 + 보안팀. 결재가 모두 끝나면 디렉터리에 권한을 주고 90일 뒤 자동 회수 일정을 남긴다.
 """,
@@ -203,7 +203,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-34", file="bx34_incident_alert", name="장애 알림 대응", dept="운영·법무·IT·고객",
     origin="새로 설계", 
-    run_location="server", trigger="메시지 `monitor_alert` — 모니터링 시스템 웹훅",
+    trigger="메시지 `monitor_alert` — 모니터링 시스템 웹훅",
     background="""
 모니터링 경보가 오면 AI가 최근 로그 요약과 추정 원인을 정리해 당직자에게 알린다. 당직자가 10분 안에 「확인」하지 않으면 다음 당직자에게, 다시 10분이 지나면 팀장에게 올린다. 모니터링에서 「복구」 메시지가 오면 대응을 끝낸다.
 """,
@@ -243,7 +243,7 @@ EXAMPLES.append(Example(
 EXAMPLES.append(Example(
     id="BX-35", file="bx35_voc_weekly", name="VOC 주간 분석", dept="운영·법무·IT·고객",
     origin="새로 설계", 
-    run_location="server", trigger="타이머 — 매주 월요일 07:00",
+    trigger="타이머 — 매주 월요일 07:00",
     background="""
 지난주 고객 문의·리뷰(수백 건)를 가져와 주제별로 묶고 감성을 매긴 뒤, 경영진용 한 장 요약과 상세 xlsx를 만든다. 건이 많아 50건씩 묶어 병렬로 분석한다.
 """,

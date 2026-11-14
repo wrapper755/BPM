@@ -1,0 +1,121 @@
+{
+  "$defs": {
+    "Place": {
+      "additionalProperties": true,
+      "description": "업무 자리 — BPM 프로세스(패키지 id)마다 하나. **회사는 적지 않는다** — 패키지의 회사다.",
+      "properties": {
+        "department": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Department"
+        },
+        "scope": {
+          "title": "Scope",
+          "type": "string"
+        },
+        "staff": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Staff"
+        }
+      },
+      "required": [
+        "scope"
+      ],
+      "title": "Place",
+      "type": "object"
+    }
+  },
+  "$id": "urn:bpm:contracts:c17-workspace-update-request",
+  "additionalProperties": true,
+  "description": "`PATCH /api/v1/workspaces/{id}` — STU-06이 하던 일.\n\n**생략한 칸은 그대로 둔다.** 회사는 여기 없다 — 만들 때 정해진다.",
+  "properties": {
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "entry": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Entry"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Name"
+    },
+    "place": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Place"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "schema": {
+      "description": "이 계약의 schema 번호",
+      "title": "Schema",
+      "type": "integer"
+    },
+    "version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Version"
+    }
+  },
+  "required": [
+    "schema"
+  ],
+  "title": "WorkspaceUpdateRequest",
+  "type": "object"
+}

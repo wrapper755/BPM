@@ -121,18 +121,18 @@ curl -X POST localhost:8010/erp/mock/v1/scenario -d '{"name":"이관1건"}'
 
 ## 여기 없는 것
 
-**`center-jobs`는 걷어냈다** — 진짜 Center의 `POST /jobs`를 부르던 앱이고, BX-16이 「서버가 PC에
-일을 넘기는 요소가 없다」를 메우려고 쓰던 **우회**였다. [ADR-0062](../docs/decisions/0062-pc-delegation.md)가
-PC 위임(`bpm:call.delegate`)으로 그 공백을 닫아 BX-16이 더 이상 작업을 만들지 않는다 — 부르는
+**`center-jobs`는 걷어냈다** — 진짜 Center의 `POST /jobs`를 부르던 앱이고, 「서버가 다른 BPM
+프로세스에 일을 넘기는 요소가 없다」를 메우려고 쓰던 **우회**였다. 맡기기(`bpm:call.delegate`,
+[ADR-0082](../docs/decisions/0082-batch-start.md))가 그 공백을 닫았다 — 부르는
 예제가 없는 앱은 두지 않는다 (`tests/server/test_mock_apps.py`의 「예제가 부르지 않는 작업」 검사가
 그것을 지킨다).
 
 ## 드러난 공백
 
-- ~~C5의 작업 대상에 「그룹」이 없다~~ → **공백이 아니게 됐다.** BX-16이 `group:구매-PC`로
-  적던 자리는 PC 위임이 되었고, **어느 PC인가는 Center가 고른다**(배포된·활성인·대기열이 짧은
-  곳 — [ADR-0062](../docs/decisions/0062-pc-delegation.md)). 그림에 PC 묶음을 적지 않는 것이
-  배포가 정하는 자리를 지키는 길이다 ([ADR-0049](../docs/decisions/0049-deployment-target-must-exist.md)).
+- ~~C5의 작업 대상에 「그룹」이 없다~~ → **공백이 아니게 됐다.** 맡기기가 그 자리를 받고,
+  **어느 실행기인가는 Center가 고른다**([ADR-0082](../docs/decisions/0082-batch-start.md)). 그림에
+  실행기를 적지 않는 것이 배포가 정하는 자리를 지키는 길이다
+  ([ADR-0049](../docs/decisions/0049-deployment-target-must-exist.md)).
 - **BX-35의 `나누기(VOC, 50)`가 성립하지 않는다.** `core.helpers`의 `나누기`는 수 나눗셈이고
   목록을 쪼개는 도우미가 없다. BX-35는 M5 묶음에 있으므로 조각 14 전에 정해야 한다
   (도우미를 더할지, 예제를 고칠지 — CLAUDE.md §5는 도우미를 더하면 ADR-0025의 표도 함께

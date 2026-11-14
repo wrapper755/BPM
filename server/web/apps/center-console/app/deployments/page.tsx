@@ -5,7 +5,7 @@ import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } 
 import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
-import { fullTime } from "@/app/bot-uis/page";
+import { fullTime } from "@/lib/time";
 import { RevokeDeployment } from "./tools";
 
 /**
@@ -35,13 +35,11 @@ export default async function DeploymentsPage({
   const names = new Map<string, string>();
   let failure: string | null = null;
   try {
-    const [deployments, botUis, runners] = await Promise.all([
+    const [deployments, runners] = await Promise.all([
       center.deployments({ active: showAll ? undefined : true }),
-      center.botUis(),
       center.serverRunners(),
     ]);
     rows = deployments;
-    for (const one of botUis) names.set(`bot_ui:${one.bot_ui_id}`, one.name);
     for (const one of runners) names.set(`server_runner:${one.server_runner_id}`, one.name);
   } catch (cause) {
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
@@ -51,8 +49,8 @@ export default async function DeploymentsPage({
   const target = (row: DeploymentInfo): string => {
     const type = String(row.target.type ?? "");
     const id = String(row.target.id ?? "");
-    if (type === "server_runner") return id === "*" ? "서버 (전체)" : `서버 ${names.get(`${type}:${id}`) ?? id}`;
-    // 아직 등록 기록이 없는 PC는 id 그대로 보인다 — 숨기면 잘못 걸린 배포를 못 찾는다.
+    if (id === "*") return "서버 (전체)";
+    // 아직 등록 기록이 없는 실행기는 id 그대로 보인다 — 숨기면 잘못 걸린 배포를 못 찾는다.
     return names.get(`${type}:${id}`) ?? id;
   };
 

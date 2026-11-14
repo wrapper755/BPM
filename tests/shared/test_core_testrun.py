@@ -1,0 +1,516 @@
+"""시험 실행 한 바퀴 (`bpm.core.testrun`) — 예제를 가져와 케이스로 돌리고 판정한다.
+
+여기가 **한 바퀴가 도는 자리**다 — 예제를 작업 폴더로 가져와, 케이스 입력으로, 엔진을 돌려,
+C14 비교 규칙으로 판정하고, 배운 재생 명세를 패키지에 적는다.
+
+거듭 보는 것 넷.
+
+1. **엔진은 스레드를 만들지 않는다** — `pump()`를 부르는 쪽이 민다. 여기서는 `run_to_end()`다.
+2. **케이스가 시키는 대로만** 답한다 — 적지 않은 결재는 기다린다 (기한 초과 시험).
+3. **시험 실행은 바깥으로 웹훅을 쏘지 않는다** — 시험 수신기로만 간다.
+4. **배운 것은 패키지에 적힌다** (ADR-0028) — 엔진은 파일을 쓰지 않으므로 돌리는 쪽이 한다.
+
+창(STU-08)의 일은 `tests/studio/test_studio_run_dialog.py`에 있다.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import replace
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from bpm.contracts.bpmn_ext import CASE_ANSWERER, Case
+from bpm.core.senders import EmailMessage, SendError, WebhookRequest
+from bpm.core.testrun.receiver import Receiver
+from bpm.core.testrun.runner import (
+    ERROR,
+    FAIL,
+    NO_EXPECT,
+    PASS,
+    CaseRun,
+    CaseSender,
+    Outcome,
+    Plan,
+    read_cases,
+    resolve_inputs,
+    summarize,
+)
+from bpm.core.testrun.settings import RunSettings
+from bpm.core.testrun.workspace import Workspace
+
+EXAMPLES = Path(__file__).resolve().parents[2] / "docs" / "08-business-examples" / "bpmn"
+
+AUTONOMOUS = "autonomous"
+
+
+def studio(tmp_path: Path, example: str) -> tuple[Any, RunSettings]:
+    """예제 하나를 작업 폴더로 가져오고, 그 시험 실행 설정을 만든다."""
+    data = tmp_path / "testrun"
+    settings = RunSettings(data_dir=data, outputs_dir=data / "outputs")  # 모델은 쓰지 않는다
+    made = Workspace(data / "workspace").ensure().import_example(EXAMPLES, example)
+    return made, settings
+
+
+def drive(run: CaseRun, *, timeout_ms: int = 20_000) -> Outcome:
+    """끝까지 민다. **스레드도 이벤트 루프도 없다** — `pump()`가 돌아올 때까지다."""
+    return run.run_to_end()
+
+
+# ─────────────────────────── 케이스 입력 연산자 (C14) ───────────────────────────
+
+
+def test_now_plus_becomes_a_real_time() -> None:
+    now = datetime(2026, 10, 4, 9, 0, tzinfo=UTC)
+    found = resolve_inputs({"마감": {"$now_plus": "PT30M"}}, now=now, receiver=None)
+    assert found["마감"].startswith("2026-10-04T09:30")
+
+
+def test_a_plain_value_is_left_alone() -> None:
+    raw = {"금액": 100, "쪽": {"a": 1, "b": 2}}
+    found = resolve_inputs(raw, now=datetime.now(UTC), receiver=None)
+    assert found == {"금액": 100, "쪽": {"a": 1, "b": 2}}
+
+
+def test_test_receiver_needs_the_receiver_running() -> None:
+    from bpm.core.engine import EngineError
+
+    with pytest.raises(EngineError, match="시험 수신기가 꺼져"):
+        resolve_inputs({"주소": {"$test_receiver": "reply"}}, now=datetime.now(UTC), receiver=None)
+
+
+def test_test_receiver_gives_a_loopback_url() -> None:
+    receiver = Receiver(port=0).start()
+    try:
+        found = resolve_inputs(
+            {"주소": {"$test_receiver": "reply"}},
+            now=datetime.now(UTC),
+            receiver=receiver,
+        )
+        assert found["주소"].startswith("http://127.0.0.1:") and found["주소"].endswith("/reply")
+    finally:
+        receiver.stop()
+
+
+# ─────────────────────────── 보내기 (개발 PC 보호) ───────────────────────────
+
+
+def test_studio_never_sends_a_real_email() -> None:
+    sender = CaseSender()
+    found = sender.send_email(EmailMessage(to=("a@example.com",), subject="x", body="y"))
+    assert found.ok and len(sender.emails) == 1
+
+
+def test_a_webhook_outside_the_test_receiver_is_refused() -> None:
+    """개발 PC에서 실수로 바깥에 쏘지 않는다 — C14는 `$test_receiver`만 예외로 둔다."""
+    with pytest.raises(SendError, match="시험 수신기로만"):
+        CaseSender().send_webhook(WebhookRequest(url="https://real.example.com/hook"))
+
+
+def test_a_webhook_to_the_test_receiver_actually_arrives() -> None:
+    receiver = Receiver(port=0).start()
+    try:
+        sender = CaseSender(receiver)
+        found = sender.send_webhook(
+            WebhookRequest(url=receiver.url_for("reply"), body={"건수": 3, "상태": "ok"})
+        )
+        assert found.status == 200
+        (got,) = receiver.got
+        assert got.name == "reply" and got.body == {"건수": 3, "상태": "ok"}
+        assert "값" not in got.summary and "3" not in got.summary.replace("127.0.0.1", "")
+    finally:
+        receiver.stop()
+
+
+# ─────────────────────────── 한 바퀴 (진짜 엔진) ───────────────────────────
+
+
+def test_a_rule_example_passes_its_cases(tmp_path: Path) -> None:
+    """FX-02 — 규칙(DMN) 하나. 케이스가 적어 둔 기대값까지 **그대로** 간다."""
+    made, settings = studio(tmp_path, "fx02_business_rule")
+    definition = made.entry_definition
+    assert definition is not None
+    cases = read_cases(made, definition)
+    assert [c.name for c in cases] == ["VIP 대량", "일반 소량"]
+
+    outcomes = [
+        drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+        for case in cases
+    ]
+    assert [o.verdict for o in outcomes] == [PASS, PASS], [o.detail for o in outcomes]
+    assert summarize(outcomes) == "전체 2개 끝: 통과 2, 실패 0, 비교 안 함 0"
+    assert outcomes[0].run is not None and outcomes[0].run.variables["최종가"] == 1200000
+
+
+def test_a_wrong_expectation_is_reported_as_a_failure(tmp_path: Path) -> None:
+    made, settings = studio(tmp_path, "fx02_business_rule")
+    definition = made.entry_definition
+    assert definition is not None
+    case = Case(name="틀린 기대", inputs={"금액": 1500000, "등급": "VIP"}, expected={"할인율": 0.9})
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.verdict == FAIL and "할인율" in found.detail
+
+
+def test_running_without_a_case_does_not_compare(tmp_path: Path) -> None:
+    made, settings = studio(tmp_path, "fx12_daily_report")
+    definition = made.entry_definition
+    assert definition is not None
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=None, settings=settings)))
+    assert found.verdict == NO_EXPECT
+
+
+def test_a_case_answers_the_approval_and_the_run_finishes(tmp_path: Path) -> None:
+    """케이스의 `approvals`가 결재에 자동으로 답한다 (C14)."""
+    made, settings = studio(tmp_path, "fx19_manual_task_pc")
+    definition = made.entry_definition
+    assert definition is not None
+    # 폼이 없는 확인은 `decision` 하나로 답한다 (C6 — 「승인 / 반려」 두 단추).
+    case = Case(name="확인", inputs={}, approvals={"Manual_Paper": {"decision": "approve"}})
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.verdict == NO_EXPECT, found.detail
+    assert found.run is not None and found.run.state.value == "done"
+
+
+def _naming_the_answerer(tmp_path: Path) -> tuple[Any, Any, RunSettings]:
+    """FX-19의 확인에 `answered_by_as`를 단다 — 그림만 바꾸고 다시 읽는다."""
+    made, settings = studio(tmp_path, "fx19_manual_task_pc")
+    entry = made.entry_definition
+    assert entry is not None
+    xml = entry.path.read_text(encoding="utf-8")
+    entry.path.write_text(
+        xml.replace('"fields": []', '"fields": [], "answered_by_as": "확인자"', 1), encoding="utf-8"
+    )
+    opened = Workspace(settings.data_dir / "workspace").read(made.folder, made.group)
+    definition = opened.entry_definition
+    assert definition is not None
+    return opened, definition, settings
+
+
+def test_the_case_names_who_answered(tmp_path: Path) -> None:
+    """**답한 사람도 케이스가 적는다** (C14 `answered_by`, ADR-0096) — 그림이 그 변수로 받는다."""
+    made, definition, settings = _naming_the_answerer(tmp_path)
+    case = Case(
+        name="확인",
+        approvals={"Manual_Paper": {"decision": "approve"}},
+        answered_by={"Manual_Paper": "이도윤"},
+        expected={"확인자": "이도윤"},
+    )
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.verdict == PASS, found.detail
+
+
+def test_an_unnamed_answerer_is_the_test_case(tmp_path: Path) -> None:
+    """적지 않으면 「시험 케이스」다 — Studio에 「Studio 사용자」가 없어 지어내지 않는다."""
+    made, definition, settings = _naming_the_answerer(tmp_path)
+    case = Case(name="확인", approvals={"Manual_Paper": {"decision": "approve"}}, expected={"확인자": CASE_ANSWERER})
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.verdict == PASS, found.detail
+
+
+def test_an_answer_the_form_refuses_ends_the_run_instead_of_looping(tmp_path: Path) -> None:
+    """케이스가 틀린 답을 주면 **그 자리에서 끝낸다** — 다음 틱에 또 같은 일이 생긴다.
+
+    FX-19에서 실제로 겪었다 (폼 없는 확인에 빈 답 `{}`). 예제는 조각 3f에서 고쳤고, 여기서는
+    **고친 예제에 일부러 빈 답을 주어** 그 자리가 막혀 있는지 본다.
+    """
+    made, settings = studio(tmp_path, "fx19_manual_task_pc")
+    definition = made.entry_definition
+    assert definition is not None
+    case = Case(name="빈 답", inputs={}, approvals={"Manual_Paper": {}})
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.verdict == ERROR and "빠진 칸" in found.detail
+
+
+def test_the_fixed_example_case_now_passes(tmp_path: Path) -> None:
+    """**칸이 없어도 답은 비어 있지 않다** — 폼 없는 결재의 답은 `decision`이다 (C6, 조각 3f)."""
+    made, settings = studio(tmp_path, "fx19_manual_task_pc")
+    definition = made.entry_definition
+    assert definition is not None
+    case = read_cases(made, definition)[0]
+    assert case.approvals == {"Manual_Paper": {"decision": "approve"}}
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.verdict == PASS, found.detail
+
+
+def test_an_unanswered_approval_keeps_waiting(tmp_path: Path) -> None:
+    """**적지 않은 결재는 답하지 않고 기다린다** — 기한 초과를 시험하는 길이다 (C14)."""
+    made, settings = studio(tmp_path, "fx19_manual_task_pc")
+    definition = made.entry_definition
+    assert definition is not None
+    case = Case(name="답 없음", inputs={}, approvals={})
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.run is not None and found.run.state.value == "waiting"
+    assert found.verdict == NO_EXPECT, "기대 결과가 없으니 비교하지 않는다"
+
+
+def test_a_webhook_example_reaches_the_test_receiver(tmp_path: Path) -> None:
+    """FX-17 — 케이스가 `$test_receiver`로 주소를 받는다."""
+    made, settings = studio(tmp_path, "fx17_webhook")
+    definition = made.entry_definition
+    assert definition is not None
+    case = next(c for c in read_cases(made, definition) if "$test_receiver" in json.dumps(c.inputs))
+
+    receiver = Receiver(port=0).start()
+    try:
+        found = drive(
+            CaseRun(Plan(process=made, definition=definition, case=case, settings=settings), receiver)
+        )
+        assert found.verdict == PASS, found.detail
+        assert [g.name for g in receiver.got] == ["hook"]
+    finally:
+        receiver.stop()
+
+
+def test_a_file_writing_example_writes_into_the_output_folder(tmp_path: Path) -> None:
+    """ADR-0026 — 쓰기는 출력 폴더 안만. Studio가 실행마다 그 자리를 준다."""
+    made, settings = studio(tmp_path, "fx12_daily_report")
+    definition = made.entry_definition
+    assert definition is not None
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=None, settings=settings)))
+    assert found.run is not None
+    written = sorted((settings.outputs_dir / made.id).rglob("*.md"))
+    assert written, "파일 출력이 실제로 생겼다"
+    assert written[0].read_text(encoding="utf-8").strip().startswith("#")
+
+
+def test_the_run_log_is_written_as_jsonl(tmp_path: Path) -> None:
+    made, settings = studio(tmp_path, "fx02_business_rule")
+    definition = made.entry_definition
+    assert definition is not None
+    case = read_cases(made, definition)[0]
+    drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    found = sorted((settings.data_dir / "runs").glob("test_*.jsonl"))
+    assert found, "C3 기록이 남는다"
+    lines = [json.loads(line) for line in found[0].read_text(encoding="utf-8").splitlines()]
+    kinds = [one["kind"] for one in lines]
+    assert kinds[0] == "run_started" and kinds[-1] == "run_finished"
+    # 작업 폴더의 id — 내보내면 매니페스트 `id`가 되는 값이다 (ADR-0086).
+    assert lines[0]["data"]["bpm_process_id"] == made.id
+
+
+def test_a_missing_required_input_is_said_plainly(tmp_path: Path) -> None:
+    """케이스 없이 돌리면 필수 입력이 빈다 — 조용히 `None`으로 흘리지 않는다 (C14 §6)."""
+    made, settings = studio(tmp_path, "fx06_document_read")
+    definition = made.entry_definition
+    assert definition is not None
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=None, settings=settings)))
+    assert found.verdict == ERROR and "필요하다" in found.detail
+
+
+def test_an_example_that_needs_a_model_says_so_instead_of_pretending(tmp_path: Path) -> None:
+    """모델이 설정되지 않았으면 **조용히 넘어가지 않는다** (ADR-0027)."""
+    made, settings = studio(tmp_path, "fx06_document_read")
+    definition = made.entry_definition
+    assert definition is not None
+    case = read_cases(made, definition)[0]
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.verdict == ERROR
+    assert "모델" in found.detail or "도구" in found.detail, found.detail
+
+
+# ─────────────────────────── PC 위임 (ADR-0062 §2) ───────────────────────────
+
+#: PC 위임 하나를 거쳐 그 값을 쓰는 서버 그림. **예제 묶음에 위임이 없어 여기서 만든다**
+#: (`test_studio_packaging.py`도 같은 까닭으로 제 그림을 들고 있다). `calledElement`는
+#: **읽는 사람을 위한 것**이라 패키지에 그 정의가 없어도 된다 — 대상은 다른 패키지다.
+DELEGATING = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpm="urn:chaeksas:bpmn:1" id="Defs_dlg" targetNamespace="urn:chaeksas:test">
+  <bpmn:error id="Err_DLG" name="DELEGATION_FAILED" errorCode="DELEGATION_FAILED" />
+  <bpmn:process id="Proc_fx03b_amount_branch" name="위임" isExecutable="true">
+    <bpmn:extensionElements><bpm:process>{
+      "inputs": [{"name": "청구번호", "type": "string", "required": true}]}</bpm:process>
+    </bpmn:extensionElements>
+    <bpmn:startEvent id="Start" />
+    <bpmn:callActivity id="Call_Erp" name="ERP 화면 입력" calledElement="Proc_erp_input">
+      <bpmn:extensionElements><bpm:call>{"delegate":
+        {"bpm_process_id": "fin.erp-input", "version": "1.0.0"},
+        "input": {"전표번호": "청구번호"}, "output": {"입력결과": "결과코드"}}</bpm:call>
+      </bpmn:extensionElements>
+    </bpmn:callActivity>
+    <bpmn:scriptTask id="Task_After" scriptFormat="bpm-expr">
+      <bpmn:script>마무리 = 입력결과 + "-확인"</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:endEvent id="End" />
+    <bpmn:boundaryEvent id="Bnd_Dlg" name="위임 실패" attachedToRef="Call_Erp">
+      <bpmn:errorEventDefinition errorRef="Err_DLG" />
+    </bpmn:boundaryEvent>
+    <bpmn:scriptTask id="Task_Fallback" scriptFormat="bpm-expr">
+      <bpmn:script>마무리 = "사람이 처리"</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:endEvent id="End_Fallback" />
+    <bpmn:sequenceFlow id="F1" sourceRef="Start" targetRef="Call_Erp" />
+    <bpmn:sequenceFlow id="F2" sourceRef="Call_Erp" targetRef="Task_After" />
+    <bpmn:sequenceFlow id="F3" sourceRef="Task_After" targetRef="End" />
+    <bpmn:sequenceFlow id="F4" sourceRef="Bnd_Dlg" targetRef="Task_Fallback" />
+    <bpmn:sequenceFlow id="F5" sourceRef="Task_Fallback" targetRef="End_Fallback" />
+  </bpmn:process>
+</bpmn:definitions>
+"""
+
+
+def delegating(tmp_path: Path) -> tuple[Any, Any, RunSettings]:
+    """위임 그림을 작업 폴더에 넣고 다시 읽는다 — `(BPM 프로세스, 진입 정의, 설정)`."""
+    made, settings = studio(tmp_path, "fx03b_amount_branch")
+    entry = made.entry_definition
+    assert entry is not None
+    entry.path.write_text(DELEGATING, encoding="utf-8")
+    opened = Workspace(settings.data_dir / "workspace").read(made.folder, made.group)
+    definition = opened.entry_definition
+    assert definition is not None
+    return opened, definition, settings
+
+
+def test_a_case_gives_the_delegation_result_and_the_run_finishes(tmp_path: Path) -> None:
+    """**케이스가 적어 둔 결과로 위임이 끝난다** (ADR-0062 §2 — 증명할 다섯의 마지막).
+
+    Studio에는 부를 PC BPM 프로세스의 그림이 없고(다른 패키지다) 있다 해도 UI 태스크라 설계자 PC에서
+    화면을 만지게 된다. 그래서 결재 답·메시지와 **같은 결**로 케이스가 결과를 적는다.
+    **Center도 남의 패키지도 없이** 끝까지 간다.
+    """
+    made, definition, settings = delegating(tmp_path)
+    case = Case(
+        name="위임",
+        inputs={"청구번호": "CLM-1"},
+        delegations={"Call_Erp": {"결과코드": "OK"}},
+        expected={"입력결과": "OK", "마무리": "OK-확인"},
+    )
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.verdict == PASS, found.detail
+
+
+def test_only_what_the_graph_reads_becomes_a_variable(tmp_path: Path) -> None:
+    """**적은 것만 오간다** (C14 `bpm:call.output`) — 돌려준 나머지는 버린다."""
+    made, definition, settings = delegating(tmp_path)
+    case = Case(
+        name="덤",
+        inputs={"청구번호": "CLM-1"},
+        delegations={"Call_Erp": {"결과코드": "OK", "덤": "버린다"}},
+    )
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.run is not None
+    assert found.run.variables["입력결과"] == "OK"
+    assert "덤" not in found.run.variables and "결과코드" not in found.run.variables
+
+
+def test_the_values_are_handed_over_as_values(tmp_path: Path) -> None:
+    """입력은 **맡길 때 값으로** 푼다 (맡은 쪽은 맡긴 그림을 모른다) — 식 이름이 가지 않는다."""
+    made, definition, settings = delegating(tmp_path)
+    case = Case(
+        name="입력",
+        inputs={"청구번호": "CLM-7"},
+        delegations={"Call_Erp": {"결과코드": "OK"}},
+    )
+    run = CaseRun(Plan(process=made, definition=definition, case=case, settings=settings))
+    drive(run)
+    (call,) = run.delegator.calls
+    assert call.inputs == {"전표번호": "CLM-7"}
+    assert (call.bpm_process_id, call.version) == ("fin.erp-input", "1.0.0")
+    assert call.node_id == "Call_Erp" and call.node_instance == 1
+
+
+def test_a_delegation_the_case_did_not_write_goes_to_the_error_boundary(
+    tmp_path: Path
+) -> None:
+    """**적어 두지 않은 위임은 그 자리에서 실패**다 (C14) — 기다리게 두면 끝나지 않는다.
+
+    현장 PC도 Center도 없으니 기다릴 상대가 없다. 업무 실패라 **그림의 오류 경계가 받고**,
+    그래서 이것이 경계를 시험하는 길이기도 하다. 그러려면 사유 코드가 그림이 받을 수 있는
+    것이어야 한다 — **`DELEGATION_FAILED`**, 진짜 PC 실행이 실패했을 때와 같은 코드다.
+    """
+    made, definition, settings = delegating(tmp_path)
+    case = Case(
+        name="안 적음",
+        inputs={"청구번호": "CLM-1"},
+        delegations={},
+        expected={"마무리": "사람이 처리"},
+    )
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.verdict == PASS, found.detail
+    assert found.run is not None and found.run.state.value == "done", "경계가 받아 끝까지 갔다"
+
+
+def test_a_delegation_without_an_error_boundary_fails_the_run(tmp_path: Path) -> None:
+    """경계가 없으면 **실행이 실패한다** — 조용히 기다리지 않는다."""
+    made, settings = studio(tmp_path, "fx03b_amount_branch")
+    entry = made.entry_definition
+    assert entry is not None
+    bare = DELEGATING.replace(
+        '<bpmn:boundaryEvent id="Bnd_Dlg" name="위임 실패" attachedToRef="Call_Erp">'
+        "\n      <bpmn:errorEventDefinition errorRef=\"Err_DLG\" />\n    </bpmn:boundaryEvent>",
+        "",
+    ).replace('<bpmn:sequenceFlow id="F4" sourceRef="Bnd_Dlg" targetRef="Task_Fallback" />', "")
+    entry.path.write_text(bare, encoding="utf-8")
+    opened = Workspace(settings.data_dir / "workspace").read(made.folder, made.group)
+    definition = opened.entry_definition
+    assert definition is not None
+
+    case = Case(name="경계 없음", inputs={"청구번호": "CLM-1"}, delegations={})
+    found = drive(CaseRun(Plan(process=opened, definition=definition, case=case, settings=settings)))
+    assert found.verdict == ERROR
+    assert "케이스" in found.detail and "Call_Erp" in found.detail, found.detail
+
+
+def test_a_value_the_graph_reads_but_the_case_does_not_return_fails(
+    tmp_path: Path
+) -> None:
+    """**적은 값이 오지 않으면 업무 실패**다 — 빈 값으로 이어 가지 않는다 (ADR-0062 §2).
+
+    현장에서는 「그 BPM 프로세스의 판이 바뀌었다」가 이 꼴이다. 여기서는 경계가 그것을 받는다.
+    """
+    made, definition, settings = delegating(tmp_path)
+    case = Case(
+        name="빈 값",
+        inputs={"청구번호": "CLM-1"},
+        delegations={"Call_Erp": {}},
+        expected={"마무리": "사람이 처리"},
+    )
+    found = drive(CaseRun(Plan(process=made, definition=definition, case=case, settings=settings)))
+    assert found.verdict == PASS, found.detail
+
+
+def test_without_a_case_a_delegation_says_what_to_write() -> None:
+    """케이스를 고르지 않고 돌리면 위임은 **적을 곳이 없다** — 그 말을 그대로 한다.
+
+    창도 엔진도 필요 없는 자리라 포트만 직접 부른다.
+    """
+    from bpm.core.delegation import DelegationCall, DelegationError
+    from bpm.studio.runner import CaseDelegator
+
+    call = DelegationCall(
+        run_id="test_20261015_090000_aaaaaa",
+        node_id="Call_Erp",
+        node_instance=1,
+        bpm_process_id="fin.erp-input",
+    )
+    with pytest.raises(DelegationError) as caught:
+        CaseDelegator(None).delegate(call)
+    # **그림·설치 오류가 아니라 업무 실패다** — 그래서 경계가 받을 수 있다.
+    assert caught.value.code == "DELEGATION_FAILED"
+    assert "delegations에 적으세요" in str(caught.value)
+
+
+# ─────────────────────────── 배운 것 적기 (ADR-0028) ───────────────────────────
+
+
+def test_what_the_autonomous_run_learned_is_written_into_the_package(tmp_path: Path) -> None:
+    """엔진은 파일을 쓰지 않는다 — **Studio가** 패키지 안 `memory/specs.json`에 적는다."""
+    from bpm.core.llm import RecordingLlm, Reply
+    from bpm.core.replay import read_memory
+
+    made, settings = studio(tmp_path, "fx06_document_read")
+    definition = made.entry_definition
+    assert definition is not None
+    assert read_memory(made.folder).specs == [], "아직 배운 것이 없다"
+
+    run = CaseRun(Plan(process=made, definition=definition, case=None, settings=settings))
+    answers = [Reply(text=json.dumps({"요약": "한 줄", "쪽수": 3}, ensure_ascii=False), model="시험")]
+    run.env = lambda: replace(  # type: ignore[method-assign]
+        CaseRun.env(run), llm=RecordingLlm(replies=answers * 5), tools={}
+    )
+    drive(run)
+    # 도구가 없어 실패했더라도, 성공한 실행만 적는다 — 그 규칙을 확인한다.
+    assert read_memory(made.folder).specs == []

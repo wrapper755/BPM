@@ -4,7 +4,7 @@
 | --- | --- |
 | 상태 | **구현됨** (2026-10-09, [09-gaps](../09-gaps.md) §1 대조) |
 | schema | 1 |
-| 보내는 쪽 → 받는 쪽 | Center(관리자가 누르면 서버의 키로 서명·보관) → PC 실행기·서버 실행기(다시 검증) |
+| 보내는 쪽 → 받는 쪽 | Center(관리자가 누르면 서버의 키로 서명·보관) → 서버 실행기(다시 검증) |
 | 코드 위치 | `shared/contracts/src/bpm/contracts/signing.py`, `…/hashing.py` (import `bpm.contracts.signing`, [ADR-0019](../decisions/0019-package-names.md)) |
 | JSON Schema | [`c2-envelope.json`](../../shared/contracts/schemas/c2-envelope.json) · [`c2-claim-deployment.json`](../../shared/contracts/schemas/c2-claim-deployment.json) · [`c2-claim-package.json`](../../shared/contracts/schemas/c2-claim-package.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
 | 관련 ADR | [0006](../decisions/0006-single-contracts-package.md), [0015](../decisions/0015-run-location.md), [0046](../decisions/0046-no-wildcard-pc-deployment.md), [0047](../decisions/0047-one-deployment-gate.md), [0090](../decisions/0090-center-admin-accounts.md) |
@@ -68,28 +68,27 @@
 
 `deployment` 필드 규칙:
 
-- `target`: `{type: "bot_ui" | "server_runner", id}`.
+- `target`: `{type: "server_runner", id}`.
 - `not_before`: 없으면 즉시.
 - `expires_at`: 없으면 무기한.
-- `max_concurrency`: 서버 배포에만 쓴다. 기본 5.
+- `max_concurrency`: 기본 5.
 
 **배포 대상 규칙:**
 
-- `target.type`은 패키지의 `run_location`과 맞아야 한다: `pc`면 `bot_ui`, `server`면 `server_runner`.
-- 서버 배포는 `id`에 `"*"`를 쓸 수 있다. 뜻은 Center가 관리하는 모든 서버 실행기다.
-- **PC 배포에는 `"*"`가 없다** — 봉투 하나는 **PC 하나**를 가리킨다 ([ADR-0046](../decisions/0046-no-wildcard-pc-deployment.md)). `{bot_ui, "*"}`는 V6이 `wrong_target`으로 거부하고, **Center도 받아 두지 않는다**(409 `wrong_target` — 받아 두면 모든 PC가 거부해 CON-03이 거짓 ⛔로 찬다). 한쪽만 적어 두면 「적지 않았을 뿐」으로 읽히므로 **없다는 것을 적는다**.
+- `target.type`은 **`server_runner` 하나**다 — PC 실행기와 함께 `bot_ui`를 걷었다 ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)). 그 밖의 종류는 V6이 `wrong_target`으로 거부하고 Center도 받아 두지 않는다(409 `wrong_target`).
+- `id`에 `"*"`를 쓸 수 있다. 뜻은 Center가 관리하는 모든 서버 실행기다.
 - 공유 BPM 프로세스는 패키지 안 `libs/`에 복사되어 들어가므로 따로 배포하지 않는다 (C1).
 - 도구 묶음(툴팩)은 **패키지가 아니다** — 도구는 확장이 기여하고, 코드 있는 도구는 설치 파일로만 온다 ([ADR-0050](../decisions/0050-no-toolpack-kind.md)). 외부 확장 정의는 `extension` 봉투로 등록한다 (아래).
 
 ### 믿는 키 (`admin_keys`)
 
-- 믿는 키는 **Center 서명 키**와 사람이 서명하던 때 들어온 **옛 Admin 키**다. Center가 C4·C12 하트비트로 그대로 내려 준다 (`AdminKey` — 「Center」라는 이름이 붙은 것이 Center 키다).
+- 믿는 키는 **Center 서명 키**와 사람이 서명하던 때 들어온 **옛 Admin 키**다. Center가 C12 하트비트로 그대로 내려 준다 (`AdminKey` — 「Center」라는 이름이 붙은 것이 Center 키다).
 - Center 서명 키는 **Center가 처음 뜰 때 만들어 DB에 둔다**. 서버 셸의 `bpm-center signing-key rotate`로 바꾸면 새 키가 그 뒤를 서명하고 **옛 키는 믿는 목록에 남는다**(이미 나간 승인·배포가 산다).
 - 키를 믿지 않게 하는 것은 `bpm-center signing-key retire <key_id>`뿐이다 — `revoked_at`이 붙고, 그 키가 서명한 승인·배포는 실행하는 쪽에서 V2 `revoked_key`로 거부된다. **지금 서명하는 키는 버릴 수 없다**(먼저 바꾼다).
 
 ## 검증 규칙
 
-Center, PC 실행기, 서버 실행기가 같은 함수(`contracts.signing.verify`)를 쓴다.
+Center와 서버 실행기가 같은 함수(`contracts.signing.verify`)를 쓴다.
 
 | # | 규칙 | 실패 사유 코드 | 누가 검사 |
 | --- | --- | --- | --- |
@@ -119,7 +118,7 @@ Center, PC 실행기, 서버 실행기가 같은 함수(`contracts.signing.verif
   "payload": {
     "kind": "deployment",
     "deployment_id": "dep_3f9a1c07",
-    "target": {"type": "bot_ui", "id": "bui_a81c22d0"},
+    "target": {"type": "server_runner", "id": "srv_a81c22d0"},
     "bpm_process_id": "erp.order-entry",
     "version": "2.1.0",
     "content_hash": "sha256:41ab…",
@@ -140,8 +139,8 @@ Center, PC 실행기, 서버 실행기가 같은 함수(`contracts.signing.verif
 | 상태 코드 | 언제 | 부르는 쪽(관리자)이 할 일 |
 | --- | --- | --- |
 | 409 | `deployment_revoked`·`package_revoked`·`extension_revoked` (철회된 것은 되살아나지 않는다) | 버전을 올려 새로 올린다 |
-| 409 | `not_approved` (패키지가 승인 상태가 아님), `deprecated`, `wrong_target` (`target.type` ↔ `run_location`, 또는 **PC 배포의 `"*"`** — ADR-0046) | 승인·버전·대상을 보고 다시 누른다 |
-| 404 | `not_found` (가리키는 패키지가 Center에 없다), `target_not_found` (**등록되지 않은 PC**, [ADR-0049](../decisions/0049-deployment-target-must-exist.md)) | 패키지를 먼저 올린다 / 대상을 확인한다 — **`bot_ui_id`는 그 PC가 한 번 등록한 뒤에 생긴다**(C4). 미리 배포해 둘 수는 없다 |
+| 409 | `not_approved` (패키지가 승인 상태가 아님), `deprecated`, `wrong_target` (모르는 `target.type`) | 승인·버전·대상을 보고 다시 누른다 |
+| 404 | `not_found` (가리키는 패키지가 Center에 없다), `target_not_found` (**등록되지 않은 실행기**, [ADR-0049](../decisions/0049-deployment-target-must-exist.md)) | 패키지를 먼저 올린다 / 대상을 확인한다 — **`server_runner_id`는 그 실행기가 한 번 등록한 뒤에 생긴다**(C4). 미리 배포해 둘 수는 없다 |
 | 422 | `server_runner_not_available` (M7 전 서버 배포) | 메시지대로 고친다 |
 
 ## 호환 규칙
@@ -153,6 +152,7 @@ Center, PC 실행기, 서버 실행기가 같은 함수(`contracts.signing.verif
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-12 | 1 | **PC 실행기를 걷었다** — 배포 대상 `{type: "bot_ui"}`와 「PC 배포에 `"*"`가 없다」 규칙(ADR-0046)을 걷었다. `target.type`은 `server_runner` 하나이고 `"*"`는 늘 쓸 수 있다. 봉투 형식은 그대로다 | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-10-31 | 1 | §검증 규칙의 「비활성으로 돌린다」를 풀어 적었다 — 언제 믿나(답한 하트비트만)·무엇이 덮나·기한은 현장이 본다·도는 실행은 그대로. 배포 철회도 같다 | [0113](../decisions/0113-field-follows-withdrawn-deployments.md) |
 | 2026-10-29 | 1 | Claim `service_key`를 더 만들지 않는다 — 서비스 앱 키가 없어졌다 (Center가 앱에 키를 맡기지 않는다) | [0102](../decisions/0102-calling-outside-is-pull.md) |
 | 2026-10-25 | 1 | Claim `service_key` — Center가 서비스 앱에 키를 맡기는 봉투 (C11) | [0094](../decisions/0094-service-app-keys-ride-the-deployment.md) |

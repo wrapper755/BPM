@@ -6,11 +6,11 @@
 C4와 **다른 것 셋**이 여기 있다 (C12 표·ADR-0054 —
 `docs/decisions/0054-server-run-state-and-concurrency.md`):
 
-| | C4 PC 실행기 | C12 서버 실행기 |
+| | C4 실행기 | C12 서버 실행기 |
 | --- | --- | --- |
 | 실행 자리 | `current_run` 하나 (ADR-0014) | `capacity` + `running[]` — 상한까지 여럿 |
 | 기다리는 실행 | 자리를 쥔다 | **`waiting[]`로 빠져 자리를 놓는다** |
-| 대기열 | PC 실행기가 가진다 | **Center가 가진다** — 실행기는 빈자리만큼만 받는다 |
+| 대기열 | 실행기가 가진다 | **Center가 가진다** — 실행기는 빈자리만큼만 받는다 |
 
 **같은 것은 같은 코드로 한다** — 키 묶기는 `center.host_keys`, 배포 봉투·배치 결정은
 `api.deployments`, 결재는 `api.approvals`가 C4와 **같은 함수**로 다룬다. 베끼면 한쪽만 고쳐져
@@ -29,13 +29,13 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
-from bpm.center import enrollments, host_keys
+from bpm.center import design_work, enrollments, host_keys
 from bpm.center.api import approvals, deployments, jobs, messages, signing, timers
 from bpm.center.api.timers import DEFAULT_ZONE
 from bpm.center.auth import Caller, require_key_type
 from bpm.center.errors import ApiError
 from bpm.center.storage import Store, dumps, loads, now_iso
-from bpm.contracts.bot_ui import ExtensionState, Readiness
+from bpm.contracts.runner import ExtensionState, Readiness
 from bpm.contracts.server_runner import (
     DEFAULT_HEARTBEAT_S,
     OFFLINE_AFTER_S,
@@ -159,7 +159,7 @@ def register(
         # **등록 응답에도 싣는다** (C12 §등록) — 실행기는 공개키를 메모리에만 두고, 다시 뜨면
         # **첫 하트비트보다 먼저** 담아 둔 실행을 되살린다 (ADR-0054). 되살린 실행이 바깥 앱
         # 명부를 지을 때 공개키가 없으면 외부 확장의 봉투를 **한 번도** 검증할 수 없다 (C13 E6).
-        # PC 실행기는 공개키를 제 저장소에 들고 있어 이 자리가 비어도 괜찮다 (C4).
+        # 실행기는 공개키를 제 저장소에 들고 있어 이 자리가 비어도 괜찮다 (C4).
         admin_keys=signing.admin_keys(store),
         heartbeat_interval_s=heartbeat_interval_s,
         server_time=now_iso(),
@@ -234,6 +234,9 @@ def heartbeat(
 
     # 배치 결정은 **한 주기만 올라온다** — 흘려보내면 「왜 설치가 안 됐나」가 남지 않는다 (C4·C12).
     deployments.remember_results(store, host_id=runner_id, results=request.deployment_results)
+    # 검사·짓기의 결과도 같은 결이다 (C17, ADR-0146) — **작업이 아니라** 한 주기만 올라온다.
+    design_work.remember_checks(store, request.check_results)
+    design_work.remember_builds(store, request.build_results)
 
     paused = bool(found["paused"])
     # 재시작을 요청해 두었으면 **작업을 싣지 않는다** (ADR-0117) — 곧 끝날 프로세스다.
@@ -243,6 +246,12 @@ def heartbeat(
     dispatch, cancels = jobs.server_heartbeat(
         store, runner_id=runner_id, request=request, paused=paused or restart
     )
+    # 작업공간의 검사·짓기 지시 (C17) — **일시 중지·재시작 중에는 보내지 않는다** (곧 끝날
+    # 프로세스이고, 못 받은 지시는 한도를 넘기면 다시 내려간다).
+    checks = [] if paused or restart else design_work.pending_checks(store)
+    builds = [] if paused or restart else design_work.pending_builds(store)
+    design_work.checks_went_down(store, checks)
+    design_work.builds_went_down(store, builds)
     return ServerRunnerHeartbeatResponse(
         server_time=now_iso(),
         next_heartbeat_s=heartbeat_interval_s,
@@ -254,12 +263,14 @@ def heartbeat(
         admin_keys=signing.admin_keys(store),
         jobs=dispatch,
         cancel_jobs=cancels,
+        checks=checks,
+        builds=builds,
         # 답이 정해진 결재 (C6) — **C4와 같은 함수**다. 결재 창구는 Center만이다 (C12).
         approvals=approvals.heartbeat(store, host_id=runner_id, acks=request.approval_acks),
         # 받을 곳이 이 실행기인 메시지 (C12 §메시지) — **ack가 올 때까지 매번 다시 싣는다**.
         messages=messages.heartbeat(store, runner_id=runner_id, acks=request.message_acks),
-        # 끝난 PC 위임의 결과 (C12 §PC 위임, ADR-0062) — 메시지와 같은 결이다: **ack가 올
-        # 때까지 다시 싣고**, 받았다는 ack가 오면 **값을 바로 지운다**.
+        # 맡긴 것의 끝난 결과 (C12 §맡기기) — 메시지와 같은 결이다: **ack가 올 때까지 다시
+        # 싣고**, 받았다는 ack가 오면 **값을 바로 지운다**.
         delegations=_delegations(store, runner_id=runner_id, acks=request.delegation_acks),
         paused=paused,
         rotated_key=enrollments.rotation_for(store, key, host_id=runner_id),
@@ -270,7 +281,7 @@ def heartbeat(
 
 
 def _delegations(store: Store, *, runner_id: str, acks: list[Any]) -> list[Any]:
-    """내려줄 위임 결과 — **ack를 먼저 적는다** (그러면 받은 것은 이번에 다시 내려가지 않는다).
+    """내려줄 맡기기 결과 — **ack를 먼저 적는다** (그러면 받은 것은 이번에 다시 내려가지 않는다).
 
     `delegations.py`를 **함수 안에서** 들여온다 — 그 모듈이 이 모듈의 `id_for_key`를 쓰므로
     위에서 import하면 순환이다 (결재·메시지와 같은 짜임).
@@ -278,13 +289,10 @@ def _delegations(store: Store, *, runner_id: str, acks: list[Any]) -> list[Any]:
     from bpm.center.api import delegations  # noqa: PLC0415 — 순환 import를 피한다
 
     delegations.apply_acks(store, runner_id=runner_id, acks=acks)
-    # **못 받은 값도 언젠가는 지운다** (ADR-0062 §4) — ack가 영영 오지 않는 것이 있다. C6
-    # 결재의 `purge_values`가 하트비트에서 돌듯 여기서 돈다 (따로 도는 청소기를 두지 않는다).
+    # **못 받은 값도 언젠가는 지운다** — ack가 영영 오지 않는 것이 있다. C6 결재의
+    # `purge_values`가 하트비트에서 돌듯 여기서 돈다 (따로 도는 청소기를 두지 않는다).
     delegations.purge_values(store)
     return [one.to_json_dict() for one in delegations.pending_for(store, runner_id)]
-
-
-# ─────────────────────────── 운영 API (CON-12) ───────────────────────────
 
 
 def _online(last_seen: Any, *, now: datetime) -> bool:
@@ -444,7 +452,7 @@ def mark_lost(store: Store, runner_id: str) -> dict[str, Any]:
 
 @router.post("/register")
 async def post_register(request: Request) -> Any:
-    from bpm.center.api.bot_ui import _json  # noqa: PLC0415 — 본문 읽기는 한 자리다
+    from bpm.center.api.body import read_json as _json  # noqa: PLC0415 — 본문 읽기는 한 자리다
 
     store: Store = request.app.state.store
     found: Caller = request.app.state.authenticate(request)
@@ -456,7 +464,7 @@ async def post_register(request: Request) -> Any:
 
 @router.post("/heartbeat")
 async def post_heartbeat(request: Request) -> Any:
-    from bpm.center.api.bot_ui import _json  # noqa: PLC0415 — 위와 같다
+    from bpm.center.api.body import read_json as _json  # noqa: PLC0415 — 위와 같다
 
     store: Store = request.app.state.store
     found: Caller = request.app.state.authenticate(request)

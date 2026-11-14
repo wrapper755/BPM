@@ -1,0 +1,94 @@
+{
+  "$id": "urn:bpm:contracts:c17-test-run-info",
+  "additionalProperties": true,
+  "description": "시험 실행 하나 — 상태·판정·로그·노드 색·변수 (CON-20 「시험 실행」).",
+  "properties": {
+    "case": {
+      "default": "",
+      "title": "Case",
+      "type": "string"
+    },
+    "detail": {
+      "default": "",
+      "title": "Detail",
+      "type": "string"
+    },
+    "learned": {
+      "default": 0,
+      "title": "Learned",
+      "type": "integer"
+    },
+    "log": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Log",
+      "type": "array"
+    },
+    "mode": {
+      "default": "autonomous",
+      "title": "Mode",
+      "type": "string"
+    },
+    "node_states": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Node States",
+      "type": "object"
+    },
+    "requested_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Requested At"
+    },
+    "requested_by": {
+      "default": "",
+      "title": "Requested By",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "state": {
+      "title": "State",
+      "type": "string"
+    },
+    "variables": {
+      "additionalProperties": true,
+      "title": "Variables",
+      "type": "object"
+    },
+    "verdict": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Verdict"
+    },
+    "workspace_id": {
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "workspace_id",
+    "state"
+  ],
+  "title": "TrialInfo",
+  "type": "object"
+}

@@ -1,13 +1,9 @@
 """서버 실행기가 확장을 꽂는 자리 (C13, ADR-0064).
 
-**실행 위치를 호스트가 쥔다** — `run_locations`에 `server`를 적지 않은 태스크 종류는 기여를 내지
-않으므로, 그런 BPM 프로세스는 사전 점검이 `task_types_wrong_location`으로 **시작 전에** 막는다
-(`core.preflight`). 적어 둔 것만 서버에서 돈다.
-
 확장에게 가는 것은 셋이다 — 자기 설정 칸(`scope: server_runner`인 것만, **환경변수로**),
 Center 주소(`center.url`), 비밀(`call_token`은 이 실행기의 Center API 키, 나머지는 그 확장의 비밀
 칸 — ADR-0102). **화면이 없어 설정 파일이
-없으므로**(`docs/04-setup.md` §6) 설정은 환경변수뿐이고 이름 규칙은 **PC 실행기의 것과 같다**.
+없으므로**(`docs/04-setup.md` §6) 설정은 환경변수뿐이다.
 """
 
 from __future__ import annotations
@@ -19,18 +15,18 @@ from typing import Any
 
 from bpm.contracts.extension import CALL_TOKEN_SECRET, CENTER_URL_SETTING, SCOPE_SERVER_RUNNER
 from bpm.core.extensions import ExtensionHost, HostTasks, load_host
-from bpm.extension_api import HOST_SERVER_RUNNER, RUN_LOCATION_SERVER, ExtensionContext
+from bpm.extension_api import HOST_SERVER_RUNNER, ExtensionContext
 from bpm.server_runner.credentials import Credentials, extension_config_env
 
 
 def load(*, host: ExtensionHost | None = None) -> ExtensionHost:
-    """설치된 확장을 읽은 호스트 하나 — **실행 위치를 쥔다** (ADR-0064).
+    """설치된 확장을 읽은 호스트 하나.
 
-    **꺼 둔 확장이 없다** (`off`가 비어 있다) — 끄는 자리는 사람이 누르는 화면이고(BUI-11·STU-15,
-    ADR-0043) 서버에는 그 화면이 없다. 운영자가 가진 손잡이는 배포다. 그래서 「꺼짐」 점검
-    (`extension_turned_off`)은 서버에서 뜨지 않는다.
+    **꺼 둔 확장이 없다** (`off`가 비어 있다) — 끄는 자리는 사람이 누르는 화면이었고 서버에는
+    그 화면이 없다. 운영자가 가진 손잡이는 배포다. 그래서 「꺼짐」 점검
+    (`extension_turned_off`)은 뜨지 않는다.
     """
-    return host if host is not None else load_host(run_location=RUN_LOCATION_SERVER)
+    return host if host is not None else load_host()
 
 
 @dataclass(frozen=True)

@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { Route } from "next";
 import type { ReactNode } from "react";
 import { Button, EmptyState, ErrorBanner, StatusBadge } from "@bpm/ui";
-import type { BotUiInfo } from "@bpm/api-types/c5-bot-ui-info";
 import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
@@ -19,22 +17,20 @@ import {
   SCAN,
   STATUS_FILTERS,
   compareVersions,
-  deployedPcs,
+  deployedRunners,
   filterGroups,
   percent,
-  placeOf,
   sortGroups,
   statusFilterOf,
   summarize,
   type BotRow,
   type GroupSort,
   type ProcessGroup,
-  type Place,
   type RunFields,
 } from "@/lib/summary";
 
 // 세는 일은 `lib/summary.ts`에 있다 (화면을 모르는 자리 — 시험이 그것을 잰다).
-export { NO_RUNS, SAMPLE, SCAN, deployedPcs, percent, summarize };
+export { NO_RUNS, SAMPLE, SCAN, deployedRunners, percent, summarize };
 export type { BotRow, RunFields };
 
 /**
@@ -50,12 +46,6 @@ export type { BotRow, RunFields };
  * 셈은 **끝난 실행**만 센다 — 도는 중인 실행의 셈 칸은 `null`이다 (C3: 요약은 받을 때 만든다).
  */
 
-
-/** 탭 — 실행 위치 (C1 `run_location`). 서버가 먼저다 (서버 우선, ADR-0016). */
-const TABS: Array<{ place: Place; label: string }> = [
-  { place: "server", label: "서버" },
-  { place: "pc", label: "데스크톱" },
-];
 
 
 /**
@@ -104,30 +94,27 @@ function Rate({ part, whole, token }: { part: number; whole: number; token: stri
 export default async function BotsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; q?: string; status?: string; sort?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; sort?: string }>;
 }) {
   const found = await session();
   if (!found) redirect("/login");
   const query = await searchParams;
-  const place: Place = query.tab === "pc" ? "pc" : "server";
   const status = statusFilterOf(query.status);
   const sort: GroupSort = query.sort === "name" ? "name" : "trouble";
 
   let rows: BotRow[] = [];
-  let pcs: BotUiInfo[] = [];
   let failure: string | null = null;
   try {
     // BPM 프로세스·배포·보고된 준비 상태는 **한 번에** 읽는다 (서로를 기다릴 일이 없다).
-    const [packages, botUis, deployments, companyNames, departmentNames, staffNames] = await Promise.all([
+    const [packages, runners, deployments, companyNames, departmentNames, staffNames] = await Promise.all([
       center.packages({ kind: "bpm_process" }),
-      center.botUis(),
+      center.serverRunners(),
       center.deployments({ active: true }),
       // 승인 창에 보일 회사·업무 자리의 **이름** (C16) — 못 읽으면 id로 보인다.
       center.companies().then(namesOf, () => ({}) as Record<string, string>),
       center.departments().then(namesOf, () => ({}) as Record<string, string>),
       center.staffList().then(namesOf, () => ({}) as Record<string, string>),
     ]);
-    pcs = botUis as BotUiInfo[];
 
     // 실행 요약은 **BPM 프로세스마다** 묻는다 — 한 번에 받아 오면 판이 많은 BPM 프로세스의 옛 판이 잘린다.
     const ids = [...new Set(packages.map((one) => one.id))];
@@ -139,8 +126,8 @@ export default async function BotsPage({
     rows = packages
       .map((one) => {
         const key = `${one.id}@${one.version}`;
-        const reported = (botUis as BotUiInfo[]).flatMap((pc) =>
-          (pc.readiness ?? []).filter(
+        const reported = runners.flatMap((runner) =>
+          (runner.readiness ?? []).filter(
             (ready) => ready.bpm_process_id === one.id && ready.version === one.version,
           ),
         );
@@ -150,20 +137,19 @@ export default async function BotsPage({
           version: one.version,
           name: one.name ?? null,
           status: one.status,
-          run_location: one.run_location ?? null,
           // `id`에 판이 붙어 온다 (C5 — `version` 칸이 따로 없다). 사유도 함께 보인다.
           missing: (one.missing_resources ?? []).map((gone) => `${gone.type} ${gone.id} (${gone.reason})`),
           blocked: unusable.length,
           blocked_codes: [
             ...new Set(unusable.flatMap((ready) => ready.blocked ?? [])),
           ],
-          ...deployedPcs(deployments as DeploymentInfo[], one.id, one.version),
+          ...deployedRunners(deployments as DeploymentInfo[], one.id, one.version),
           place_line: placeLine(
             one.company ? (companyNames[one.company] ?? one.company) : null,
             workPlaceLabel(one.place, { departments: departmentNames, staff: staffNames }),
           ),
           // **실행 요약은 제 칸만 덮는다** (`RunFields`) — 위에서 센 「실행 불가」·「배포된
-          // PC 실행기」가 살아 있어야 한다.
+          // 실행기」가 살아 있어야 한다.
           ...(counts.get(key) ?? NO_RUNS),
         } as BotRow;
       })
@@ -172,12 +158,6 @@ export default async function BotsPage({
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
   }
 
-  // 탭은 **실행 위치로** 가른다 — 그래서 카드에 「실행 위치」가 없다 (CON-02). 탭의 수는 BPM 프로세스 수다.
-  const counts = {
-    server: new Set(rows.filter((row) => placeOf(row.run_location) === "server").map((row) => row.id)).size,
-    pc: new Set(rows.filter((row) => placeOf(row.run_location) === "pc").map((row) => row.id)).size,
-  };
-  rows = rows.filter((row) => placeOf(row.run_location) === place);
   const notReady = rows.filter((row) => row.blocked > 0);
   const incomplete = rows.filter((row) => row.missing.length > 0);
   const groups = sortGroups(filterGroups(rows, { q: query.q, status }), sort);
@@ -189,26 +169,8 @@ export default async function BotsPage({
         <h1 className="text-h1 font-bold">프로세스</h1>
       </header>
 
-      <nav className="mb-4 flex flex-wrap gap-2" aria-label="실행 위치">
-        {TABS.map((one) => (
-          <Link
-            key={one.place}
-            href={`/bots?tab=${one.place}` as Route}
-            aria-current={place === one.place ? "page" : undefined}
-            className={
-              place === one.place
-                ? "rounded-md border border-transparent bg-primary-subtle px-3 py-1 text-body font-semibold text-primary"
-                : "rounded-md border border-border-default bg-bg-surface px-3 py-1 text-body text-text-secondary hover:bg-bg-subtle"
-            }
-          >
-            {one.label} ({counts[one.place]})
-          </Link>
-        ))}
-      </nav>
-
       {/* [F] 거르기 — GET 폼이라 JS 없이 돌고 주소에 남는다. */}
       <form className="filter-card mb-4 flex flex-wrap items-end gap-3" method="get">
-        <input type="hidden" name="tab" value={place} />
         <label className="flex flex-col gap-1 text-body-sm">
           이름
           <input
@@ -244,7 +206,7 @@ export default async function BotsPage({
           </select>
         </label>
         <Link
-          href={`/bots?tab=${place}` as Route}
+          href="/bots"
           className="ml-auto inline-flex h-9 items-center rounded-md px-3 text-body text-text-secondary hover:bg-bg-subtle"
         >
           초기화
@@ -258,7 +220,7 @@ export default async function BotsPage({
         <ErrorBanner message={failure} />
       ) : rows.length === 0 ? (
         <EmptyState
-          title={place === "server" ? "올라온 서버 프로세스가 없습니다." : "올라온 PC 프로세스가 없습니다."}
+          title="올라온 프로세스가 없습니다."
           hint="Studio에서 「Center로 올리기」로 올리세요."
         />
       ) : (
@@ -283,7 +245,7 @@ export default async function BotsPage({
           ) : (
             <ul className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3" aria-label="프로세스">
               {groups.map((group) => (
-                <ProcessCard key={group.id} group={group} place={place} admin={admin} />
+                <ProcessCard key={group.id} group={group} admin={admin} />
               ))}
             </ul>
           )}
@@ -303,15 +265,13 @@ export default async function BotsPage({
         </div>
       )}
 
-      {/* 서버 BPM 프로세스가 도는 곳 — 서버 실행기 목록·승인 대기·대기열 (옛 CON-12 목록). */}
-      {place === "server" ? (
-        <div className="mt-8">
-          <ServerRunners admin={found.mode === "admin"} />
-        </div>
-      ) : null}
+      {/* 실행이 도는 곳 — 서버 실행기 목록·승인 대기·대기열 (옛 CON-12 목록). */}
+      <div className="mt-8">
+        <ServerRunners admin={found.mode === "admin"} />
+      </div>
 
-      {/* [S] 「일정」 — 타이머로 시작하는 그 탭의 배포 (C5 §일정). 없으면 영역이 없다. */}
-      {failure ? null : <Schedules place={place} botUis={pcs} />}
+      {/* [S] 「일정」 — 타이머로 시작하는 배포 (C5 §일정). 없으면 영역이 없다. */}
+      {failure ? null : <Schedules />}
     </Shell>
   );
 }
@@ -341,7 +301,7 @@ function Metric({ label, title, children }: { label: string; title?: string; chi
 /** 승인 단추가 있는 상태 (`PackageActions`의 `asksFor`와 같다 — 철회는 끝이라 단추가 없다). */
 const ACTIONABLE = new Set(["candidate", "approved", "deprecated"]);
 
-function ProcessCard({ group, place, admin }: { group: ProcessGroup; place: Place; admin: boolean }) {
+function ProcessCard({ group, admin }: { group: ProcessGroup; admin: boolean }) {
   const { lead } = group;
   const blocked = group.troubled.filter((row) => row.blocked > 0);
   const missing = group.troubled.filter((row) => row.missing.length > 0);
@@ -386,12 +346,10 @@ function ProcessCard({ group, place, admin }: { group: ProcessGroup; place: Plac
             <span className="tabular-nums">{lead.sample}회</span>
           </Metric>
           <Metric label="최근 성공">{time(lead.last_success)}</Metric>
-          {place === "pc" ? (
-            // **건수가 아니라 PC 수**다 (ADR-0046). 건수는 툴팁에.
-            <Metric label="배포된 Bot" title={`살아 있는 배포 ${lead.deployments}건`}>
-              {lead.pcs === 0 ? NONE : <span className="tabular-nums">{lead.pcs}대</span>}
-            </Metric>
-          ) : null}
+          {/* **건수가 아니라 실행기 수**다. 건수는 툴팁에. */}
+          <Metric label="배포된 실행기" title={`살아 있는 배포 ${lead.deployments}건`}>
+            {lead.runners === 0 ? NONE : <span className="tabular-nums">{lead.runners}대</span>}
+          </Metric>
         </dl>
       )}
 

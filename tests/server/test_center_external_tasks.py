@@ -97,21 +97,21 @@ def new_key(center: TestClient, *, name: str, kind: str) -> str:
 
 
 def pc(center: TestClient, *, machine: str = "7" * 64) -> tuple[str, str]:
-    """등록된 PC 실행기 — `(bot_ui_id, 키)`."""
-    key = new_key(center, name="현장 1", kind="bot_ui")
+    """등록된 서버 실행기 — `(server_runner_id, 키)`."""
+    key = new_key(center, name="현장 1", kind="server_runner")
     made = center.post(
-        "/api/v1/bot-ui/register",
+        "/api/v1/server-runner/register",
         json={
             "schema": 1,
             "machine_id": machine,
             "name": "현장 1",
-            "os": "windows-11-23H2",
-            "versions": {"bot_ui": "0.1.0", "core": "0.1.0"},
+            "os": "ubuntu-24.04",
+            "versions": {"server_runner": "0.1.0", "core": "0.1.0"},
         },
         headers=bearer(key),
     )
     assert made.status_code < 400, made.text
-    return str(made.json()["bot_ui_id"]), key
+    return str(made.json()["server_runner_id"]), key
 
 
 def package_zip(*, bot: str, apps: list[str]) -> bytes:
@@ -121,8 +121,7 @@ def package_zip(*, bot: str, apps: list[str]) -> bytes:
         "id": bot,
         "version": VERSION,
         "name": bot,
-        "run_location": "pc",
-        "entry": "process/main.bpmn",
+                "entry": "process/main.bpmn",
         "process_id": "Proc_x",
         "requires": {"service_apps": [{"app_id": one, "operations": [OPERATION]} for one in apps]},
         "human": {},
@@ -144,7 +143,7 @@ def package_zip(*, bot: str, apps: list[str]) -> bytes:
     return made(json.dumps(manifest, ensure_ascii=False))
 
 
-def deployed(center: TestClient, bot_ui_id: str, *, bot: str = BOT, apps: list[str] | None = None) -> None:
+def deployed(center: TestClient, server_runner_id: str, *, bot: str = BOT, apps: list[str] | None = None) -> None:
     made = center.post(
         "/api/v1/packages",
         files={"file": ("p.zip", package_zip(bot=bot, apps=apps or [TOPIC]), "application/zip")},
@@ -153,7 +152,11 @@ def deployed(center: TestClient, bot_ui_id: str, *, bot: str = BOT, apps: list[s
     assert made.status_code in (200, 201), made.text
     approve_package(center, bot, VERSION)
     answer = deploy(
-        center, target={"type": "bot_ui", "id": bot_ui_id}, bpm_process_id=bot, version=VERSION, expect=None
+        center,
+        target={"type": "server_runner", "id": server_runner_id},
+        bpm_process_id=bot,
+        version=VERSION,
+        expect=None,
     )
     assert answer.status_code in (200, 201), answer.text
 
@@ -185,7 +188,7 @@ def task_body(**over: Any) -> dict[str, Any]:
         "operation": OPERATION,
         "mode": "deterministic",
         "idempotency": {"run_id": RUN, "node_id": "Task_submit", "node_instance": 1, "attempt": 1},
-        "caller": {"type": "bot_ui", "host": "현장 1", "bpm_process_id": BOT, "version": VERSION},
+        "caller": {"type": "server_runner", "host": "현장 1", "bpm_process_id": BOT, "version": VERSION},
         "input": {"order_id": "PO-101"},
         **over,
     }
@@ -208,8 +211,8 @@ def fetch(center: TestClient, token: str, **over: Any) -> dict[str, Any]:
 @pytest.fixture
 def field(center: TestClient) -> str:
     """그 토픽을 요구하는 BPM 프로세스가 배포된 PC의 키."""
-    bot_ui_id, key = pc(center)
-    deployed(center, bot_ui_id)
+    server_runner_id, key = pc(center)
+    deployed(center, server_runner_id)
     return key
 
 

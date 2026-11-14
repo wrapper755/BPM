@@ -3,9 +3,9 @@
 세 가지를 지킨다.
 
 1. **원문은 저장하지 않는다.** 해시만 두고, 발급 응답에 **한 번만** 원문을 싣는다 (CON-11).
-2. **키가 신원이다.** PC 실행기는 `bot_ui_id`를 보내지 않는다 — 키로 누구인지 정한다 (C4).
-3. **키는 처음 등록한 PC에 묶인다.** 다른 PC에서 같은 키를 쓰면 409 — 키가 새어도 다른
-   PC 실행기를 사칭할 수 없다. 운영자가 CON-11에서 묶음을 풀 수 있다.
+2. **키가 신원이다.** 실행기는 제 id를 보내지 않는다 — 키로 누구인지 정한다 (C4).
+3. **키는 처음 등록한 기계에 묶인다.** 다른 기계에서 같은 키를 쓰면 409 — 키가 새어도 다른
+   실행기를 사칭할 수 없다. 운영자가 묶음을 풀 수 있다.
 """
 
 from __future__ import annotations
@@ -26,10 +26,10 @@ from bpm.contracts.center_keys import (
     prefix_of,
 )
 
-#: 키 종류 (C7). Center는 이 넷만 발급한다.
-KEY_TYPES = ("bot_ui", "studio", "server_runner", "integration")
-#: 키 묶음을 가지는 종류 — PC 하나에 묶인다.
-BOUND_TYPES = ("bot_ui", "server_runner")
+#: 키 종류 (C7). Center는 이 셋만 발급한다.
+KEY_TYPES = ("studio", "server_runner", "integration")
+#: 키 묶음을 가지는 종류 — 기계 하나에 묶인다.
+BOUND_TYPES = ("server_runner",)
 #: 기본 만료 (C7 — 1년).
 DEFAULT_EXPIRY_DAYS = 365
 
@@ -71,7 +71,7 @@ class KeyRecord:
     public_key: str | None = None
     #: 회전으로 갈아 줄 새 키 (새 키로 첫 요청이 오면 이 키를 폐기한다).
     successor_id: str | None = None
-    #: 그 장비가 속한 회사 (C16 — Studio·PC 실행기 키에만 있다. 등록을 승인할 때 정한다).
+    #: 그 장비가 속한 회사 (C16 — Studio·실행기 키에만 있다. 등록을 승인할 때 정한다).
     company: str | None = None
 
     def state(self, *, now: str) -> str:
@@ -215,7 +215,7 @@ def revoke(store: Store, key_id: str) -> bool:
 def purge(store: Store, key_id: str) -> bool:
     """폐기된 키의 행을 지운다 (CON-11 「삭제」, [ADR-0095]). **폐기된 것만** — 아니면 `False`.
 
-    키 행을 가리키는 것(PC 실행기·서버 실행기 행의 `key_id`, 실행 기록·결재의 `owner_key_id`,
+    키 행을 가리키는 것(서버 실행기 행의 `key_id`, 실행 기록·결재의 `owner_key_id`,
     회전의 `successor_id`)은 그대로 둔다 — 모두 키 행이 없을 때를 다룬다. 묶였던 기계 자리는
     「묶음 풀기」처럼 놓인 자리가 된다 (`host_keys._adopt_or_refuse`).
     """

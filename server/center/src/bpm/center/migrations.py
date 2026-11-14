@@ -324,7 +324,7 @@ MIGRATIONS: tuple[Step, ...] = (
             "CREATE TABLE process_places ("
             " bpm_process_id TEXT PRIMARY KEY, company TEXT NOT NULL, scope TEXT NOT NULL,"
             " department TEXT, staff TEXT, updated_at TEXT NOT NULL, updated_by TEXT NOT NULL)",
-            # 회사 소유: 패키지(올린 Studio의 회사)·PC 실행기·Studio 키·등록 요청. 서버 실행기는 공용이라 없다.
+            # 회사 소유: 패키지(올린 Studio의 회사)·서버 실행기·Studio 키·등록 요청. 서버 실행기는 공용이라 없다.
             "ALTER TABLE packages ADD COLUMN company TEXT",
             "ALTER TABLE bot_uis ADD COLUMN company TEXT",
             "ALTER TABLE center_keys ADD COLUMN company TEXT",
@@ -381,6 +381,76 @@ MIGRATIONS: tuple[Step, ...] = (
         (
             "UPDATE extensions SET source = 'consumer' WHERE source = 'worker'",
             "ALTER TABLE external_tasks ADD COLUMN definition_version TEXT",
+        ),
+    ),
+    Step(
+        28,
+        "PC 실행기를 걷었다 — 명부를 지우고 맡기기의 대상 열을 실행기로 바꾼다 (ADR-0144)",
+        (
+            "ALTER TABLE delegations RENAME COLUMN bot_ui_id TO target_runner_id",
+            "ALTER TABLE delegations RENAME COLUMN pc_run_id TO child_run_id",
+            "DROP TABLE IF EXISTS bot_uis",
+        ),
+    ),
+    Step(
+        29,
+        "확인도 결재함으로 온다 — 어느 층인가를 적어 둔다 (C6 `layer`, ADR-0144)",
+        ("ALTER TABLE approvals ADD COLUMN layer TEXT NOT NULL DEFAULT 'approval'",),
+    ),
+    Step(
+        30,
+        "작업공간 — 설계가 콘솔에서 일어난다 (C17, ADR-0143). **파일은 디스크**이고 여기에는 "
+        "Center의 사실만 둔다 (누구 회사·누가 언제 고쳤나)",
+        (
+            "CREATE TABLE workspaces ("
+            " id TEXT PRIMARY KEY, company TEXT NOT NULL,"
+            " created_at TEXT NOT NULL, created_by TEXT NOT NULL,"
+            " updated_at TEXT NOT NULL, updated_by TEXT NOT NULL)",
+            "CREATE INDEX workspaces_company ON workspaces (company)",
+            # 파일마다의 기록 — `updated_by`를 파일 시스템이 모른다. `revision`은 내용 해시다.
+            "CREATE TABLE workspace_files ("
+            " workspace_id TEXT NOT NULL REFERENCES workspaces (id),"
+            " path TEXT NOT NULL, revision TEXT NOT NULL, size_bytes INTEGER NOT NULL,"
+            " updated_at TEXT NOT NULL, updated_by TEXT NOT NULL,"
+            " PRIMARY KEY (workspace_id, path))",
+        ),
+    ),
+    Step(
+        31,
+        "시험 실행 — 작업에 **시험 칸 하나**(있으면 시험 작업이다, 깃발을 따로 두지 않는다)와 "
+        "그 실행의 진행·판정 (C17, ADR-0146)",
+        (
+            # C4 `JobDispatch.test`를 그대로 담는다 — NULL이면 운영 작업이다.
+            "ALTER TABLE jobs ADD COLUMN test_json TEXT",
+            "CREATE TABLE test_runs ("
+            " run_id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, job_id TEXT,"
+            " revision TEXT NOT NULL, case_name TEXT, mode TEXT NOT NULL,"
+            " state TEXT NOT NULL, verdict TEXT, detail TEXT,"
+            # 업무 값이다 (계약 README 원칙 6의 예외) — 목록에는 키만 보이고 지울 때 함께 지운다.
+            " log_json TEXT, node_states_json TEXT, variables_json TEXT,"
+            " learned INTEGER NOT NULL DEFAULT 0,"
+            " requested_by TEXT NOT NULL, requested_at TEXT NOT NULL, updated_at TEXT NOT NULL)",
+            "CREATE INDEX test_runs_workspace ON test_runs (workspace_id, requested_at)",
+        ),
+    ),
+    Step(
+        32,
+        "실행 전 검사와 배포 후보 짓기 — **작업이 아니다**(하트비트의 작은 칸). 검사는 그때 본 "
+        "묶음과 함께 담아 두어 바뀐 것이 없으면 다시 묻지 않는다 (C17, ADR-0146)",
+        (
+            "CREATE TABLE workspace_checks ("
+            " check_id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, revision TEXT NOT NULL,"
+            " state TEXT NOT NULL, violations_json TEXT, reason TEXT,"
+            " requested_by TEXT NOT NULL, requested_at TEXT NOT NULL, checked_at TEXT,"
+            " dispatched_at TEXT)",
+            # **묶음마다 하나만** 담아 둔다 — 캐시의 열쇠다.
+            "CREATE UNIQUE INDEX workspace_checks_revision ON workspace_checks (workspace_id, revision)",
+            "CREATE TABLE workspace_builds ("
+            " build_id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, revision TEXT NOT NULL,"
+            " kind TEXT NOT NULL, state TEXT NOT NULL, package_id TEXT, version TEXT, reason TEXT,"
+            " requested_by TEXT NOT NULL, requested_at TEXT NOT NULL, updated_at TEXT NOT NULL,"
+            " dispatched_at TEXT)",
+            "CREATE INDEX workspace_builds_workspace ON workspace_builds (workspace_id, requested_at)",
         ),
     ),
 )

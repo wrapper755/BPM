@@ -2,7 +2,7 @@
 
 | 경로 | 인증 |
 | --- | --- |
-| `POST /external-tasks`, `GET·ack·cancel …/{task_id}` | PC 실행기·서버 실행기·Studio의 Center API 키 |
+| `POST /external-tasks`, `GET·ack·cancel …/{task_id}` | 서버 실행기·Studio의 Center API 키 |
 | `POST /consumers/fetch`, `…/tasks/{id}/complete·fail·extend`, `PUT·GET …/self/…` | 일꾼 토큰 |
 | `GET /consumers`, `GET /external-topics`, `GET /external-topics/{topic}/operations` | 콘솔 토큰 |
 
@@ -37,7 +37,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from bpm.center import enrollments, keys
-from bpm.center.api import bot_ui, deployments, resources, server_runner
+from bpm.center.api import deployments, resources, server_runner
 from bpm.center.auth import Caller, bearer, require_console
 from bpm.center.errors import ApiError
 from bpm.center.responses import Utf8JSONResponse
@@ -102,11 +102,11 @@ CONSOLE_SOURCE = "console"
 
 router = APIRouter(prefix="/api/v1", tags=["external-tasks"])
 
-#: 부를 수 있는 Center API 키 종류 (C15 §전송). 호출 토큰은 조각 2에서 PC 실행기 키의 신원으로 얹힌다.
-POSTER_KEY_TYPES = frozenset({"bot_ui", "server_runner", "studio"})
+#: 부를 수 있는 Center API 키 종류 (C15 §전송). 호출 토큰은 조각 2에서 실행기 키의 신원으로 얹힌다.
+POSTER_KEY_TYPES = frozenset({"server_runner", "studio"})
 STUDIO = "studio"
 #: 키 종류 → 등록 표 (소유·배포 대조의 대상). Studio는 표가 없다 (C5 §Studio 등록 요청과 승인).
-_HOST_IDS = {"bot_ui": bot_ui.id_for_key, "server_runner": server_runner.id_for_key}
+_HOST_IDS = {"server_runner": server_runner.id_for_key}
 #: 한 번 기다릴 때 깨어나 다시 보는 간격 (초) — 잠금이 풀리거나 기한이 지나는 것은 종이 울리지 않는다.
 _RECHECK_S = 1.0
 #: 본문 한도 — 값 한도(1 MB) 위에 칸 몇 개가 더 붙는다.
@@ -137,7 +137,7 @@ def _size(value: Any) -> int:
 
 @dataclass(frozen=True)
 class Poster:
-    """올린 쪽. `host_id`는 PC 실행기·서버 실행기의 등록 id이고 Studio는 `None`이다."""
+    """올린 쪽. `host_id`는 서버 실행기의 등록 id이고 Studio는 `None`이다."""
 
     key_id: str
     kind: str
@@ -145,9 +145,9 @@ class Poster:
 
 
 def poster_of(store: Store, found: Caller) -> Poster:
-    """올릴 수 있는 쪽인가 (C15 §전송). 등록되지 않은 PC 실행기·실행기는 409 `not_registered`.
+    """올릴 수 있는 쪽인가 (C15 §전송). 등록되지 않은 실행기는 409 `not_registered`.
 
-    **호출 토큰은 그것을 청한 쪽으로 본다** — 소유(C3)·배포 대조가 그 PC 실행기(또는 Studio)의 키로 돈다.
+    **호출 토큰은 그것을 청한 쪽으로 본다** — 소유(C3)·배포 대조가 그 Studio의 키로 돈다.
     """
     if found.key is not None and found.key.type == CALL_TOKEN:
         bound = found.key.bound_to
@@ -156,14 +156,9 @@ def poster_of(store: Store, found: Caller) -> Poster:
             if parent is None or parent.state(now=now_iso()) != "active":
                 raise ApiError(409, "not_registered", "호출 토큰을 청한 Studio 키가 없다")
             return Poster(key_id=parent.key_id, kind=STUDIO, host_id=None)
-        row = (
-            store.row("SELECT key_id FROM bot_uis WHERE bot_ui_id = ?", (bound.id,)) if bound is not None else None
-        )
-        if bound is None or row is None or not row["key_id"]:
-            raise ApiError(409, "not_registered", "호출 토큰을 청한 PC 실행기가 없다")
-        return Poster(key_id=str(row["key_id"]), kind="bot_ui", host_id=bound.id)
+        raise ApiError(409, "not_registered", "호출 토큰을 청한 Studio 키가 없다")
     if found.key is None or found.key.type not in POSTER_KEY_TYPES:
-        raise ApiError(403, "wrong_key_type", "외부 작업은 PC 실행기·서버 실행기·Studio의 Center API 키로 올린다")
+        raise ApiError(403, "wrong_key_type", "외부 작업은 서버 실행기·Studio의 Center API 키로 올린다")
     kind = found.key.type
     if kind == STUDIO:
         return Poster(key_id=found.key.key_id, kind=kind, host_id=None)
@@ -174,16 +169,10 @@ def poster_of(store: Store, found: Caller) -> Poster:
 
 
 def issue_call_token(store: Store, found: Caller, *, now: str | None = None) -> CallToken:
-    """`POST /call-tokens` — PC 실행기·Studio만, 24시간 (C15 「정한 것」). 지난 토큰은 이때 지운다."""
-    if found.key is None or found.key.type not in ("bot_ui", STUDIO):
-        raise ApiError(403, "wrong_key_type", "호출 토큰은 PC 실행기·Studio의 Center API 키로 청한다")
-    if found.key.type == STUDIO:
-        bound = BoundTo(type=STUDIO, id=found.key.key_id, name=found.key.name)
-    else:
-        bot_ui_id = bot_ui.id_for_key(store, found.key.key_id)
-        if bot_ui_id is None:
-            raise ApiError(409, "not_registered", "등록되지 않은 Center API 키다")
-        bound = BoundTo(type="bot_ui", id=bot_ui_id, name=found.key.name)
+    """`POST /call-tokens` — Studio만, 24시간 (C15 「정한 것」). 지난 토큰은 이때 지운다."""
+    if found.key is None or found.key.type != STUDIO:
+        raise ApiError(403, "wrong_key_type", "호출 토큰은 Studio의 Center API 키로 청한다")
+    bound = BoundTo(type=STUDIO, id=found.key.key_id, name=found.key.name)
     at = now or now_iso()
     with store.tx() as cur:
         cur.execute(

@@ -10,7 +10,7 @@
 | C1 | `manifest` | 패키지 매니페스트 + 검사 규칙 `validate()` |
 | C2 | `hashing`, `signing` | `canonical_json`·`content_hash`, 서명 봉투 + 검증 규칙 V1~V8 |
 | C3 | `events` | 실행 이벤트 (`kind`는 열린 문자열) |
-| C4 | `bot_ui` | PC 실행기 등록·하트비트 |
+| C4 | `runner` | 실행기 ↔ Center 공통 — 작업·ack·배포 결과·준비 상태·결재 전달 |
 | C5 | `center_api`, `accounts` | 패키지·배포·작업 + 배포·작업 검사, 관리자 계정·로그인 세션 |
 | C6 | `approvals` | 결재 요청·답 + 폼으로 답 검증 |
 | C7 | `resources`, `center_keys` | 리소스 목록 + 누락 검사, Center API 키 |
@@ -21,6 +21,7 @@
 | C14 | `dmn` | 규칙 태스크가 쓰는 DMN 결정표 읽기·판정 |
 | C14 | `replay` | 재생 명세 (`memory/specs.json`, C1 패키지 구성) |
 | C16 | `organization` | 회사 > 부서 > 직원, 업무 자리 + 자리 판정 (초안 → 합의, ADR-0125) |
+| C17 | `workspace` | 작업공간·파일·시험 실행·검사·짓기 + 경로 규칙·판정 글 (초안, ADR-0143·0146) |
 
 검사 함수가 계약마다 있어서, 이름이 겹치는 것은 루트에서 계약을 붙여 다시 내보낸다
 (`validate_approval_create`, `validate_center_key_create`). 모듈 안의 이름은 계약 문서 그대로다.
@@ -59,26 +60,6 @@ from bpm.contracts.approvals import (
     validate_answer,
 )
 from bpm.contracts.approvals import validate_create as validate_approval_create
-from bpm.contracts.bot_ui import (
-    ApprovalAck,
-    ApprovalDispatch,
-    BuildStamp,
-    CurrentRun,
-    DeploymentResult,
-    EnrollRequest,
-    ExtensionState,
-    HeartbeatRequest,
-    HeartbeatResponse,
-    JobAck,
-    JobDispatch,
-    Queue,
-    QueueItem,
-    Readiness,
-    RegisterRequest,
-    RegisterResponse,
-    Runtimes,
-    Versions,
-)
 from bpm.contracts.bpmn_ext import (
     BUILTIN_VARS,
     INPUT_SOURCE_CALLER,
@@ -122,8 +103,6 @@ from bpm.contracts.center_api import (
     DEPLOYMENT_REFUSAL_STATUS,
     ENVELOPE_REFUSAL_STATUS,
     SERVER_RUNNER_AVAILABLE,
-    BotUiInfo,
-    BotUiKey,
     DependentInfo,
     DeploymentInfo,
     DeploymentRequest,
@@ -188,7 +167,6 @@ from bpm.contracts.extension import (
     CALL_TOKEN_SECRET,
     CENTER_URL_SETTING,
     RESERVED_CONFIG_PREFIXES,
-    SCOPE_BOT_UI,
     SCOPE_STUDIO,
     STORAGE_DIR_SETTING,
     AdapterAuth,
@@ -308,9 +286,20 @@ from bpm.contracts.resources import (
     blocking_at_deploy,
     missing,
 )
+from bpm.contracts.runner import (
+    ApprovalAck,
+    ApprovalDispatch,
+    BuildStamp,
+    DeploymentResult,
+    ExtensionState,
+    JobAck,
+    JobDispatch,
+    Readiness,
+)
 from bpm.contracts.server_runner import DEFAULT_HEARTBEAT_S as RUNNER_HEARTBEAT_S
 from bpm.contracts.server_runner import (
     DEFAULT_MAX_CONCURRENCY,
+    DEFAULT_MAX_TEST_CONCURRENCY,
     DEFAULT_PER_BOT_CONCURRENCY,
     KNOWN_DELEGATION_STATES,
     KNOWN_MESSAGE_ACK_REASONS,
@@ -385,8 +374,52 @@ from bpm.contracts.signing import (
     verify_target,
     verify_time,
 )
+from bpm.contracts.workspace import (
+    ALLOWED_SUFFIXES,
+    KNOWN_BUILD_KINDS,
+    KNOWN_BUILD_STATES,
+    KNOWN_NODE_STATES,
+    KNOWN_TEST_MODES,
+    KNOWN_TEST_RUN_STATES,
+    KNOWN_TEST_VERDICTS,
+    MODE_AUTONOMOUS,
+    MODE_DETERMINISTIC,
+    PROCESS_JSON,
+    READ_ONLY_DIRS,
+    TEST_RUN_PREFIX,
+    VERDICT_ERROR,
+    VERDICT_FAIL,
+    VERDICT_NO_EXPECT,
+    VERDICT_PASS,
+    VERDICT_STOPPED,
+    WORKSPACE_ID_PATTERN,
+    BuildDispatch,
+    BuildInfo,
+    BuildRequest,
+    BuildResult,
+    CheckDispatch,
+    CheckResponse,
+    CheckResult,
+    FileInfo,
+    LibInstallRequest,
+    TrialCreateRequest,
+    TrialInfo,
+    TrialReport,
+    TrialTarget,
+    WorkspaceCreateRequest,
+    WorkspaceInfo,
+    WorkspaceUpdateRequest,
+    check_file_path,
+)
 
 __all__ = [
+    "DelegationResult",
+    "DelegationResponse",
+    "DelegationRequest",
+    "DelegationAck",
+    "WAITING_DELEGATION",
+    "KNOWN_DELEGATION_STATES",
+    "Delegate",
     "CompanyInfo",
     "CompanyRequest",
     "DepartmentInfo",
@@ -422,7 +455,6 @@ __all__ = [
     "ExternalTaskInfo",
     "ScheduleInfo",
     "StudioEnrollRequest",
-    "EnrollRequest",
     "EnrollStatus",
     "EnrollmentApproveRequest",
     "EnrollmentDecision",
@@ -486,21 +518,12 @@ __all__ = [
     # C4 (`AdminKey`는 C2가 소유한다)
     "ApprovalAck",
     "ApprovalDispatch",
-    "CurrentRun",
+    "BuildStamp",
     "DeploymentResult",
     "ExtensionState",
-    "HeartbeatRequest",
-    "HeartbeatResponse",
     "JobAck",
     "JobDispatch",
-    "Queue",
-    "QueueItem",
     "Readiness",
-    "RegisterRequest",
-    "RegisterResponse",
-    "Runtimes",
-    "Versions",
-    "BuildStamp",
     # C5
     "AccountCreateRequest",
     "AccountInfo",
@@ -515,8 +538,6 @@ __all__ = [
     "DEPLOYMENT_REFUSAL_STATUS",
     "ENVELOPE_REFUSAL_STATUS",
     "SERVER_RUNNER_AVAILABLE",
-    "BotUiInfo",
-    "BotUiKey",
     "DependentInfo",
     "NodeLabel",
     "DeploymentInfo",
@@ -592,8 +613,8 @@ __all__ = [
     "resolve_mode",
     # C12 (ack·배포·준비 모양은 C4가, `AdminKey`는 C2가 소유한다)
     "DEFAULT_MAX_CONCURRENCY",
+    "DEFAULT_MAX_TEST_CONCURRENCY",
     "DEFAULT_PER_BOT_CONCURRENCY",
-    "KNOWN_DELEGATION_STATES",
     "KNOWN_MESSAGE_ACK_REASONS",
     "KNOWN_MESSAGE_TARGETS",
     "KNOWN_RESTORE_REFUSALS",
@@ -601,12 +622,7 @@ __all__ = [
     "KNOWN_WAITING_FOR",
     "OFFLINE_AFTER_S",
     "RUNNER_HEARTBEAT_S",
-    "WAITING_DELEGATION",
     "WAITING_REQUIRES",
-    "DelegationAck",
-    "DelegationRequest",
-    "DelegationResponse",
-    "DelegationResult",
     "Capacity",
     "MessageAck",
     "MessageDispatch",
@@ -629,7 +645,6 @@ __all__ = [
     "validate_runner_heartbeat",
     # C13 (`ExtensionClaim`은 C2가 소유한다)
     "RESERVED_CONFIG_PREFIXES",
-    "SCOPE_BOT_UI",
     "SCOPE_STUDIO",
     "CALL_TOKEN_SECRET",
     "CENTER_URL_SETTING",
@@ -683,7 +698,6 @@ __all__ = [
     "Decision",
     "DecisionInput",
     "DecisionIo",
-    "Delegate",
     "DecisionOutput",
     "DecisionRule",
     "Defaults",
@@ -716,4 +730,40 @@ __all__ = [
     "read_process",
     "server_blockers",
     "validate_bpmn",
+    # C17 (작업공간)
+    "ALLOWED_SUFFIXES",
+    "KNOWN_BUILD_KINDS",
+    "KNOWN_BUILD_STATES",
+    "KNOWN_NODE_STATES",
+    "KNOWN_TEST_MODES",
+    "KNOWN_TEST_RUN_STATES",
+    "KNOWN_TEST_VERDICTS",
+    "MODE_AUTONOMOUS",
+    "MODE_DETERMINISTIC",
+    "PROCESS_JSON",
+    "READ_ONLY_DIRS",
+    "TEST_RUN_PREFIX",
+    "VERDICT_ERROR",
+    "VERDICT_FAIL",
+    "VERDICT_NO_EXPECT",
+    "VERDICT_PASS",
+    "VERDICT_STOPPED",
+    "WORKSPACE_ID_PATTERN",
+    "BuildDispatch",
+    "BuildInfo",
+    "BuildRequest",
+    "BuildResult",
+    "CheckDispatch",
+    "CheckResponse",
+    "CheckResult",
+    "FileInfo",
+    "LibInstallRequest",
+    "TrialCreateRequest",
+    "TrialInfo",
+    "TrialReport",
+    "TrialTarget",
+    "WorkspaceCreateRequest",
+    "WorkspaceInfo",
+    "WorkspaceUpdateRequest",
+    "check_file_path",
 ]

@@ -173,7 +173,7 @@ DEMO: dict[str, Any] = {
         "configuration": [
             {"key": "region", "label": "지역", "scope": "studio", "schema": {"type": "string"}},
             {"key": "token", "label": "개발용 토큰", "scope": "studio", "secret": True},
-            {"key": "elsewhere", "label": "현장 칸", "scope": "bot_ui"},
+            {"key": "elsewhere", "label": "서버 칸", "scope": "server_runner"},
         ]
     },
 }
@@ -190,7 +190,7 @@ def demo_extensions(**kw: Any) -> Extensions:
 def test_extension_fields_come_from_the_contribution(qt: Any, settings: Settings) -> None:
     """창은 어느 확장인지 모른다 — `scope: studio` 칸만 그 확장의 이름 아래 짓는다."""
     found = dialog(settings, demo_extensions(), Vault())
-    assert set(found.extension_fields) == {("demo-ext", "region"), ("demo-ext", "token")}, "bot_ui 칸은 없다"
+    assert set(found.extension_fields) == {("demo-ext", "region"), ("demo-ext", "token")}, "서버 실행기 칸은 없다"
     _, secret = found.extension_fields[("demo-ext", "token")]
     from PySide6.QtWidgets import QLineEdit  # noqa: PLC0415
 
@@ -521,15 +521,16 @@ def test_studio_asks_center_for_a_call_token_and_keeps_it(monkeypatch: pytest.Mo
 
 
 def test_the_model_key_for_runs_comes_from_the_vault(monkeypatch: pytest.MonkeyPatch) -> None:
-    from bpm.studio import runner  # noqa: PLC0415
+    """모델 키는 **설정 파일에 없다** — Studio가 풀어 시험 실행 설정에 값으로 넣는다 (ADR-0143)."""
+    from bpm.studio.runner import run_settings  # noqa: PLC0415
 
     vault = Vault()
     vault.set_password("bpm-studio", "llm", "sk-stored")
     monkeypatch.delenv("BPM_STUDIO__LLM__API_KEY", raising=False)
     monkeypatch.setattr("bpm.studio.credentials.StudioCredentials._keyring", lambda self: vault)
-    assert runner._llm_key() == "sk-stored"
+    assert run_settings(Settings()).llm_api_key == "sk-stored"
     monkeypatch.setenv("BPM_STUDIO__LLM__API_KEY", "sk-env")
-    assert runner._llm_key() == "sk-env"
+    assert run_settings(Settings()).llm_api_key == "sk-env"
 
 
 def test_an_old_files_service_keys_are_not_read_and_drop_out_on_save(tmp_path: Path) -> None:

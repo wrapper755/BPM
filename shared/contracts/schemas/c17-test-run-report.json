@@ -1,0 +1,70 @@
+{
+  "$id": "urn:bpm:contracts:c17-test-run-report",
+  "additionalProperties": true,
+  "description": "실행기가 올리는 시험 실행의 **진행과 끝** — `PUT /workspaces/{id}/test-runs/{run_id}`.\n\n**하트비트에 싣지 않는다** — 로그가 길고(수백 줄) 하트비트는 작은 JSON이다. 검사·짓기와 다른\n자리인 까닭이 그것이다. 지시는 그쪽들과 같이 Center에서 내려가고(`jobs[]`의 `test` 칸), 올리는\n것만 이 길이다 — 콘솔이 도는 중에도 로그와 노드 색을 본다 (CON-20).\n\n**배운 것은 여기 실려 올라오고 Center가 `memory/specs.json`에 적는다** (ADR-0028) — 엔진은\n파일을 쓰지 않고 실행기의 디스크는 그 실행이 끝나면 사라진다.",
+  "properties": {
+    "detail": {
+      "default": "",
+      "title": "Detail",
+      "type": "string"
+    },
+    "learned": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Learned"
+    },
+    "log": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Log",
+      "type": "array"
+    },
+    "node_states": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Node States",
+      "type": "object"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "state": {
+      "title": "State",
+      "type": "string"
+    },
+    "variables": {
+      "additionalProperties": true,
+      "title": "Variables",
+      "type": "object"
+    },
+    "verdict": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Verdict"
+    }
+  },
+  "required": [
+    "run_id",
+    "state"
+  ],
+  "title": "TrialReport",
+  "type": "object"
+}
