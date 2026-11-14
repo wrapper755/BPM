@@ -9,7 +9,7 @@
 
 - **서명이 유일한 관문**이다. 모르는 키·철회된 키·손댄 봉투·해시가 다른 패키지·승인 서명
   없는 패키지는 **설치하지 않는다** (V1~V7).
-- **거부도 보고한다** — 사유 코드와 함께 (C4 `deployment_results`, CON-03 「⛔ 거부」).
+- **거부도 보고한다** — 사유 코드와 함께 (C4 `deployment_results`, CON-12 「⛔ 거부」).
 - **예약 배포는 때가 될 때까지 두고 본다** (V5b `not_before`) — 거부가 아니다.
 - **남의 배포는 받지 않는다** (V6) — `target`이 나여야 한다.
 - 설치는 **한 번만** 한다. 이미 그 해시로 설치돼 있으면 조용히 지나간다.
@@ -352,7 +352,7 @@ class Deployer:
         return made
 
     def _refused(self, made: Outcome, problem: Any) -> Outcome:
-        """**거부도 보고한다** — 왜 거부했는지가 콘솔에 보여야 한다 (CON-03)."""
+        """**거부도 보고한다** — 왜 거부했는지가 콘솔에 보여야 한다 (CON-12)."""
         made.result = REJECTED
         made.reason = problem.code or "bad_signature"
         log.warning("배포 %s 거부: %s (%s)", made.deployment_id, problem.message, problem.code)

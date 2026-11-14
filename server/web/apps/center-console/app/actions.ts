@@ -81,7 +81,7 @@ export async function login(_previous: ActionResult, form: FormData): Promise<Ac
       expires: new Date(made.expires_at),
     },
   );
-  // 첫 화면 — **설계할 수 있는 사람은 작업공간 홈**, 보기 전용은 운영 현황이다 (ADR-0145 §2).
+  // 첫 화면 — **설계할 수 있는 사람은 작업공간 홈**, 보기 전용은 「운영 › 프로세스」다 (ADR-0145 §2).
   redirect(writes ? "/workspaces" : "/bots");
 }
 
@@ -358,7 +358,7 @@ export async function revokeCenterKey(keyId: string): Promise<ActionResult> {
 }
 
 /**
- * 등록 요청 승인·거절 (CON-03·CON-12 「승인 대기」, C5 §등록 승인). 키는 Center가 만들어
+ * 등록 요청 승인·거절 (CON-12 「승인 대기」, C5 §등록 승인). 키는 Center가 만들어
  * 요청의 공개키로 봉해 둔다 — 여기서도 원문은 지나가지 않는다.
  */
 export async function decideEnrollment(

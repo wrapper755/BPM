@@ -51,12 +51,11 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 [ADR-0143](decisions/0143-design-happens-in-the-console.md) §4가 **「설계자의 키가 없어졌다」**고
 정했는데, 계약과 Center에는 아직 그 종류가 있다 — C5·C7의 키 종류 `studio`, C5 §Studio 등록 요청과
-승인(`POST /api/v1/studio/enroll`·`StudioEnrollRequest`), Center의 `enrollments.py` Studio 갈래,
-그리고 **CON-03**(지금은 Studio 목록 하나다).
+승인(`POST /api/v1/studio/enroll`·`StudioEnrollRequest`), Center의 `enrollments.py` Studio 갈래다.
 
-M11 조각 5는 **Qt 코드를 걷었고** 그 종류를 건드리지 않았다 — 키 종류를 걷는 것은 계약(C5 권한표·
-C7)·Center·화면·시험 열다섯 자리를 함께 고치는 일이라 **제 조각이 필요하다**. 지금 해로운 것은
-아니다(발급하는 사람이 없으면 아무 일도 없다). **먼저 정할 것**: 옛 Studio 키가 남아 있는 Center에서
+**화면 쪽은 닫혔다** — CON-03(Studio 목록)을 없앴다 ([ADR-0149](decisions/0149-console-menu-follows-the-work.md)).
+남은 것은 **계약(C5 권한표·C7)·Center·시험 열다섯 자리**이고 함께 고쳐야 해서 **제 조각이 필요하다**.
+지금 해로운 것은 아니다(발급하는 화면도 사람도 없으면 아무 일도 없다). **먼저 정할 것**: 옛 Studio 키가 남아 있는 Center에서
 그것을 **지울 것인가 두고 만료시킬 것인가** — 지우면 그 키로 올라온 패키지의 `uploaded_by`가 가리킬
 곳이 없어진다.
 
@@ -137,7 +136,7 @@ ADR-0014의 PC 쪽 줄은 함께 걷었다.
 | C3 `llm_usage` | 엔진(`core/agent.py`·`nodes.py`) | 없음 | ADR-0027은 「Center가 가격표로 계산」이라 적었다. Center·콘솔에 읽는 곳이 없다. C3 `service_call`·`mode_used`도 CON-01이 그리지 않는다(`runs/[runId]/page.tsx:167-171`) |
 | C3 `kind: data`(`data.vars`, 켠 경우에만) | 없음, 켜는 설정도 없다 | 없음 | |
 | C3 `run_started.queued_s` | PC 실행기·서버 실행기 | Center·콘솔에 없음 | 표시만의 칸 — CON-01이 보이지 않는다 |
-| C4 `runtimes.browsers`·`desktop_backend` | 없음 | Center C7 `RuntimeResource`(`api/resources.py` `runtimes()`), CON-03 「런타임」 열(`bot-uis/page.tsx`) | 읽는데 싣지 않는다 — 실을 쪽(UI 자동화)을 걷었다. §3-28 |
+| C4 `runtimes.browsers`·`desktop_backend` | 없음 | Center C7 `RuntimeResource`(`api/resources.py` `runtimes()`), 그릴 화면은 없다(CON-03을 없앴다 — ADR-0149) | 읽는데 싣지 않고 그리지도 않는다 — 실을 쪽(UI 자동화)을 걷었다. §3-28 |
 | C11 사용 기록 `delivery` (SVC-03 열), C15 `LockedTask.delivery` | Center | 없음 — `UsageRecord`(`contracts/service_app.py:151-163`)에 칸이 없다 | C11 문서가 그 열을 약속한다 |
 | C12 하트비트 `restored[]` | 서버 실행기 첫 하트비트(`agent.py:337`) | 없음 — Center가 `state_json`에 담고(`api/server_runner.py:210`) 다음 하트비트가 덮는다 | CON-12가 「재시작 때 되살린 실행」을 보일 재료다 |
 | C12 `status: draining`·`error` | 없음 — `running`·`paused`만(`agent.py:1138`, `STATUS_ERROR`는 정의뿐) | 콘솔 표기(`lib/summary.ts:173`) | SIGTERM에도 `draining`을 보내지 않는다 |
@@ -183,7 +182,7 @@ ADR-0014의 PC 쪽 줄은 함께 걷었다.
 막고, 시나리오 3(M6 첫째)은 멈춰 있다.
 
 **쓰는 쪽 없이 남은 칸.** 걷지 않고 둔 것이다 — 다시 들일 때 쓸지 걷을지 정한다.
-- C4 `runtimes.browsers`·`desktop_backend` — 싣는 쪽이 없다. Center는 C7 `RuntimeResource`로 읽고 CON-03 「런타임」 열이 그리므로 늘 빈다(§3-26).
+- C4 `runtimes.browsers`·`desktop_backend` — 싣는 쪽이 없다. Center는 C7 `RuntimeResource`로 읽기만 하고 그릴 화면이 없다(§3-26).
 - C7 런타임 자원(`type: runtime`) — 위 칸에서 짓는 것이라 함께 빈다.
 
 **먼저 정할 것.** 기여 지점·장치 중 **무엇을 다시 들이나** — 로컬 런타임(띄우기·예약)·도구 창·패널·AI 환경을 하나씩 새

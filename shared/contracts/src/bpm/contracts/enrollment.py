@@ -215,7 +215,7 @@ class ExistingHost(ContractModel):
 
 
 class EnrollmentInfo(ContractModel):
-    """`GET /enrollments`의 한 줄 (C5 §등록 승인, CON-03·CON-12 「승인 대기」)."""
+    """`GET /enrollments`의 한 줄 (C5 §등록 승인, CON-12 「승인 대기」)."""
 
     enrollment_id: EnrollmentId
     type: str

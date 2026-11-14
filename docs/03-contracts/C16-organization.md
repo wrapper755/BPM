@@ -7,7 +7,7 @@
 | 보내는 쪽 → 받는 쪽 | 콘솔(Center 관리자·회사 관리자)·연동용 키 ↔ Center (조직·업무 자리), Center → 서버 실행기 (작업의 자리) |
 | 코드 위치 | `shared/contracts/organization.py`, Center `migrations.py` 22판 · (예정) `api/organization.py`·`api/packages.py`·`enrollments.py`·`accounts.py` |
 | 관련 ADR | [0125](../decisions/0125-organization-and-work-placement.md), [0127](../decisions/0127-studio-picks-the-work-place.md), [0090](../decisions/0090-center-admin-accounts.md), [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md), [0093](../decisions/0093-studio-is-let-in-by-approval.md), [0099](../decisions/0099-input-value-source.md) |
-| 관련 화면 | CON-13 조직, STU-12 「Center로 올리기」(자리 고르기), CON-02·CON-06 승인(자리 보이기), CON-03 승인 대기(회사 고르기), CON-14 관리자 계정(회사 관리자), CON-01 (회사·부서·직원 열) |
+| 관련 화면 | CON-13 조직, STU-12 「Center로 올리기」(자리 고르기), CON-02·CON-06 승인(자리 보이기), CON-12 승인 대기(회사 고르기), CON-14 관리자 계정(회사 관리자), CON-01 (회사·부서·직원 열) |
 
 ## 목적
 

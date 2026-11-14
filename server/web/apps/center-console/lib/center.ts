@@ -494,7 +494,7 @@ export const center = {
    */
   enrollments: (type: "server_runner" | "studio") =>
     call<EnrollmentInfo[]>(`/api/v1/enrollments?type=${type}`),
-  /** 모든 상태의 등록 요청 — CON-16 「앱 로그」가 이력으로 읽는다 (C5 `state`는 쉼표로 여럿). */
+  /** 모든 상태의 등록 요청 — CON-16 「변경 이력」이 읽는다 (C5 `state`는 쉼표로 여럿). */
   enrollmentHistory: () =>
     call<EnrollmentInfo[]>("/api/v1/enrollments?state=pending,approved,rejected,expired"),
   /** 승인 — Studio는 **회사를 정해** 들인다 (C16). 서버 실행기는 회사를 보내지 않는다. */

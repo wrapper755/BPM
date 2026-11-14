@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 (「바꾸지 않는 것」의 Studio 중 메뉴 막대의 항목 글은 [ADR-0133](0133-studio-menus-say-process.md)이 「프로세스」로 대체) · **틀 부분(남색 위 막대 + 남색 왼쪽 탐색)은 대체됨** ([ADR-0145](0145-console-is-workspace-shaped.md)) — 「프로세스」라 쓴다는 결정은 그대로 산다 |
+| 상태 | 수락 (「바꾸지 않는 것」의 Studio 중 메뉴 막대의 항목 글은 [ADR-0133](0133-studio-menus-say-process.md)이 「프로세스」로 대체) · **틀 부분(남색 위 막대 + 남색 왼쪽 탐색)은 대체됨** ([ADR-0145](0145-console-is-workspace-shaped.md)) · **메뉴 묶음(§결정 2)도 대체됨** ([ADR-0149](0149-console-menu-follows-the-work.md) — 일의 흐름대로 여섯, 「로그」 묶음 해체) — 「프로세스」라 쓴다는 결정은 그대로 산다 |
 | 날짜 | 2026-10-31 |
 | 관련 | [ADR-0111](0111-bpm-process-and-pc-runner-names.md)(Center 콘솔 몫만 대체), `docs/02-glossary.md` §0, 화면 `docs/06-screens/center-console.md` |
 
