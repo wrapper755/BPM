@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | **묶음 목록은 대체됨** ([ADR-0151](0151-console-follows-the-lifecycle.md) — 생애주기 차례로 다시 묶고 「업무」를 운영으로 넣었다) — 원래 수락 (2026-11-14). **CON-03을 없앤 것과 이름 둘**(「실행 기록」·「변경 이력」)**은 그대로 산다** |
 | 날짜 | 2026-11-14 |
 | 관련 | [ADR-0121](0121-center-console-says-process.md)(§결정 2 메뉴 묶음을 대체 — 「프로세스」라 쓴다는 결정은 그대로 산다), [ADR-0145](0145-console-is-workspace-shaped.md)(두 층 틀은 그대로, 묶음 목록만 바뀐다), [ADR-0143](0143-design-happens-in-the-console.md)(CON-03을 없애는 까닭), 화면 `server/docs/screens/center-console.md` |
 

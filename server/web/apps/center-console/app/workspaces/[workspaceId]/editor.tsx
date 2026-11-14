@@ -35,7 +35,7 @@ import "@bpm/bpmn-canvas/canvas.css";
 /**
  * CON-20b 작업공간 — 탭 셋과 그 안의 자리들 ([ADR-0147](../../../../../../docs/decisions/0147-workspace-has-three-tabs.md)).
  *
- * 「설계」는 탐색기 + 가운데 + 상세 패널 + 아래 탭이고, **가운데에 무엇이 뜰지는 고른 파일이
+ * 「저작」는 탐색기 + 가운데 + 상세 패널 + 아래 탭이고, **가운데에 무엇이 뜰지는 고른 파일이
  * 정한다**(그림·결정표·케이스). 「시험 실행」은 돌려 본 것들이다. 「정보」는 아직 비어 있다 —
  * **끄고 까닭을 그 자리에 적는다** (U3).
  *
@@ -56,7 +56,7 @@ interface Opened {
   revision: string;
 }
 
-const TABS = ["설계", "시험 실행", "정보"] as const;
+const TABS = ["저작", "시험 실행", "정보"] as const;
 type Tab = (typeof TABS)[number];
 
 /** 아래 탭 (STU-01 [L]) — 「검사」는 조각 4f에서 찬다. */
@@ -101,7 +101,7 @@ export function Workspace({
   departments: { id: string; name: string }[];
   staff: { id: string; name: string }[];
 }) {
-  const [tab, setTab] = useState<Tab>("설계");
+  const [tab, setTab] = useState<Tab>("저작");
   // 「정보」 탭이 고치면 그 자리에서 바뀐다 — 머리 띠의 이름·판과 진입 정의가 함께 따라간다.
   const [info, setInfo] = useState(given);
   const [file, setFile] = useState<Opened | null>(opened ? { path: opened, text, revision } : null);
@@ -219,7 +219,7 @@ export function Workspace({
   }, [trial, info.id, refreshTrials]);
 
   /**
-   * 노드 색을 캔버스에 입힌다 — **「설계」 탭에서도 보인다** (돌려 보고 그 자리에서 고친다).
+   * 노드 색을 캔버스에 입힌다 — **「저작」 탭에서도 보인다** (돌려 보고 그 자리에서 고친다).
    * 그림을 **다시 들이면 표식이 지워지므로** `onImported`에서도 같은 것을 입힌다.
    */
   const marks = useRef<Record<string, NodeState>>({});
@@ -230,7 +230,7 @@ export function Workspace({
 
   /** 탭을 옮겼다 돌아오면 캔버스가 제 자리를 다시 재야 한다 (숨어 있는 동안은 0×0이다). */
   useEffect(() => {
-    if (tab === "설계") canvas.current?.editor?.resized();
+    if (tab === "저작") canvas.current?.editor?.resized();
   }, [tab]);
 
   const stop = useCallback(async () => {
@@ -397,10 +397,10 @@ export function Workspace({
       ) : null}
 
       {/*
-        탭을 옮겨도 **「설계」는 지우지 않고 숨긴다** — 지우면 캔버스가 함께 사라져 **저장하지 않은
+        탭을 옮겨도 **「저작」는 지우지 않고 숨긴다** — 지우면 캔버스가 함께 사라져 **저장하지 않은
         그림을 잃는다**. 「시험 실행」을 보고 와서 고치는 것이 이 화면의 쓰임이라 더욱 그렇다.
       */}
-      <div className={tab === "설계" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+      <div className={tab === "저작" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
         <div className="flex min-h-0 flex-1">
         {/* [E] 탐색기 — 접힌다 (CON-20). 접어도 **여는 길이 남는다**. */}
         {showFiles ? null : (

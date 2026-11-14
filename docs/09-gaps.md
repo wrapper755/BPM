@@ -350,6 +350,7 @@ CON-07 상세 「서버 주소」에서 넣고 **정의의 허용 호스트 안�
 
 ## 5. 공백은 아니지만 적어 둘 것
 
+- **담당자 없는 결재는 API로 답할 수 없다** (2026-11-15, [ADR-0081](decisions/0081-answering-on-behalf.md)·[ADR-0151](decisions/0151-console-follows-the-lifecycle.md) §배경) — 대리 답용 키는 **담당자가 적힌 결재만** 받으므로, 그림이 `bpm:approval.assignees`를 비워 두면 그 결재는 **콘솔에서만** 닫힌다(회사 시스템이 답할 수 없다). 업무 예제의 결재 노드 28개 중 담당자가 적힌 것은 **1개**다(예제는 케이스가 답하니 문제가 없다). 운영에서 자주 막히면 **실행 전 검사의 경고**(C14)로 올리는 것이 다음 수인데, 「담당자 없음」이 정상인 그림도 있어 (관리자가 답하기로 한 업무) 지금은 **적어만 둔다** — 대시보드(CON-21)가 그 수를 보인다.
 - **편의 접근자 둘을 지웠다** (2026-10-16) — `ExtensionHost.adapter_operations()`(창·어댑터는 정의의 `m.adapter.operations`를 직접 읽는다)와 `secret_config_keys()`(`credentials.py`가 `configuration()`에 `.secret`을 걸어 본다). **쓰는 길이 둘이면 한쪽만 고친다.** 함께 적어 둔 `studio_editors()`는 **쓰인다** — `editor(task_type)`가 그것을 부른다(단수 메서드 뒤에 있어 「호출자 없음」으로 잘못 적혀 있었다). 시험은 **제품이 쓰는 길**로 고쳐 같은 것을 본다.
 - **C1의 「아는 값」 둘을 정했다** (2026-10-16) — `KNOWN_SETTINGS`는 **쓰는 쪽을 만들었다**(R11: `requires.settings`가 아는 값인가 — R9와 같은 까닭이고, 지금 Studio가 넣는 것은 `smtp` 하나뿐이라 올라간 패키지는 다 지난다). `KNOWN_BUILT_BY`는 **검사하지 않는 쪽으로 정했다** — 남의 도구로 만든 올바른 패키지를 거부하게 되므로 열린 문자열이 맞다. 그 까닭을 **상수 옆에 적어** 두어 다음 사람이 「검사가 없다」고 또 적지 않게 했다.
 - **`extension_api`에 우리 호출자가 없는 상수들은 정상이다** (`SEVERITY_INFO`) — 그 패키지는 **확장 저자에게 주는 API**(C13)다. 우리 코드가 다 쓰는지로 셈하지 않는다. (`HOST_SERVER_RUNNER`·`RUN_LOCATION_SERVER`는 2026-10-16에 쓰는 쪽이 생겼다 — [ADR-0064](decisions/0064-extension-tasks-on-the-server.md). 그때 그 둘을 대조하다 §3-14를 찾았다.)

@@ -115,7 +115,7 @@ export default async function PackagesPage() {
       ) : rows.length === 0 ? (
         <EmptyState
           title="올라온 공통 패키지가 없습니다."
-          hint="「설계 › 작업공간」에서 「공유 BPM 프로세스로 짓기」로 만드세요."
+          hint="「저작 › 작업공간」에서 「공유 BPM 프로세스로 짓기」로 만드세요."
         />
       ) : (
         <DataTable

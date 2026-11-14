@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { Activity, Inbox, PackageOpen, PencilRuler, Plug, Settings2 } from "lucide-react";
+import { Activity, LayoutDashboard, PackageOpen, PencilRuler, Plug, Users } from "lucide-react";
 import { BpmMark, Button } from "@bpm/ui";
 import { logout } from "@/app/actions";
 import { openMode, session } from "@/lib/center";
@@ -40,19 +40,29 @@ const LATER_BADGE = "아직";
 type Icon = typeof Activity;
 
 /**
- * 묶음 여섯 (CON-00 [R]·[P]) — **일의 흐름 차례**다: 설계 → 배포 → 운영 → 업무 → 연결 → 관리
- * ([ADR-0149](../../../../../docs/decisions/0149-console-menu-follows-the-work.md)).
+ * 묶음 여섯 (CON-00 [R]·[P]) — **BPM 생애주기 차례**다: 대시보드 → 저작 → 배포 → 운영 → 연결 → 권한·조직
+ * ([ADR-0151](../../../../../docs/decisions/0151-console-follows-the-lifecycle.md)).
  * 레일에 아이콘 하나씩 서고, 누르면 그 묶음의 첫 화면으로 간다 — 펼침 패널은 **지금 자리의 묶음**을 그린다.
  *
  * **줄 이름과 화면 제목이 같다** — 전에는 「운영 현황 › 프로세스」와 「로그 › 프로세스」가 같은
  * 이름이어서 눌러 봐야 어느 쪽인지 알았다 (ADR-0121이 화면 제목으로만 가르던 것이다).
  *
+ * **결재함·작업 지시가 「운영」에 있다** — 결재의 정식 길은 **대리 답용 키의 API**이고
+ * ([ADR-0081](../../../../../docs/decisions/0081-answering-on-behalf.md)) 콘솔 결재함은 ①막힌 것 찾기
+ * ②담당자 없는 결재 답하기 ③감사용이다. 셋 다 운영자의 일이라 「업무」 묶음을 따로 두지 않는다.
+ *
  * **아이콘에는 말풍선이 필수다** (ADR-0145 §5) — 글 없는 아이콘은 뜻이 흐려진다.
  */
 const NAV: Array<{ label: string; icon: Icon; items: NavItem[] }> = [
   {
-    // 설계가 콘솔 안으로 들어왔다 (ADR-0143) — 작업공간 하나가 BPM 프로세스 한 벌이다 (C17).
-    label: "설계",
+    // 들어오는 자리 — 실패·막힘·기다림을 한 화면에서 본다 (CON-21). 역할로 가르지 않는다.
+    label: "대시보드",
+    icon: LayoutDashboard,
+    items: [{ label: "대시보드", href: "/dashboard" }],
+  },
+  {
+    // 저작이 콘솔 안으로 들어왔다 (ADR-0143) — 작업공간 하나가 BPM 프로세스 한 벌이다 (C17).
+    label: "저작",
     icon: PencilRuler,
     items: [{ label: "작업공간", href: "/workspaces" }],
   },
@@ -66,19 +76,12 @@ const NAV: Array<{ label: string; icon: Icon; items: NavItem[] }> = [
     ],
   },
   {
-    // 지켜보는 것 — 지금 모습과 지나온 기록을 **같은 묶음**에서 본다 (ADR-0149 §결정 2).
+    // 지키는 것 — 지금 모습·지나온 기록·막힌 결재·내려갈 작업이 **한 묶음**이다 (ADR-0151 §1).
     label: "운영",
     icon: Activity,
     items: [
       { label: "프로세스", href: "/bots" },
       { label: "실행 기록", href: "/runs" },
-    ],
-  },
-  {
-    // 사람이 답하는 것.
-    label: "업무",
-    icon: Inbox,
-    items: [
       { label: "결재함", href: "/approvals" },
       { label: "작업 지시", href: "/jobs" },
     ],
@@ -93,8 +96,9 @@ const NAV: Array<{ label: string; icon: Icon; items: NavItem[] }> = [
     ],
   },
   {
-    label: "관리",
-    icon: Settings2,
+    // 사람과 권한 — 업무가 아니라 **누가 무엇을 할 수 있나**다.
+    label: "권한·조직",
+    icon: Users,
     items: [
       { label: "조직", href: "/organization" },
       // 계정을 보는 것도 관리자의 일이다 (C5 `GET /accounts`) — 보기 전용에는 줄이 없다.
@@ -166,12 +170,16 @@ export async function Shell({
       >
         <div style={{ width: "var(--size-nav-width)" }} className="p-3">
           <h2 className="mb-2 px-2 text-caption font-semibold text-text-muted">{here?.label ?? "메뉴"}</h2>
+          {/* 줄이 하나이고 이름이 묶음과 같으면(「대시보드」) **줄을 그리지 않는다** — 같은 말이
+              레일 말풍선·패널 제목·지금 자리·화면 제목까지 넷이 된다. 패널 제목이 이미 그 자리다. */}
           <ul className="flex flex-col gap-1">
-            {(here?.items ?? []).map((item) => (
-              <li key={item.label}>
-                <NavLink item={item} current={current} />
-              </li>
-            ))}
+            {(here?.items ?? [])
+              .filter((item) => item.label !== here?.label)
+              .map((item) => (
+                <li key={item.label}>
+                  <NavLink item={item} current={current} />
+                </li>
+              ))}
           </ul>
         </div>
       </aside>
@@ -289,12 +297,18 @@ function RailLink({
 function Crumb({ here, current }: { here: string | null; current: string }) {
   const group = NAV.find((one) => one.label === here);
   const item = group?.items.find((one) => one.href === current);
+  // 묶음에 줄이 하나이고 이름이 같으면(「대시보드」) **한 번만** 적는다 — 「대시보드 › 대시보드」는 말이 아니다.
+  const alone = group !== undefined && group.label === item?.label;
   return (
     <nav aria-label="지금 자리" className="min-w-0 truncate text-body-sm">
       {group && item?.href ? (
         <>
-          <span className="text-text-muted">{group.label}</span>
-          <span className="text-text-muted"> › </span>
+          {alone ? null : (
+            <>
+              <span className="text-text-muted">{group.label}</span>
+              <span className="text-text-muted"> › </span>
+            </>
+          )}
           <Link href={item.href} className="hover:underline">
             {item.label}
           </Link>
