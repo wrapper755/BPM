@@ -55,7 +55,7 @@
 | `run_finished` | 실행 끝 (항상 마지막) | `status`(`success`\|`failed`\|`cancelled`), `duration_s`, `ai_tasks`, `replayed_tasks`, `service_calls`, `human_requests` | `error_code`, `error_message`(한 줄), `confirmations` |
 
 - **`human_requests`는 결재와 확인을 합친 수**다. 확인만 따로 세는 `confirmations`는 **선택 칸**이다 — 아는 쪽(보내는 쪽)이 `human_requested`의 `layer`로 센다. **넣지 않은 쪽이 있으면** 받는 쪽은 「확인만은 모른다」로 다룬다(0으로 보지 않는다 — 「확인이 없었다」와 「세지 않았다」는 다르다). 결재 수는 `human_requests - confirmations`다 (칸을 둘 두지 않는다).
-- 배포 적용 결정은 실행이 아니므로 실행 이벤트로 보내지 않는다 → C4 하트비트의 `deployment_results` (CON-03 「최근 배치 결정」).
+- 배포 적용 결정은 실행이 아니므로 실행 이벤트로 보내지 않는다 → C4 하트비트의 `deployment_results` (CON-12 상세 「최근 배치 결정」).
 - `kind`와 `data`의 값 목록(`state`, `source`, `layer`, `status` 등)은 모두 **열린 문자열**이다 (README 원칙 10).
 - PC BPM 프로세스는 결재·확인을 기다리는 동안 `node_state: waiting`만 남긴다 (`run_waiting`은 서버만 쓴다 — 실행 자리를 쥐고 있으므로).
 - **`run_resumed`는 `run_waiting`과 짝이다.** 짝을 못 찾으면(이 판 전에 담긴 실행을 되살릴 때) **보내지 않는다** — `after_s`가 필수 칸이라 0을 넣어야 하는데, 0은 「바로 이어 갔다」라서 「얼마나 기다렸는지 모른다」와 같은 값이 된다 (선택 칸 규칙과 같은 결). **`after_s`는 보내는 쪽이 센다** — 받는 쪽은 두 줄의 시각 차로 다시 세지 않는다.

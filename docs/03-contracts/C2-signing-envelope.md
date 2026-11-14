@@ -8,7 +8,7 @@
 | 코드 위치 | `shared/contracts/src/bpm/contracts/signing.py`, `…/hashing.py` (import `bpm.contracts.signing`, [ADR-0019](../decisions/0019-package-names.md)) |
 | JSON Schema | [`c2-envelope.json`](../../shared/contracts/schemas/c2-envelope.json) · [`c2-claim-deployment.json`](../../shared/contracts/schemas/c2-claim-deployment.json) · [`c2-claim-package.json`](../../shared/contracts/schemas/c2-claim-package.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
 | 관련 ADR | [0006](../decisions/0006-single-contracts-package.md), [0015](../decisions/0015-run-location.md), [0046](../decisions/0046-no-wildcard-pc-deployment.md), [0047](../decisions/0047-one-deployment-gate.md), [0090](../decisions/0090-center-admin-accounts.md) |
-| 관련 화면 | CON-02·CON-06 「승인」, CON-15 「배포」, , CON-03 「최근 배치 결정」 |
+| 관련 화면 | CON-02·CON-06 「승인」, CON-15 「배포」, CON-12 상세·CON-16 「변경 이력」(배치 결정) |
 
 ## 목적
 
@@ -102,7 +102,7 @@ Center와 서버 실행기가 같은 함수(`contracts.signing.verify`)를 쓴�
 | V7 | (deployment) 받은 패키지의 실제 `content_hash`가 봉투와 같고, 패키지 `SIGNATURE`(package claim)도 V1~V3을 통과한다 | `hash_mismatch` / `unsigned_package` | 실행하는 쪽 |
 | V8 | (admin_key) 서명 키가 추가하려는 키 자신이 아니다 | `self_signed_key` | **쓰지 않는다** (`admin_key`를 더 만들지 않는다, ADR-0090) |
 
-- 실패하면 실행하는 쪽은 설치하지 않는다. C4 `deployment_results`에 `rejected`와 사유 코드를 보낸다 (CON-03 「⛔ 거부」).
+- 실패하면 실행하는 쪽은 설치하지 않는다. C4 `deployment_results`에 `rejected`와 사유 코드를 보낸다 (CON-12 상세 「최근 배치 결정」).
 - 서명 키를 버리거나 패키지 승인이 철회되면, 실행하는 쪽은 다음 하트비트에서 해당 BPM 프로세스를 비활성으로 돌린다. 패키지 파일은 지우지 않는다. 배포 철회도 같다 ([ADR-0113](../decisions/0113-field-follows-withdrawn-deployments.md)):
   - **맞추는 것은 Center가 답한 하트비트뿐이다** — 닿지 못하거나 키가 거부되면 아무것도 바꾸지 않는다 (ADR-0007). 답의 `deployments`(C4·C12)는 활성 배포 **전체**라 빈 목록도 목록이다.
   - 「Center 배포」로 설치된 `(id, version)`마다 **지금 설치를 허락할 봉투**(V1~V4·V5a·V5b·V6을 지난 것)가 하나라도 있으면 덮였다. 없으면 비활성이다 — V2 `revoked_key`로 빠진 것도 같다. 같은 판을 다시 배포하면 새 봉투가 다시 덮는다.

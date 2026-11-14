@@ -6,9 +6,9 @@ import { Button, DataTable, Dialog, ErrorBanner, Field, StatusBadge, type Column
 import { decideEnrollment } from "@/app/actions";
 
 /**
- * 「승인 대기」 (CON-03·CON-12, C5 §등록 승인, ADR-0092) — **요청이 있을 때만** 목록 위에 보인다.
+ * 「승인 대기」 (CON-12, C5 §등록 승인, ADR-0092) — **요청이 있을 때만** 목록 위에 보인다.
  *
- * 사람이 하는 일은 하나다: 현장 화면(서버는 로그)의 **요청 코드**가 이 줄과 같은지 보고 들인다.
+ * 사람이 하는 일은 하나다: 서버 실행기의 **시작 로그**에 뜬 요청 코드가 이 줄과 같은지 보고 들인다.
  * 키는 Center가 만들어 봉해 두므로 여기에 키가 나오지 않는다.
  *
  * 일꾼(C15)은 여기 오지 않는다 — 일꾼 폴더의 파일로만 들어온다 (ADR-0122).

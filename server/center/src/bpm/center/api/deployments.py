@@ -477,7 +477,7 @@ def max_concurrency_for(store: Store, *, bpm_process_id: str) -> int | None:
 
 
 def results_of(store: Store, *, host_id: str, limit: int = RECENT_RESULTS) -> list[DeploymentResult]:
-    """그 **보고한 쪽**의 최근 배치 결정 (C5 `BotUiInfo.deployment_results`, CON-03·CON-12).
+    """그 **보고한 쪽**의 최근 배치 결정 (C5 `BotUiInfo.deployment_results`, CON-12).
 
     `host_id`는 PC(`bui_…`)이거나 서버 실행기(`srv_…`)다 (열 이름은 2판 단계가 고쳤다, ADR-0065).
     """

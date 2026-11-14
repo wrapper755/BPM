@@ -269,7 +269,7 @@ CREATE TABLE IF NOT EXISTS approvals (
 );
 CREATE TABLE IF NOT EXISTS deployment_results (
   -- 배치 결정은 하트비트 한 주기만 올라온다 (C4·C12). 흘려보내면 「왜 설치가 안 됐나」가
-  -- 영영 남지 않아서 쌓아 둔다 (CON-03·CON-12 「최근 배치 결정」).
+  -- 영영 남지 않아서 쌓아 둔다 (CON-12 「최근 배치 결정」).
   --
   -- **이 칸은 「보고한 쪽」이다** — PC(`bui_…`)이거나 서버 실행기(`srv_…`)다. 기준선에는
   -- `bot_ui_id`로 남아 있고 **2판 단계가 `host_id`로 고친다** (`migrations.py`, ADR-0065).

@@ -3,7 +3,7 @@
    그다음 `pnpm --filter @bpm/api-types generate`. */
 
 /**
- * `GET /enrollments`의 한 줄 (C5 §등록 승인, CON-03·CON-12 「승인 대기」).
+ * `GET /enrollments`의 한 줄 (C5 §등록 승인, CON-12 「승인 대기」).
  */
 export interface EnrollmentInfo {
   code: string;

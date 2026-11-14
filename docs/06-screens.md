@@ -100,9 +100,9 @@
 | STU-01 ~ STU-16 | (폐기 — 데스크톱 Studio 화면. **CON-20이 대신한다**, [ADR-0143](decisions/0143-design-happens-in-the-console.md)) | — | — | — | — |
 | BUI-01 ~ BUI-11 | (폐기 — PC 실행기 화면, [ADR-0144](decisions/0144-remove-the-pc-runner.md)) | — | — | — | — |
 | CON-00 | 공통 틀 | Center 콘솔 | 모두 | M2 | 프로토타입 |
-| CON-01 | 프로세스 로그 | Center 콘솔 | 운영자 | M3 | 프로토타입 |
+| CON-01 | 실행 기록 | Center 콘솔 | 운영자 | M3 | 프로토타입 (이름은 [ADR-0149](decisions/0149-console-menu-follows-the-work.md)) |
 | CON-02 | 프로세스 | Center 콘솔 | 운영자 | M3 | 프로토타입 |
-| CON-03 | 앱 | Center 콘솔 | 운영자 | M2 | 프로토타입 확장 (쓰는 키 종류가 남았다 — `docs/09-gaps.md` §3-35) |
+| CON-03 | 앱 — 없어짐 ([ADR-0149](decisions/0149-console-menu-follows-the-work.md) — Studio 키 목록뿐이었다. 서버 실행기는 CON-12, 이력은 CON-16) | Center 콘솔 | 운영자 | M2 | 폐기 (쓰는 앱이 없는 키 종류가 남았다 — `docs/09-gaps.md` §3-35) |
 | CON-04 | 결재함 | Center 콘솔 | 결재자 | M5 | 프로토타입 |
 | CON-05 | 작업 지시 | Center 콘솔 | 운영자 | M5 | 프로토타입 확장 (만들기 추가) |
 | CON-06 | 공통 패키지 | Center 콘솔 | 운영자 | M5 | 프로토타입 |
@@ -112,7 +112,7 @@
 | CON-13 | 조직 | Center 콘솔 | Center 관리자·회사 관리자 | — | 신규 ([ADR-0125](decisions/0125-organization-and-work-placement.md) — 가상 직원 화면은 걷었다) |
 | CON-14 | 관리자 계정 | Center 콘솔 | 관리자 | — | 신규 ([ADR-0090](decisions/0090-center-admin-accounts.md)) |
 | CON-15 | 배포 | Center 콘솔 | 관리자 | — | 신규 (ADM-03을 옮겼다, ADR-0090) |
-| CON-16 | 앱 로그 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0121](decisions/0121-center-console-says-process.md)) |
+| CON-16 | 변경 이력 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0121](decisions/0121-center-console-says-process.md), 이름은 [ADR-0149](decisions/0149-console-menu-follows-the-work.md)) |
 | CON-17 | 일꾼 | Center 콘솔 | Center 관리자 | — | 신규 ([ADR-0137](decisions/0137-consumers-are-managed-in-the-console.md)) |
 | CON-18 | 연결 앱 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0138](decisions/0138-console-app-catalog.md) — 보기만) |
 | CON-20 | 작업공간 (설계) | Center 콘솔 | 설계자 | M11 | 신규 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)·[ADR-0147](decisions/0147-workspace-has-three-tabs.md) — STU-01·02·04·05·06·07·08·09·12를 대신한다) |

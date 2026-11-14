@@ -65,8 +65,8 @@ export default async function PackagePage({
 }
 
 /**
- * 패키지 상세 — `area`가 지금 자리다: `process`는 「운영 현황 › 프로세스」(CON-02), `package`는
- * 「배포·자원 › 공통 패키지」(CON-06). BPM 프로세스는 앞의 것, 나머지는 뒤의 것에만 보인다.
+ * 패키지 상세 — `area`가 지금 자리다: `process`는 「운영 › 프로세스」(CON-02), `package`는
+ * 「배포 › 공통 패키지」(CON-06). BPM 프로세스는 앞의 것, 나머지는 뒤의 것에만 보인다.
  */
 export async function PackageDetail({
   params,

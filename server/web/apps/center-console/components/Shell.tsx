@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { Activity, Inbox, PackageOpen, PencilRuler, ScrollText, Settings2 } from "lucide-react";
+import { Activity, Inbox, PackageOpen, PencilRuler, Plug, Settings2 } from "lucide-react";
 import { BpmMark, Button } from "@bpm/ui";
 import { logout } from "@/app/actions";
 import { openMode, session } from "@/lib/center";
@@ -40,8 +40,12 @@ const LATER_BADGE = "아직";
 type Icon = typeof Activity;
 
 /**
- * 묶음 여섯 (CON-00 [R]·[P]). 레일에 아이콘 하나씩 서고, 누르면 그 묶음의 첫 화면으로 간다 —
- * 펼침 패널은 **지금 자리의 묶음**을 그린다.
+ * 묶음 여섯 (CON-00 [R]·[P]) — **일의 흐름 차례**다: 설계 → 배포 → 운영 → 업무 → 연결 → 관리
+ * ([ADR-0149](../../../../../docs/decisions/0149-console-menu-follows-the-work.md)).
+ * 레일에 아이콘 하나씩 서고, 누르면 그 묶음의 첫 화면으로 간다 — 펼침 패널은 **지금 자리의 묶음**을 그린다.
+ *
+ * **줄 이름과 화면 제목이 같다** — 전에는 「운영 현황 › 프로세스」와 「로그 › 프로세스」가 같은
+ * 이름이어서 눌러 봐야 어느 쪽인지 알았다 (ADR-0121이 화면 제목으로만 가르던 것이다).
  *
  * **아이콘에는 말풍선이 필수다** (ADR-0145 §5) — 글 없는 아이콘은 뜻이 흐려진다.
  */
@@ -53,38 +57,37 @@ const NAV: Array<{ label: string; icon: Icon; items: NavItem[] }> = [
     items: [{ label: "작업공간", href: "/workspaces" }],
   },
   {
-    label: "운영 현황",
+    // 내보내는 것 — 지은 것을 현장에 올린다.
+    label: "배포",
+    icon: PackageOpen,
+    items: [
+      { label: "배포", href: "/deployments" },
+      { label: "공통 패키지", href: "/packages" },
+    ],
+  },
+  {
+    // 지켜보는 것 — 지금 모습과 지나온 기록을 **같은 묶음**에서 본다 (ADR-0149 §결정 2).
+    label: "운영",
     icon: Activity,
     items: [
       { label: "프로세스", href: "/bots" },
-      { label: "앱", href: "/apps" },
+      { label: "실행 기록", href: "/runs" },
     ],
   },
   {
-    // 같은 둘(프로세스·앱)을 「지금 모습」(위)과 「지나온 이력」(여기)으로 가른다 (ADR-0121).
-    label: "로그",
-    icon: ScrollText,
-    items: [
-      { label: "프로세스", href: "/runs" },
-      { label: "앱", href: "/app-logs" },
-    ],
-  },
-  {
+    // 사람이 답하는 것.
     label: "업무",
     icon: Inbox,
     items: [
       { label: "결재함", href: "/approvals" },
       { label: "작업 지시", href: "/jobs" },
-      { label: "조직", href: "/organization" },
     ],
   },
   {
-    label: "배포·자원",
-    icon: PackageOpen,
+    // 바깥을 들이는 것 — 연결 앱 카탈로그(CON-18)와 그것을 맡는 일꾼(CON-17)은 한 짝이다.
+    label: "연결",
+    icon: Plug,
     items: [
-      { label: "공통 패키지", href: "/packages" },
-      { label: "배포", href: "/deployments" },
-      // 연결 앱 카탈로그 — 외부 정의·일꾼 앱과 그 작업, 보기만 한다 (CON-18, ADR-0138).
       { label: "연결 앱", href: "/connected-apps" },
       { label: "일꾼", href: "/consumers" },
     ],
@@ -93,8 +96,11 @@ const NAV: Array<{ label: string; icon: Icon; items: NavItem[] }> = [
     label: "관리",
     icon: Settings2,
     items: [
+      { label: "조직", href: "/organization" },
       // 계정을 보는 것도 관리자의 일이다 (C5 `GET /accounts`) — 보기 전용에는 줄이 없다.
       { label: "관리자 계정", href: "/accounts", adminOnly: true },
+      // 앱의 등록·키·배치 이력 (CON-16) — 운영이 아니라 관리다.
+      { label: "변경 이력", href: "/app-logs" },
     ],
   },
 ];

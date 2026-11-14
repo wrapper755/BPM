@@ -8,10 +8,13 @@ import { fullTime } from "@/lib/time";
 import { APP_KINDS, APP_LABEL, buildAppLog, type AppKind, type AppLogRow } from "@/lib/app-logs";
 
 /**
- * CON-16 앱 로그 — 앱(Studio·서버 실행기)이 Center와 주고받은 이력 (ADR-0121).
+ * CON-16 변경 이력 — Center에 붙는 앱이 Center와 주고받은 이력 (ADR-0121, 이름은 ADR-0149).
+ *
+ * 지금 붙는 앱은 **서버 실행기**다. 지나간 Studio·Bot의 등록·키도 그대로 남아 있다 — **이력은
+ * 지우지 않는다** (ADR-0149 §결정 1).
  *
  * **새로 쌓는 것은 없다** — 등록 요청(C5)·키(C7)·배치 결정(C4·C12)을 읽어 `buildAppLog`가 합친다.
- * 하트비트가 끊긴 때는 Center가 남기지 않아 여기 없다 (지금 상태는 CON-03이 말한다).
+ * 하트비트가 끊긴 때는 Center가 남기지 않아 여기 없다 (지금 상태는 CON-12가 말한다).
  */
 
 const LIMITS = [50, 100, 200, 500];
@@ -71,7 +74,7 @@ export default async function AppLogsPage({
   return (
     <Shell mode={found.mode} actor={found.actor} current="/app-logs">
       <header className="mb-4">
-        <h1 className="text-h2 font-bold">앱 로그</h1>
+        <h1 className="text-h2 font-bold">변경 이력</h1>
       </header>
 
       <nav className="mb-4 flex flex-wrap items-center gap-2" aria-label="앱 종류">
@@ -119,10 +122,10 @@ export default async function AppLogsPage({
       ) : shown.length === 0 ? (
         <EmptyState title="아직 이력이 없습니다." hint="앱이 등록을 요청하거나 키·배포를 받으면 여기 쌓입니다." />
       ) : (
-        <DataTable columns={columns} rows={shown} rowKey={(row) => `${row.at}-${row.kind}-${row.name}-${row.what}-${row.detail}`} caption="앱 로그" />
+        <DataTable columns={columns} rows={shown} rowKey={(row) => `${row.at}-${row.kind}-${row.name}-${row.what}-${row.detail}`} caption="변경 이력" />
       )}
       <p className="mt-2 text-caption text-text-muted">
-        등록 요청·API 키·설치(배치 결정)를 모은 것입니다. 하트비트가 끊긴 때는 남지 않습니다 — 지금 상태는 「운영 현황 › 앱」에서 봅니다.
+        등록 요청·API 키·설치(배치 결정)를 모은 것입니다. 하트비트가 끊긴 때는 남지 않습니다 — 지금 상태는 「운영 › 프로세스」에서 봅니다.
       </p>
     </Shell>
   );

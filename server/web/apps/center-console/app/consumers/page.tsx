@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { DataTable, EmptyState, ErrorBanner, type Column } from "@bpm/ui";
 import type { ConsumerInfo } from "@bpm/api-types/c15-consumer-info";
-import { CenterError, center, session } from "@/lib/center";
+import { CENTER_PUBLIC_URL, CenterError, center, session } from "@/lib/center";
 import { KINDS_UNSET, cameFrom, kindMismatches, kindsLabel, type AppChoice } from "@/lib/consumers";
 import { IMPL_LABEL, connectedApps, kindsLabel as appKindsLabel, workersOf } from "@/lib/connected-apps";
+import { CenterAddress } from "@/components/CenterAddress";
 import { Shell } from "@/components/Shell";
 import { fullTime } from "@/lib/time";
 import { ConsumerMenu, NewConsumer } from "./tools";
@@ -11,6 +12,10 @@ import { ConsumerMenu, NewConsumer } from "./tools";
 /**
  * CON-17 일꾼 (ADR-0137). 「종류」는 Center 관리자가 정하고, 토픽의 작업과 어긋나면 ⚠ (ADR-0139). 일꾼의 원본은 Center DB이고 바꾼 것은 **다음 요청부터** 반영된다 — Center를
  * 다시 띄우지 않는다. 목록은 콘솔 계정 모두, 「새 일꾼...」·「...」는 **Center 관리자만**(일꾼은 Center 공용, C16).
+ *
+ * **설정에 적을 Center 주소도 여기 있다** (ADR-0149 §6) — 그 주소를 손으로 적는 사람은 일꾼을
+ * 띄우는 사람뿐이다. 토큰 창이 「일꾼 설정의 Center 토큰에 넣으세요」라고만 말하고 주소는 어디에도
+ * 없었다. 서버 실행기는 compose가 이미 적어 두었고, 설계는 콘솔 안에서 한다.
  */
 export default async function ConsumersPage() {
   const found = await session();
@@ -112,7 +117,10 @@ export default async function ConsumersPage() {
     <Shell mode={found.mode} actor={found.actor} current="/consumers">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-h2 font-bold">일꾼</h1>
-        {manage ? <NewConsumer apps={apps} /> : null}
+        <div className="flex flex-wrap items-end gap-3">
+          <CenterAddress url={CENTER_PUBLIC_URL} who="일꾼" />
+          {manage ? <NewConsumer apps={apps} /> : null}
+        </div>
       </header>
       {failure ? (
         <ErrorBanner message={failure} />

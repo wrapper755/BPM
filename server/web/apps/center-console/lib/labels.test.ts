@@ -1,4 +1,4 @@
-/** 화면이 같이 쓰는 표기 (`lib/labels.ts`) — CON-01 「시작 방식」, CON-03 「마지막 보고 기준」. */
+/** 화면이 같이 쓰는 표기 (`lib/labels.ts`) — CON-01 「시작 방식」, CON-12 「마지막 보고 기준」. */
 import { describe, expect, it } from "vitest";
 import { lastReportNote, sourceLabel } from "./labels";
 

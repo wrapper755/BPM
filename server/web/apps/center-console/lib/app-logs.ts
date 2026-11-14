@@ -3,7 +3,7 @@ import type { CenterKeyInfo } from "@bpm/api-types/c7-center-key-info";
 import type { DeploymentResult } from "@bpm/api-types/c12-server-runner-info";
 
 /**
- * CON-16 앱 로그 — Center가 이미 들고 있는 것(등록 요청·키·배치 결정)을 **읽어 합친다** (ADR-0121).
+ * CON-16 변경 이력 — Center가 이미 들고 있는 것(등록 요청·키·배치 결정)을 **읽어 합친다** (ADR-0121).
  *
  * 새로 쌓지 않는다 — 집계를 따로 두면 낡는다(CON-02의 셈과 같은 결). 화면을 모르는 함수라
  * vitest가 잰다 (`app-logs.test.ts`).

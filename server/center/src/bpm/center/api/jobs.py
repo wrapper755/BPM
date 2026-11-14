@@ -753,7 +753,7 @@ def _reconcile(store: Store, *, host_id: str, seen: set[str], lost_reason: str =
 def _to_dispatch(store: Store, *, host_id: str, disabled: bool) -> list[JobDispatch]:
     """내려줄 작업 (C4 `jobs`) — **ack가 올 때까지 매번 실린다**.
 
-    비활성화된 실행기에는 **새 작업을 보내지 않는다** (C5 CON-03). 작업은 `pending`으로 남아
+    비활성화된 실행기에는 **새 작업을 보내지 않는다** (C5 CON-12). 작업은 `pending`으로 남아
     기다린다 — 되살리려고 다시 만들 필요가 없다.
     """
     if disabled:
