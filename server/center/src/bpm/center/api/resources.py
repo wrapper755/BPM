@@ -407,8 +407,8 @@ def put_catalog(
 ) -> dict[str, Any]:
     """`PUT /consumers/self/catalogs/{type}` (C15) — 일꾼이 올린 카탈로그를 쌓는다.
 
-    **`revision`이 같으면 항목을 다시 쓰지 않는다** (C7) — 같은 것을 다시 쓰면 Studio의
-    계획 캐시가 공연히 버려진다. 승인된 토픽의 것만 받는다.
+    **`revision`이 같으면 항목을 다시 쓰지 않는다** (C7) — 같은 것을 다시 쓰면 받아 둔 쪽의
+    캐시가 공연히 버려진다. 승인된 토픽의 것만 받는다.
     """
     app_id = str(raw.get("app_id") or "")
     if app_id not in set(loads(consumer["topics_json"], []) or []):

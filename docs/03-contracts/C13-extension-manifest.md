@@ -119,10 +119,10 @@
   | --- | --- |
   | `storage.dir` | 이 확장이 **자기 파일을 둘 폴더** (호스트가 **제 데이터 폴더 아래에** 만들어 준다 — 앱마다 다른 자리다). 밀린 큐처럼 확장이 혼자 들고 있어야 하는 것을 여기 둔다. **비밀은 두지 않는다** (OS 비밀 저장소로 간다) |
   | `center.url` | **Center 주소** — 확장 클라이언트가 외부 작업(C15)을 올리는 곳 (ADR-0102). 서버 부분의 주소는 없다 |
-  | `center.call_token` | 비밀이라 설정이 아니라 **`ctx.secret("call_token")`**으로 푼다 — 호출 토큰 (C15). 그 호스트가 제 키로 청한 것이다 |
+  | `center.call_token` | 비밀이라 설정이 아니라 **`ctx.secret("call_token")`**으로 푼다 — 외부 작업을 올릴 토큰 (C15). **그 호스트의 Center API 키**다 ([ADR-0150](../decisions/0150-the-designer-key-is-gone.md) — 24시간 호출 토큰은 걷었고 이름만 남았다) |
 
   `center.`·`storage.`로 시작하는 키는 **호스트가 소유한다** — 확장이 `configuration`에 같은 이름을 선언하면 거부한다 (E7). 옛 머리 `service.`·`runtime.`도 계속 막는다 — 옛 확장이 그 이름으로 칸을 선언해 호스트의 값과 섞이지 않게.
-- `configuration`의 `scope`: `studio`, `server_runner` 중 하나. 그 밖의 값은 검사 오류 `unknown_scope`다 — `bot_ui`는 PC 실행기와 함께 걷었다 ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)).
+- `configuration`의 `scope`: `studio`, `server_runner` 중 하나. 그 밖의 값은 검사 오류 `unknown_scope`다 — `bot_ui`는 PC 실행기와 함께 걷었다 ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)). **`studio`는 설계 쪽 설정 칸의 이름으로 남아 있다** — 그 자리는 이제 콘솔이고 설계자의 키는 없다 ([ADR-0150](../decisions/0150-the-designer-key-is-gone.md)).
 - `configuration`의 `schema`: JSON Schema. 확장이 설정 칸을 이것으로 선언한다.
 - **`secret: true`인 칸은 OS 비밀 저장소에 둔다** (ADR-0013). 설정 파일·로그에는 남기지 않는다. 서비스 앱 키는 없다 (ADR-0102, 아래 KeyNeed) — 비밀 칸은 바깥 도구의 암호 같은 것에만 쓴다.
 - `editor`: 두 가지 중 하나다.

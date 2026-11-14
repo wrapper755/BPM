@@ -147,7 +147,7 @@ BPM 프로세스가 네트워크 건너의 기능을 부를 때 Center에 **일�
 | 일꾼 | `consumer` | 토픽을 지켜보다 일감을 가져가(잠금) 수행하고 끝냈다고 알리는 **상시 프로세스**. 서비스 앱이 일꾼이 되고, 외부 앱은 어댑터 일꾼이 맡는다. Center가 승인해 들인다 |
 | 어댑터 일꾼 | `adapter_consumer` | BPM가 주는 범용 일꾼. 외부 확장 정의의 HTTP 어댑터를 읽어 외부 앱을 부른다. **외부 앱의 주소·키는 이 일꾼만 든다** — 외부 앱이 있는 망 안에 띄워도 된다 |
 | 잠금 | `lock` | 일꾼이 일감을 가져가면 그 일꾼만 끝낼 수 있는 시간. 지나면 다른 일꾼에게 다시 나간다 (그래서 **최소 한 번 실행**이다) |
-| 호출 토큰 | `call_token` | 확장 클라이언트가 외부 작업을 **올리고 결과를 기다리는 데만** 쓰는 Center 토큰. **부르는 쪽이** 제 Center API 키로 청해(24시간) 확장에게 준다 |
+| 호출 토큰 | `call_token` | 확장 클라이언트가 외부 작업(C15)을 올릴 때 쓰는 비밀의 **이름**. 값은 **그 호스트의 Center API 키**다 — 24시간짜리 토큰을 따로 내주던 길은 그것을 청하던 Studio와 함께 걷었다 ([ADR-0150](decisions/0150-the-designer-key-is-gone.md)) |
 | 일꾼 종류 | `kind` | 작업이 어떤 일꾼의 일인가 — `ai`(AI 작업)·`api`(외부 시스템 API 호출)·`rpa`(화면 조작, **자리만 있다**). 작업(C11 `Operation`·C13)이 정하고 Center가 일감에 붙인다. 토픽은 그대로 앱 id다 ([ADR-0135](decisions/0135-agentic-automation-and-unified-consumer.md)). **일꾼의 종류**(여럿)는 Center 관리자가 CON-17에서 정하고 일꾼은 그 종류의 일감만 가져간다 ([ADR-0139](decisions/0139-consumer-kinds-are-set-in-the-console.md)) |
 | AI 작업 | `ai_operation` | `kind: ai`인 작업. 서비스 태스크가 부르고 일꾼 쪽에서 지식 검색 → 모델 추론 → **검증**(스키마·근거 id·숫자 대조) → 결과·결정을 돌려준다. 엔진 안의 **AI 태스크**와 다르다 — 재생 명세가 없고 매번 검증한다 (ADR-0135) |
 | 통합 일꾼 | `unified_consumer` | 일꾼 프로세스 하나가 여러 토픽과 일꾼 종류 셋을 함께 맡는 것 (`bpm-unified-consumer`). 흐름은 쥐지 않는다 — 흐름은 엔진과 Center다 (ADR-0135) |

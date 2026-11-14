@@ -26,7 +26,7 @@ DEFAULT_EXPIRY_DAYS = 365
 EXPIRY_WARNING_DAYS = 14
 
 #: `type`은 열린 문자열이지만 Center는 이 넷만 발급한다 (`bot_ui`는 ADR-0144가 걷었다).
-ISSUABLE_KEY_TYPES = frozenset({"studio", "server_runner", "integration", "relay"})
+ISSUABLE_KEY_TYPES = frozenset({"server_runner", "integration", "relay"})
 #: 대리 답용 키 (ADR-0081) — **결재 읽기·답뿐**이다. Center는 이 종류를 `require_read`·작업·
 #: 실행 기록에서 막고, 결재에서는 `X-BPM-On-Behalf-Of`의 그 사람이 담당자인 것만 보인다.
 RELAY_KEY_TYPE = "relay"

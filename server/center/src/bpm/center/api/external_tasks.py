@@ -2,7 +2,7 @@
 
 | 경로 | 인증 |
 | --- | --- |
-| `POST /external-tasks`, `GET·ack·cancel …/{task_id}` | 서버 실행기·Studio의 Center API 키 |
+| `POST /external-tasks`, `GET·ack·cancel …/{task_id}` | 서버 실행기의 Center API 키 |
 | `POST /consumers/fetch`, `…/tasks/{id}/complete·fail·extend`, `PUT·GET …/self/…` | 일꾼 토큰 |
 | `GET /consumers`, `GET /external-topics`, `GET /external-topics/{topic}/operations` | 콘솔 토큰 |
 
@@ -36,16 +36,13 @@ from urllib.parse import urlsplit, urlunsplit
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from bpm.center import enrollments, keys
+from bpm.center import enrollments, keys, trials
 from bpm.center.api import deployments, resources, server_runner
 from bpm.center.auth import Caller, bearer, require_console
 from bpm.center.errors import ApiError
 from bpm.center.responses import Utf8JSONResponse
 from bpm.center.storage import Store, dumps, loads, now_iso
-from bpm.contracts.center_keys import BoundTo
 from bpm.contracts.external_task import (
-    CALL_TOKEN,
-    CALL_TOKEN_HOURS,
     CODE_NO_CONSUMER,
     CODE_TIMEOUT,
     CONSUMER,
@@ -64,7 +61,6 @@ from bpm.contracts.external_task import (
     STATE_LOCKED,
     STATE_PENDING,
     TEST_RUN_PREFIX,
-    CallToken,
     CompleteRequest,
     ConsumerAddress,
     ConsumerAddressUpload,
@@ -102,10 +98,10 @@ CONSOLE_SOURCE = "console"
 
 router = APIRouter(prefix="/api/v1", tags=["external-tasks"])
 
-#: 부를 수 있는 Center API 키 종류 (C15 §전송). 호출 토큰은 조각 2에서 실행기 키의 신원으로 얹힌다.
-POSTER_KEY_TYPES = frozenset({"server_runner", "studio"})
-STUDIO = "studio"
-#: 키 종류 → 등록 표 (소유·배포 대조의 대상). Studio는 표가 없다 (C5 §Studio 등록 요청과 승인).
+#: 부를 수 있는 Center API 키 종류 (C15 §전송) — **서버 실행기 하나다**. 운영 실행도 시험 실행도
+#: 그 실행기의 키로 올린다 ([ADR-0150](../../../../../docs/decisions/0150-the-designer-key-is-gone.md)).
+POSTER_KEY_TYPES = frozenset({"server_runner"})
+#: 키 종류 → 등록 표 (소유·배포 대조의 대상).
 _HOST_IDS = {"server_runner": server_runner.id_for_key}
 #: 한 번 기다릴 때 깨어나 다시 보는 간격 (초) — 잠금이 풀리거나 기한이 지나는 것은 종이 울리지 않는다.
 _RECHECK_S = 1.0
@@ -137,56 +133,22 @@ def _size(value: Any) -> int:
 
 @dataclass(frozen=True)
 class Poster:
-    """올린 쪽. `host_id`는 서버 실행기의 등록 id이고 Studio는 `None`이다."""
+    """올린 쪽. `host_id`는 그 서버 실행기의 등록 id다."""
 
     key_id: str
     kind: str
-    host_id: str | None
+    host_id: str
 
 
 def poster_of(store: Store, found: Caller) -> Poster:
-    """올릴 수 있는 쪽인가 (C15 §전송). 등록되지 않은 실행기는 409 `not_registered`.
-
-    **호출 토큰은 그것을 청한 쪽으로 본다** — 소유(C3)·배포 대조가 그 Studio의 키로 돈다.
-    """
-    if found.key is not None and found.key.type == CALL_TOKEN:
-        bound = found.key.bound_to
-        if bound is not None and bound.type == STUDIO:
-            parent = keys.get(store, bound.id)
-            if parent is None or parent.state(now=now_iso()) != "active":
-                raise ApiError(409, "not_registered", "호출 토큰을 청한 Studio 키가 없다")
-            return Poster(key_id=parent.key_id, kind=STUDIO, host_id=None)
-        raise ApiError(409, "not_registered", "호출 토큰을 청한 Studio 키가 없다")
+    """올릴 수 있는 쪽인가 (C15 §전송). 등록되지 않은 실행기는 409 `not_registered`."""
     if found.key is None or found.key.type not in POSTER_KEY_TYPES:
-        raise ApiError(403, "wrong_key_type", "외부 작업은 서버 실행기·Studio의 Center API 키로 올린다")
+        raise ApiError(403, "wrong_key_type", "외부 작업은 서버 실행기의 Center API 키로 올린다")
     kind = found.key.type
-    if kind == STUDIO:
-        return Poster(key_id=found.key.key_id, kind=kind, host_id=None)
     host_id = _HOST_IDS[kind](store, found.key.key_id)
     if host_id is None:
         raise ApiError(409, "not_registered", "등록되지 않은 Center API 키다")
     return Poster(key_id=found.key.key_id, kind=kind, host_id=host_id)
-
-
-def issue_call_token(store: Store, found: Caller, *, now: str | None = None) -> CallToken:
-    """`POST /call-tokens` — Studio만, 24시간 (C15 「정한 것」). 지난 토큰은 이때 지운다."""
-    if found.key is None or found.key.type != STUDIO:
-        raise ApiError(403, "wrong_key_type", "호출 토큰은 Studio의 Center API 키로 청한다")
-    bound = BoundTo(type=STUDIO, id=found.key.key_id, name=found.key.name)
-    at = now or now_iso()
-    with store.tx() as cur:
-        cur.execute(
-            "DELETE FROM center_keys WHERE type = ? AND expires_at <= ?", (CALL_TOKEN, _later(at, -86400))
-        )
-    record, raw = keys.issue(
-        store,
-        name=f"호출 토큰 · {found.key.name}",
-        key_type=CALL_TOKEN,
-        expires_at=_later(at, CALL_TOKEN_HOURS * 3600),
-        bound=bound,
-    )
-    assert record.expires_at is not None
-    return CallToken(token=raw, expires_at=record.expires_at)
 
 
 def _topic_manifest(store: Store, topic: str) -> ServiceAppManifest | None:
@@ -198,14 +160,14 @@ def _topic_manifest(store: Store, topic: str) -> ServiceAppManifest | None:
 
 def _owns_the_run(store: Store, *, run_id: str, key_id: str) -> bool:
     """그 실행 기록을 보낸 키인가 (C3 소유). **기록이 아직 없으면 받아 준다** — 실행 기록은 하트비트
-    뒤에 올라가므로 첫 호출이 먼저 닿는다 (PC 위임과 같은 규칙)."""
+    뒤에 올라가므로 첫 호출이 먼저 닿는다."""
     row = store.row("SELECT owner_key_id FROM runs WHERE run_id = ?", (run_id,))
     return row is None or row["owner_key_id"] == key_id
 
 
 def _bot_requires(store: Store, poster: Poster, *, bot: str | None, version: str | None, topic: str) -> bool:
     """그 BPM 프로세스가 이 호스트에 배포돼 있고 그 판의 매니페스트가 이 토픽을 요구하는가 (C1)."""
-    if not bot or not version or poster.host_id is None:
+    if not bot or not version:
         return False
     if version not in deployments.versions_for(
         store, target_type=poster.kind, target_id=poster.host_id, bpm_process_id=bot
@@ -223,14 +185,16 @@ def _authorize(store: Store, poster: Poster, task: ExternalTaskCreate) -> tuple[
     """「불러도 되나」 (C15 §올리기 표). 통과하면 `(기한(초), 일꾼 종류)`를 돌려준다 — 종류는 manifest도
     외부 확장 정의도 없으면(아직 아무 일꾼도 그 토픽을 올리지 않았다) 모른다."""
     run_id = task.idempotency.run_id
-    if poster.kind == STUDIO:
-        if not run_id.startswith(TEST_RUN_PREFIX):
-            raise ApiError(403, "run_not_owned", f"Studio는 시험 실행(`{TEST_RUN_PREFIX}…`)으로만 올린다")
+    if run_id.startswith(TEST_RUN_PREFIX):
+        # **시험 실행** (C15 §시험 실행의 외부 작업) — 그것을 들고 있는 실행기만 올린다. 배포 대조는
+        # 하지 않고(그림이 묶음으로 온다) 자율 수행도 받는다 — 설계 중에는 모델이 배운다.
+        if trials.holder_of(store, run_id) != poster.host_id:
+            raise ApiError(403, "run_not_owned", "이 실행기로 내려간 시험 실행이 아니다")
     else:
-        if run_id.startswith(TEST_RUN_PREFIX) or not _owns_the_run(store, run_id=run_id, key_id=poster.key_id):
+        if not _owns_the_run(store, run_id=run_id, key_id=poster.key_id):
             raise ApiError(403, "run_not_owned", "이 키의 실행이 아니다")
         if task.mode == "autonomous":
-            raise ApiError(403, "mode_not_allowed", "자율 수행은 Studio에서만 올린다")
+            raise ApiError(403, "mode_not_allowed", "자율 수행은 시험 실행에서만 올린다")
         if not _bot_requires(
             store, poster, bot=task.caller.bpm_process_id, version=task.caller.version, topic=task.topic
         ):
@@ -996,11 +960,6 @@ def _model(model: Any, raw: dict[str, Any]) -> Any:
         return model.model_validate(raw)
     except ValueError as e:
         raise ApiError(422, "input_invalid", "본문이 계약과 맞지 않는다", {"error": str(e).splitlines()[0]}) from e
-
-
-@router.post("/call-tokens", status_code=201)
-def post_call_token(request: Request) -> Any:
-    return issue_call_token(_store(request), _caller(request))
 
 
 @router.post("/external-tasks")

@@ -8,7 +8,7 @@
 
 판단은 `center.workspaces`에 있고 여기는 길만 잇는다.
 
-**Studio 키 종류는 받지 않는다** (ADR-0143 §4) — 설계자의 키가 없어졌다. 콘솔 로그인 하나가 그
+**Center API 키는 받지 않는다** (ADR-0143 §4·ADR-0150) — 설계자의 키가 없어졌다. 콘솔 로그인 하나가 그
 일을 하고, 그래서 로그인의 무게가 늘었다 (`docs/09-gaps.md` §3-33).
 """
 
@@ -467,7 +467,7 @@ def read_bundle(request: Request, workspace_id: str) -> Response:
     """작업 폴더 zip — **서버 실행기 키만**. 시험 실행·검사·짓기 셋이 같은 길을 쓴다 (ADR-0146).
 
     **승인 봉투도 서명도 없다** — 승인받지 않은 그림이라서다. 그래서 이 길은 **실행기 키**로
-    좁혀 둔다(읽기 토큰·Studio 키로는 집을 수 없다).
+    좁혀 둔다(읽기 토큰으로는 집을 수 없다).
     """
     require_key_type(request.app.state.authenticate(request), RUNNER_KEY_TYPE)
     data, revision = workspaces.bundle(

@@ -189,7 +189,7 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
 
         {failure ? <ErrorBanner message={failure} /> : null}
 
-        <Enrollments rows={enrollments} where="서버 실행기 로그" canDecide={admin} />
+        <Enrollments rows={enrollments} canDecide={admin} />
 
         {rows.length === 0 && !failure ? (
           <EmptyState

@@ -24,7 +24,7 @@
 | 시작 | 메시지 `vendor_registration` — 구매 포털의 등록 신청 |
 | 서비스 앱 | `compliance`, `erp`, `ext-credit` |
 | 확장 | ext-credit, compliance, erp |
-| 마일스톤 | **M5** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M5** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx10_vendor_onboarding_review.bpmn) · [시험 케이스](cases/bx10_vendor_onboarding_review.cases.json) |
 
 **업무 배경과 목표**
@@ -124,7 +124,7 @@
 | 시작 | 작업 지시 — 입찰 공고 발행 시 |
 | 서비스 앱 | 없음 |
 | 확장 | 없음 (플랫폼 기본 태스크만) |
-| 마일스톤 | **M3** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M3** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx11_bid_collection.bpmn) · [시험 케이스](cases/bx11_bid_collection.cases.json) |
 
 **업무 배경과 목표**
@@ -227,7 +227,7 @@
 | 시작 | BPM 프로세스 호출 — 견적(BX-15)·주문 처리에서 부름 |
 | 서비스 앱 | 없음 |
 | 확장 | 없음 (플랫폼 기본 태스크만) |
-| 마일스톤 | **M3** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M3** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx12_shipping_fee.bpmn) · [시험 케이스](cases/bx12_shipping_fee.cases.json) · [DMN](bpmn/shipping_fee.dmn) |
 
 **업무 배경과 목표**
@@ -296,7 +296,7 @@
 | 시작 | 메시지 `return_request` — 쇼핑몰 반품 신청 |
 | 서비스 앱 | `shop` |
 | 확장 | shop |
-| 마일스톤 | **M5** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M5** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx13_return_processing.bpmn) · [시험 케이스](cases/bx13_return_processing.cases.json) |
 
 **업무 배경과 목표**
@@ -394,7 +394,7 @@
 | 시작 | 메시지 `quote_request` — CRM의 견적 요청 |
 | 서비스 앱 | `crm`, `erp` |
 | 확장 | erp, crm |
-| 마일스톤 | **M5** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M5** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx15_quotation.bpmn) · [시험 케이스](cases/bx15_quotation.cases.json) |
 
 **업무 배경과 목표**
@@ -480,7 +480,7 @@ API·계산·결재 — 서버.
 | 시작 | 타이머 — 매일 07:00 |
 | 서비스 앱 | `wms` |
 | 확장 | wms |
-| 마일스톤 | **M5** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M5** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx16_reorder_proposal.bpmn) · [시험 케이스](cases/bx16_reorder_proposal.cases.json) |
 
 **업무 배경과 목표**

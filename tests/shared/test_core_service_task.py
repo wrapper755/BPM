@@ -298,19 +298,19 @@ def test_a_call_becomes_an_external_task_and_its_result_comes_back() -> None:
     assert center.acked == ["/api/v1/external-tasks/et_1/ack"], "받았으면 ack — Center가 값을 지운다"
 
 
-def test_a_studio_test_run_is_a_test_task_and_the_token_is_read_each_time() -> None:
+def test_a_test_run_is_a_test_task_and_the_token_is_read_each_time() -> None:
     center = FakeCenter()
     reads: list[int] = []
 
     def token() -> str:
         reads.append(1)
-        return "chk_call_token"
+        return "bpm_ctr_runner"
 
     center_caller(center, token=token).call(op_call(run_id="test_20261004_093000_abc123", timeout_s=5))
     body = center.posted[0]["json"]
     assert body["origin"] == "test", "시험 일감이라 일꾼이 폴백·시험 주소를 고를 수 있다"
     assert body["timeout_s"] == 5
-    assert len(reads) >= 3, "호출 토큰은 24시간마다 바뀐다 — 부를 때마다 읽는다"
+    assert len(reads) >= 3, "키는 회전으로 바뀐다 — 부를 때마다 읽는다 (C4 §키 회전)"
 
 
 @pytest.mark.parametrize(
@@ -414,8 +414,9 @@ class FinishOnPost:
 
 def test_the_engine_calls_through_center_to_a_consumer(tmp_path: Any) -> None:
     """엔진 → `CenterServiceCaller` → Center → 일꾼의 작업 함수 → 변수. 엔진은 무엇이 바뀌었는지 모른다."""
-    from consumers import ADMIN, enroll  # noqa: PLC0415
+    from consumers import enroll  # noqa: PLC0415
     from fastapi.testclient import TestClient  # noqa: PLC0415
+    from trials import hold_trial, runner_key  # noqa: PLC0415
 
     from bpm.center.app import create_app as create_center  # noqa: PLC0415
     from bpm.center.settings import Settings as CenterSettings  # noqa: PLC0415
@@ -433,9 +434,11 @@ def test_the_engine_calls_through_center_to_a_consumer(tmp_path: Any) -> None:
     with TestClient(create_center(settings, store=store)) as center:
         tokens = enroll(center, topics=["erp"], manifests=[manifest.to_json_dict()], folder=tmp_path / "c")
         consumer = Consumer([erp.state.ops], center_url="", tokens=tokens, wait_s=0, client=center)
-        key = center.post("/api/v1/center-keys", json={"name": "설계자", "type": "studio"}, headers=ADMIN)
+        # 시험 실행이 부른다 — 올리는 쪽은 **그것을 들고 있는 서버 실행기**다 (ADR-0150).
+        runner_id, key = runner_key(center)
+        hold_trial(store, runner_id=runner_id, run_id="test_20261004_093000_abc123")
         caller = CenterServiceCaller(
-            base_url="", token=key.json()["key"], caller_type="studio", client=FinishOnPost(center, consumer)
+            base_url="", token=key, caller_type="server_runner", client=FinishOnPost(center, consumer)
         )
         engine = Engine()
         run = engine.start(

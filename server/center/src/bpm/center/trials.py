@@ -254,6 +254,24 @@ def lost(store: Store, *, run_id: str, reason: str) -> None:
 # ─────────────────────────── 올라온 것 적기 ───────────────────────────
 
 
+def holder_of(store: Store, run_id: str) -> str | None:
+    """**그 시험 실행을 들고 있는 서버 실행기**의 등록 id — 없으면 `None` (C15 §시험 실행의 외부 작업).
+
+    시험 실행이 서비스 앱·외부 확장을 부를 때 Center가 「이 실행기의 시험 실행인가」를 보는
+    자리다 ([ADR-0150](../../../../../docs/decisions/0150-the-designer-key-is-gone.md)). 운영 실행은
+    실행 기록의 소유 키로 가르지만(C3) 시험 실행은 **기록을 남기지 않으므로**(판정은 `test_runs`에
+    적는다) 내려간 작업으로 가른다.
+
+    **끝난 시험 실행은 `None`이다** — 판정이 난 뒤에 올라오는 일감은 받지 않는다.
+    """
+    row = store.row(
+        "SELECT j.target_id AS target_id FROM test_runs t JOIN jobs j ON j.job_id = t.job_id"
+        " WHERE t.run_id = ? AND t.state NOT IN ('done', 'failed', 'cancelled')",
+        (run_id,),
+    )
+    return None if row is None or row["target_id"] is None else str(row["target_id"])
+
+
 def report(
     store: Store,
     *,

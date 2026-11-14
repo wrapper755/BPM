@@ -34,7 +34,7 @@ export const LABEL: Record<string, string> = {
 
 const CHOICES = ["", "running", "waiting", "success", "failed", "cancelled"];
 
-/** C3 `executor` → 화면 표기 (「실행한 쪽」 열). */
+/** C3 `executor` → 화면 표기 (「실행한 쪽」 열). 지나간 기록의 `studio`도 풀어 쓴다 (ADR-0150). */
 const EXECUTOR: Record<string, string> = {
   server_runner: "서버 실행기",
   studio: "Studio",
@@ -49,9 +49,9 @@ function tally(value: number | null | undefined): string {
   return value === null || value === undefined ? "—" : String(value);
 }
 
-/** Studio가 보낸 기록에는 실행기가 없다는 말 (U3 — 「—」 옆에 까닭을 둔다). */
+/** 실행기가 없는 기록이 있다는 말 (U3 — 「—」 옆에 까닭을 둔다). */
 export const NO_RUNNER_NOTE =
-  "「실행기」가 비어 있는 기록은 실행기가 아닌 쪽(Studio 시험 실행)이 보낸 것입니다.";
+  "「실행기」가 비어 있는 기록은 실행기에 묶이지 않은 토큰(자동화·지나간 기록)이 보낸 것입니다.";
 
 export function time(value: string | null | undefined): string {
   if (!value) return "—";

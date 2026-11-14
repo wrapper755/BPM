@@ -365,10 +365,9 @@ export async function decideEnrollment(
   enrollmentId: string,
   decision: "approve" | "reject",
   text: string,
-  company?: string,
 ): Promise<ActionResult> {
   try {
-    if (decision === "approve") await center.approveEnrollment(enrollmentId, text.trim() || undefined, company);
+    if (decision === "approve") await center.approveEnrollment(enrollmentId, text.trim() || undefined);
     else await center.rejectEnrollment(enrollmentId, text.trim() || undefined);
   } catch (cause) {
     return { error: message(cause) };

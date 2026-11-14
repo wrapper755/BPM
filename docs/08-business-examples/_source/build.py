@@ -367,7 +367,7 @@ def coverage(examples: list[Example]) -> list[str]:
           "## 플랫폼 기능 커버리지", "", "| 기능 | 예제 |", "| --- | --- |"]
     L += [f"| {a} | {ids(p)} |" for a, p in plat_rows]
     L += ["", "## 마일스톤별 인수 시험 묶음", "",
-          "예제가 쓰는 기능으로 자동으로 정한다: 기본 M3(Studio 시험 실행), 서비스 앱·확장 → M5. "
+          "예제가 쓰는 기능으로 자동으로 정한다: 기본 M3(시험 실행), 서비스 앱·확장 → M5. "
           "처음 통과한 뒤에는 회귀로 계속 돈다. M5에서 PC 예제는 Center 배포 → PC 실행기 실행으로, M7에서 서버 예제는 서버 실행기에서 다시 통과해야 한다.", "",
           "| 마일스톤 | 처음 통과해야 하는 예제 | 다시 통과 |", "| --- | --- | --- |"]
     by = {}
@@ -389,7 +389,7 @@ def first_milestone(e: Example) -> str:
 def set_milestone(e: Example) -> None:
     m = first_milestone(e)
     tail = "M5 Center 배포 → M7 서버 실행기"
-    e.milestone = f"**{m}** Studio 시험 실행에서 처음 통과 → {tail}"
+    e.milestone = f"**{m}** 시험 실행에서 처음 통과 → {tail}"
 
 
 def readme(examples: list[Example]) -> str:

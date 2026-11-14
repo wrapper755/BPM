@@ -26,8 +26,9 @@ from bpm.contracts.center_keys import (
     prefix_of,
 )
 
-#: 키 종류 (C7). Center는 이 셋만 발급한다.
-KEY_TYPES = ("studio", "server_runner", "integration")
+#: 키 종류 (C7) — **발급하는 종류는 `contracts.center_keys.ISSUABLE_KEY_TYPES`가 센다.**
+#: 여기 둘은 **장비·외부 시스템의 키**이고 대리 답용(`relay`)은 폴더 키로만 들어온다 (ADR-0123).
+KEY_TYPES = ("server_runner", "integration")
 #: 키 묶음을 가지는 종류 — 기계 하나에 묶인다.
 BOUND_TYPES = ("server_runner",)
 #: 기본 만료 (C7 — 1년).
@@ -71,7 +72,7 @@ class KeyRecord:
     public_key: str | None = None
     #: 회전으로 갈아 줄 새 키 (새 키로 첫 요청이 오면 이 키를 폐기한다).
     successor_id: str | None = None
-    #: 그 장비가 속한 회사 (C16 — Studio·실행기 키에만 있다. 등록을 승인할 때 정한다).
+    #: 그 장비가 속한 회사 (C16) — 서버 실행기는 Center 공용이라 비어 있다 (ADR-0150).
     company: str | None = None
 
     def state(self, *, now: str) -> str:

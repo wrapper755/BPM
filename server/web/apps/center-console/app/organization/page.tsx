@@ -27,7 +27,7 @@ import { NewOrgItem, OrgItemTools, type OrgItem } from "./tools";
  *
  * 고르기는 **링크**(`?node=<종류>:<id>`)라 JS 없이 돈다. 회사가 정해진 계정에게는 **Center가** 제 회사
  * 것만 준다 — 화면이 거르지 않는다. 그 자리 업무·최근 실행은 하나 읽기가 준다(셈은 Center가 읽을 때 한다).
- * 업무 자리는 Studio가 올릴 때 고르므로 여기서 업무를 옮기는 손잡이는 없다 (ADR-0127).
+ * 업무 자리는 배포 후보를 지을 때 매니페스트에 실리므로 여기서 업무를 옮기는 손잡이는 없다 (ADR-0127).
  */
 
 type Detail = CompanyInfo | DepartmentInfo | StaffInfo;
@@ -299,7 +299,7 @@ export default async function OrganizationPage({ searchParams }: { searchParams:
                   {(detail.work ?? []).length === 0 ? (
                     <EmptyState
                       title="이 자리에 놓인 업무가 없습니다."
-                      hint="업무 자리는 Studio가 올릴 때 고릅니다."
+                      hint="업무 자리는 작업공간에서 고릅니다."
                     />
                   ) : (
                     <DataTable

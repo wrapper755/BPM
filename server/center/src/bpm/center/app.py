@@ -348,9 +348,10 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
 
     @app.post(f"{API}/packages")
     async def upload_package(request: Request) -> Any:
-        """업로드 (C5). **Studio용 키로도 된다** — 올리는 쪽이 Studio다 (ADR-0013).
+        """업로드 (C5). **관리자 토큰만이다** (ADR-0150 — Center API 키에는 올리기 권한이 없다).
 
-        올라간 것은 **후보**다. 승인·배포는 관리자의 일이라 키로는 할 수 없다.
+        콘솔에서 지은 배포 후보는 이 길을 지나지 않는다 — Center가 제 안에서 등록한다 (ADR-0146).
+        올라간 것은 **후보**다. 승인·배포는 관리자의 일이고 서명이 관문이다 (C2).
         """
         found = require_upload(authenticate(request))
         form = await request.form()
@@ -358,7 +359,7 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
         if uploaded is None or isinstance(uploaded, str):
             raise ApiError(422, "input_invalid", "multipart 칸 `file`에 zip을 보내세요")
         raw = await uploaded.read()
-        # 패키지는 **올린 쪽의 회사** 것이다 (C16) — Studio 키면 그 키의 회사, 자동화 토큰은 칸 `company`.
+        # 패키지는 **올린 쪽의 회사** 것이다 (C16) — 회사 관리자면 그 회사, 자동화 토큰은 칸 `company`.
         wanted_company = found.company or (str(form.get("company") or "") or None)
         info, created = packages.upload(
             app.state.store, package_dir=settings.package_dir, raw=raw, actor=found.actor, company=wanted_company
@@ -509,7 +510,7 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
     def list_resources(
         request: Request, type: str | None = None, resource_type: str | None = None
     ) -> Any:
-        """리소스 목록. 읽기·관리자 토큰과 Studio·서버 실행기 키가 읽는다 (C7)."""
+        """리소스 목록. 읽기·관리자 토큰과 서버 실행기 키가 읽는다 (C7)."""
         require_read(authenticate(request))
         return resources.listing(app.state.store, type=type, resource_type=resource_type)
 

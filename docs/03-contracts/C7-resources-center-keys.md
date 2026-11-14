@@ -4,7 +4,7 @@
 | --- | --- |
 | 상태 | **구현됨** (2026-10-10, [09-gaps](../09-gaps.md) §1 대조 — 상태는 토픽에서 온다, C15) |
 | schema | 1 |
-| 보내는 쪽 → 받는 쪽 | Center ↔ 서비스 앱(공개 정보 읽기), Studio·서버 실행기·Center 콘솔 → Center |
+| 보내는 쪽 → 받는 쪽 | Center ↔ 서비스 앱(공개 정보 읽기), 서버 실행기·Center 콘솔 → Center |
 | 코드 위치 | `shared/contracts/src/bpm/contracts/resources.py`, `…/center_keys.py` (import `bpm.contracts.resources`, [ADR-0019](../decisions/0019-package-names.md)) |
 | JSON Schema | 리소스 [`c7-extension-resource.json`](../../shared/contracts/schemas/c7-extension-resource.json) · [`c7-service-app-resource.json`](../../shared/contracts/schemas/c7-service-app-resource.json) · [`c7-contributed-resource.json`](../../shared/contracts/schemas/c7-contributed-resource.json) · [`c7-runtime-resource.json`](../../shared/contracts/schemas/c7-runtime-resource.json) / 키 [`c7-center-key-create-request.json`](../../shared/contracts/schemas/c7-center-key-create-request.json) · [`c7-center-key-info.json`](../../shared/contracts/schemas/c7-center-key-info.json) · [`c7-center-key-created.json`](../../shared/contracts/schemas/c7-center-key-created.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
 | 관련 ADR | [0010](../decisions/0010-service-apps.md), [0013](../decisions/0013-api-keys.md), [0015](../decisions/0015-run-location.md), [0018](../decisions/0018-extensions.md), [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md), [0094](../decisions/0094-service-app-keys-ride-the-deployment.md) |
@@ -25,7 +25,7 @@
 
 이 목록은 두 곳에서 쓴다 (콘솔의 리소스 화면 CON-07은 걷었다 — ADR-0128).
 
-- Studio: 리소스 탐색기와 태스크 편집기
+- 콘솔: 작업공간의 태스크 편집기 (CON-20)
 - Center: 배포 전 누락 검사
 
 **2. Center API 키 관리** (CON-11).
@@ -49,7 +49,7 @@
 
 ## 전송
 
-기본 경로는 `/api/v1`. 권한은 C5 권한표를 따른다. 리소스 읽기는 읽기·관리자 토큰, Studio·서버 실행기 키가 할 수 있다.
+기본 경로는 `/api/v1`. 권한은 C5 권한표를 따른다. 리소스 읽기는 읽기·관리자 토큰과 서버 실행기 키가 할 수 있다.
 
 | 메서드·경로 | 인증 | 뜻 |
 | --- | --- | --- |
@@ -79,7 +79,7 @@
 | `protocol` | `bpm-c11` / `http-adapter` / 없음 (클라이언트 기여만) |
 | `contributes_summary` | 기여 지점별 이름 (예: `task_types: [seal_check]`) |
 | `service_app_id`? | 서버 부분 |
-| `installed_on` | 이 확장을 가진 서버 실행기 수와 버전 분포 (C12 보고. Studio는 세지 않음) |
+| `installed_on` | 이 확장을 가진 서버 실행기 수와 버전 분포 (C12 보고) |
 | `status` | 서버 부분 상태. 값은 `ServiceAppResource.status`와 같고 **서버 부분이 아예 없으면 `n/a`**다. 그 토픽을 가져가는 일꾼으로 본다 (§리소스 모으는 방식) |
 | `status_reasons`, `checked_at`? | 상태의 사유와 마지막으로 본 때. 서버 부분이 없으면 비어 있다 |
 | `definition`, `envelope` | 외부 확장만. 실행하는 쪽이 받아 검증한다 |
@@ -158,7 +158,7 @@
 
 ### 목록 응답 공통
 
-`{items: [...], fetched_at}`. Studio는 마지막으로 받은 목록을 캐시하고, 오프라인이면 「(오프라인 — 마지막 확인 <fetched_at>)」을 붙인다 (U8).
+`{items: [...], fetched_at}`. 받은 쪽은 마지막 목록을 캐시해 두고, 닿지 않으면 「(오프라인 — 마지막 확인 <fetched_at>)」을 붙인다 (U8).
 
 ## 누락 검사
 
@@ -176,7 +176,7 @@
 
 ## 외부 앱 키 · 외부 확장 주소 — 없다
 
-외부 앱의 키와 주소는 **어댑터 일꾼의 설정**에만 있다 ([ADR-0102](../decisions/0102-calling-outside-is-pull.md), C13 §4) — Center에 넣는 칸(`PUT …/app-key`·`…/app-key/test`·`…/address`)은 없다. 시험용 키라는 것도 없다: Studio 시험 실행의 일감은 `origin: test`이고, 어댑터 일꾼이 확장마다 시험 쪽 주소·키를 따로 둘 수 있다 (ADR-0102 §6).
+외부 앱의 키와 주소는 **어댑터 일꾼의 설정**에만 있다 ([ADR-0102](../decisions/0102-calling-outside-is-pull.md), C13 §4) — Center에 넣는 칸(`PUT …/app-key`·`…/app-key/test`·`…/address`)은 없다. 시험용 키라는 것도 없다: 시험 실행의 일감은 `origin: test`이고, 어댑터 일꾼이 확장마다 시험 쪽 주소·키를 따로 둘 수 있다 (ADR-0102 §6).
 
 ## Center API 키 관리 (CON-11)
 
@@ -188,9 +188,9 @@
 | `POST /center-keys/{key_id}/unbind` | 관리자 토큰 | 호스트 묶음 풀기 (서버 실행기용) |
 | `POST /center-keys/{key_id}/purge` | 관리자 토큰 | **폐기된 키**의 행을 지운다 (204). 폐기되지 않았으면 409 `not_revoked` — 폐기 → 삭제 두 걸음이다 ([0095](../decisions/0095-deleting-revoked-center-keys.md)). 묶였던 PC·서버 자리는 「묶음 풀기」처럼 놓인 자리가 되고, 실행 기록·결재의 `owner_key_id`는 글자로 남는다 |
 
-`type`: `studio`, `server_runner`, `integration`, `relay` (열린 문자열이지만 Center는 이 넷만 발급한다 — `bot_ui`는 PC 실행기와 함께 걷었다, [ADR-0144](../decisions/0144-remove-the-pc-runner.md)).
+`type`: `server_runner`, `integration`, `relay` (열린 문자열이지만 Center는 이 셋만 발급한다 — `bot_ui`는 PC 실행기와 함께, `studio`는 설계자의 키와 함께 걷었다, [ADR-0144](../decisions/0144-remove-the-pc-runner.md)·[ADR-0150](../decisions/0150-the-designer-key-is-gone.md)).
 
-- **`server_runner`·`studio` 키는 등록 승인이 만든다** (`studio`는 [0093](../decisions/0093-studio-is-let-in-by-approval.md)) (C5 §등록 승인, [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)). 이 경로로 그 둘을 발급하는 길은 **자동화·시험용**으로 남고(관리자 토큰) CON-11 화면에는 없다. 승인이 만든 키는 `enrollment_id`를 가진다.
+- **`server_runner` 키는 등록 승인이 만든다** (C5 §등록 승인, [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md)). 이 경로로 그것을 발급하는 길은 **자동화·시험용**으로 남고(관리자 토큰) CON-11 화면에는 없다. 승인이 만든 키는 `enrollment_id`를 가진다.
 
 - `relay`(**대리 답용 키**, CON-11 표기 「대리 답용」)는 연동하는 쪽이 **사람 대신 결재에 답할 때만** 쓴다 — 결재 읽기·답뿐이고, 그 사람이 담당자일 때만 받는다 (C6, [ADR-0081](../decisions/0081-answering-on-behalf.md)). 연동용 키에 그 권한을 더하지 않은 것은 연동용 키가 **작업을 만드는 바깥 시스템 모두**에 나가기 때문이다. Center는 이 키를 `require_read`·작업·실행 기록 올리기에서 막는다.
 
@@ -249,6 +249,7 @@ CenterKeyInfo 필드:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-15 | 1 | **키 종류 `studio`를 걷었다** — 발급하는 종류는 셋이다(`server_runner`·`integration`·`relay`). 리소스 읽기는 콘솔 토큰과 서버 실행기 키뿐이고, 리소스 목록을 쓰는 화면은 **콘솔의 작업공간**(CON-20)이다 | [0150](../decisions/0150-the-designer-key-is-gone.md) |
 | 2026-11-12 | 1 | **PC 실행기를 걷었다** — 키 종류 `bot_ui`, `RuntimeResource.host.type`의 `bot_ui`와 브라우저·데스크톱 칸을 걷었다. `installed_on`은 서버 실행기만 센다 | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-11-11 | 1 | **열린 모드**에서는 폴더 키(연동용·대리 답용)가 없어도 된다 — 키 없는 호출이 관리자다(C5 §인증). 폴더 키 규칙은 그대로다 | [0142](../decisions/0142-open-mode.md) |
 | 2026-11-09 | 1 | §콘솔에서 고치는 외부 확장 — `POST·PUT·DELETE /resources/extensions…`, `…/versions`·`…/dependents`·`…/test-calls`(`ExtensionCreateRequest`·`ExtensionUpdateRequest`·`ExtensionVersionInfo`·`ExtensionDependent`·`ExtensionRevoked`·`ExtensionTestCall`·`ExtensionTestResult`), `ExtensionResource.source`. 새 엔드포인트와 선택 칸이라 schema는 그대로다 | [0141](../decisions/0141-adapter-definitions-are-edited-in-the-console.md) |

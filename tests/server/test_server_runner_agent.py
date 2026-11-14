@@ -136,7 +136,7 @@ def test_a_wrong_key_type_blocks_and_stops_knocking(
 ) -> None:
     """키 종류가 틀리면 **다시 걸어도 같다** — 막아 두고 두드리지 않는다 (C12 403)."""
     raw = center.post(
-        "/api/v1/center-keys", json={"name": "Studio 키", "type": "studio"}, headers=ADMIN
+        "/api/v1/center-keys", json={"name": "연동용 키", "type": "integration"}, headers=ADMIN
     ).json()["key"]
     found = build(settings, raw, center)
 
@@ -657,7 +657,7 @@ class _FakeBot:
                 "requires": requires or {},
                 "human": {"approval_center": False, "approval_field": False, "confirmation": False},
                 "built": {
-                    "by": "studio",
+                    "by": "server_runner",
                     "at": "2026-10-14T09:00:00+09:00",
                     "core": "0.1.0",
                     "spec_version": 1,

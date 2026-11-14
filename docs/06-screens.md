@@ -5,7 +5,7 @@
 
 ## 0. 구현 기술과 모양
 
-- 웹 화면(Center 콘솔, 서비스 앱 관리 콘솔)은 **Next.js**, 데스크톱(Studio)은 **PySide6**. 둘 다 같은 디자인 토큰(`design/tokens.json`)과 [스타일 가이드](07-style-guide.md)를 따른다 ([ADR-0017](decisions/0017-web-nextjs-design-system.md)).
+- 화면은 모두 웹이다 (Center 콘솔, 서비스 앱 관리 콘솔) — **Next.js**이고 디자인 토큰(`design/tokens.json`)과 [스타일 가이드](07-style-guide.md)를 따른다 ([ADR-0017](decisions/0017-web-nextjs-design-system.md)). 데스크톱 산출물은 없다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)).
 - 화면 설계서는 **무엇을 어디에 보이는가**를 정하고, **어떻게 보이는가**(색·글자·구성요소)는 스타일 가이드가 정한다.
 
 ## 1. 문서 구성
@@ -102,7 +102,7 @@
 | CON-00 | 공통 틀 | Center 콘솔 | 모두 | M2 | 프로토타입 |
 | CON-01 | 실행 기록 | Center 콘솔 | 운영자 | M3 | 프로토타입 (이름은 [ADR-0149](decisions/0149-console-menu-follows-the-work.md)) |
 | CON-02 | 프로세스 | Center 콘솔 | 운영자 | M3 | 프로토타입 |
-| CON-03 | 앱 — 없어짐 ([ADR-0149](decisions/0149-console-menu-follows-the-work.md) — Studio 키 목록뿐이었다. 서버 실행기는 CON-12, 이력은 CON-16) | Center 콘솔 | 운영자 | M2 | 폐기 (쓰는 앱이 없는 키 종류가 남았다 — `docs/09-gaps.md` §3-35) |
+| CON-03 | 앱 — 없어짐 ([ADR-0149](decisions/0149-console-menu-follows-the-work.md) — Studio 키 목록뿐이었다. 서버 실행기는 CON-12, 이력은 CON-16) | Center 콘솔 | 운영자 | M2 | 폐기 (키 종류 `studio`도 걷었다 — [ADR-0150](decisions/0150-the-designer-key-is-gone.md)) |
 | CON-04 | 결재함 | Center 콘솔 | 결재자 | M5 | 프로토타입 |
 | CON-05 | 작업 지시 | Center 콘솔 | 운영자 | M5 | 프로토타입 확장 (만들기 추가) |
 | CON-06 | 공통 패키지 | Center 콘솔 | 운영자 | M5 | 프로토타입 |

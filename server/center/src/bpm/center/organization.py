@@ -97,9 +97,6 @@ def _company(store: Store, row: Any, *, detail: bool = False) -> CompanyInfo:
         processes=count(
             "SELECT COUNT(DISTINCT id) AS n FROM packages WHERE company = ? AND kind = 'bpm_process'"
         ),
-        studios=count(
-            "SELECT COUNT(*) AS n FROM center_keys WHERE company = ? AND type = 'studio' AND revoked_at IS NULL"
-        ),
         work=work_at(store, company=cid, scope=SCOPE_COMPANY) if detail else [],
         recent_runs=recent_runs(store, company=cid) if detail else [],
     )

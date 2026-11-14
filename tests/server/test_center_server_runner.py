@@ -131,7 +131,7 @@ def test_register_is_idempotent(client: TestClient) -> None:
 
 def test_only_a_server_runner_key_is_accepted(client: TestClient) -> None:
     """다른 종류의 키는 403 `wrong_key_type` (C12)."""
-    for other in ("studio", "integration", "relay"):
+    for other in ("integration", "relay"):
         key = issue(client, name=f"{other} 키", key_type=other)
         response = client.post(f"{RUNNER}/register", json=register_body(), headers=auth(key))
         assert response.status_code == 403, other

@@ -4,9 +4,10 @@
 
 /**
  * `POST /enrollments/{id}/approve` — `name`을 비우면 요청의 이름을 쓴다.
+ *
+ * **회사 칸은 없다** — 오는 것은 서버 실행기뿐이고 Center 공용이다 (C16, ADR-0150).
  */
 export interface EnrollmentApproveRequest {
-  company?: string | null;
   name?: string | null;
   [k: string]: unknown;
 }

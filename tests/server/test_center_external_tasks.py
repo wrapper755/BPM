@@ -6,7 +6,7 @@
 | 토픽은 **승인할 때** 정해진다 — 요청한 것 안에서만 줄인다 | 일꾼이 제 손으로 남의 토픽을 열지 못한다 |
 | 같은 멱등 칸은 **같은 일감**이다 | 되살린 실행이 다시 올린다 (원칙 9) |
 | **그 BPM 프로세스가 그 토픽을 요구할 때만** 올린다 | 「불러도 되나」가 배포 한 자리다 |
-| 자율 수행은 **Studio의 시험 실행만** | 운영에서 LLM이 몰래 끼지 않는다 |
+| 자율 수행은 **그 실행기가 들고 있는 시험 실행만** | 운영에서 LLM이 몰래 끼지 않는다 |
 | 잠금이 지나면 **다시 나간다**, 먼저 끝낸 쪽이 이긴다 | 최소 한 번 실행 |
 | 기한이 지나면 `no_consumer`·`timeout`으로 **실패한다** | 조용히 쌓이지 않는다 |
 | `ack`가 오면 **값이 지워진다**, 못 받은 것은 7일에 | 원칙 6 예외를 좁게 쓴다 |
@@ -30,6 +30,7 @@ import pytest
 from center_admin import approve as approve_package
 from center_admin import deploy
 from fastapi.testclient import TestClient
+from trials import hold_trial
 
 from bpm.center import keys
 from bpm.center.api import external_tasks as api
@@ -210,10 +211,15 @@ def fetch(center: TestClient, token: str, **over: Any) -> dict[str, Any]:
 
 @pytest.fixture
 def field(center: TestClient) -> str:
-    """그 토픽을 요구하는 BPM 프로세스가 배포된 PC의 키."""
+    """그 토픽을 요구하는 BPM 프로세스가 배포된 서버 실행기의 키."""
     server_runner_id, key = pc(center)
     deployed(center, server_runner_id)
     return key
+
+
+#: 시험 실행의 실행 id (C15 §시험 실행의 외부 작업).
+TRIAL = "test_20261029_000000_aaaaaa"
+TRIAL_RUN = {"run_id": TRIAL, "node_id": "Task_submit", "node_instance": 1, "attempt": 1}
 
 
 def later(seconds: float) -> str:
@@ -306,16 +312,51 @@ def test_a_bot_not_deployed_here_is_refused(center: TestClient) -> None:
     assert made.status_code == 403 and made.json()["code"] == "topic_not_required"
 
 
-def test_autonomous_only_from_studio_test_runs(center: TestClient, field: str) -> None:
-    made = post(center, field, mode="autonomous")
+def test_autonomous_only_from_the_trial_this_runner_holds(center: TestClient, store: Store) -> None:
+    """자율 수행은 **시험 실행**에서만이고, 그 시험 실행은 **이 실행기로 내려간 것**이어야 한다.
+
+    운영 실행에서 열어 두면 운영에서 LLM이 몰래 낀다 (C1 원칙 7). 실행기를 보지 않으면 실행기
+    하나가 남의 시험 실행 id로 일감을 올릴 수 있다 (ADR-0150).
+    """
+    runner_id, key = pc(center)
+    deployed(center, runner_id)
+    made = post(center, key, mode="autonomous")
     assert made.status_code == 403 and made.json()["code"] == "mode_not_allowed"
 
-    studio = new_key(center, name="설계자", kind="studio")
-    refused = post(center, studio, mode="autonomous")
+    # 시험 실행 id인데 내려간 것이 없다 — 받지 않는다.
+    refused = post(center, key, mode="autonomous", idempotency=TRIAL_RUN, origin="test")
     assert refused.status_code == 403 and refused.json()["code"] == "run_not_owned"
-    test_run = {"run_id": "test_0a1b2c", "node_id": "Task_submit", "node_instance": 1, "attempt": 1}
-    ok = post(center, studio, mode="autonomous", idempotency=test_run, origin="test")
+
+    hold_trial(store, run_id=TRIAL, runner_id=runner_id)
+    ok = post(center, key, mode="autonomous", idempotency=TRIAL_RUN, origin="test")
     assert ok.status_code == 201, ok.text
+
+
+def test_a_trial_of_another_runner_is_refused(center: TestClient, store: Store) -> None:
+    other, _ = pc(center, machine="5" * 64)
+    hold_trial(store, run_id=TRIAL, runner_id=other)
+    _, key = pc(center)
+    made = post(center, key, idempotency=TRIAL_RUN, origin="test")
+    assert made.status_code == 403 and made.json()["code"] == "run_not_owned"
+
+
+def test_a_trial_does_not_need_a_deployment(center: TestClient, store: Store) -> None:
+    """시험 실행에는 배포가 없다 — 그림이 묶음으로 온다 (C17). 배포 대조를 하면 올릴 길이 없다."""
+    runner_id, key = pc(center)
+    hold_trial(store, run_id=TRIAL, runner_id=runner_id)
+    consumer(center)
+    made = post(center, key, idempotency=TRIAL_RUN, origin="test")
+    assert made.status_code == 201, made.text
+
+
+def test_a_finished_trial_is_refused(center: TestClient, store: Store) -> None:
+    """판정이 난 뒤에 올라오는 일감은 받지 않는다 — 그 시험 실행은 끝났다."""
+    runner_id, key = pc(center)
+    hold_trial(store, run_id=TRIAL, runner_id=runner_id)
+    with store.tx() as cur:
+        cur.execute("UPDATE test_runs SET state = 'done' WHERE run_id = ?", (TRIAL,))
+    made = post(center, key, idempotency=TRIAL_RUN, origin="test")
+    assert made.status_code == 403 and made.json()["code"] == "run_not_owned"
 
 
 def test_a_run_owned_by_another_key_is_refused(center: TestClient, store: Store, field: str) -> None:
@@ -657,17 +698,18 @@ def test_a_worker_with_kinds_takes_only_those_and_the_unknown(center: TestClient
     assert [one["task_id"] for one in fetch(center, token, max_tasks=5)["tasks"]] == [rpa]
 
 
-def test_an_external_extension_task_takes_its_kind_from_the_definition(center: TestClient) -> None:
+def test_an_external_extension_task_takes_its_kind_from_the_definition(center: TestClient, store: Store) -> None:
     """외부 확장 토픽에는 manifest가 없다 — 등록된 정의의 작업에서 종류를 읽는다 (ADR-0139, HTTP 어댑터는 `api`뿐)."""
     from test_m5_extensions import definition  # noqa: PLC0415
 
     token = consumer(center, topics=["ext-ocr"], manifest=None)
     got = center.put("/api/v1/consumers/self/extension", json={"definition": definition()}, headers=bearer(token))
     assert got.status_code in (200, 201), got.text
-    studio = new_key(center, name="설계자", kind="studio")
-    test_run = {"run_id": "test_0a1b2c", "node_id": "Task_ocr", "node_instance": 1, "attempt": 1}
+    runner_id, key = pc(center)
+    hold_trial(store, run_id=TRIAL, runner_id=runner_id)
+    test_run = {**TRIAL_RUN, "node_id": "Task_ocr"}
     for operation in ("read_invoice", "not_in_the_definition"):
-        made = post(center, studio, topic="ext-ocr", operation=operation, idempotency=test_run, origin="test")
+        made = post(center, key, topic="ext-ocr", operation=operation, idempotency=test_run, origin="test")
         assert made.status_code == 201, made.text
         test_run = {**test_run, "node_instance": 2}
 

@@ -4,7 +4,6 @@
 | --- | --- |
 | 관리자 토큰 | 전부 |
 | 읽기 토큰 | **없다** — 콘솔 「보기 전용」은 목록·정보까지다 (파일은 받지 않는다) |
-| Studio 키 | 전부 — 올린 쪽이고, 공유 BPM 프로세스·툴팩을 가져다 쓴다 |
 | 서버 실행기 키 | **자기에게 배포된 것만** (고르는 기준은 `envelopes_for`와 같다) |
 | 연동용 키 | 없다 — 작업만 만든다 |
 
@@ -22,7 +21,7 @@ from __future__ import annotations
 from typing import Any
 
 from bpm.center.api import deployments, server_runner
-from bpm.center.auth import PACKAGE_KEY_TYPE, Caller
+from bpm.center.auth import Caller
 from bpm.center.errors import ApiError
 from bpm.center.storage import Store
 
@@ -49,8 +48,6 @@ def guard_download(store: Store, found: Caller, *, package_id: str, version: str
     if key is None:
         # 읽기 토큰 — 콘솔은 패키지 **파일**을 받지 않는다 (C5 권한표의 「—」).
         raise ApiError(403, "forbidden", "읽기 토큰으로는 패키지 파일을 내려받을 수 없다")
-    if key.type == PACKAGE_KEY_TYPE:
-        return
     if key.type not in TARGET_OF:
         raise ApiError(
             403, "forbidden", f"{key.type} 종류의 키로는 패키지를 내려받을 수 없다"

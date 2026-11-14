@@ -2,9 +2,9 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **구현됨** (2026-10-10, [09-gaps](../09-gaps.md) §1 대조 — `Provides`를 Studio가 짓고 CON-06이 읽는다) |
+| 상태 | **구현됨** (2026-10-10, [09-gaps](../09-gaps.md) §1 대조 — `Provides`를 짓는 쪽이 채우고 CON-06이 읽는다) |
 | schema | 1 |
-| 보내는 쪽 → 받는 쪽 | Studio(빌드) → Center(업로드·검사·보관) → 서버 실행기(설치·사전 점검) |
+| 보내는 쪽 → 받는 쪽 | 짓는 쪽(C17 「배포 후보로 만들기」 — 실행기의 시험 모드) → Center(등록·검사·보관) → 서버 실행기(설치·사전 점검) |
 | 코드 위치 | `shared/contracts/src/bpm/contracts/manifest.py` (import `bpm.contracts.manifest`, [ADR-0019](../decisions/0019-package-names.md)) |
 | JSON Schema | [`c1-manifest.json`](../../shared/contracts/schemas/c1-manifest.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
 | 관련 ADR | [0006](../decisions/0006-single-contracts-package.md), [0013](../decisions/0013-api-keys.md), [0015](../decisions/0015-run-location.md), [0016](../decisions/0016-server-first.md), [0110](../decisions/0110-center-keeps-the-schedule.md) |
@@ -27,7 +27,7 @@
 ├─ manifest.json            # 이 계약
 ├─ process/                 # 진입 정의 + 하위 정의 (.bpmn), 규칙 (.dmn)
 ├─ memory/specs.json        # 재생 명세 (학습 자료)
-├─ preflight.json           # Studio가 계산한 사전 점검 결과 (노드별 ok/warning/blocked)
+├─ preflight.json           # 짓는 쪽이 계산한 사전 점검 결과 (노드별 ok/warning/blocked)
 ├─ libs/                    # 복사해 넣은 공유 BPM 프로세스 (requires.libs) — 정의(.bpmn)와 그것이 쓰는 결정표(.dmn)
 └─ SIGNATURE                # 승인 서명 — Center가 짓는다 (C2, 있을 때만)
 ```
@@ -46,7 +46,7 @@
 | `version` | str | ✓ | SemVer (`1.2.0`, `1.2.0-rc.1`) | 1 |
 | `name` | str | | 화면 표시 이름 | 1 |
 | `description` | str | | | 1 |
-| `place` | object? | `bpm_process`만 | **업무 자리** — 이 BPM 프로세스가 누구의 일인가 (C16 `Place`: `{scope: company\|department\|staff, department?, staff?}`). **Studio가 「Center로 올리기」에서 고른다**. 비우면 회사 공통이고, 회사는 올린 Studio의 회사다. Center가 올릴 때 그 회사 안의 부서·직원인지 본다 ([ADR-0127](../decisions/0127-studio-picks-the-work-place.md)) | 1 |
+| `place` | object? | `bpm_process`만 | **업무 자리** — 이 BPM 프로세스가 누구의 일인가 (C16 `Place`: `{scope: company\|department\|staff, department?, staff?}`). **작업공간에서 고른다** (CON-20). 비우면 회사 공통이고, 회사는 그 작업공간의 회사다. Center가 올릴 때 그 회사 안의 부서·직원인지 본다 ([ADR-0127](../decisions/0127-studio-picks-the-work-place.md)) | 1 |
 | `entry` | str | `bpm_process`만 ✓ | 진입 정의 경로 (예: `process/main.bpmn`) | 1 |
 | `process_id` | str | `bpm_process`만 ✓ | 진입 정의의 BPMN process id | 1 |
 | `triggers` | Trigger[] | | 시작 방법 | 1 |
@@ -78,10 +78,10 @@
 | `settings` | str[] | 실행하는 쪽이 갖춰야 할 설정 이름: `llm` `vlm` `smtp` |
 | `service_apps` | ServiceAppNeed[] | 부르는 서비스 앱(= C15 토픽)과 작업 (아래). 제 앱을 부르는 확장(C13 `requires_keys[].purpose: run`)의 태스크가 있으면 그 확장 id가 들어간다 |
 | `resources` | `{type, id}`[] | 확장이 기여한 자원 중 쓰는 것 (예: `{type: "seal_specimen", id: "hq.corporate-seal"}`). Center 리소스 목록(C7 확장 기여 자원)과 대조 |
-| `extensions` | `{id, version, definition_hash?}`[] | 쓰는 확장과 버전 범위 (C13). 외부 확장이면 `definition_hash`로 정의를 고정한다. Studio가 채운다 |
-| `task_types` | `{id, extension}`[] | 쓰는 태스크 종류 중 **확장이 기여한 것**. Studio가 빌드할 때 그림에서 모은다. Center는 배포 때 그 확장이 깔려 있나를 본다 (C7) |
+| `extensions` | `{id, version, definition_hash?}`[] | 쓰는 확장과 버전 범위 (C13). 외부 확장이면 `definition_hash`로 정의를 고정한다. 짓는 쪽이 채운다 |
+| `task_types` | `{id, extension}`[] | 쓰는 태스크 종류 중 **확장이 기여한 것**. 지을 때 그림에서 모은다. Center는 배포 때 그 확장이 깔려 있나를 본다 (C7) |
 | `libs` | str[] | 복사해 넣은 공유 BPM 프로세스 `<id>@<version>` |
-| `delegations` | str[] | **맡기는** BPM 프로세스 `<id>@<version>` 또는 `<id>`(판을 비우면 배포된 판). 복사해 넣는 것이 **아니다** — 따로 올리고 따로 배포한 BPM 프로세스라 `libs/`에 들어가지 않는다 ([ADR-0082](../decisions/0082-batch-start.md)). Studio가 그림(`bpm:call.delegate`)에서 모은다 |
+| `delegations` | str[] | **맡기는** BPM 프로세스 `<id>@<version>` 또는 `<id>`(판을 비우면 배포된 판). 복사해 넣는 것이 **아니다** — 따로 올리고 따로 배포한 BPM 프로세스라 `libs/`에 들어가지 않는다 ([ADR-0082](../decisions/0082-batch-start.md)). 지을 때 그림(`bpm:call.delegate`)에서 모은다 |
 | `runtimes` | str[] | 예: `node>=20`, `chromium` |
 | `os` | str[] | `windows` `linux`. 비면 제한 없음 |
 
@@ -109,7 +109,7 @@
 | --- | --- |
 | Trigger | `kind`: `none` \| `message` \| `timer` \| `conditional` \| `signal`, `name`(이벤트 이름 — 메시지·신호), `expression`(타이머 식) |
 | Provides | `processes`: `{process_id, file, name, description, reads[], writes[], ai_tasks, human}`[] |
-| Built | `by`: `studio` \| `cli`, `at`(ISO 8601), `core`(버전), `spec_version`(재생 명세 버전) |
+| Built | `by`: `server_runner` \| `cli`(열린 문자열 — 옛 패키지는 `studio`다), `at`(ISO 8601), `core`(버전), `spec_version`(재생 명세 버전) |
 
 **`triggers`는 진입 정의의 시작 이벤트를 그대로 옮긴 것이다** — `kind`는 BPMN 시작 이벤트의
 이벤트 정의와 1:1이고, 값은 이 다섯뿐이다 (R9가 검사한다).
@@ -131,14 +131,14 @@
   쓰지 않고, 신호는 한 실행 안의 가지 사이에서만 간다). 그래도 **`none`으로 뭉개지 않고 그린 대로
   적는다** — 「작업 지시로 시작한다」고 적어 주면 왜 안 도는지 아무도 모른다.
 - **타이머 일정은 Center가 `triggers`로 쓴다** ([ADR-0110](../decisions/0110-center-keeps-the-schedule.md),
-  C5 §일정) — Center는 그림을 읽지 않으므로 Studio가 `timeCycle` 본문을 `expression`에 옮겨 둔 것이
+  C5 §일정) — Center는 그림을 읽지 않으므로 짓는 쪽이 `timeCycle` 본문을 `expression`에 옮겨 둔 것이
   일정의 원본이다. 읽는 문법은 `contracts.schedule` 하나이고 **R13이 올릴 때 같은 함수로 본다**.
   실행하는 쪽(서버 실행기)은 일정을 잡지 않는다 — 일정이 만든 것은 평범한 작업이다.
   메시지 시작도 Center가 `triggers`의 이름으로 고른다(C12 — 상관 키는 Center가 기다리는 실행과 맞춘다).
 
 ## 검사 규칙
 
-Studio(빌드 때), Center(업로드 때), 서버 실행기(설치 때)가 **같은 함수**(`contracts.manifest.validate`)로 검사한다.
+짓는 쪽(지을 때), Center(등록할 때), 서버 실행기(설치 때)가 **같은 함수**(`contracts.manifest.validate`)로 검사한다.
 
 | # | 규칙 | 위반 시 |
 | --- | --- | --- |
@@ -146,7 +146,7 @@ Studio(빌드 때), Center(업로드 때), 서버 실행기(설치 때)가 **같
 | R2 | `requires.domains`에 `web`·`desktop`이 없다 — 그 판은 아직 돌릴 수 없다 ([ADR-0114](../decisions/0114-remove-ui-automation.md)) | 422 `server_incompatible` + 걸린 항목 목록 |
 | R8 | (Center, 배포 때) `requires.service_apps[].operations`가 모두 C11 manifest에서 `server_ok=true`이고 결정 수행을 지원한다 (리소스 목록 C7과 대조). 업로드 때는 경고만 | 배포 422 `operation_not_server_ok` / `operation_not_deterministic` |
 | R4 | (없앴다 — 키 참조 칸이 없다, ADR-0102. 번호는 다시 쓰지 않는다) | — |
-| R5 | `manifest.json`·BPMN 어디에도 키 값·비밀 값이 없다 (Studio 빌드가 보장한다) | — |
+| R5 | `manifest.json`·BPMN 어디에도 키 값·비밀 값이 없다 (짓는 쪽이 보장한다) | — |
 | R6 | `content_hash`가 실제 내용과 같다 (C2) | 422 `hash_mismatch` |
 
 **R7은 없어졌다** — 툴팩 해시를 검사하던 규칙이고 툴팩 갈래가 사라졌다 ([ADR-0050](../decisions/0050-no-toolpack-kind.md)). **번호는 다시 쓰지 않는다** (오류 코드는 사람이 기억한다).
@@ -194,7 +194,7 @@ Studio(빌드 때), Center(업로드 때), 서버 실행기(설치 때)가 **같
   "human": {"approval_center": true, "confirmation": false},
   "inputs": [{"name": "대상월", "type": "string", "required": false, "description": "비우면 지난달"}],
   "outputs": ["invoice_no"],
-  "built": {"by": "studio", "at": "2026-10-01T10:00:00+09:00", "core": "0.3.0", "spec_version": 1},
+  "built": {"by": "server_runner", "at": "2026-10-01T10:00:00+09:00", "core": "0.3.0", "spec_version": 1},
   "content_hash": "sha256:9f2c…"
 }
 ```
@@ -206,7 +206,7 @@ Studio(빌드 때), Center(업로드 때), 서버 실행기(설치 때)가 **같
 | 400 | zip이 깨짐, `manifest.json` 없음, JSON 아님 | 다시 빌드 |
 | 200 | 같은 `id`+`version`이고 `content_hash`도 같음 (재시도한 업로드) | 성공으로 본다 |
 | 409 | 같은 `id`+`version`인데 내용이 다름 (C5) | 버전을 올린다 |
-| 422 | 검사 규칙 위반(R1~R6·R9), 모르는(더 높은) `schema` | 응답 `detail[]`의 규칙 코드를 Studio 「실행 전 검사」와 같은 문구로 보인다 |
+| 422 | 검사 규칙 위반(R1~R6·R9), 모르는(더 높은) `schema` | 응답 `detail[]`의 규칙 코드를 작업공간의 「실행 전 검사」와 같은 문구로 보인다 |
 
 ## 호환 규칙
 

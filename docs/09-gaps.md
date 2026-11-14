@@ -21,7 +21,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 | 계약 | 문서 머리말 | 코드 | 「구현됨」까지 남은 것 |
 | --- | --- | --- | --- |
-| C1 | **구현됨** | `contracts.manifest` R1~R8 (R8은 Center 배포가 짓는다) | — (닫았다 — Studio가 `Provides`를 짓고 CON-06이 읽는다). — (닫았다). `definition_hash`는 **STU-15에서 사람이 고정한다**([ADR-0060](decisions/0060-pinning-external-definitions.md) — 고정하지 않으면 경고만 한다), `requires.settings`는 Studio가 그림에서 채운다 (`bpm:email` → `smtp`, [ADR-0059](decisions/0059-sending-mail-and-webhooks.md)) |
+| C1 | **구현됨** | `contracts.manifest` R1~R8 (R8은 Center 배포가 짓는다) | — (닫았다 — 짓는 쪽이 `Provides`를 채우고 CON-06이 읽는다). `definition_hash`는 **CON-20에서 사람이 고정한다**([ADR-0060](decisions/0060-pinning-external-definitions.md) — 고정하지 않으면 경고만 한다), `requires.settings`는 짓는 쪽이 그림에서 채운다 (`bpm:email` → `smtp`, [ADR-0059](decisions/0059-sending-mail-and-webhooks.md)) |
 | C2 | **구현됨** | `contracts.hashing`·`signing` V1~V8 | — (닫았다) |
 | C3 | **구현됨** | `contracts.events`·`core.run_log` | — (닫았다: 확장이 남기는 줄은 [ADR-0041](decisions/0041-extension-run-events.md), `case_id`·`queued_s`는 아는 쪽이 넣는다, `confirmations`는 **세는 쪽**이 가르고 `bot_ui_id`는 **Center가 읽을 때** 채운다) |
 | C4 | **구현됨** | `contracts.runner` (실행기 공통 모델 — 경로는 C12) | — (`key_expires_at`으로 BUI-05 Center API 키 만료를 닫았다). `runtimes.browsers`·`desktop_backend`는 채우는 쪽이 없다 — §3-28 |
@@ -30,8 +30,8 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 | C7 | **구현됨** | `contracts.resources`·`center_keys` | — (닫았다 — 상태는 토픽에서 온다, C15). `requires.resources`를 짓는 쪽이 없어 `used_by`가 빈다 — §3-24 |
 | C11 | **구현됨** | `contracts.service_app`·`service_kit`(`service_kit.consumer` — 일꾼) | — (닫았다) |
 | C12 | **구현됨** (M7) | `contracts.server_runner`·`core.run_snapshot` + **양쪽** — 등록·하트비트·운영 API·배포 설치·작업 실행·저장·재개·결재·**메시지**가 돈다 | — (닫았다). 「기한은 간다」는 [ADR-0061](decisions/0061-waking-runs-whose-timer-is-due.md)이 코드로도 사실로 만들었다 (주기만큼 늦을 수 있다고 C12에 적었다). **PC 위임도 본문이 되어 양쪽이 돈다** ([ADR-0062](decisions/0062-pc-delegation.md) — §3-13). 담고 되살리는 모양은 [ADR-0054](decisions/0054-server-run-state-and-concurrency.md)가 정했고, **재시작을 건너 메시지가 두 번 들어가던 자리**는 [ADR-0058](decisions/0058-absorbed-messages-travel-with-the-snapshot.md)이 닫았다 (ADR-0056이 「재 보지 않았다」고 적어 둔 것 — 재 보니 정말 두 번이었다) |
-| C13 | **구현됨** | `contracts.extension`·`core.extensions` | — (닫았다 — 기여 지점마다 읽는 쪽이 있다: 호스트·Studio·PC 실행기·콘솔·Center) |
-| C14 | **구현됨** | `contracts.bpmn_ext` B1~B17 + `contracts.dmn` | — (닫았다 — 엔진이 수행하고 Studio가 편집·검사하고 예제 49개가 이 형식이다. schema 1에서 **쓰지 않기로 적은 것**은 범위 결정이다) |
+| C13 | **구현됨** | `contracts.extension`·`core.extensions` | — (닫았다 — 기여 지점마다 읽는 쪽이 있다: 호스트·콘솔·Center. 설계 쪽 기여는 `studio.*`라는 이름으로 남아 있고 그 자리는 콘솔이다, ADR-0150) |
+| C14 | **구현됨** | `contracts.bpmn_ext` B1~B17 + `contracts.dmn` | — (닫았다 — 엔진이 수행하고 콘솔이 편집·검사하고 예제 49개가 이 형식이다. schema 1에서 **쓰지 않기로 적은 것**은 범위 결정이다) |
 | C15 | **구현됨** | `contracts.external_task`, Center `api/external_tasks.py` (15판) + **양쪽** — 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`server/adapter_consumer` | — (조각 2~4가 닫았고 긴 작업은 [ADR-0103](decisions/0103-long-external-tasks.md)이 닫았다, §3-17) |
 | C17 | **초안** | 전송이 다 돈다. 화면(CON-20)도 탭 셋이 돈다 | 리소스에서 노드 만들기 — **리소스 탐색기를 어디에 둘지 먼저 정한다**. 전송에서 정할 것은 없다 ([ADR-0146](decisions/0146-design-work-has-its-own-lane.md)). §3-34 |
 
@@ -45,19 +45,19 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 ## 3. 계약 쪽 기능 공백
 
-계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18). **보안을 어디까지 조일지는 §3-33으로 미뤘다** — 관문은 다 있고 스위치 하나로 지나간다([ADR-0142](decisions/0142-open-mode.md)). **M11이 C17을 구현하면서 §3-34를 거의 닫았고**(전송 전부 + 화면 탭 셋 — 남은 것은 리소스에서 노드 만들기 하나다) **Qt를 걷으면서 §3-35가 새로 생겼다**(쓰는 앱이 없는 Studio 키 종류).
+계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18). **보안을 어디까지 조일지는 §3-33으로 미뤘다** — 관문은 다 있고 스위치 하나로 지나간다([ADR-0142](decisions/0142-open-mode.md)). **M11이 C17을 구현하면서 §3-34를 거의 닫았고**(전송 전부 + 화면 탭 셋 — 남은 것은 리소스에서 노드 만들기 하나다) **Qt를 걷으면서 생긴 §3-35도 닫았다** — 쓰는 앱이 없는 Studio 키 종류를 걷고, 걷다가 드러난 「시험 실행이 서비스 앱을 부를 수 없다」까지 함께 열었다 ([ADR-0150](decisions/0150-the-designer-key-is-gone.md)).
 
-### 3-35. Studio 키 종류가 남아 있다 (쓰는 앱이 없다)
+### 3-35. Studio 키 종류가 남아 있다 (쓰는 앱이 없다) — **닫혔다** (2026-11-15)
 
-[ADR-0143](decisions/0143-design-happens-in-the-console.md) §4가 **「설계자의 키가 없어졌다」**고
-정했는데, 계약과 Center에는 아직 그 종류가 있다 — C5·C7의 키 종류 `studio`, C5 §Studio 등록 요청과
-승인(`POST /api/v1/studio/enroll`·`StudioEnrollRequest`), Center의 `enrollments.py` Studio 갈래다.
+[ADR-0150](decisions/0150-the-designer-key-is-gone.md)이 걷었다 — 계약(C5 권한표·C7 키 종류·C15),
+Center(등록 요청·`enrollments.py`·권한 관문·`organization.py`의 셈), 시험까지다. 화면 쪽은 그 앞에
+[ADR-0149](decisions/0149-console-menu-follows-the-work.md)가 닫았다(CON-03).
 
-**화면 쪽은 닫혔다** — CON-03(Studio 목록)을 없앴다 ([ADR-0149](decisions/0149-console-menu-follows-the-work.md)).
-남은 것은 **계약(C5 권한표·C7)·Center·시험 열다섯 자리**이고 함께 고쳐야 해서 **제 조각이 필요하다**.
-지금 해로운 것은 아니다(발급하는 화면도 사람도 없으면 아무 일도 없다). **먼저 정할 것**: 옛 Studio 키가 남아 있는 Center에서
-그것을 **지울 것인가 두고 만료시킬 것인가** — 지우면 그 키로 올라온 패키지의 `uploaded_by`가 가리킬
-곳이 없어진다.
+걷다가 **닫혀 있던 자리 하나가 드러나 함께 열었다** — C15가 「시험 실행(`test_…`)의 외부 작업」과
+「자율 수행」을 Studio 키에만 열어 두어 **서버 실행기의 시험 실행이 서비스 앱을 부를 수 없었다**.
+이제 Center가 `test_runs.job_id` → `jobs.target_id`로 **그 실행기가 들고 있는 시험 실행인지** 보고 받는다
+(C15 §시험 실행의 외부 작업). 호출 토큰(24시간)은 청하는 쪽이 없어져 함께 걷었고, 남아 있던
+Studio 키·호출 토큰은 판 올리기 33이 **폐기 표시**한다.
 
 ### 3-34. 작업공간(C17) — 알맹이는 돌고 전송이 없다
 
@@ -91,9 +91,9 @@ M11 조각 4) — 탐색기·캔버스·속성 패널·결정표 격자·케이�
 
 **이 공백이 §3-33(보안 조이기)을 더 급하게 만든다** — 콘솔 로그인 하나가 그림까지 고치게 된다.
 
-### 3-29. 조직·업무 자리 — Center·Studio·콘솔은 돈다, 연동 키의 회사가 아직
+### 3-29. 조직·업무 자리 — Center·콘솔은 돈다, 연동 키의 회사가 아직
 
-[ADR-0125](decisions/0125-organization-and-work-placement.md)·[ADR-0127](decisions/0127-studio-picks-the-work-place.md), 계약 [C16](03-contracts/C16-organization.md) 「합의」. 도는 것: 조직 API, 장비의 회사(등록 승인), 올릴 때 업무 자리 검사(매니페스트 `place`), PC 배포의 회사 관문, 작업의 주인·`owner_stopped`·서버 작업의 `place`, 회사 관리자 거르기, STU-12b 자리 고르기, 콘솔 승인 창·등록 승인·계정의 회사, 조직 화면 CON-13, CON-01의 회사·부서·직원 열. 가상 직원은 없앴다. **남은 것**: ① 연동용·대리 답용 키의 회사(> 미정) ② 직원 사이의 업무 요청 ADR(ADR-0125 §8 — 조직이 선 뒤). PC 작업에 자리를 나르는 줄은 **PC 실행기와 함께 사라졌다** ([ADR-0144](decisions/0144-remove-the-pc-runner.md)).
+[ADR-0125](decisions/0125-organization-and-work-placement.md)·[ADR-0127](decisions/0127-studio-picks-the-work-place.md), 계약 [C16](03-contracts/C16-organization.md) 「합의」. 도는 것: 조직 API, 작업공간의 회사(C17), 올릴 때 업무 자리 검사(매니페스트 `place`), 배포의 회사 관문, 작업의 주인·`owner_stopped`·서버 작업의 `place`, 회사 관리자 거르기, 작업공간의 자리 고르기(CON-20), 콘솔 승인 창·계정의 회사, 조직 화면 CON-13, CON-01의 회사·부서·직원 열. 가상 직원은 없앴다. **남은 것**: ① 연동용·대리 답용 키의 회사(> 미정) ② 직원 사이의 업무 요청 ADR(ADR-0125 §8 — 조직이 선 뒤). PC 작업에 자리를 나르는 줄은 **PC 실행기와 함께 사라졌다** ([ADR-0144](decisions/0144-remove-the-pc-runner.md)).
 
 ### 3-21. PC BPM 프로세스로 메시지를 넣는 길이 없다 — **사라졌다**
 
@@ -113,7 +113,7 @@ ADR-0014의 PC 쪽 줄은 함께 걷었다.
 
 **무엇이 없나.** C1 `requires.resources`(BPM 프로세스가 쓰는 확장 기여 자원)를 **세 곳이 읽는데 쓰는 곳이 없다.** 그래서 C7 기여 자원의 `used_by`가 늘 비고(CON-07 「쓰는 BPM 프로세스」 열), C7 누락 검사의 `resource/not_found`가 울리지 않는다.
 
-**근거.** 읽는 쪽 — Center `api/packages.py:207`(`missing`)·`api/deployments.py:277`(`blocking_at_deploy`)·`api/resources.py`(`used_by`). 쓰는 쪽 — Studio `packaging.py:160-169`의 `Requires(...)`에 `resources`가 없고, `ResourceRef`를 만드는 코드가 계약 패키지 밖에 없다.
+**근거.** 읽는 쪽 — Center `api/packages.py:207`(`missing`)·`api/deployments.py:277`(`blocking_at_deploy`)·`api/resources.py`(`used_by`). 쓰는 쪽 — `core.testrun.packaging`의 `Requires(...)`에 `resources`가 없고, `ResourceRef`를 만드는 코드가 계약 패키지 밖에 없다.
 
 **먼저 정할 것.** 그림의 어디서 자원 id를 모으나. 후보는 확장이 선언한 칸(`creates_task_field` — STU-03 「캔버스에 추가」가 자원 id를 넣는 자리, ADR-0045)이다. 그 칸을 읽으면 플랫폼이 확장의 `data`를 해석하지 않고도(C13 §5) 모을 수 있다.
 

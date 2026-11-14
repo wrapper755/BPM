@@ -12,7 +12,7 @@
 
 ## 목적
 
-**서비스 앱은 확장의 서버 부분이다** ([ADR-0018](../decisions/0018-extensions.md)). 내장·사내 확장의 서비스 앱은 이 계약을 따르고, 이 계약을 따르지 않는 외부 앱은 확장 정의의 HTTP 어댑터(C13 §4)를 **어댑터 일꾼**이 돌려 붙인다. 서비스 앱이 늘어나도 부르는 쪽은 **한 가지 방식**(C15 외부 작업)으로 부르고, Studio는 manifest로 서비스 앱 태스크 편집기(STU-14)를 만들며, 관리 콘솔은 `service_kit`이 같은 모양으로 제공한다.
+**서비스 앱은 확장의 서버 부분이다** ([ADR-0018](../decisions/0018-extensions.md)). 내장·사내 확장의 서비스 앱은 이 계약을 따르고, 이 계약을 따르지 않는 외부 앱은 확장 정의의 HTTP 어댑터(C13 §4)를 **어댑터 일꾼**이 돌려 붙인다. 서비스 앱이 늘어나도 부르는 쪽은 **한 가지 방식**(C15 외부 작업)으로 부르고, 콘솔은 manifest로 서비스 앱 태스크 편집기(CON-20)를 만들며, 관리 콘솔은 `service_kit`이 같은 모양으로 제공한다.
 
 ## 전송
 
@@ -69,7 +69,7 @@
 | `name` | str | `^[a-z][a-z0-9_]{0,63}$` |
 | `description` | str | STU-14에 보이는 설명 |
 | `modes` | (`autonomous` \| `deterministic`)[] | 지원하는 수행 모드 |
-| `fallback` | `none` \| `autonomous` | 결정 수행이 실패했을 때. **기본 `none`** (운영에서 LLM이 몰래 개입하지 않게). `autonomous`여도 **시험 일감(`origin: test` — Studio 시험 실행)일 때만** 넘어간다. 현장 일감이면 폴백하지 않고 실패한다 |
+| `fallback` | `none` \| `autonomous` | 결정 수행이 실패했을 때. **기본 `none`** (운영에서 LLM이 몰래 개입하지 않게). `autonomous`여도 **시험 일감(`origin: test` — 콘솔의 시험 실행)일 때만** 넘어간다. 현장 일감이면 폴백하지 않고 실패한다 |
 | `input_schema` / `output_schema` | JSON Schema | STU-14 입력·출력 표의 원본 |
 | `timeout_s` | int | 기본 60 |
 | `server_ok` | bool | 서버 실행기에서 불러도 되는가 (기본 true. 현장 PC에서만 의미 있는 작업은 false) |

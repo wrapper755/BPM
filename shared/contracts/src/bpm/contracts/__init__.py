@@ -151,7 +151,6 @@ from bpm.contracts.enrollment import (
     EnrollStatus,
     RotatedKey,
     Sealed,
-    StudioEnrollRequest,
 )
 from bpm.contracts.events import (
     EventBatchResponse,
@@ -461,7 +460,6 @@ __all__ = [
     "TopicStatus",
     "ExternalTaskInfo",
     "ScheduleInfo",
-    "StudioEnrollRequest",
     "EnrollStatus",
     "EnrollmentApproveRequest",
     "EnrollmentDecision",

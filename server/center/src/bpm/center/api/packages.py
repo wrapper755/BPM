@@ -93,7 +93,7 @@ def upload(
 ) -> tuple[PackageInfo, bool]:
     """패키지 하나를 받는다. `(정보, 새로 만들었나)`.
 
-    **패키지는 올린 쪽의 회사 것이다** (C16 — Studio는 회사 소유다). 업무 자리(매니페스트 `place`)의
+    **패키지는 올린 쪽의 회사 것이다** (C16 — 작업공간이 회사 소유다). 업무 자리(매니페스트 `place`)의
     부서·직원이 그 회사 안인지 여기서 본다(ADR-0127) — 승인할 때는 보여 주기만 한다.
 
     같은 id·버전·해시로 다시 보내면 **200으로 그대로 돌려준다** (재시도가 안전해야 한다).
@@ -163,7 +163,7 @@ def upload(
 
 
 def _upload_company(store: Store, company: str | None) -> str:
-    """올린 쪽의 회사 — Studio 키면 그 키의 회사, 자동화 토큰이면 적은 것(없으면 회사가 하나뿐일 때만)."""
+    """올린 쪽의 회사 — 지은 작업공간의 회사이거나(C17) 자동화 토큰이 적은 것(없으면 회사가 하나뿐일 때만)."""
     from bpm.center import organization  # noqa: PLC0415 — 순환 import를 피한다
 
     chosen = company or organization.only_company(store)

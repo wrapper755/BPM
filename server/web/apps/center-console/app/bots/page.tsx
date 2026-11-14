@@ -221,7 +221,7 @@ export default async function BotsPage({
       ) : rows.length === 0 ? (
         <EmptyState
           title="올라온 프로세스가 없습니다."
-          hint="Studio에서 「Center로 올리기」로 올리세요."
+          hint="「설계 › 작업공간」에서 「배포 후보로 만들기」로 올리세요."
         />
       ) : (
         <div className="flex flex-col gap-3">

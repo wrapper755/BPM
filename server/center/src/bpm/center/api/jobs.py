@@ -88,7 +88,7 @@ def _scope(found: Caller, *, write: bool) -> str | None:
     - 관리자 토큰: 전부 (쓰기 포함)
     - 읽기 토큰: 전부, **GET만**
     - 연동용 키: 만들기와 **자기 것만** 읽기·취소
-    - 그 밖의 Center API 키(Studio·서버 실행기): 작업은 다루지 못한다
+    - 그 밖의 Center API 키(서버 실행기·대리 답용): 작업은 다루지 못한다
     """
     if found.is_admin:
         return None
