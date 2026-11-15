@@ -51,6 +51,11 @@ export class CanvasEditor {
     this.modeler = new BpmnModeler({
       container,
       ...RENDERER,
+      // **되돌리기는 단축키뿐이다** (ADR-0156) — `Ctrl+Z`·`Ctrl+Shift+Z`는 bpmn-js의 `keyboard`가
+      // **그림(SVG)에** 제 손으로 붙여 둔 것이라 **캔버스가 키를 쥐고 있을 때만** 듣는다(속성 칸에
+      // 글을 쓰다 누른 것은 그 칸의 것이다). `autoFocus`는 **아무도 쥐지 않은 채** 그림 위로
+      // 마우스를 올리면 키를 되돌려 준다 — 쥔 자리가 있으면 빼앗지 않는다.
+      canvas: { autoFocus: true },
       // `bpm:*`를 타입으로 다룬다 — 설명은 C14 모델에서 생성한다 (scripts/gen_moddle.py).
       moddleExtensions: { bpm: BPM_MODDLE },
     });
@@ -105,6 +110,14 @@ export class CanvasEditor {
   clear(): void {
     this.modeler.clear();
     this.changed = false;
+  }
+
+  /**
+   * 키를 그림에 쥐어 준다 — 되돌리기 단축키는 **캔버스가 쥐고 있을 때만** 듣는다 (ADR-0156).
+   * 바깥에서(리소스 탭의 「+」처럼) 그림을 고친 뒤에 부른다.
+   */
+  focus(): void {
+    this.modeler.get("canvas").focus();
   }
 
   undo(): void {
@@ -241,6 +254,9 @@ export class CanvasEditor {
       : freeSpot(canvas, this.modeler.get("elementRegistry"), shape);
     const made = this.modeler.get("modeling").createShape(shape, at, canvas.getRootElement());
     this.modeler.get("selection").select(made);
+    // **키를 그림에 돌려준다** (ADR-0156) — 리소스 탭의 「+」로 만들면 키가 그 단추에 남아
+    // 방금 만든 것을 `Ctrl+Z`로 되돌릴 수 없다.
+    canvas.focus();
     return { id: made.id, x: made.x + made.width / 2, y: made.y + made.height / 2 };
   }
 

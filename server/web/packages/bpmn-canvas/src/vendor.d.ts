@@ -38,6 +38,8 @@ interface BpmnServices {
     getRootElement(): import("./types").Shape;
     /** 담은 자리의 크기를 다시 잰다 — 숨겼다 다시 보인 캔버스가 이것을 불러야 한다. */
     resized(): void;
+    /** 키를 그림(SVG)에 쥐어 준다 — 되돌리기 단축키가 듣는 자리다 (ADR-0156). */
+    focus(): void;
     addMarker(id: string, marker: string): void;
     removeMarker(id: string, marker: string): void;
   };

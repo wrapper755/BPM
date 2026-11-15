@@ -45,23 +45,20 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 ## 3. 계약 쪽 기능 공백
 
-계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18). **보안을 어디까지 조일지는 §3-33으로 미뤘다** — 관문은 다 있고 스위치 하나로 지나간다([ADR-0142](decisions/0142-open-mode.md)). **M11이 C17을 구현하면서 §3-34를 거의 닫았고**(전송 전부 + 화면 탭 셋 — 남은 것은 리소스에서 노드 만들기 하나다) **Qt를 걷으면서 생긴 §3-35도 닫았다** — 쓰는 앱이 없는 Studio 키 종류를 걷고, 걷다가 드러난 「시험 실행이 서비스 앱을 부를 수 없다」까지 함께 열었다 ([ADR-0150](decisions/0150-the-designer-key-is-gone.md)).
+계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18). **보안을 어디까지 조일지는 §3-33으로 미뤘다** — 관문은 다 있고 스위치 하나로 지나간다([ADR-0142](decisions/0142-open-mode.md)). **M11이 C17을 구현하면서 §3-34를 닫았고**(전송 전부 + 화면 탭 셋 + 탐색기의 「리소스」 탭, [ADR-0155](decisions/0155-resources-are-a-tab-in-the-explorer.md)) 그것을 만들다 드러난 **§3-36**(되돌리기를 부르는 자리)도 [ADR-0156](decisions/0156-undo-is-a-shortcut-only.md)으로 닫았다. **Qt를 걷으면서 생긴 §3-35도 닫았다** — 쓰는 앱이 없는 Studio 키 종류를 걷고, 걷다가 드러난 「시험 실행이 서비스 앱을 부를 수 없다」까지 함께 열었다 ([ADR-0150](decisions/0150-the-designer-key-is-gone.md)).
 
-### 3-36. 웹 편집기에 **실행 취소를 부르는 자리가 없다**
+### 3-36. 웹 편집기에 되돌리기를 부르는 자리가 없었다 — **닫혔다** (2026-11-16)
 
-캔버스는 `CanvasEditor.undo()`·`redo()`를 내주고, 화면 쪽 글과 ADR 여럿이 「한 번이 **실행 취소
-한 걸음**이다」라고 적어 둔다 ([ADR-0022](decisions/0022-studio-canvas.md)·
-[ADR-0044](decisions/0044-canvas-drag-and-drop.md)·[ADR-0155](decisions/0155-resources-are-a-tab-in-the-explorer.md),
-CON-20b의 속성·변수·리소스 절). **그런데 그 둘을 부르는 자리가 콘솔에 하나도 없다** — 단추도
-없고 `Ctrl+Z` 바인딩도 없다(캔버스가 bpmn-js의 `keyboard` 모듈을 붙이지 않는다). 명령 묶음은
-제대로 한 걸음인데 **되돌릴 길이 없다**.
+[ADR-0156](decisions/0156-undo-is-a-shortcut-only.md). **단축키뿐이다** — `Ctrl+Z`·`Ctrl+Y`는
+bpmn-js의 키 그대로이고 단추를 두지 않는다.
 
-데스크톱 Studio에는 메뉴와 단축키가 있었다 — 웹으로 옮기며 빠진 것이고, 조각 12에서 리소스로
-노드를 만들다 드러났다(잘못 만든 노드를 지우려면 고르고 `Delete`다).
-
-**먼저 정할 것**: 단축키만 둘지(`Ctrl+Z`·`Ctrl+Shift+Z` — bpmn-js `keyboard`를 `bindTo`로 붙인다),
-머리 띠에 단추도 둘지. 단축키는 **캔버스가 떠 있을 때만** 들어야 한다 — 케이스 편집기·결정표
-격자에서 누른 `Ctrl+Z`가 그림을 되돌리면 안 된다 (화면 구성이라 먼저 묻는다).
+적어 둔 **까닭이 틀렸다**: 캔버스는 bpmn-js의 `keyboard`를 이미 붙이고 있었고(`Modeler`의 기본
+모듈이다 — diagram-js 15부터 붙이는 자리를 고를 수 없어 `bindTo`는 오류다), 듣지 않던 것은
+**키를 쥔 자리** 때문이었다. 리스너가 그림(SVG)에 달려 있어 그림이 키를 쥐고 있을 때만 듣는데,
+리소스 탭의 「+」를 누르면 키는 그 단추에 남는다. 그래서 고친 것은 둘이다 — `createTask`가 끝에
+키를 그림에 돌려주고(`canvas.focus()`), 아무도 쥐지 않았으면 그림 위로 마우스를 올릴 때
+돌려준다(`canvas.autoFocus`). **창에 리스너를 달지 않는다** — 속성 칸·결정표 격자·케이스
+편집기에서 글을 쓰다 누른 `Ctrl+Z`는 그 칸의 것이어야 한다.
 
 ### 3-35. Studio 키 종류가 남아 있다 (쓰는 앱이 없다) — **닫혔다** (2026-11-15)
 
