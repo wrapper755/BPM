@@ -28,6 +28,10 @@ from bpm.contracts.organization import DEFAULT_COMPANY_ID, DEFAULT_COMPANY_NAME
 
 log = logging.getLogger(__name__)
 
+#: 33판이 적는 폐기 시각 — **이 결정의 날짜**다 (ADR-0150). 돌 때의 시계를 쓰지 않는 까닭은
+#: ISO 8601 시각을 짓는 SQL 함수가 DB마다 달라서다 (ADR-0070 §2).
+ADR_0150_AT = "2026-11-15T00:00:00+00:00"
+
 #: 판 기록 표. **이 표만은 단계가 아니다** — 판을 읽으려면 먼저 있어야 한다.
 VERSIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -451,6 +455,23 @@ MIGRATIONS: tuple[Step, ...] = (
             " requested_by TEXT NOT NULL, requested_at TEXT NOT NULL, updated_at TEXT NOT NULL,"
             " dispatched_at TEXT)",
             "CREATE INDEX workspace_builds_workspace ON workspace_builds (workspace_id, requested_at)",
+        ),
+    ),
+    Step(
+        33,
+        "설계자의 키를 걷는다 — 남은 Studio 키와 호출 토큰을 **폐기 표시**하고 대기 중인 Studio "
+        "등록 요청을 닫는다 (ADR-0150). 지우지 않는 까닭은 패키지의 `uploaded_by`와 변경 이력이 "
+        "가리킬 곳을 잃기 때문이고, 두지 않는 까닭은 종류를 보는 관문이 없어져 **제한 없는 키**가 "
+        "되기 때문이다",
+        (
+            # **폐기한 때는 이 결정의 날짜로 적는다** — `CenterKeyInfo.revoked_at`은 ISO 8601 +
+            # 시간대만 받고(`CURRENT_TIMESTAMP`는 `2026-11-15 09:00:00`이라 목록에서 422가 된다),
+            # 그것을 SQL로 짓는 함수는 DB마다 다르다 (`strftime`은 SQLite 전용 — ADR-0070 §2).
+            f"UPDATE center_keys SET revoked_at = '{ADR_0150_AT}'"
+            " WHERE type IN ('studio', 'call_token') AND revoked_at IS NULL",
+            # 승인할 길이 없어졌다 — 사람이 영원히 기다리게 두지 않는다.
+            "UPDATE enrollments SET state = 'rejected', reason = '설계는 콘솔에서 합니다 (ADR-0150)'"
+            " WHERE type = 'studio' AND state = 'pending'",
         ),
     ),
 )

@@ -73,17 +73,6 @@ def runner_body(public_key: str) -> dict[str, Any]:
     return bot_body(public_key, seed="srv2")
 
 
-def studio_body(public_key: str) -> dict[str, Any]:
-    return {
-        "schema": 1,
-        "machine_id": machine("stu1"),
-        "name": "설계 PC",
-        "os": "ubuntu-24.04",
-        "versions": {"studio": "0.1.0", "core": "0.1.0"},
-        "public_key": public_key,
-    }
-
-
 def enroll(client: TestClient, body: dict[str, Any], *, kind: str) -> EnrollStatus:
     response = client.post(f"{API}/{kind}/enroll", json=body)
     assert response.status_code == 201, response.text
@@ -135,10 +124,9 @@ def test_an_enrolling_runner_is_approved_where_it_asks(open_client: TestClient) 
     assert registered.status_code in (200, 201), registered.text
 
 
-def test_studio_and_the_server_runner_come_in_the_same_way(open_client: TestClient) -> None:
+def test_the_server_runner_comes_in_by_itself(open_client: TestClient) -> None:
+    """열린 모드에서는 받는 자리에서 승인된다 — 서버 실행기는 Center 공용이라 늘 그렇다 (C16)."""
     _, public = new_keypair()
-    studio = enroll(open_client, studio_body(public), kind="studio")
-    assert studio.state == "approved"
     runner = enroll(open_client, runner_body(public), kind="server-runner")
     assert runner.state == "approved"
 
@@ -153,12 +141,14 @@ def test_a_wrong_join_token_is_still_refused_when_open(open_client: TestClient) 
     assert response.json()["code"] == "join_token_invalid"
 
 
-def test_two_companies_leave_studio_waiting_but_not_the_server_runner(open_client: TestClient) -> None:
-    """누구의 장비인지는 짐작하지 않는다 (C16) — 서버 실행기는 Center 공용이라 상관없다."""
+def test_two_companies_do_not_hold_the_server_runner_back(open_client: TestClient) -> None:
+    """회사가 둘이어도 서버 실행기는 들어온다 — **Center 공용이라 회사를 고르지 않는다** (C16).
+
+    회사를 고르는 등록 요청은 설계자의 키와 함께 없어졌다 (ADR-0150).
+    """
     made = open_client.post(f"{API}/companies", json={"id": "company2", "name": "회사2"}, headers=ADMIN)
     assert made.status_code in (200, 201), made.text
     _, public = new_keypair()
-    assert enroll(open_client, studio_body(public), kind="studio").state == "pending"
     assert enroll(open_client, runner_body(public), kind="server-runner").state == "approved"
 
 

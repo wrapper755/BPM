@@ -24,6 +24,7 @@ from typing import Any
 import pytest
 from consumers import ADMIN, enroll
 from fastapi.testclient import TestClient
+from trials import hold_trial, runner_key
 
 from bpm.center.app import create_app as create_center
 from bpm.center.settings import Settings as CenterSettings
@@ -118,14 +119,14 @@ def consumer(center: TestClient, service: Service, tokens: TokenFile) -> Consume
 
 
 @pytest.fixture
-def studio(center: TestClient) -> dict[str, str]:
-    """시험 실행으로 일감을 올리는 쪽 — Studio 키."""
-    made = center.post("/api/v1/center-keys", json={"name": "설계자", "type": "studio"}, headers=ADMIN)
-    assert made.status_code == 201, made.text
-    return {"Authorization": f"Bearer {made.json()['key']}"}
+def poster(center: TestClient) -> dict[str, str]:
+    """시험 실행으로 일감을 올리는 쪽 — **그 시험 실행을 들고 있는 서버 실행기**다 (ADR-0150)."""
+    runner_id, key = runner_key(center)
+    hold_trial(center.app.state.store, runner_id=runner_id, run_id=RUN)  # type: ignore[attr-defined]
+    return {"Authorization": f"Bearer {key}"}
 
 
-def post(center: TestClient, studio: dict[str, str], **over: Any) -> str:
+def post(center: TestClient, poster: dict[str, str], **over: Any) -> str:
     body: dict[str, Any] = {
         "schema": 1,
         "topic": TOPIC,
@@ -133,17 +134,17 @@ def post(center: TestClient, studio: dict[str, str], **over: Any) -> str:
         "mode": MODE_DETERMINISTIC,
         "origin": "test",
         "idempotency": {"run_id": RUN, "node_id": "Task_issue", "node_instance": 1, "attempt": 1},
-        "caller": {"type": "studio", "host": "설계자 PC"},
+        "caller": {"type": "server_runner", "host": "실행기"},
         "input": {"n": 7},
         **over,
     }
-    made = center.post("/api/v1/external-tasks", json=body, headers=studio)
+    made = center.post("/api/v1/external-tasks", json=body, headers=poster)
     assert made.status_code == 201, made.text
     return str(made.json()["task_id"])
 
 
-def seen(center: TestClient, studio: dict[str, str], task_id: str) -> dict[str, Any]:
-    found = center.get(f"/api/v1/external-tasks/{task_id}", headers=studio)
+def seen(center: TestClient, poster: dict[str, str], task_id: str) -> dict[str, Any]:
+    found = center.get(f"/api/v1/external-tasks/{task_id}", headers=poster)
     assert found.status_code == 200, found.text
     return dict(found.json())
 
@@ -187,22 +188,22 @@ def test_without_a_token_the_consumer_does_not_knock(service: Service, tmp_path:
 
 
 def test_run_once_fetches_executes_and_completes(
-    center: TestClient, consumer: Consumer, studio: dict[str, str]
+    center: TestClient, consumer: Consumer, poster: dict[str, str]
 ) -> None:
     assert consumer.run_once(wait_s=0) == 0, "일감이 없으면 빈손이다"
-    task_id = post(center, studio)
+    task_id = post(center, poster)
     assert consumer.run_once(wait_s=0) == 1
 
-    found = seen(center, studio, task_id)
+    found = seen(center, poster, task_id)
     assert found["state"] == "completed" and found["output"] == {"invoice_no": "INV-7"}
     assert found["mode_used"] == MODE_DETERMINISTIC and found["replayed"] is False
     assert consumer.registration().registered and consumer.registration().last_reported_at, "SVC-01이 본다"
 
 
-def test_an_operation_failure_goes_back_as_fail(center: TestClient, consumer: Consumer, studio: dict[str, str]) -> None:
-    task_id = post(center, studio, operation="refuse")
+def test_an_operation_failure_goes_back_as_fail(center: TestClient, consumer: Consumer, poster: dict[str, str]) -> None:
+    task_id = post(center, poster, operation="refuse")
     consumer.run_once(wait_s=0)
-    found = seen(center, studio, task_id)
+    found = seen(center, poster, task_id)
     assert found["state"] == "failed"
     assert found["error"] == {
         "code": "input_invalid", "message": "사업자 번호가 틀렸다", "retryable": False, "outcome_unknown": False
@@ -210,43 +211,43 @@ def test_an_operation_failure_goes_back_as_fail(center: TestClient, consumer: Co
 
 
 def test_a_slot_still_running_sends_nothing(
-    center: TestClient, consumer: Consumer, service: Service, studio: dict[str, str]
+    center: TestClient, consumer: Consumer, service: Service, poster: dict[str, str]
 ) -> None:
     """같은 멱등 칸이 **이 앱 안에서 아직 도는 중**이면 끝내지 않는다 — 앞의 것이 끝내면 그것이 이긴다."""
-    task_id = post(center, studio)
+    task_id = post(center, poster)
     [task] = consumer.fetch(max_tasks=1, wait_s=0)
     req = service.request_of(task)
     service.idempotency.begin(idempotency_key(task.operation, req), body=body_hash(req))
 
     consumer.handle(task)
-    assert seen(center, studio, task_id)["state"] == "locked", "아무것도 보내지 않았다"
+    assert seen(center, poster, task_id)["state"] == "locked", "아무것도 보내지 않았다"
 
 
 def test_a_409_on_finish_is_ignored(
-    center: TestClient, consumer: Consumer, studio: dict[str, str], caplog: pytest.LogCaptureFixture
+    center: TestClient, consumer: Consumer, poster: dict[str, str], caplog: pytest.LogCaptureFixture
 ) -> None:
     """올린 쪽이 거뒀다(409 `cancelled`) — 일꾼은 경고 없이 다음 일감으로 간다."""
-    task_id = post(center, studio)
+    task_id = post(center, poster)
     [task] = consumer.fetch(max_tasks=1, wait_s=0)
-    assert center.post(f"/api/v1/external-tasks/{task_id}/cancel", headers=studio).status_code == 200
+    assert center.post(f"/api/v1/external-tasks/{task_id}/cancel", headers=poster).status_code == 200
 
     with caplog.at_level(logging.WARNING, logger="bpm.service_kit.consumer"):
         consumer.handle(task)
     assert caplog.records == []
-    assert seen(center, studio, task_id)["state"] == "cancelled"
+    assert seen(center, poster, task_id)["state"] == "cancelled"
 
 
 def test_a_redelivered_task_is_finished_from_the_stored_result(
-    center: TestClient, consumer: Consumer, studio: dict[str, str]
+    center: TestClient, consumer: Consumer, poster: dict[str, str]
 ) -> None:
     """잠금이 지나 다시 온 일감 — 다시 수행하지 않고 **저장된 결과로** 끝낸다 (`replayed`)."""
-    task_id = post(center, studio)
+    task_id = post(center, poster)
     [task] = consumer.fetch(max_tasks=1, wait_s=0)
     first = consumer.services[0].execute(task)
     assert first.ok  # 수행은 했는데 끝내기 전에 일꾼이 죽었다
 
     consumer.handle(task)
-    found = seen(center, studio, task_id)
+    found = seen(center, poster, task_id)
     assert found["state"] == "completed" and found["replayed"] is True
 
 

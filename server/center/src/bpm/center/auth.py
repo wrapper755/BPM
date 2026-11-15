@@ -5,10 +5,10 @@
 | 콘솔 「보기 전용」 계정 | 세션 토큰 (`bpm_ses_…`) | **GET만** |
 | 콘솔 「관리자」 계정 | 세션 토큰 | 쓰기 전부 — 승인·배포·외부 확장은 Center가 서명한다 (ADR-0090) |
 | 자동화(스크립트·시험) | 관리자·읽기 토큰 | 위의 둘과 같다. 설정하지 않으면 그 길이 닫힌다 |
-| 서버 실행기·Studio·서버 실행기 | Center API 키 (종류별) | 자기 일만 |
+| 서버 실행기·외부 시스템 | Center API 키 (종류별) | 자기 일만 |
 
 **「자기 일만」은 키 종류로 가른다.** 토큰이 맞는지만 보는 `require_read`로는 C5 권한표를
-지킬 수 없다 — 패키지 쪽은 종류를 보는 관문(`require_upload`·`require_package_read`)과,
+지킬 수 없다 — 패키지 쪽은 **키를 모두 막는** 관문(`require_upload`·`require_package_read`)과,
 배포 표까지 대조하는 관문(`api.package_access.guard_download`)이 따로 있다.
 
 **행위자 이름은 본문에서 받지 않는다** (C5). 세션으로 부르면 **계정 아이디**(로그인이 정한
@@ -35,19 +35,12 @@ from bpm.contracts.accounts import ROLE_ADMIN, ROLE_COMPANY_ADMIN, SESSION_PREFI
 from bpm.contracts.approvals import normalize_name
 from bpm.contracts.center_api import ON_BEHALF_HEADER, on_behalf_violation
 from bpm.contracts.center_keys import RELAY_KEY_TYPE
-from bpm.contracts.external_task import CALL_TOKEN, CALL_TOKEN_PATH, CALL_TOKEN_READ_PATH
 
 #: 콘솔(BFF)이 로그인한 사용자 이름을 싣는 헤더. **값은 UTF-8 퍼센트 인코딩** (C5).
 ACTOR_HEADER = "X-BPM-Actor"
 
 #: 열린 모드에서 키 없이 부른 사람의 이름 — `X-BPM-Actor`가 없을 때 (ADR-0142).
 OPEN_MODE_ACTOR = "열린 모드"
-
-#: 패키지를 올리고 목록·정보를 볼 수 있는 Center API 키 종류 (C5 권한표).
-#:
-#: **Studio만이다.** 실행하는 쪽(서버 실행기)은 배포를 하트비트로 받으므로 목록을 볼
-#: 일이 없고(내려받기만 한다), 연동용 키는 작업만 만든다.
-PACKAGE_KEY_TYPE = "studio"
 
 #: 연동용 키 — 외부 시스템이 작업·메시지를 넣는다 (C5 권한표).
 INTEGRATION_KEY_TYPE = "integration"
@@ -68,7 +61,7 @@ class Caller:
     #: 세션으로 불렀으면 그 계정 아이디 (ADR-0090). 토큰·키로 부르면 `None`.
     account: str | None = None
     #: **이 부르는 쪽이 보는 회사** (C16, ADR-0125 §5). 회사 관리자·회사 보기 전용 계정과 회사 소유
-    #: 장비(Studio)의 키에 있다. `None`이면 Center 전체다(Center 관리자·자동화 토큰·서버 실행기).
+    #: 회사 소유 장비의 키에 있다. `None`이면 Center 전체다(Center 관리자·자동화 토큰·서버 실행기).
     company: str | None = None
 
     @property
@@ -160,27 +153,15 @@ def caller(
     state = record.state(now=now_iso())
     if state != "active":
         raise ApiError(403, f"key_{state}", f"키 「{record.name}」은 {state} 상태다")
-    if record.type == CALL_TOKEN and not _call_token_may(request):
-        # 호출 토큰은 외부 작업을 올리고 기다리는 데와 **리소스 목록 읽기**만 (C15) — 실행 기록·하트비트·
-        # 결재·패키지를 열지 않는다. 리소스 목록은 도구·편집기가 카탈로그(C9)를 읽는 자리다.
-        raise ApiError(403, "call_token_scope", "호출 토큰으로는 외부 작업을 올리고 리소스 목록을 읽기만 한다")
     keys.touch(store, record.key_id)
     # 회전한 새 키로 첫 요청이면 행을 새 키로 옮긴다 (C4 §키 회전) — 하트비트가 행을 찾기 **전에**.
     enrollments.adopt_successor(store, record)
-    # 승인으로 받은 키가 처음 쓰였다 — 봉해 둔 것을 지운다. Studio는 `register`가 없어 이 자리가
-    # 받았다는 표시다 (C5 §Studio 등록 요청과 승인). 서버 실행기도 여기서 먼저 지워진다.
+    # 승인으로 받은 키가 처음 쓰였다 — 봉해 둔 것을 지운다 (서버 실행기는 `register`보다 여기가 먼저다).
     if record.enrollment_id:
         enrollments.delivered(store, record, public_key=None)
     # 키로 부를 때는 X-BPM-Actor를 믿지 않는다 (C5). 사람 대신 부르는 키만 On-Behalf-Of를 듣는다.
     on_behalf = _on_behalf(request) if record.type in ON_BEHALF_KEY_TYPES else None
     return Caller(kind="key", actor=record.name, key=record, on_behalf=on_behalf, company=record.company)
-
-
-def _call_token_may(request: Request) -> bool:
-    path = request.url.path
-    if path.startswith(CALL_TOKEN_PATH):
-        return True
-    return request.method == "GET" and path.startswith(CALL_TOKEN_READ_PATH)
 
 
 def require_admin(found: Caller) -> Caller:
@@ -258,37 +239,29 @@ def require_console(found: Caller) -> Caller:
     )
 
 
-def _package_key(found: Caller) -> bool:
-    return found.key is not None and found.key.type == PACKAGE_KEY_TYPE
-
-
 def require_upload(found: Caller) -> Caller:
-    """`POST /packages`에 필요한 권한 — 관리자 토큰 **또는 Studio용 키** (C5 권한표).
+    """`POST /packages`에 필요한 권한 — **관리자 토큰·관리자 계정만** (C5 권한표).
 
-    관리자 토큰만으로 막지 않는다. 올리는 쪽은 Studio이고, 관리자 토큰을 관문으로 삼으면
-    **설계자 PC에 관리자 토큰을 두게 된다** — ADR-0013이 피한 것이다. 승인·배포는 그대로
-    서명이 관문이라(C2) 올린 것은 후보로만 앉는다.
+    설계가 콘솔 안으로 들어와(ADR-0143) 짓는 쪽이 콘솔이다 — 실행기가 지은 zip은 Center가
+    **제 안에서** 이 함수를 지나지 않고 등록한다(ADR-0146 `design_work.took_artifact`). 그래서
+    여기 남는 것은 자동화·CI뿐이고, Center API 키에는 올리기 권한이 없다 (ADR-0150).
+    승인·배포는 그대로 서명이 관문이라(C2) 올린 것은 후보로만 앉는다.
     """
-    if found.is_admin or _package_key(found):
+    if found.is_admin:
         return found
-    raise ApiError(
-        403, "forbidden", "패키지 업로드는 관리자 토큰이나 Studio용 Center API 키로만 된다"
-    )
+    raise ApiError(403, "forbidden", "패키지 업로드는 관리자 토큰으로만 된다")
 
 
 def require_package_read(found: Caller) -> Caller:
-    """패키지 목록·정보·참조에 필요한 권한 — 콘솔 토큰 또는 **Studio용 키만** (C5 권한표).
+    """패키지 목록·정보·참조에 필요한 권한 — **콘솔 토큰만** (C5 권한표).
 
-    `require_read`와 다른 것은 **키 종류를 본다**는 점이다. 실행기 키로 패키지 표 전체를
-    읽을 수 있으면 「무엇이 올라와 있나」가 현장 PC에 다 보인다.
+    `require_read`와 다른 것은 **키를 막는다**는 점이다. 실행기 키로 패키지 표 전체를
+    읽을 수 있으면 「무엇이 올라와 있나」가 그 서버에 다 보인다 (내려받기는 제 배포분만 —
+    `api.package_access.guard_download`).
     """
-    if found.kind in ("admin", "read") or _package_key(found):
+    if found.kind in ("admin", "read"):
         return found
-    raise ApiError(
-        403,
-        "forbidden",
-        "패키지 목록·정보는 콘솔 토큰이나 Studio용 Center API 키로만 볼 수 있다",
-    )
+    raise ApiError(403, "forbidden", "패키지 목록·정보는 콘솔 토큰으로만 볼 수 있다")
 
 
 def require_key_type(found: Caller, wanted: str) -> keys.KeyRecord:

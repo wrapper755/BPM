@@ -1,20 +1,8 @@
 {
   "$id": "urn:bpm:contracts:c5-enrollment-approve-request",
   "additionalProperties": true,
-  "description": "`POST /enrollments/{id}/approve` — `name`을 비우면 요청의 이름을 쓴다.",
+  "description": "`POST /enrollments/{id}/approve` — `name`을 비우면 요청의 이름을 쓴다.\n\n**회사 칸은 없다** — 오는 것은 서버 실행기뿐이고 Center 공용이다 (C16, ADR-0150).",
   "properties": {
-    "company": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Company"
-    },
     "name": {
       "anyOf": [
         {

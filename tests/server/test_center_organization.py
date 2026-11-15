@@ -159,26 +159,26 @@ def test_the_owner_goes_down_with_names(client: TestClient) -> None:
     assert organization.identity(store, None, None, None) is None
 
 
-def test_a_company_admin_approves_studios_into_its_own_company_only(client: TestClient) -> None:
+def test_a_company_admin_sees_and_decides_no_enrollment(client: TestClient) -> None:
+    """등록 요청은 **서버 실행기뿐**이고 그것은 Center 공용이다 (C16, ADR-0150).
+
+    그래서 회사 관리자에게는 요청이 보이지 않고 결정도 Center 관리자만 한다 — 회사를 고르며
+    들이던 장비(Studio)가 없어졌기 때문이다.
+    """
     from bpm.contracts.enrollment import new_keypair
 
     organize(client)
     mine = login_as(client, "admin2", "company_admin", "company2")
     _, public = new_keypair()
-    body = {"schema": 1, "machine_id": "ab" * 32, "name": "설계 PC", "os": "ubuntu-24.04",
-            "versions": {"studio": "0.1.0", "core": "0.1.0"}, "public_key": public}
-    pending = made(client.post(f"{API}/studio/enroll", json=body))
-    # 대기 중인 요청은 회사가 없어 보인다 — 제 회사로 승인할 수 있다.
-    assert [one["enrollment_id"] for one in made(client.get(f"{API}/enrollments", headers=mine), 200)] == [
-        pending["enrollment_id"]]
-    other = client.post(f"{API}/enrollments/{pending['enrollment_id']}/approve", json={"company": "default"},
-                        headers=mine)
-    assert other.status_code == 404
-    done = made(client.post(f"{API}/enrollments/{pending['enrollment_id']}/approve", json={}, headers=mine), 200)
+    body = {"schema": 1, "machine_id": "ab" * 32, "name": "서버 2", "os": "ubuntu-24.04",
+            "versions": {"server_runner": "0.1.0", "core": "0.1.0"}, "public_key": public}
+    pending = made(client.post(f"{API}/server-runner/enroll", json=body))
+    assert made(client.get(f"{API}/enrollments", headers=mine), 200) == []
+    refused = client.post(f"{API}/enrollments/{pending['enrollment_id']}/approve", json={}, headers=mine)
+    assert refused.status_code == 403 and refused.json()["code"] == "center_admin_only"
+    done = made(client.post(f"{API}/enrollments/{pending['enrollment_id']}/approve", json={}, headers=ADMIN), 200)
     key = [k for k in made(client.get(f"{API}/center-keys", headers=ADMIN), 200) if k["key_id"] == done["key_id"]]
-    assert key, "승인한 키가 있다"
-    listed = made(client.get(f"{API}/enrollments?state=approved", headers=mine), 200)
-    assert [one["company"] for one in listed] == ["company2"]
+    assert key and key[0].get("company") is None, "Center 공용이라 회사가 없다"
 
 
 def test_a_company_detail_shows_only_company_wide_work(client: TestClient) -> None:

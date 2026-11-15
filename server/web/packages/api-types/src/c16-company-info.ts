@@ -14,7 +14,6 @@ export interface CompanyInfo {
   recent_runs?: RecentRun[];
   staff?: number;
   state?: string;
-  studios?: number;
   updated_at: string;
   work?: WorkItem[];
   [k: string]: unknown;

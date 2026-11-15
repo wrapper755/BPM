@@ -403,8 +403,8 @@ def test_a_key_that_still_has_its_own_pc_cannot_take_over_another(client: TestCl
 
 
 def test_wrong_key_type_is_refused(client: TestClient) -> None:
-    """서버 실행기용 키만 받는다 (C4). Studio용 키로 부르면 403."""
-    _key_id, raw = issue_key(client, name="설계자 PC", key_type="studio")
+    """서버 실행기용 키만 받는다 (C4). 연동용 키로 부르면 403."""
+    _key_id, raw = issue_key(client, name="바깥 시스템", key_type="integration")
     response = client.post(
         "/api/v1/server-runner/register",
         json=register_body(machine=machine_id("pc1")),
@@ -761,8 +761,8 @@ def test_actor_header_is_ignored_for_key_callers(client: TestClient) -> None:
     _key_id, raw = issue_key(client, name="현장 PC 1")
     auth = {"Authorization": f"Bearer {raw}", "X-BPM-Actor": quote("관리자인 척")}
     client.post("/api/v1/server-runner/register", json=register_body(machine=machine_id("pc1")), headers=auth)
-    # 서버 실행기 키로는 올릴 수 없으니, 행위자가 쓰이는 길(업로드)은 막혀 있다. Studio 키가
-    # 올릴 때도 행위자는 **키 이름**이다 — `test_studio_key_uploads_and_reads…`가 본다.
+    # 서버 실행기 키로는 올릴 수 없으니, 행위자가 쓰이는 길(업로드)은 막혀 있다 —
+    # **어느 Center API 키로도** 올릴 수 없다 (`test_no_center_api_key_can_upload…`가 본다).
     denied = client.post(
         "/api/v1/packages", files={"file": ("p.zip", build_package(), "application/zip")}, headers=auth
     )
@@ -777,35 +777,28 @@ def test_read_token_cannot_upload(client: TestClient) -> None:
     assert response.status_code == 403 and response.json()["code"] == "forbidden"
 
 
-def test_studio_key_uploads_and_reads_but_server_runner_key_does_not(client: TestClient) -> None:
-    """올리는 쪽은 Studio다 (C5 권한표) — **관리자 토큰을 설계자 PC에 두지 않는다** (ADR-0013).
+def test_no_center_api_key_can_upload_or_read_packages(client: TestClient) -> None:
+    """패키지 올리기·목록·정보는 **콘솔 토큰만**이다 (C5 권한표, [ADR-0150]).
 
-    서버 실행기 키는 패키지 표를 보지 못한다 — 배포는 하트비트로 받고 내려받기만 한다.
+    설계가 콘솔 안으로 들어와(ADR-0143) 짓는 쪽이 콘솔이다 — 실행기가 지은 zip은 Center가 제
+    안에서 등록하므로(ADR-0146) 키에 올리기 권한을 줄 까닭이 없어졌다. 서버 실행기 키가 패키지
+    표를 보지 못하는 것도 그대로다 — 배포는 하트비트로 받고 내려받기만 한다.
     """
-    _key_id, studio = issue_key(client, name="설계자 PC", key_type="studio")
-    studio_auth = {"Authorization": f"Bearer {studio}"}
-    created = client.post(
-        "/api/v1/packages",
-        files={"file": ("p.zip", build_package(), "application/zip")},
-        headers=studio_auth,
-    )
-    assert created.status_code == 201, created.text
-    # 올린 것은 **후보**다 — 키로는 승인할 수 없다 (C2).
-    assert created.json()["status"] == "candidate"
-    # 행위자는 **키 이름**이다 (C5 — 키로 부를 때 `X-BPM-Actor`를 믿지 않는다).
-    assert created.json()["uploaded_by"] == "설계자 PC"
-    assert len(client.get("/api/v1/packages", headers=studio_auth).json()) == 1
-    assert client.get("/api/v1/packages/invoice-check/1.0.0", headers=studio_auth).status_code == 200
+    for kind in ("server_runner", "integration"):
+        _key_id, raw = issue_key(client, name=f"{kind} 하나", key_type=kind)
+        auth = {"Authorization": f"Bearer {raw}"}
+        uploading = client.post(
+            "/api/v1/packages", files={"file": ("p.zip", build_package(), "application/zip")}, headers=auth
+        )
+        assert uploading.status_code == 403, kind
+        for path in ("/api/v1/packages", "/api/v1/packages/invoice-check/1.0.0/info"):
+            denied = client.get(path, headers=auth)
+            assert denied.status_code == 403 and denied.json()["code"] == "forbidden", (kind, path)
 
-    _again, bot = issue_key(client)
-    bot_auth = {"Authorization": f"Bearer {bot}"}
-    for path in ("/api/v1/packages", "/api/v1/packages/invoice-check/1.0.0/info"):
-        denied = client.get(path, headers=bot_auth)
-        assert denied.status_code == 403 and denied.json()["code"] == "forbidden", path
-    uploading = client.post(
-        "/api/v1/packages", files={"file": ("p.zip", build_package(), "application/zip")}, headers=bot_auth
-    )
-    assert uploading.status_code == 403
+    # 관리자 토큰으로 올린 것은 **후보**다 (C2 — 승인·배포는 서명이 관문이다).
+    created = upload(client, build_package())
+    assert created.status_code == 201, created.text
+    assert created.json()["status"] == "candidate"
 
 
 def test_server_runner_key_cannot_download_what_is_not_deployed_to_it(client: TestClient) -> None:

@@ -5,14 +5,14 @@
 
 ## 0. 구현 기술과 모양
 
-- 웹 화면(Center 콘솔, 서비스 앱 관리 콘솔)은 **Next.js**, 데스크톱(Studio)은 **PySide6**. 둘 다 같은 디자인 토큰(`design/tokens.json`)과 [스타일 가이드](07-style-guide.md)를 따른다 ([ADR-0017](decisions/0017-web-nextjs-design-system.md)).
+- 화면은 모두 웹이다 (Center 콘솔, 서비스 앱 관리 콘솔) — **Next.js**이고 디자인 토큰(`design/tokens.json`)과 [스타일 가이드](07-style-guide.md)를 따른다 ([ADR-0017](decisions/0017-web-nextjs-design-system.md)). 데스크톱 산출물은 없다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)).
 - 화면 설계서는 **무엇을 어디에 보이는가**를 정하고, **어떻게 보이는가**(색·글자·구성요소)는 스타일 가이드가 정한다.
 
 ## 1. 문서 구성
 
 | 파일 | 앱 | 화면 ID |
 | --- | --- | --- |
-| ~~Studio (Windows 데스크톱)~~ | **폐기** — 설계가 콘솔 안으로 옮겼다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md), M11 조각 5) | ~~STU-01 ~ STU-16~~ → CON-20 |
+| ~~Studio (Windows 데스크톱)~~ | **폐기** — 저작이 콘솔 안으로 옮겼다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md), M11 조각 5) | ~~STU-01 ~ STU-16~~ → CON-20 |
 | [server/docs/screens/center-console.md](../server/docs/screens/center-console.md) | Center 콘솔 (웹) — 관리자 계정으로 승인·배포까지 ([ADR-0090](decisions/0090-center-admin-accounts.md)) | CON-00 ~ CON-18 (CON-07~11 폐기) · CON-20은 아래 파일 |
 | [server/docs/screens/center-console-connections.md](../server/docs/screens/center-console-connections.md) | Center 콘솔 — 일꾼·연결 앱 (위 파일을 나눈 것) | CON-17 · CON-18 |
 | [server/docs/screens/center-console-workspace.md](../server/docs/screens/center-console-workspace.md) | Center 콘솔 — 작업공간 (설계가 콘솔 안으로, [ADR-0143](decisions/0143-design-happens-in-the-console.md)) | CON-20 |
@@ -75,8 +75,8 @@
 새 업무 하나가 만들어져 운영되기까지 거치는 화면이다.
 
 0. **준비 (서버)** — 설치하는 사람이 `.env`에 첫 관리자 아이디·비밀번호를 적고 Center를 띄운다. 서비스 앱·어댑터 일꾼은 관리자가 [CON-17](../server/docs/screens/center-console.md#con-17-일꾼-신규) 「일꾼」에서 만들고 받은 토큰과 Center 주소를 주어 띄운다(함께 배포되는 일꾼은 일꾼 폴더의 파일로 처음 한 번 들어온다 — `bpm-center consumer-file`) — 외부 확장 정의는 어댑터 일꾼이 들고 있다가 올리고, 외부 앱의 주소·키는 어댑터 일꾼의 설정에만 넣는다 ([ADR-0102](decisions/0102-calling-outside-is-pull.md), [ADR-0137](decisions/0137-consumers-are-managed-in-the-console.md)). 들어왔는지·마지막으로 가져간 때도 CON-17에서 본다. 서버 BPM 프로세스를 쓸 거면 서버 실행기에 Center 주소를 주고 띄운 뒤, 로그의 요청 코드와 같은 줄을 [CON-12](../server/docs/screens/center-console.md#con-12-서버-실행-신규-m7) 「승인 대기」에서 승인한다 (컨테이너는 환경변수로 키를 준다 — C12).
-1. **준비 (설계자)** — 관리자가 [CON-14](../server/docs/screens/center-console.md#con-14-관리자-계정) 「관리자 계정」에서 계정을 만들어 준다. **설계자의 키는 없다** — 설계가 콘솔 안에서 일어나므로 로그인 하나뿐이다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md) §4). **서비스 앱 키도 없다** — BPM 프로세스는 바깥 기능을 Center의 외부 작업으로 부르고, 불러도 되는가는 7 「배포」가 정한다 (C15).
-3. **BPM 프로세스 만들기** — 설계자가 콘솔에서 작업공간 하나를 만든다. **실행 자리는 서버 하나다** ([ADR-0016](decisions/0016-server-first.md)·[ADR-0144](decisions/0144-remove-the-pc-runner.md)). [CON-20a](../server/docs/screens/center-console-workspace.md#con-20a-작업공간-홈), [CON-20b](../server/docs/screens/center-console-workspace.md#con-20b-작업공간) 「정보」 탭
+1. **준비 (저작하는 사람)** — 관리자가 [CON-14](../server/docs/screens/center-console.md#con-14-관리자-계정) 「관리자 계정」에서 계정을 만들어 준다. **저작하는 사람의 키는 없다** — 저작이 콘솔 안에서 일어나므로 로그인 하나뿐이다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md) §4). **서비스 앱 키도 없다** — BPM 프로세스는 바깥 기능을 Center의 외부 작업으로 부르고, 불러도 되는가는 7 「배포」가 정한다 (C15).
+3. **BPM 프로세스 만들기** — 콘솔에서 작업공간 하나를 만든다. **실행 자리는 서버 하나다** ([ADR-0016](decisions/0016-server-first.md)·[ADR-0144](decisions/0144-remove-the-pc-runner.md)). [CON-20a](../server/docs/screens/center-console-workspace.md#con-20a-작업공간-홈), [CON-20b](../server/docs/screens/center-console-workspace.md#con-20b-작업공간) 「정보」 탭
 4. **그리기** — BPMN을 그리고 태스크마다 속성을 채운다. [CON-20b](../server/docs/screens/center-console-workspace.md#con-20b-작업공간) 「설계」 탭
 5. **시험** — 시험 케이스를 만들고 자율 수행으로 돌려 본다. **돌리는 것은 서버 실행기다** (C17). AI 태스크는 학습되어 재생 명세가 생기고, 결정 수행(재생)으로 운영과 같은 방식을 미리 확인한다. [CON-20b](../server/docs/screens/center-console-workspace.md#시험-실행-탭) 「시험 실행」 탭
 6. **배포 후보로 만들기** — 콘솔이 그 자리에서 패키지를 지어 후보로 올린다. 패키지에는 키가 없다. [CON-20b](../server/docs/screens/center-console-workspace.md#배포-후보로-만들기), [CON-02](../server/docs/screens/center-console.md#con-02-프로세스)
@@ -102,7 +102,7 @@
 | CON-00 | 공통 틀 | Center 콘솔 | 모두 | M2 | 프로토타입 |
 | CON-01 | 실행 기록 | Center 콘솔 | 운영자 | M3 | 프로토타입 (이름은 [ADR-0149](decisions/0149-console-menu-follows-the-work.md)) |
 | CON-02 | 프로세스 | Center 콘솔 | 운영자 | M3 | 프로토타입 |
-| CON-03 | 앱 — 없어짐 ([ADR-0149](decisions/0149-console-menu-follows-the-work.md) — Studio 키 목록뿐이었다. 서버 실행기는 CON-12, 이력은 CON-16) | Center 콘솔 | 운영자 | M2 | 폐기 (쓰는 앱이 없는 키 종류가 남았다 — `docs/09-gaps.md` §3-35) |
+| CON-03 | 앱 — 없어짐 ([ADR-0149](decisions/0149-console-menu-follows-the-work.md) — Studio 키 목록뿐이었다. 서버 실행기는 CON-12, 이력은 CON-16) | Center 콘솔 | 운영자 | M2 | 폐기 (키 종류 `studio`도 걷었다 — [ADR-0150](decisions/0150-the-designer-key-is-gone.md)) |
 | CON-04 | 결재함 | Center 콘솔 | 결재자 | M5 | 프로토타입 |
 | CON-05 | 작업 지시 | Center 콘솔 | 운영자 | M5 | 프로토타입 확장 (만들기 추가) |
 | CON-06 | 공통 패키지 | Center 콘솔 | 운영자 | M5 | 프로토타입 |
@@ -115,7 +115,8 @@
 | CON-16 | 변경 이력 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0121](decisions/0121-center-console-says-process.md), 이름은 [ADR-0149](decisions/0149-console-menu-follows-the-work.md)) |
 | CON-17 | 일꾼 | Center 콘솔 | Center 관리자 | — | 신규 ([ADR-0137](decisions/0137-consumers-are-managed-in-the-console.md)) |
 | CON-18 | 연결 앱 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0138](decisions/0138-console-app-catalog.md) — 보기만) |
-| CON-20 | 작업공간 (설계) | Center 콘솔 | 설계자 | M11 | 신규 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)·[ADR-0147](decisions/0147-workspace-has-three-tabs.md) — STU-01·02·04·05·06·07·08·09·12를 대신한다) |
+| CON-20 | 작업공간 (저작) | Center 콘솔 | 저작하는 사람 | M11 | 신규 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)·[ADR-0147](decisions/0147-workspace-has-three-tabs.md) — STU-01·02·04·05·06·07·08·09·12를 대신한다) |
+| CON-21 | 대시보드 (홈) | Center 콘솔 | 모두 | — | 신규 ([ADR-0151](decisions/0151-console-follows-the-lifecycle.md) — 역할로 가르지 않는다) |
 | SVC-00 | 공통 틀 | 서비스 앱 관리 콘솔 | 서비스 앱 관리자 | M2 | 신규 (`service_kit`) |
 | SVC-01 | 상태 | 서비스 앱 관리 콘솔 | 서비스 앱 관리자 | M2 | 신규 |
 | SVC-02 | API 키 — **없어졌다** (ADR-0102, 서비스 앱 키가 없다) | 서비스 앱 관리 콘솔 | — | M2 | 폐기 |

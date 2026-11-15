@@ -19,6 +19,7 @@ import pytest
 from consumers import ADMIN, enroll
 from fake_handlers import BROKEN, FACTORY, MANIFEST, TOPIC
 from fastapi.testclient import TestClient
+from trials import hold_trial, runner_key
 
 from bpm.adapter_consumer.main import service_of
 from bpm.center.app import create_app as create_center
@@ -122,14 +123,23 @@ def center(tmp_path: Path) -> Iterator[TestClient]:
     store.close()
 
 
+def trial_runner(center: TestClient) -> dict[str, str]:
+    """**시험 실행 하나를 들고 있는** 서버 실행기의 헤더 (C15 §시험 실행의 외부 작업, ADR-0150).
+
+    일감은 `origin: test`로 올린다 — 통합 일꾼이 시험 쪽으로 보낼지를 그것으로 가른다.
+    """
+    runner_id, key = runner_key(center)
+    hold_trial(center.app.state.store, runner_id=runner_id, run_id=RUN)  # type: ignore[attr-defined]
+    return {"Authorization": f"Bearer {key}"}
+
+
 def test_the_unified_consumer_finishes_ai_and_rpa_tasks_through_center(center: TestClient, tmp_path: Path) -> None:
     loaded, _ = load(data_dir=tmp_path / "handlers", found=points(("fake-co", FACTORY)))
     host = UnifiedConsumer.assemble(loaded, [])
     tokens = enroll(center, topics=[TOPIC], manifests=[MANIFEST.to_json_dict()], folder=tmp_path / "consumer")
     consumer = Consumer(host.services, center_url="", tokens=tokens, wait_s=0, client=center)
 
-    made = center.post("/api/v1/center-keys", json={"name": "설계자", "type": "studio"}, headers=ADMIN)
-    studio = {"Authorization": f"Bearer {made.json()['key']}"}
+    runner = trial_runner(center)
 
     def post(operation: str, node: str, payload: dict[str, Any]) -> str:
         body = {
@@ -139,10 +149,10 @@ def test_the_unified_consumer_finishes_ai_and_rpa_tasks_through_center(center: T
             "mode": "deterministic",
             "origin": "test",
             "idempotency": {"run_id": RUN, "node_id": node, "node_instance": 1, "attempt": 1},
-            "caller": {"type": "studio", "host": "설계자 PC"},
+            "caller": {"type": "server_runner", "host": "실행기"},
             "input": payload,
         }
-        answer = center.post("/api/v1/external-tasks", json=body, headers=studio)
+        answer = center.post("/api/v1/external-tasks", json=body, headers=runner)
         assert answer.status_code == 201, answer.text
         return str(answer.json()["task_id"])
 
@@ -151,7 +161,7 @@ def test_the_unified_consumer_finishes_ai_and_rpa_tasks_through_center(center: T
     assert consumer.run_once(wait_s=0) + consumer.run_once(wait_s=0) == 2
 
     outputs = {
-        task_id: center.get(f"/api/v1/external-tasks/{task_id}", headers=studio).json() for task_id in (review, order)
+        task_id: center.get(f"/api/v1/external-tasks/{task_id}", headers=runner).json() for task_id in (review, order)
     }
     assert outputs[review]["output"] == {"decision": "approve"}
     assert outputs[order]["output"] == {"receipt": "ORD-7"}
@@ -177,8 +187,7 @@ def test_the_admin_api_lists_every_topics_operations_with_kind_and_counts_per_to
         center, topics=[TOPIC], manifests=[MANIFEST.to_json_dict()], folder=tmp_path / "consumer"
     )
     consumer = Consumer(services[:1], center_url="", tokens=tokens, wait_s=0, client=center)
-    made = center.post("/api/v1/center-keys", json={"name": "설계자", "type": "studio"}, headers=ADMIN)
-    studio = {"Authorization": f"Bearer {made.json()['key']}"}
+    runner = trial_runner(center)
     calls: list[tuple[str, str, dict[str, Any]]] = [
         ("Task_a", "draft_review", {"amount": 10}),
         ("Task_b", "enter_order", {}),
@@ -187,9 +196,9 @@ def test_the_admin_api_lists_every_topics_operations_with_kind_and_counts_per_to
         body = {
             "schema": 1, "topic": TOPIC, "operation": operation, "mode": "deterministic", "origin": "test",
             "idempotency": {"run_id": RUN, "node_id": node, "node_instance": 1, "attempt": 1},
-            "caller": {"type": "studio", "host": "설계자 PC"}, "input": payload,
+            "caller": {"type": "server_runner", "host": "실행기"}, "input": payload,
         }
-        assert center.post("/api/v1/external-tasks", json=body, headers=studio).status_code == 201
+        assert center.post("/api/v1/external-tasks", json=body, headers=runner).status_code == 201
     consumer.run_once(wait_s=0)
     consumer.run_once(wait_s=0)
 

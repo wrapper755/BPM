@@ -58,15 +58,8 @@ RETRY_STATUS_CODES: dict[int, str] = {503: "dependency_down", 429: "rate_limited
 
 #: 일꾼을 들이는 요청 종류 (`contracts.enrollment.ENROLLMENT_TYPES`에 더한다).
 CONSUMER = "consumer"
-#: 호출 토큰 (C15 「정한 것」) — Studio가 제 키로 청해 확장에게 넘긴다.
-CALL_TOKEN = "call_token"
-CALL_TOKEN_HOURS = 24
-#: 호출 토큰이 열 수 있는 경로의 앞자리 — 밖은 403 `call_token_scope`.
-CALL_TOKEN_PATH = "/api/v1/external-tasks"
-#: 호출 토큰이 **읽을** 수 있는 곳 — 리소스 목록(C7, 카탈로그를 읽는다). GET만.
-CALL_TOKEN_READ_PATH = "/api/v1/resources"
-
-#: Studio 시험 실행의 `run_id` 앞자리 (C11 `run_id` — 「Studio 단독 시험이면 `test_<hex>`」).
+#: 시험 실행의 `run_id` 앞자리 (C11 `run_id`). **올리는 쪽은 그 시험 실행을 들고 있는 서버
+#: 실행기다** — Center가 그것을 대조한다 (C15 §시험 실행의 외부 작업, ADR-0150).
 TEST_RUN_PREFIX = "test_"
 
 Topic = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9.-]{0,63}$")]
@@ -123,13 +116,6 @@ class ExternalTaskCreate(SchemaVersioned):
     timeout_s: int | None = Field(default=None, ge=1)
     want_result: bool = True
     origin: str = ORIGIN_RUN  # KNOWN_ORIGINS
-
-
-class CallToken(ContractModel):
-    """`POST /api/v1/call-tokens`의 응답. **원문은 이때만** 실린다 (Center에는 해시만)."""
-
-    token: str
-    expires_at: Timestamp
 
 
 class ExternalTaskCreated(ContractModel):
@@ -393,10 +379,6 @@ class TopicOperationStatus(ContractModel):
 
 
 __all__ = [
-    "CALL_TOKEN",
-    "CALL_TOKEN_HOURS",
-    "CALL_TOKEN_PATH",
-    "CALL_TOKEN_READ_PATH",
     "CODE_NO_CONSUMER",
     "CODE_TIMEOUT",
     "CONSUMER",
@@ -418,7 +400,6 @@ __all__ = [
     "STATE_LOCKED",
     "STATE_PENDING",
     "TEST_RUN_PREFIX",
-    "CallToken",
     "CatalogUpload",
     "CompleteRequest",
     "CONSUMER_SOURCES",

@@ -141,11 +141,6 @@
       "title": "State",
       "type": "string"
     },
-    "studios": {
-      "default": 0,
-      "title": "Studios",
-      "type": "integer"
-    },
     "updated_at": {
       "title": "Updated At",
       "type": "string"

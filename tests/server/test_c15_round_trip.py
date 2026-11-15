@@ -21,7 +21,8 @@ from typing import Any
 
 import httpx
 import pytest
-from consumers import ADMIN, enroll, serve, start
+from consumers import enroll, serve, start
+from trials import hold_trial, runner_key
 
 from bpm.center.app import create_app
 from bpm.center.settings import Settings as CenterSettings
@@ -60,11 +61,20 @@ def worker(center: tuple[str, Store], tmp_path: Path) -> Iterator[Any]:
     stop.set()
 
 
-def studio_key(url: str) -> str:
+#: 이 바퀴가 쓰는 실행 — **시험 실행**이다 (설계 중에 돌려 보는 자리, C15 §시험 실행의 외부 작업).
+TRIAL = "test_20261029_000000_aaaaaa"
+
+
+def runner_with_a_trial(url: str, store: Store) -> str:
+    """**시험 실행 하나를 들고 있는** 서버 실행기의 키 (ADR-0150).
+
+    올리는 쪽은 서버 실행기뿐이고, 시험 실행은 **그 실행기로 내려간 것**이어야 받는다 — 그래서
+    키만으로는 모자라다 (`tests/trials.py`가 그 행을 세운다).
+    """
     with httpx.Client(base_url=url) as http:
-        made = http.post("/api/v1/center-keys", json={"name": "설계자", "type": "studio"}, headers=ADMIN)
-        assert made.status_code == 201, made.text
-        return str(made.json()["key"])
+        runner_id, key = runner_key(http)
+    hold_trial(store, runner_id=runner_id, run_id=TRIAL)
+    return str(key)
 
 
 def call(**over: Any) -> OpCall:
@@ -73,7 +83,7 @@ def call(**over: Any) -> OpCall:
         "operation": "list_overdue_receivables",
         "mode": "deterministic",
         "input": {},
-        "run_id": "test_20261029_000000_aaaaaa",
+        "run_id": TRIAL,
         "node_id": "Task_list",
         **over,
     }
@@ -82,7 +92,7 @@ def call(**over: Any) -> OpCall:
 
 def test_a_service_call_goes_through_center_to_the_consumer(center: tuple[str, Store], worker: Any) -> None:
     url, store = center
-    caller = CenterServiceCaller(base_url=url, token=studio_key(url), caller_type="studio")
+    caller = CenterServiceCaller(base_url=url, token=runner_with_a_trial(url, store), caller_type="server_runner")
     found = caller.call(call())
     assert "receivables" in found.output or found.output  # 모의 ERP가 짠 답을 준다
     assert found.mode_used == "deterministic"
@@ -91,8 +101,8 @@ def test_a_service_call_goes_through_center_to_the_consumer(center: tuple[str, S
 
 
 def test_the_apps_failure_code_comes_back(center: tuple[str, Store], worker: Any) -> None:
-    url, _ = center
-    caller = CenterServiceCaller(base_url=url, token=studio_key(url), caller_type="studio")
+    url, store = center
+    caller = CenterServiceCaller(base_url=url, token=runner_with_a_trial(url, store), caller_type="server_runner")
     with pytest.raises(ServiceCallError) as caught:
         caller.call(call(operation="no_such_op"))
     assert caught.value.code == "operation_not_found"
@@ -102,7 +112,9 @@ def test_the_apps_failure_code_comes_back(center: tuple[str, Store], worker: Any
 def test_a_long_task_is_handed_back_and_asked_for_later(center: tuple[str, Store], tmp_path: Path) -> None:
     """일꾼이 아직 없다 → 기다림으로 넘긴다. 일꾼이 붙어 끝내면 **묻는 쪽이** 결과를 받는다."""
     url, store = center
-    caller = CenterServiceCaller(base_url=url, token=studio_key(url), caller_type="studio", park_after_s=0)
+    caller = CenterServiceCaller(
+        base_url=url, token=runner_with_a_trial(url, store), caller_type="server_runner", park_after_s=0
+    )
     erp = catalog.c11("erp")
     assert erp is not None
     made = build(erp)
@@ -129,7 +141,7 @@ def test_a_long_task_is_handed_back_and_asked_for_later(center: tuple[str, Store
         # 넣고 ack한 뒤 죽었다 — 값이 없다. **같은 칸으로 다시 올리면** 같은 결과를 받는다.
         with pytest.raises(ServiceResultLost):
             caller.result(call(), task_id)
-        again = CenterServiceCaller(base_url=url, token=caller.token, caller_type="studio").call(call())
+        again = CenterServiceCaller(base_url=url, token=caller.token, caller_type="server_runner").call(call())
         assert dict(again.output) == dict(found.output)
     finally:
         stop.set()
@@ -137,7 +149,9 @@ def test_a_long_task_is_handed_back_and_asked_for_later(center: tuple[str, Store
 
 def test_a_parked_task_can_be_withdrawn(center: tuple[str, Store]) -> None:
     url, store = center
-    caller = CenterServiceCaller(base_url=url, token=studio_key(url), caller_type="studio", park_after_s=0)
+    caller = CenterServiceCaller(
+        base_url=url, token=runner_with_a_trial(url, store), caller_type="server_runner", park_after_s=0
+    )
     with pytest.raises(ServicePending) as parked:
         caller.call(call())
     caller.withdraw(parked.value.task_id)

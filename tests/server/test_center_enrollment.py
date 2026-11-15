@@ -19,6 +19,7 @@ from bpm.center import create_app
 from bpm.center.settings import Settings
 from bpm.center.storage import Store
 from bpm.contracts.enrollment import (
+    ENROLLMENT_TYPES,
     EnrollStatus,
     Sealed,
     SealError,
@@ -409,63 +410,16 @@ def test_keys_without_a_public_key_do_not_rotate(client: TestClient, store: Stor
     assert beat.json().get("rotated_key") is None
 
 
-# ─────────────── Studio (C5 §Studio 등록 요청과 승인, ADR-0093) ───────────────
+# ─────────────── 설계자의 키는 없다 (ADR-0150) ───────────────
 
 
-def studio_body(public_key: str, *, seed: str = "designer-pc", name: str = "설계 PC") -> dict[str, Any]:
-    return {
-        "schema": 1,
-        "machine_id": machine(seed),
-        "name": name,
-        "os": "ubuntu-24.04",
-        "versions": {"studio": "0.1.0", "core": "0.1.0"},
-        "public_key": public_key,
-    }
+def test_the_designer_key_and_its_enroll_path_are_gone(client: TestClient) -> None:
+    """설계는 콘솔에서 하므로 설계자의 키가 없다 (ADR-0143 §4) — 길도 종류도 남기지 않는다.
 
-
-def test_studio_is_let_in_the_same_way_and_its_name_is_who(client: TestClient, store: Store) -> None:
-    """Studio도 요청 코드 → 승인이다. 아이디·비밀번호가 없고 「누가」는 승인 때 붙인 이름이다."""
-    private, public = new_keypair()
-    pending = enroll(client, studio_body(public), kind="studio")
-    assert pending.code == request_code(public, pending.enrollment_id)
-    listed = client.get("/api/v1/enrollments?type=studio", headers=READ).json()
-    assert [one["code"] for one in listed] == [pending.code]
-
-    approve(client, pending.enrollment_id, name="김OO 설계 PC")
-    key = receive_key(client, private, pending.enrollment_id, kind="studio")
-    headers = {"Authorization": f"Bearer {key}"}
-    listed_keys = client.get("/api/v1/center-keys", headers=ADMIN).json()
-    info = next(k for k in listed_keys if k["enrollment_id"] == pending.enrollment_id)
-    assert info["type"] == "studio" and info["name"] == "김OO 설계 PC"
-
-    # 처음 부르면 그것이 받았다는 표시다 — 봉해 둔 것을 지운다 (Studio에는 `register`가 없다).
-    assert client.get("/api/v1/packages", headers=headers).status_code == 200
-    row = store.row("SELECT sealed_json FROM enrollments WHERE enrollment_id = ?", (pending.enrollment_id,))
-    assert row is not None and row["sealed_json"] is None
-
-
-def test_reapproving_the_same_studio_pc_revokes_the_old_key(client: TestClient) -> None:
-    private, public = new_keypair()
-    first = enroll(client, studio_body(public), kind="studio")
-    approve(client, first.enrollment_id)
-    old = {"Authorization": f"Bearer {receive_key(client, private, first.enrollment_id, kind='studio')}"}
-    assert client.get("/api/v1/packages", headers=old).status_code == 200
-
-    private2, public2 = new_keypair()
-    second = enroll(client, studio_body(public2), kind="studio")
-    listed = client.get("/api/v1/enrollments?type=studio", headers=READ).json()
-    assert listed[0]["existing"]["name"] == "설계 PC"
-    decision = approve(client, second.enrollment_id)
-    assert decision["replaced_key_id"] is not None
-    new = {"Authorization": f"Bearer {receive_key(client, private2, second.enrollment_id, kind='studio')}"}
-    assert client.get("/api/v1/packages", headers=old).status_code == 403
-    assert client.get("/api/v1/packages", headers=new).status_code == 200
-
-
-def test_studio_keys_last_a_year(client: TestClient) -> None:
-    private, public = new_keypair()
-    pending = enroll(client, studio_body(public), kind="studio")
-    approve(client, pending.enrollment_id)
-    status = client.get(f"/api/v1/studio/enroll/{pending.enrollment_id}").json()
-    days = (datetime.fromisoformat(status["key_expires_at"]) - datetime.now(UTC)).days
-    assert days in (364, 365)
+    남아 있으면 **콘솔 밖에서 패키지를 올리는 길**이 하나 더 있는 셈이다.
+    """
+    assert client.post("/api/v1/studio/enroll", json={}).status_code == 404
+    assert client.get("/api/v1/studio/enroll/enr_0").status_code == 404
+    assert ENROLLMENT_TYPES == {"server_runner"}
+    # 요청 종류로도 받지 않는다 — 열린 모드라도 줄을 만들지 않는다.
+    assert client.get("/api/v1/enrollments?type=studio", headers=READ).json() == []

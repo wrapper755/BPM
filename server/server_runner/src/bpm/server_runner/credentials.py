@@ -1,7 +1,7 @@
 """비밀 값 — 환경변수가 먼저, 그다음 OS 비밀 저장소 (CLAUDE.md §5).
 
 **서버에서는 환경변수가 주 경로다.** 컨테이너·systemd가 그렇게 준다. 그래도 저장소를 쓸 수
-있으면 읽는다 — 개발 PC에서 서버 실행기·Studio와 같은 방식으로 다룰 수 있게. **운영자가 비밀 폴더
+있으면 읽는다 — 개발 PC에서도 같은 방식으로 다룰 수 있게. **운영자가 비밀 폴더
 (`BPM_SERVER_RUNNER__SECRETS_DIR`)를 적으면 그것이 저장소 자리에 들어간다** (ADR-0100) — OS 비밀
 저장소가 없는 컨테이너에서도 등록 승인·키 회전이 돈다.
 
@@ -20,7 +20,7 @@ from bpm.server_runner import secret_file
 
 log = logging.getLogger(__name__)
 
-#: `keyring`의 서비스 이름 (서버 실행기·Studio와 가른다 — 한 PC에 셋이 있을 수 있다).
+#: `keyring`의 서비스 이름 — 한 PC에 다른 BPM 프로그램이 함께 있어도 섞이지 않게 가른다.
 SERVICE = "bpm-server-runner"
 
 #: Center API 키 (C12 — 「서버 실행기용」 종류).

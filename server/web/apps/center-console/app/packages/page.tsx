@@ -113,7 +113,10 @@ export default async function PackagesPage() {
       {failure ? (
         <ErrorBanner message={failure} />
       ) : rows.length === 0 ? (
-        <EmptyState title="올라온 공통 패키지가 없습니다." hint="Studio의 「공유 프로세스로 내보내기...」로 만든 패키지를 올리세요." />
+        <EmptyState
+          title="올라온 공통 패키지가 없습니다."
+          hint="「저작 › 작업공간」에서 「공유 BPM 프로세스로 짓기」로 만드세요."
+        />
       ) : (
         <DataTable
           columns={columns}

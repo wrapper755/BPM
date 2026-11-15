@@ -2,9 +2,9 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **구현됨** (2026-10-29) — Center(`api/external_tasks.py`, 15판)와 양쪽이 돈다: 부르는 쪽은 `core.services.CenterServiceCaller`(서버 실행기·실행 프로세스·Studio), 일꾼은 `service_kit.consumer`(서비스 앱·모의 앱)와 어댑터 일꾼 `bpm-adapter-consumer`(`server/adapter_consumer`). `tests/server/test_center_external_tasks.py`·`test_c15_round_trip.py`·`test_service_kit_consumer.py`·`test_adapter_consumer.py`가 지킨다. 서버 실행기는 긴 작업을 기다림으로 넘긴다(ADR-0103) |
+| 상태 | **구현됨** (2026-10-29) — Center(`api/external_tasks.py`, 15판)와 양쪽이 돈다: 부르는 쪽은 `core.services.CenterServiceCaller`(서버 실행기 — 운영 실행과 시험 실행 둘 다), 일꾼은 `service_kit.consumer`(서비스 앱·모의 앱)와 어댑터 일꾼 `bpm-adapter-consumer`(`server/adapter_consumer`). `tests/server/test_center_external_tasks.py`·`test_c15_round_trip.py`·`test_service_kit_consumer.py`·`test_adapter_consumer.py`가 지킨다. 서버 실행기는 긴 작업을 기다림으로 넘긴다(ADR-0103) |
 | schema | 1 |
-| 보내는 쪽 → 받는 쪽 | 서버 실행기·실행 프로세스·Studio → Center (올리기·기다리기), 일꾼 → Center (들이기·가져가기·끝내기) |
+| 보내는 쪽 → 받는 쪽 | 서버 실행기 → Center (올리기·기다리기), 일꾼 → Center (들이기·가져가기·끝내기) |
 | 코드 위치 | `shared/contracts/external_task.py`, Center `api/external_tasks.py` |
 | 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0062](../decisions/0062-pc-delegation.md), [0092](../decisions/0092-keys-are-issued-and-delivered-by-center.md), [0102](../decisions/0102-calling-outside-is-pull.md), [0107](../decisions/0107-outcome-unknown-asks-a-person.md), [0114](../decisions/0114-remove-ui-automation.md), [0122](../decisions/0122-consumer-folder.md), [0137](../decisions/0137-consumers-are-managed-in-the-console.md) |
 | 관련 화면 | CON-01 (실행 상세의 「외부 작업」), CON-17 (일꾼) |
@@ -23,8 +23,7 @@ BPM 프로세스가 네트워크 건너의 기능을 부를 때, 부르는 쪽�
 
 | 엔드포인트 | 인증 | 뜻 |
 | --- | --- | --- |
-| `POST /api/v1/call-tokens` | Studio의 Center API 키 | 확장에게 줄 호출 토큰 받기 (24시간) |
-| `POST /api/v1/external-tasks` | 서버 실행기·Studio의 Center API 키 | 일감 올리기 (멱등) |
+| `POST /api/v1/external-tasks` | 서버 실행기의 Center API 키 | 일감 올리기 (멱등) |
 | `GET /api/v1/external-tasks/{task_id}?wait_s=` | 올린 쪽 | 결과 기다리기 (롱폴링). 아직이면 `wait_s`(최대 25) 뒤 `state: pending` |
 | `POST /api/v1/external-tasks/{task_id}/ack` | 올린 쪽 | 결과를 받았다 → 값을 지운다 |
 | `POST /api/v1/external-tasks/{task_id}/cancel` | 올린 쪽 | 거두기 (실행이 취소됐다) |
@@ -58,14 +57,14 @@ BPM 프로세스가 네트워크 건너의 기능을 부를 때, 부르는 쪽�
 | `schema` | int | ✓ | 1 |
 | `topic` | str | ✓ | 앱 id. BPMN `bpm:serviceCall.app_id`, 확장 태스크면 그 확장 id |
 | `operation` | str | ✓ | 작업 이름 (manifest의 것) |
-| `mode` | `autonomous` \| `deterministic` | ✓ | 수행 모드 (원칙 7). 자율 수행은 Studio에서만 받는다 |
+| `mode` | `autonomous` \| `deterministic` | ✓ | 수행 모드 (원칙 7). 자율 수행은 **시험 실행에서만** 받는다 |
 | `idempotency` | object | ✓ | `{run_id, node_id, node_instance, attempt, call_seq}` — C11 멱등 키와 같다(`operation`을 더해 여섯 칸). **같은 칸이면 같은 일감**이다 (다른 본문이면 409 `idempotency_conflict`) |
 | `caller` | object | ✓ | C11 `caller`와 같다 (`{type, host, bpm_process_id, version}`) |
 | `business_key` | str | | C11과 같다 |
 | `input` | object | ✓ | |
 | `timeout_s` | int | | 기한. 올린 때부터 센다. 없으면 manifest의 작업 `timeout_s` (기본 60) |
 | `want_result` | bool | | 기본 `true`. `false`면 결과를 기다리지 않는다(보고처럼 답이 필요 없는 것) — Center는 끝나면 값을 바로 지운다 |
-| `origin` | `run` \| `test` | | 기본 `run`. Studio 시험 실행은 `test` — 일꾼이 시험 쪽으로 보낼지를 정한다 (ADR-0102 §6) |
+| `origin` | `run` \| `test` | | 기본 `run`. 시험 실행은 `test` — 일꾼이 시험 쪽으로 보낼지를 정한다 (ADR-0102 §6) |
 
 응답 `{task_id, state}`. `task_id`는 멱등 칸에서 **Center가 짓는다**(같은 칸이면 같은 id) — 되살린 실행이 다시 올려도 같은 일감이다. **이미 받아 간(`ack`) 일감을 같은 본문으로 다시 올리면 다시 줄에 선다** — 값은 지웠으므로 옛 일감을 돌려주면 빈 결과가 된다. 일꾼이 멱등 칸으로 저장해 둔 결과를 다시 준다(반복 안의 태스크가 차례마다 같은 칸으로 올릴 수 있다 — 엔진은 반복 중에 `node_instance`를 올리지 않는다, ADR-0082).
 
@@ -73,11 +72,27 @@ Center가 받기 전에 보는 것 (「불러도 되나」, ADR-0102 §5):
 
 | 검사 | 거절 |
 | --- | --- |
-| `run_id`가 이 호출자의 실행인가 (C3 소유. Studio는 `test_…`만) | 403 `run_not_owned` |
-| 그 실행의 BPM 프로세스가 이 토픽을 요구하는가 (배포된 C1) | 403 `topic_not_required` |
+| `run_id`가 이 호출자의 실행인가 — 운영 실행은 C3 소유, **시험 실행(`test_…`)은 그 실행기로 내려간 것**인가 (아래 §시험 실행의 외부 작업) | 403 `run_not_owned` |
+| 그 실행의 BPM 프로세스가 이 토픽을 요구하는가 (배포된 C1 — **시험 실행은 보지 않는다**) | 403 `topic_not_required` |
 | 이 토픽에 들인 일꾼의 manifest가 이 작업·모드를 받는가 | 422 `operation_not_found` / `mode_unsupported` |
 | 작업이 `required_scopes`를 적었는가 — **지금은 켜 줄 길이 없어** 적은 작업은 늘 거절이다 (C11, [ADR-0114](../decisions/0114-remove-ui-automation.md)) | 403 `scope_missing` |
-| 자율 수행인데 Studio가 아니다 | 403 `mode_not_allowed` |
+| 자율 수행인데 시험 실행이 아니다 | 403 `mode_not_allowed` |
+
+### 시험 실행의 외부 작업 ([ADR-0150](../decisions/0150-the-designer-key-is-gone.md))
+
+콘솔에서 돌려 보는 **시험 실행**(C17)도 서비스 앱·외부 확장을 부른다. 올리는 쪽은 그것을 돌리는
+**서버 실행기**이고 키도 그 실행기의 Center API 키다 — 시험을 위한 키나 토큰은 없다.
+
+운영 실행과 **다른 것 셋**이다.
+
+| 무엇 | 운영 실행 | 시험 실행 (`run_id`가 `test_…`) |
+| --- | --- | --- |
+| 실행의 주인 | 그 실행 기록을 보낸 키 (C3 소유) | **그 시험 실행이 이 실행기로 내려갔는가** — Center가 `test_runs.job_id` → `jobs.target_id`로 본다. 끝난 시험 실행은 받지 않는다 |
+| 배포 대조 | 배포된 그 판의 매니페스트가 이 토픽을 요구해야 한다 | **보지 않는다** — 시험 실행에는 배포가 없다 (그림이 묶음으로 온다, C17) |
+| 수행 모드 | 결정 수행만 | **자율 수행도 받는다** (설계 중에는 모델이 배운다 — C1 원칙 7) |
+
+같은 `idempotency.run_id`로 남이 올리는 것은 403 `run_not_owned`이다. 일꾼이 보는 것은
+`origin: test` 하나뿐이다 — 시험 쪽 주소·키로 보낼지는 일꾼이 정한다 (ADR-0102 §6).
 
 ### 결과 (`ExternalTaskResult`)
 
@@ -264,7 +279,7 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 ### manifest·카탈로그 올리기
 
 - `PUT /api/v1/consumers/self/manifest` — 본문은 ServiceAppManifest 하나. 그 `app_id`가 일꾼의 토픽 밖이면 403 `topic_not_granted`. 같은 `app_id`의 것을 바꾼다. 판이 바뀌면 일꾼이 뜰 때 다시 올린다.
-- `PUT /api/v1/consumers/self/catalogs/{resource_type}` `{app_id, catalog}` — C13 §5 `Catalog`. Center는 `revision`이 같으면 다시 쓰지 않는다(C7). 일꾼의 토픽 것만 받는다. 이 카탈로그가 C7 기여 자원·Studio 리소스 탐색기(STU-03)의 고를 거리가 된다 — **Center도 Studio도 앱의 주소를 모른다.**
+- `PUT /api/v1/consumers/self/catalogs/{resource_type}` `{app_id, catalog}` — C13 §5 `Catalog`. Center는 `revision`이 같으면 다시 쓰지 않는다(C7). 일꾼의 토픽 것만 받는다. 이 카탈로그가 C7 기여 자원·콘솔 편집기(CON-20)의 고를 거리가 된다 — **Center도 콘솔도 앱의 주소를 모른다.**
 
 ## 부르는 쪽의 규칙
 
@@ -272,7 +287,7 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 - **멱등 칸은 C11과 같은 규칙으로 짓는다** — 재시작 뒤에도 같은 값이 되게 한다(원칙 9). 그래서 되살린 실행은 새 일감이 아니라 **같은 일감의 결과**를 받는다.
 - 실행이 취소되면 기다리던 일감을 `cancel`한다.
 - 실행 기록(C3 `service_call`)은 지금과 같은 칸이다(업무 값 없음). `key_ref`는 빈 글이다(키가 없다).
-- **누가 무엇으로 올리나**: 서버 실행기·Studio는 제 Center API 키, 실행 프로세스는 호출 토큰(아래 「정한 것」). 호출 토큰은 청한 키와 같은 신원이다(Studio가 청했으면 `test_…`만).
+- **누가 무엇으로 올리나**: 서버 실행기가 제 Center API 키로 올린다 — 운영 실행도 시험 실행도 같은 키다 (§시험 실행의 외부 작업).
 
 ## 예시
 
@@ -328,8 +343,7 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 
 ## 정한 것 (처음에 미정이던 셋)
 
-- **부르는 쪽은 제 Center API 키를 쓴다** — 서버 실행기·Studio 모두 제 프로세스 안에서 엔진을 돌리므로 따로 토큰을 받을 일이 없다. 자식 프로세스에 토큰을 건네던 길은 PC 실행기와 함께 걷었다 ([ADR-0144](../decisions/0144-remove-the-pc-runner.md)).
-- **호출 토큰은 Studio가 확장에게 줄 때만 쓴다** — `POST /api/v1/call-tokens` → `{token, expires_at}`(수명 24시간, Studio 키로만 청한다). 확장 클라이언트는 `ctx.secret("call_token")`으로 이것을 받으므로 Studio의 오래 사는 키를 쥐지 않는다. **호출 토큰으로 부르면 Center는 그 Studio의 키로 부른 것과 같이 본다** — 소유(C3)·배포 대조가 같은 신원으로 돈다. 열리는 것은 `/api/v1/external-tasks`와 **리소스 목록 읽기**(`GET /api/v1/resources…`)뿐이고 밖은 모두 403 `call_token_scope`다. 서버 실행기의 확장은 **실행기의 Center API 키를 그 이름으로** 받는다.
+- **부르는 쪽은 제 Center API 키를 쓴다** — 서버 실행기가 제 프로세스 안에서 엔진을 돌리므로 따로 토큰을 받을 일이 없다. 자식 프로세스에 토큰을 건네던 길은 PC 실행기와 함께 걷었고([ADR-0144](../decisions/0144-remove-the-pc-runner.md)) **호출 토큰(24시간)은 그것을 청하던 Studio와 함께 걷었다**([ADR-0150](../decisions/0150-the-designer-key-is-gone.md)). 확장 클라이언트의 비밀 이름 `call_token`은 그대로이고 **그 값은 실행기 제 키다** (C13).
 - **롱폴링 상한은 설정의 기본 200** (`BPM_CENTER__EXTERNAL_TASKS__MAX_WAITERS` — 올리는 쪽·일꾼의 기다림을 함께 센다). 한 번 가져가기에 잠글 수 있는 수는 **10건까지**(`max_tasks`가 그보다 크면 10으로 깎는다). **`max_tasks: 0`은 일감을 가져가지 않는다** — 열린 모드의 들이기만 하는 한 번이다(§일꾼 들이기).
 - **어댑터 일꾼은 맡은 외부 확장의 정의를 제가 들고 있다가 올린다** (ADR-0122, §외부 확장 정의 올리기) — `BPM_ADAPTER__DEFINITIONS`의 파일들이다. **원본이 콘솔인 정의는 Center에서 받는다**(ADR-0141, §콘솔이 원본인 정의 받기).
 - 출력 검사는 **`output_schema.required`의 칸이 다 있는가**까지다 — 계약 패키지에 JSON Schema 검증기를 두지 않는다(입력 쪽도 그렇다). 더 깊은 모양은 일꾼과 엔진의 `output` 매핑이 본다.
@@ -353,6 +367,7 @@ C11 오류는 `error.code`로 그대로 온다. C14 `retry.on`의 HTTP 숫자는
 | 2026-11-08 | 1 | **`GET /external-topics/{topic}/operations`**(콘솔 토큰, `TopicOperationStatus[]`) — CON-18이 작업마다 기다림·처리 중·최근 7일 끝남·실패를 본다. 새 엔드포인트라 옛 쪽은 영향이 없다 | [0138](../decisions/0138-console-app-catalog.md) |
 | 2026-11-08 | 1 | `LockedTask`·`ExternalTaskInfo`에 **`kind`**(일꾼 종류 — Center가 manifest에서 붙인다). 받는 쪽은 모르는 칸을 무시하므로 판은 그대로다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-10-31 | 1 | **일꾼은 일꾼 폴더로만 들어온다** — `<이름>.consumer.json`(`FolderConsumer`, 토큰 해시), 토픽 고정, 만료·회전 없음. `POST /consumers/enroll`·`ConsumerEnrollRequest`를 걷었다. **외부 확장 정의는 일꾼이 올린다** — `PUT /consumers/self/extension` | [0122](../decisions/0122-consumer-folder.md) |
+| 2026-11-15 | 1 | **올리는 쪽이 서버 실행기 하나가 되었다** — 호출 토큰(`POST /call-tokens`·`CallToken`·`call_token_scope`)과 Studio 키 갈래를 걷고, 시험 실행의 외부 작업을 **그 시험 실행을 들고 있는 실행기**에 열었다(§시험 실행의 외부 작업 — 자율 수행도 거기서만). 확장의 비밀 이름 `call_token`은 그대로다 | [0150](../decisions/0150-the-designer-key-is-gone.md) |
 | 2026-10-31 | 1 | **등록 세션(`reg_…`)과 거절 `registration_off`를 걷었다** — 셀렉터 등록 도구(Tool UI)와 「셀렉터 등록」 스위치가 없다. 부르는 쪽은 서버 실행기·실행 프로세스·Studio 셋이다. `required_scopes`를 적은 작업은 켜 줄 길이 없어 `scope_missing`이다. 경로·모양은 그대로다 | [0114](../decisions/0114-remove-ui-automation.md) |
 | 2026-10-30 | 1 | **`GET /external-tasks?run_id=`**(콘솔 토큰, `ExternalTaskInfo[]`) — CON-01 「외부 작업」이 일감이 어디서 멈췄는지(기다림·일꾼이 쥠·다시 나감)를 본다. 값·오류 글은 싣지 않는다. 새 엔드포인트라 옛 쪽은 영향이 없다 | [0102](../decisions/0102-calling-outside-is-pull.md) |
 | 2026-10-29 | 1 | `fail`·결과 `error`에 **`outcome_unknown`**(기본 false)을 더했다 — 요청이 닿았을 수 있는데 답을 못 받았다. 어댑터 일꾼이 `idempotent: false` 작업에서 적고, PC의 `bpm:serviceCall`은 사람에게 묻는다. 선택 칸이라 판은 그대로다 | [0107](../decisions/0107-outcome-unknown-asks-a-person.md) |

@@ -237,7 +237,7 @@ def runner_of(store: Store, owner_key_id: str | None) -> str | None:
     **읽을 때 찾는다** — 요약에 적어 두지 않는다 (`missing_resources`·`dependents`와 같은 결).
     키를 다시 묶으면 적어 둔 값은 낡고, 어느 쪽이 원본인지 흐려진다.
 
-    Studio 키나 관리자·읽기 토큰이 보낸 기록에는 **없다** — 그 키에 묶인 실행기가 없다
+    관리자·읽기 토큰이 보낸 기록에는 **없다** — 그 토큰에 묶인 실행기가 없다
     (`_owner_key`가 `token:<종류>`로 적어 두므로 찾아도 안 나온다).
     """
     if not owner_key_id:
@@ -302,7 +302,7 @@ def listing(
     """최근 실행부터 (CON-01 목록). 좁히기는 상태·BPM 프로세스·**실행기**다.
 
     「실행기」는 **보낸 키가 묶인 PC**다 (C3 소유 → C4 키 묶기) — 요약에 적어 둔 값이 아니라
-    읽을 때 찾는다. Studio가 보낸 기록은 그 좁히기에 걸리지 않는다 (묶인 PC가 없다).
+    읽을 때 찾는다. 토큰이 보낸 기록은 그 좁히기에 걸리지 않는다 (묶인 실행기가 없다).
     """
     rows = store.rows(
         "SELECT run_id, owner_key_id, first_seen_at, last_seen_at, summary_json FROM runs "

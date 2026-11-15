@@ -489,19 +489,18 @@ export const center = {
   purgeCenterKey: (keyId: string) => call<void>(`/api/v1/center-keys/${keyId}/purge`, { method: "POST" }),
 
   /**
-   * 등록 요청 (C5 §등록 승인, ADR-0092) — CON-03·CON-12 「승인 대기」, CON-11. 기본은 대기 중인 것만.
-   * 사람은 키를 보지 않는다 — 승인 응답에도 원문이 없다.
+   * 등록 요청 (C5 §등록 승인, ADR-0092) — CON-12 「승인 대기」. 기본은 대기 중인 것만.
+   * 사람은 키를 보지 않는다 — 승인 응답에도 원문이 없다. **오는 것은 서버 실행기뿐이다** (ADR-0150).
    */
-  enrollments: (type: "server_runner" | "studio") =>
-    call<EnrollmentInfo[]>(`/api/v1/enrollments?type=${type}`),
+  enrollments: (type: "server_runner") => call<EnrollmentInfo[]>(`/api/v1/enrollments?type=${type}`),
   /** 모든 상태의 등록 요청 — CON-16 「변경 이력」이 읽는다 (C5 `state`는 쉼표로 여럿). */
   enrollmentHistory: () =>
     call<EnrollmentInfo[]>("/api/v1/enrollments?state=pending,approved,rejected,expired"),
-  /** 승인 — Studio는 **회사를 정해** 들인다 (C16). 서버 실행기는 회사를 보내지 않는다. */
-  approveEnrollment: (id: string, name?: string, company?: string) =>
+  /** 승인 — 오는 것은 서버 실행기뿐이고 **Center 공용이라 회사를 보내지 않는다** (C16, ADR-0150). */
+  approveEnrollment: (id: string, name?: string) =>
     call<EnrollmentDecision>(`/api/v1/enrollments/${encodeURIComponent(id)}/approve`, {
       method: "POST",
-      body: JSON.stringify({ ...(name ? { name } : {}), ...(company ? { company } : {}) }),
+      body: JSON.stringify(name ? { name } : {}),
     }),
   /** 조직 (C16) — 회사가 정해진 계정에게는 Center가 제 회사 것만 준다. */
   companies: () => call<CompanyInfo[]>("/api/v1/companies"),

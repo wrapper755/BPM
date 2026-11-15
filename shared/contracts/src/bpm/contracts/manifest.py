@@ -23,8 +23,11 @@ SETTING_SMTP = "smtp"
 KNOWN_SETTINGS = frozenset({SETTING_LLM, SETTING_VLM, SETTING_SMTP})
 #: `built.by`의 아는 값. **검사하지 않는다** — 남의 도구로 만든 올바른 패키지를 거부하게
 #: 되므로 **열린 문자열이 맞다** (`settings`와 다르다: 그쪽은 우리가 아는 것만 점검할 수 있어
-#: R11이 막는다). 화면이 「studio로 만듦」처럼 풀어 쓸 때 쓰는 목록이다.
-KNOWN_BUILT_BY = frozenset({"studio", "cli"})
+#: R11이 막는다). 화면이 「server_runner로 만듦」처럼 풀어 쓸 때 쓰는 목록이다.
+#:
+#: `studio`는 **옛 패키지가 적어 둔 값**이다 (ADR-0150 — 짓는 쪽은 실행기의 시험 모드다).
+#: 목록에 남겨 두는 까닭은 화면이 그 패키지도 풀어 써야 하기 때문이다.
+KNOWN_BUILT_BY = frozenset({"server_runner", "cli", "studio"})
 
 #: AI 태스크의 대상 환경 — C14 `bpm:aiTask.domain`과 C1 `requires.domains`가 **같은 목록**이다.
 #: 거르는 자리는 둘이지만(C14 B8이 그림에서, R2가 매니페스트에서) **정의는 여기 하나**다.

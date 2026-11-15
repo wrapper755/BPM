@@ -31,7 +31,7 @@ from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from pydantic import Field
 
-from bpm.contracts._base import ContractModel, SchemaVersioned, Timestamp
+from bpm.contracts._base import ContractModel, Timestamp
 
 #: 봉함 방식 — 지금은 이것 하나다 (C4 §봉함).
 SEAL_ALG = "x25519-hkdf-sha256-chacha20poly1305"
@@ -52,8 +52,9 @@ ROTATE_NOTICE_DAYS = 7
 #: 거절 사유 길이 (C5).
 REASON_MAX = 200
 
-#: 요청할 수 있는 종류 — 만드는 키 종류와 같다 (C7). Studio도 같은 길이다 (ADR-0093).
-ENROLLMENT_TYPES = frozenset({"server_runner", "studio"})  # 일꾼은 일꾼 폴더로만 (ADR-0122)
+#: 요청할 수 있는 종류 — 만드는 키 종류와 같다 (C7). **하나뿐이다**: 일꾼은 일꾼 폴더로만
+#: 들어오고(ADR-0122) 설계자의 키는 없어졌다 (ADR-0150).
+ENROLLMENT_TYPES = frozenset({"server_runner"})
 #: 알려진 상태 (열린 문자열).
 KNOWN_ENROLLMENT_STATES = frozenset({"pending", "approved", "rejected", "expired"})
 
@@ -161,26 +162,6 @@ def open_sealed(private_key: str, sealed: Sealed, *, salt: str) -> str:
     return plain.decode("utf-8")
 
 
-class StudioVersions(ContractModel):
-    """Studio의 판 (C5 §Studio 등록 요청과 승인)."""
-
-    studio: str
-    core: str
-
-
-class StudioEnrollRequest(SchemaVersioned):
-    """`POST /api/v1/studio/enroll` — Studio의 등록 요청 (C5 §Studio 등록 요청과 승인, ADR-0093).
-
-    실행기의 `EnrollRequest`와 같은 결이다 — 등록(`register`)이 없는 Studio라 그 칸만 따로 둔다.
-    """
-
-    machine_id: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
-    name: str
-    os: str
-    versions: StudioVersions
-    public_key: PublicKey
-
-
 class EnrollStatus(ContractModel):
     """`POST …/enroll`의 응답이자 `GET …/enroll/{id}`의 응답 (C4 `EnrollResponse`·`EnrollStatus`)."""
 
@@ -192,7 +173,7 @@ class EnrollStatus(ContractModel):
     #: `approved`일 때만 — 봉한 Center API 키.
     sealed_key: Sealed | None = None
     key_expires_at: Timestamp | None = None
-    #: `approved`일 때만. 승인할 때 붙인 키 이름 — Studio는 이것이 「누가」라 보여 준다 (ADR-0093).
+    #: `approved`일 때만. 승인할 때 붙인 키 이름 — 받는 쪽은 이것이 「누가」라 보여 준다.
     key_name: str | None = None
     #: `rejected`일 때 관리자가 적은 사유.
     reason: str | None = None
@@ -232,17 +213,18 @@ class EnrollmentInfo(ContractModel):
     decided_by: str | None = None
     decided_at: Timestamp | None = None
     reason: str | None = None
-    company: str | None = None  # 승인할 때 고른 회사 (C16)
+    #: 승인할 때 고른 회사 (C16) — **지나간 요청에만** 있다 (서버 실행기는 Center 공용이다, ADR-0150).
+    company: str | None = None
     key_id: str | None = None
 
 
 class EnrollmentApproveRequest(ContractModel):
-    """`POST /enrollments/{id}/approve` — `name`을 비우면 요청의 이름을 쓴다."""
+    """`POST /enrollments/{id}/approve` — `name`을 비우면 요청의 이름을 쓴다.
+
+    **회사 칸은 없다** — 오는 것은 서버 실행기뿐이고 Center 공용이다 (C16, ADR-0150).
+    """
 
     name: str | None = None
-    #: 그 장비가 속할 회사 (C16, ADR-0125 §2). Studio는 **필수**가 되고(구현 조각 2),
-    #: 서버 실행기는 Center 공용이라 적지 않는다.
-    company: str | None = None
 
 
 class EnrollmentRejectRequest(ContractModel):
@@ -283,8 +265,6 @@ __all__ = [
     "RequestCode",
     "RotatedKey",
     "SealError",
-    "StudioEnrollRequest",
-    "StudioVersions",
     "Sealed",
     "new_keypair",
     "open_sealed",

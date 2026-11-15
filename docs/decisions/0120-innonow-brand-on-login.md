@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | **대체됨**([ADR-0153](0153-the-console-stands-as-bpm.md) — 화면에 서는 이름은 「BPM」 하나다) |
 | 날짜 | 2026-10-31 |
 | 관련 | 화면 CON-00 (로그인), [ADR-0118](0118-no-product-name-on-screens.md), [ADR-0119](0119-match-nowview-style.md) |
 

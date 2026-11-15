@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · **「마크 옆에 이름을 두지 않는다」는 대체됨**([ADR-0153](0153-the-console-stands-as-bpm.md) — 제품 이름이 BPM으로 정해져 이 ADR의 다시 볼 조건이 찼다). 마크 자체와 「Chaeksas를 쓰지 않는다」는 그대로다 |
 | 날짜 | 2026-10-31 |
 | 관련 | [00-vision](../00-vision.md) §열린 질문, [07-style-guide](../07-style-guide.md) §6-1, 화면 CON-00·SVC-00, [ADR-0017](0017-web-nextjs-design-system.md) |
 

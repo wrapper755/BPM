@@ -37,26 +37,21 @@ from bpm.contracts.enrollment import (
     ExistingHost,
     RotatedKey,
     Sealed,
-    StudioEnrollRequest,
     request_code,
     seal,
     valid_public_key,
 )
 from bpm.contracts.server_runner import ServerRunnerEnrollRequest
 
-#: 요청 종류 → 키 묶기를 지킬 표 (C4·C12 — 규칙은 `host_keys`에 하나다). **Studio는 표가 없다** —
-#: 등록(`register`)이 없어 그 PC는 키 자체에만 묶인다 (C5 §Studio 등록 요청과 승인, ADR-0093).
+#: 요청 종류 → 키 묶기를 지킬 표 (C4·C12 — 규칙은 `host_keys`에 하나다). **종류는 하나뿐이다** —
+#: 일꾼은 일꾼 폴더로만 들어오고(ADR-0122) 설계자의 키는 없어졌다 (ADR-0150).
 TABLES = {"server_runner": host_keys.SERVER_RUNNER}
-STUDIO = "studio"
 #: 들이기 비밀로 승인한 요청의 「누가」 (ADR-0117) — 사람 계정 이름과 겹치지 않는다(계정은 `_`를 쓰지 않는다).
 JOIN_TOKEN_ACTOR = "join_token"
 #: 열린 모드가 승인한 요청의 「누가」 (ADR-0142) — 들이기 비밀과 같은 결이다.
 OPEN_MODE_ACTOR = "open_mode"
-#: 요청 본문 모델 — 각자의 `RegisterRequest` + `public_key` (Studio는 제 모양).
-MODELS: dict[str, Any] = {
-    "server_runner": ServerRunnerEnrollRequest,
-    STUDIO: StudioEnrollRequest,
-}
+#: 요청 본문 모델 — 그 종류의 `RegisterRequest` + `public_key`.
+MODELS: dict[str, Any] = {"server_runner": ServerRunnerEnrollRequest}
 
 
 def new_enrollment_id() -> str:
@@ -119,9 +114,8 @@ def request(
     **들이기 비밀이 실려 오면** (C12, ADR-0117) 그 자리에서 승인해 봉한 키를 바로 싣는다 —
     승인은 버튼과 **같은 `approve()`**다. 실려 왔는데 맞지 않으면 403이고 대기 줄을 만들지 않는다.
 
-    **열린 모드도 같은 자리에서 승인한다** (ADR-0142). 서버 실행기·Studio는 **회사가 하나뿐일 때만**
-    — 둘 이상이면 누구의 장비인지 짐작하지 않고 승인 대기로 남긴다 (C16). 서버 실행기는 Center
-    공용이라 회사를 받지 않으니 늘 승인된다.
+    **열린 모드도 같은 자리에서 승인한다** (ADR-0142) — 오는 것은 서버 실행기뿐이고 Center
+    공용이라 회사를 받지 않으니 늘 승인된다 (C16).
     """
     try:
         wanted = MODELS[kind].model_validate(body)
@@ -192,18 +186,9 @@ def request(
         approve(store, enrollment_id, name=None, actor=JOIN_TOKEN_ACTOR)
         return status(store, enrollment_id, kind=kind)
     if open_mode:
-        company = None if kind == "server_runner" else _the_only_company(store)
-        if kind == "server_runner" or company is not None:
-            approve(store, enrollment_id, name=None, actor=OPEN_MODE_ACTOR, company=company)
-            return status(store, enrollment_id, kind=kind)
+        approve(store, enrollment_id, name=None, actor=OPEN_MODE_ACTOR)
+        return status(store, enrollment_id, kind=kind)
     return EnrollStatus(enrollment_id=enrollment_id, state="pending", code=code, expires_at=expires_at)
-
-
-def _the_only_company(store: Store) -> str | None:
-    """회사가 **하나뿐이면** 그 id — 열린 모드의 자동 승인이 그때만 회사를 정한다 (ADR-0142 §1)."""
-    from bpm.center import organization  # noqa: PLC0415 — 순환 import를 피한다 (`approve`와 같은 결)
-
-    return organization.only_company(store)
 
 
 def status(store: Store, enrollment_id: str, *, kind: str) -> EnrollStatus:
@@ -229,29 +214,8 @@ def _existing(store: Store, kind: str, machine_id: str) -> Any | None:
     return store.row(f"SELECT * FROM {table.name} WHERE machine_id = ?", (machine_id,))  # noqa: S608 — 표 이름은 상수다
 
 
-def _studio_keys(store: Store, machine_id: str) -> list[keys.KeyRecord]:
-    """그 PC에 묶인 **살아 있는** Studio 키 — 같은 PC를 다시 승인하면 폐기할 것들."""
-    now = now_iso()
-    rows = store.rows("SELECT key_id FROM center_keys WHERE type = ? AND revoked_at IS NULL", (STUDIO,))
-    found = [keys.get(store, str(row["key_id"])) for row in rows]
-    return [
-        one
-        for one in found
-        if one is not None
-        and one.bound_to is not None
-        and one.bound_to.id == machine_id
-        and one.state(now=now) == "active"
-    ]
-
-
 def _existing_info(store: Store, kind: str, machine_id: str) -> ExistingHost | None:
     """그 기계가 이미 들어와 있으면 — 승인하면 그 자리를 이어받고 옛 키는 폐기된다."""
-    if kind == STUDIO:
-        held = _studio_keys(store, machine_id)
-        if not held:
-            return None
-        newest = held[-1]
-        return ExistingHost(id=newest.key_id, name=newest.name, key_prefix=newest.prefix, last_seen=newest.last_used_at)
     table = TABLES.get(kind)
     other = _existing(store, kind, machine_id) if table is not None else None
     if other is None or table is None:
@@ -321,40 +285,22 @@ def approve(
     *,
     name: str | None,
     actor: str,
-    company: str | None = None,
     scope: str | None = None,
 ) -> EnrollmentDecision:
     """승인 (C5). 키를 만들어 **그 기계에 미리 묶고** 요청의 공개키로 봉해 둔다.
 
-    **서버 실행기·Studio는 회사를 정해 승인한다** (C16, ADR-0125 §2) — 회사 관리자(`scope`)는 제 회사로만.
-    서버 실행기는 Center 공용이라 회사를 받지 않고, Center 관리자만 승인한다.
+    **오는 것은 서버 실행기뿐이고 Center 공용이라 회사를 받지 않는다** (C16, ADR-0150) —
+    그래서 Center 관리자만 승인한다 (회사 관리자 `scope`는 403).
     """
     row = _pending(store, enrollment_id)
     kind = str(row["type"])
-    if kind == "server_runner":
-        if scope is not None:
-            raise ApiError(403, "center_admin_only", "서버 실행기는 Center 관리자만 승인한다 (Center 공용이다)")
-        company = None
-    else:
-        company = company or scope
-        if not company:
-            raise ApiError(422, "company_required", "이 장비가 속할 회사를 고르세요 (C16)")
-        if scope is not None and company != scope:
-            raise ApiError(404, "not_found", f"그 회사가 없습니다: {company}")
-        from bpm.center import organization  # noqa: PLC0415 — 순환 import를 피한다
-
-        if not organization.company_exists(store, company):
-            raise ApiError(404, "not_found", f"그 회사가 없습니다: {company}")
+    if scope is not None:
+        raise ApiError(403, "center_admin_only", "서버 실행기는 Center 관리자만 승인한다 (Center 공용이다)")
     machine_id = str(row["machine_id"])
     shown = (name or "").strip() or str(row["name"])
 
     replaced = None
     host_id = None
-    if kind == STUDIO:
-        # 같은 PC를 다시 승인했다 — 그 PC의 옛 Studio 키를 폐기한다 (Studio에는 이어받을 행이 없다).
-        for old in _studio_keys(store, machine_id):
-            keys.revoke(store, old.key_id)
-            replaced = old.key_id
     other = _existing(store, kind, machine_id) if kind in TABLES else None
     if other is not None:
         table = TABLES[kind]
@@ -374,15 +320,14 @@ def approve(
         bound=BoundTo(type=kind, id=machine_id, name=shown),
         enrollment_id=enrollment_id,
         public_key=str(row["public_key"]),
-        company=company,
     )
     sealed = seal(str(row["public_key"]), raw, salt=enrollment_id)
     del raw  # 원문은 봉함 안에만 남는다
     with store.tx() as cur:
         cur.execute(
             "UPDATE enrollments SET state = 'approved', decided_by = ?, decided_at = ?, key_id = ?,"
-            " sealed_json = ?, replaced_key_id = ?, company = ? WHERE enrollment_id = ?",
-            (actor, now, record.key_id, dumps(sealed.to_json_dict()), replaced, company, enrollment_id),
+            " sealed_json = ?, replaced_key_id = ? WHERE enrollment_id = ?",
+            (actor, now, record.key_id, dumps(sealed.to_json_dict()), replaced, enrollment_id),
         )
     return EnrollmentDecision(key_id=record.key_id, host_id=host_id, replaced_key_id=replaced)
 

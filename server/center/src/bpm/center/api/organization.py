@@ -4,7 +4,7 @@
 | --- | --- |
 | `GET /companies…` | 읽기 (회사가 정해진 쪽은 제 회사만) |
 | `POST/PUT /companies…` | Center 관리자 |
-| `GET /departments…`·`/staff…` | 읽기·**Studio 키**(제 회사만 — 올리기 창의 고를 거리) |
+| `GET /departments…`·`/staff…` | 읽기 (회사가 정해진 쪽은 제 회사만) |
 | `POST/PUT/DELETE /departments…`·`/staff…` | 관리자 (회사 관리자는 제 회사만) |
 
 판단은 `center.organization`에 있고 여기는 길만 잇는다.
@@ -19,7 +19,6 @@ from fastapi import APIRouter, Request, Response
 from bpm.center import organization
 from bpm.center.api.body import read_json as _json
 from bpm.center.auth import (
-    PACKAGE_KEY_TYPE,
     Caller,
     company_scope,
     require_admin,
@@ -38,10 +37,8 @@ def _store(request: Request) -> Store:
 
 
 def _reader(request: Request) -> Caller:
-    """읽기 — 콘솔·자동화 토큰·Center API 키, 그리고 Studio 키(제 회사만)."""
+    """읽기 — 콘솔·자동화 토큰과 Center API 키 (C5 권한표)."""
     found: Caller = request.app.state.authenticate(request)
-    if found.key is not None and found.key.type == PACKAGE_KEY_TYPE:
-        return found
     return require_read(found)
 
 

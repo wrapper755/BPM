@@ -25,7 +25,7 @@
 | 시작 | 메시지 `contract_review` — 전자계약 시스템의 검토 요청 |
 | 서비스 앱 | 없음 |
 | 확장 | 없음 (플랫폼 기본 태스크만) |
-| 마일스톤 | **M3** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M3** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx30_contract_review.bpmn) · [시험 케이스](cases/bx30_contract_review.cases.json) |
 
 **업무 배경과 목표**
@@ -133,7 +133,7 @@
 | 시작 | BPM 프로세스 호출 — BX-30 |
 | 서비스 앱 | 없음 |
 | 확장 | 없음 (플랫폼 기본 태스크만) |
-| 마일스톤 | **M3** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M3** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx37_clause_review.bpmn) · [시험 케이스](cases/bx37_clause_review.cases.json) |
 
 **업무 배경과 목표**
@@ -209,7 +209,7 @@ AI만 — 서버.
 | 시작 | 메시지 `ops_request` — 사내 요청 메일함·메신저 봇이 보냄 |
 | 서비스 앱 | `ticketing` |
 | 확장 | ticketing |
-| 마일스톤 | **M5** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M5** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx31_request_triage.bpmn) · [시험 케이스](cases/bx31_request_triage.cases.json) |
 
 **업무 배경과 목표**
@@ -291,7 +291,7 @@ AI·메시지 — 서버.
 | 시작 | 메시지 `cs_inquiry` — 외부 고객센터 SaaS의 웹훅 |
 | 서비스 앱 | `ext-helpdesk`, `kb-search` |
 | 확장 | kb-search, ext-helpdesk |
-| 마일스톤 | **M5** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M5** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx32_customer_inquiry.bpmn) · [시험 케이스](cases/bx32_customer_inquiry.cases.json) |
 
 **업무 배경과 목표**
@@ -376,7 +376,7 @@ AI·메시지 — 서버.
 | 시작 | 메시지 `access_request` — 포털 권한 신청 |
 | 서비스 앱 | `directory` |
 | 확장 | directory |
-| 마일스톤 | **M5** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M5** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx33_access_request.bpmn) · [시험 케이스](cases/bx33_access_request.cases.json) · [DMN](bpmn/access_risk.dmn) |
 
 **업무 배경과 목표**
@@ -452,7 +452,7 @@ AI·메시지 — 서버.
 | 시작 | 메시지 `monitor_alert` — 모니터링 시스템 웹훅 |
 | 서비스 앱 | `observability` |
 | 확장 | observability |
-| 마일스톤 | **M5** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M5** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx34_incident_alert.bpmn) · [시험 케이스](cases/bx34_incident_alert.cases.json) |
 
 **업무 배경과 목표**
@@ -540,7 +540,7 @@ AI·메시지 — 서버.
 | 시작 | 타이머 — 매주 월요일 07:00 |
 | 서비스 앱 | `ext-helpdesk` |
 | 확장 | ext-helpdesk |
-| 마일스톤 | **M5** Studio 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
+| 마일스톤 | **M5** 시험 실행에서 처음 통과 → M5 Center 배포 → M7 서버 실행기 |
 | 파일 | [BPMN](bpmn/bx35_voc_weekly.bpmn) · [시험 케이스](cases/bx35_voc_weekly.cases.json) |
 
 **업무 배경과 목표**

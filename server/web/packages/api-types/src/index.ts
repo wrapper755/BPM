@@ -95,7 +95,6 @@ export const CONTRACT_MODULES = [
   "c5-revoke-request",
   "c5-schedule-info",
   "c5-session-info",
-  "c5-studio-enroll-request",
   "c5-who-am-i",
   "c6-answer-request",
   "c6-approval-create-request",

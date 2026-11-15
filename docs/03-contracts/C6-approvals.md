@@ -4,7 +4,7 @@
 | --- | --- |
 | 상태 | **구현됨** (2026-10-09, [09-gaps](../09-gaps.md) §1 대조) |
 | schema | 1 |
-| 보내는 쪽 → 받는 쪽 | 서버 실행기(실행 중 BPM 프로세스)·Studio 시험 실행 → Center ↔ Center 콘솔(결재함) |
+| 보내는 쪽 → 받는 쪽 | 서버 실행기(실행 중 BPM 프로세스) → Center ↔ Center 콘솔(결재함) |
 | 코드 위치 | `shared/contracts/src/bpm/contracts/approvals.py` (import `bpm.contracts.approvals`, [ADR-0019](../decisions/0019-package-names.md)) |
 | JSON Schema | [`c6-approval-create-request.json`](../../shared/contracts/schemas/c6-approval-create-request.json) · [`c6-approval-info.json`](../../shared/contracts/schemas/c6-approval-info.json) · [`c6-answer-request.json`](../../shared/contracts/schemas/c6-answer-request.json) — `uv run python scripts/gen_schemas.py`로 모델에서 생성 |
 | 관련 ADR | [0007](../decisions/0007-client-initiated-communication.md), [0017](../decisions/0017-web-nextjs-design-system.md), [0080](../decisions/0080-approval-assignees.md)·[0081](../decisions/0081-answering-on-behalf.md), [0112](../decisions/0112-escalation-review-from-extensions.md) |
@@ -29,7 +29,7 @@ BPM 프로세스의 결재(UserTask)를 Center 결재함으로 올린다. 결재
 
 | 메서드·경로 | 인증 | 뜻 |
 | --- | --- | --- |
-| `POST /api/v1/approvals` | 실행기·Studio 키 | 결재 요청 올리기 |
+| `POST /api/v1/approvals` | 실행기 키 | 결재 요청 올리기 |
 | `DELETE /api/v1/approvals/{request_id}` | 올린 쪽 키 (`reason: "run_ended"`) / 관리자 토큰 (`reason: "admin_withdraw"`) | 회수 |
 | `GET /api/v1/approvals?state=&bpm_process_id=&host=&assignee=` | 읽기·관리자 토큰 / 대리 답용 키 (**담당인 것만**) | 결재함 목록 |
 | `GET /api/v1/approvals/{request_id}` | 읽기·관리자 토큰 / 대리 답용 키 (**담당인 것만**, 아니면 404) | 하나 |

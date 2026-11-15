@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "INNONOW — Management Transformation Center",
+  // 화면에 서는 이름은 「BPM」 하나다 (ADR-0153 — INNONOW 브랜드는 걷었다).
+  title: "BPM",
   description: "Center 콘솔 (ADR-0017)",
 };
 

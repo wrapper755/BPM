@@ -63,9 +63,7 @@ KNOWN_QUEUED_REASONS = frozenset({"global_limit", "per_bot_limit", "paused"})
 KNOWN_CANCEL_RESULTS = frozenset({"cancelled", "refused_already_started"})
 KNOWN_TARGET_TYPES = frozenset({"server_runner"})
 # `missing_resources`의 값 목록은 C7이 소유한다 (`resources.KNOWN_MISSING_TYPES`).
-KNOWN_AUTH_KINDS = frozenset(
-    {"read_token", "admin_token", "studio_key", "server_runner_key", "integration_key"}
-)
+KNOWN_AUTH_KINDS = frozenset({"read_token", "admin_token", "server_runner_key", "integration_key"})
 
 #: `requested_by`의 예약값 앞머리 — **맡기기가 만든 작업**이다 (`server_bot:<run_id>`, ADR-0082).
 #:

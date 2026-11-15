@@ -61,7 +61,7 @@ KNOWN_KINDS = frozenset(REQUIRED_DATA_KEYS) | {"data"}
 """`data`(업무 값)는 실행 설정에서 명시적으로 켠 경우에만 보낸다 (README 원칙 6)."""
 
 # 아래는 모두 **열린 문자열**의 알려진 값일 뿐이다 (README 원칙 10).
-KNOWN_EXECUTORS = frozenset({"server_runner", "studio"})
+KNOWN_EXECUTORS = frozenset({"server_runner"})
 KNOWN_MODES = frozenset({"autonomous", "deterministic"})
 #: 시작 출처 (C4 `source`와 같은 값).
 KNOWN_SOURCES = frozenset({"job", "manual", "watch", "schedule", "message", "test", "delegation"})
