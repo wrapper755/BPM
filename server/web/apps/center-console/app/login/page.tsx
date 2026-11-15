@@ -14,16 +14,13 @@ export default async function LoginPage({
   const { changed } = await searchParams;
   return (
     <div className="flex min-h-screen flex-col">
-      {/* 화면 폭 전체의 머리 — **마크 + 「BPM」**과 문구 (ADR-0153: INNONOW 로고는 걷었고 문구는 그대로다). */}
+      {/* 화면 폭 전체의 머리 — **마크 + 「BPM」 한 줄뿐이다** (ADR-0154: 문구 두 줄을 걷었다. 로그인하러
+          온 사람이 카드를 보기 전에 읽을 글을 두지 않는다). */}
       <header className="border-b border-border-default bg-bg-surface">
-        <div className="mx-auto flex max-w-[1080px] flex-col gap-4 px-6 py-10">
-          <p className="flex items-center gap-3 text-primary">
-            <BpmMark className="h-7 w-auto" />
-            <span className="text-h2 font-bold tracking-wide">BPM</span>
-          </p>
-          <h1 className="text-display font-bold">AI와 함께, 경영을 실행합니다.</h1>
-          <p className="text-body-lg text-text-secondary">Management Transformation in Action.</p>
-        </div>
+        <h1 className="mx-auto flex max-w-[1080px] items-center gap-3 px-6 py-5 text-primary">
+          <BpmMark className="h-7 w-auto" />
+          <span className="text-h2 font-bold tracking-wide">BPM</span>
+        </h1>
       </header>
       {/* 배경 그림 — BPM 흐름과 AI(신경망)를 떠올리게 한다. Gemini 이미지 모델로 만들었다 (ADR-0120). */}
       <main
