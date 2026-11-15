@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · **「문구 두 줄은 그대로 둔다」는 대체됨**([ADR-0154](0154-the-login-band-is-mark-and-name.md)) |
 | 날짜 | 2026-11-15 |
 | 관련 | 화면 CON-00(로그인·틀), [ADR-0120](0120-innonow-brand-on-login.md)(**이 결정이 대체한다**), [ADR-0118](0118-no-product-name-on-screens.md)(마크 — 「이름을 쓰지 않는다」의 다시 볼 조건이 찼다), [ADR-0130](0130-rename-to-bpm.md)·[ADR-0126](0126-operator-facing-names-say-bpm.md)(사람에게 보이는 이름은 대문자 BPM) |
 
