@@ -28,6 +28,7 @@ import type { BuildInfo } from "@bpm/api-types/c17-build-info";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import type { WorkspaceUpdateRequest } from "@bpm/api-types/c17-workspace-update-request";
 import type { PackageInfo } from "@bpm/api-types/c5-package-info";
+import type { ServiceAppResource } from "@bpm/api-types/c7-service-app-resource";
 import type { ExtensionDependent } from "@bpm/api-types/c7-extension-dependent";
 import type { ExtensionTestResult } from "@bpm/api-types/c7-extension-test-result";
 import type { ExtensionVersionInfo } from "@bpm/api-types/c7-extension-version-info";
@@ -1125,6 +1126,34 @@ export async function removeLib(
   } catch (cause) {
     return { error: message(cause) };
   }
+}
+
+/**
+ * 탐색기 「리소스」 탭이 고를 거리 — **부를 수 있는 것 둘**이다 (CON-20b, ADR-0155).
+ *
+ * 공유 프로세스는 C5 패키지 표(`process_lib`)의 `provides.processes`, 서비스 앱은 C7의
+ * `operations`다. **둘을 따로 받는다** — 하나가 막혀도 다른 쪽은 고를 수 있어야 한다
+ * (대시보드 카드와 같은 결, ADR-0151).
+ *
+ * **확장이 기여한 자원은 없다** — 지금 깔린 확장이 하나도 없다 (ADR-0114).
+ */
+export async function loadWorkspaceResources(): Promise<{
+  shared: PackageInfo[];
+  apps: ServiceAppResource[];
+  errors: string[];
+}> {
+  const [shared, apps] = await Promise.all([
+    center.packages({ kind: "process_lib" }).catch((cause: unknown) => message(cause)),
+    center.serviceApps().catch((cause: unknown) => message(cause)),
+  ]);
+  const errors: string[] = [];
+  if (typeof shared === "string") errors.push(`공유 프로세스를 읽지 못했습니다 — ${shared}`);
+  if (typeof apps === "string") errors.push(`서비스 앱을 읽지 못했습니다 — ${apps}`);
+  return {
+    shared: typeof shared === "string" ? [] : shared,
+    apps: typeof apps === "string" ? [] : apps,
+    errors,
+  };
 }
 
 /** 설치할 수 있는 공유 프로세스 — C5 패키지 표의 `process_lib`만 (C7에 그 갈래가 없다). */

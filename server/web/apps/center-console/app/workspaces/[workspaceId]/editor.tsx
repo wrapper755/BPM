@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, ErrorBanner } from "@bpm/ui";
-import type { BpmnCanvasHandle, NodeProperties, NodeState, PropertyPatch } from "@bpm/bpmn-canvas";
+import type { BpmnCanvasHandle, NodeProperties, NodeState, PropertyPatch, TaskSpec } from "@bpm/bpmn-canvas";
 import type { FileInfo } from "@bpm/api-types/c17-file-info";
 import type { BuildInfo } from "@bpm/api-types/c17-build-info";
 import type { CheckResponse } from "@bpm/api-types/c17-check-response";
@@ -30,6 +30,7 @@ import { Info } from "./info";
 import { StartTrial, TrialLog, TrialRuns } from "./trials";
 import { Variables } from "./variables";
 import { Properties } from "./properties";
+import { RESOURCE_MIME, ResourcePanel } from "./resources";
 import "@bpm/bpmn-canvas/canvas.css";
 
 /**
@@ -57,6 +58,8 @@ interface Opened {
 }
 
 const TABS = ["저작", "시험 실행", "정보"] as const;
+/** 왼쪽 탐색기의 탭 — 작업 폴더의 파일과 **부를 수 있는 것** (ADR-0155). */
+const LEFT_TABS = ["파일", "리소스"] as const;
 type Tab = (typeof TABS)[number];
 
 /** 아래 탭 (STU-01 [L]) — 「검사」는 조각 4f에서 찬다. */
@@ -120,6 +123,7 @@ export function Workspace({
   // 접는 것은 **보는 자리를 넓히는 일**이라 기억하지 않는다 — 탭을 옮겨도 그대로 있고 새로
   // 열면 펴진 채다 (CON-20 [E]·[P]).
   const [showFiles, setShowFiles] = useState(true);
+  const [left, setLeft] = useState<(typeof LEFT_TABS)[number]>("파일");
   const [showDetail, setShowDetail] = useState(true);
   const canvas = useRef<BpmnCanvasHandle>(null);
 
@@ -320,13 +324,34 @@ export function Workspace({
     [picked],
   );
 
+  /**
+   * 「리소스」 탭이 고른 것으로 **노드 하나를 만든다** (ADR-0155). 끌어다 놓기와 「+」가
+   * **같은 길**이고 다른 것은 자리(`spec.at`)뿐이라 실행 취소도 한 걸음이다.
+   *
+   * 캔버스가 떠 있지 않으면 만들 데가 없다 — 그 자리에서 까닭을 말한다.
+   */
+  const addNode = useCallback(
+    (spec: TaskSpec) => {
+      const editor = canvas.current?.editor;
+      if (!editor) {
+        setFailure("정의를 먼저 여세요 — 노드는 그림 위에 만듭니다.");
+        return;
+      }
+      setFailure(null);
+      const made = editor.createTask(spec);
+      // 만든 것을 **골라 둔 채로** 둔다 — 오른쪽 상세 패널에서 입력·출력을 바로 잇는다.
+      setPicked(editor.properties(made.id));
+    },
+    [],
+  );
+
   const groups = groupFiles(files);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* [H] 머리 띠 — 지금 자리와 탭, 그리고 그 화면에서만 쓰는 것 (CON-00 [H]와 같은 결). */}
       <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-default bg-bg-surface px-5 py-3">
-        {/* 지금 자리는 **위 막대가 쥔다** (ADR-0145 §1) — 여기는 그 작업공간의 지금 상태만 말한다. */}
+        {/* 위 막대는 **메뉴가 쥐었다** (ADR-0152 §7) — 이 화면은 제 머리 띠에 지금 상태만 말한다. */}
         <p className="text-body-sm text-text-secondary">
           <span className="font-semibold text-text-primary">{info.name}</span>
           {dirty ? <span title="저장하지 않은 변경이 있습니다"> *</span> : null}
@@ -411,11 +436,31 @@ export function Workspace({
           hidden={!showFiles}
           className="w-64 shrink-0 overflow-y-auto border-r border-border-default bg-bg-surface p-3"
         >
+          {/* 탭 둘 — 「파일」과 「리소스」 (ADR-0155). 패널을 넷째로 늘리지 않는다. */}
           <div className="mb-2 flex items-center">
-            <h2 className="text-caption font-semibold text-text-muted">파일</h2>
+            <div role="tablist" aria-label="탐색기" className="flex gap-1">
+              {LEFT_TABS.map((one) => (
+                <button
+                  key={one}
+                  role="tab"
+                  aria-selected={left === one}
+                  onClick={() => setLeft(one)}
+                  className={
+                    left === one
+                      ? "border-b-2 border-primary px-2 py-1 text-caption font-semibold"
+                      : "border-b-2 border-transparent px-2 py-1 text-caption text-text-muted hover:text-text-primary"
+                  }
+                >
+                  {one}
+                </button>
+              ))}
+            </div>
             <Fold label="파일 패널 접기" onClick={() => setShowFiles(false)} />
           </div>
-          {groups.map((group) => (
+          {left === "리소스" ? (
+            <ResourcePanel libs={info.libs ?? []} canWrite={editing} onAdd={addNode} />
+          ) : null}
+          {left === "리소스" ? null : groups.map((group) => (
             <section key={group.label} className="mb-4">
               <h2 className="mb-1 text-caption font-semibold text-text-muted">{group.label}</h2>
               {group.files.length === 0 ? (
@@ -445,8 +490,25 @@ export function Workspace({
           ))}
         </aside>
 
-        {/* [C] 가운데 — 고른 파일이 정한다 (ADR-0147 §2) */}
-        <div className="min-w-0 flex-1 bg-bg-canvas">
+        {/*
+          [C] 가운데 — 고른 파일이 정한다 (ADR-0147 §2).
+          리소스를 **떨어뜨리는 자리**이기도 하다 (ADR-0155) — **우리 짐만** 받아 bpmn-js 제
+          팔레트의 드래그를 살려 둔다. 떨어진 화면 자리를 그대로 넘기면 캔버스가 제 좌표로 푼다.
+        */}
+        <div
+          className="min-w-0 flex-1 bg-bg-canvas"
+          onDragOver={(event) => {
+            if (!event.dataTransfer.types.includes(RESOURCE_MIME)) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "copy";
+          }}
+          onDrop={(event) => {
+            const text = event.dataTransfer.getData(RESOURCE_MIME);
+            if (!text) return;
+            event.preventDefault();
+            addNode({ ...(JSON.parse(text) as TaskSpec), at: { x: event.clientX, y: event.clientY } });
+          }}
+        >
           {file && (shows === "canvas" || shows === "viewer") ? (
             <BpmnCanvas
               key={file.path}

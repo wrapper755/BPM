@@ -33,7 +33,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 | C13 | **구현됨** | `contracts.extension`·`core.extensions` | — (닫았다 — 기여 지점마다 읽는 쪽이 있다: 호스트·콘솔·Center. 설계 쪽 기여는 `studio.*`라는 이름으로 남아 있고 그 자리는 콘솔이다, ADR-0150) |
 | C14 | **구현됨** | `contracts.bpmn_ext` B1~B17 + `contracts.dmn` | — (닫았다 — 엔진이 수행하고 콘솔이 편집·검사하고 예제 49개가 이 형식이다. schema 1에서 **쓰지 않기로 적은 것**은 범위 결정이다) |
 | C15 | **구현됨** | `contracts.external_task`, Center `api/external_tasks.py` (15판) + **양쪽** — 부르는 쪽 `core.services.CenterServiceCaller`, 일꾼 `service_kit.consumer`·`server/adapter_consumer` | — (조각 2~4가 닫았고 긴 작업은 [ADR-0103](decisions/0103-long-external-tasks.md)이 닫았다, §3-17) |
-| C17 | **초안** | 전송이 다 돈다. 화면(CON-20)도 탭 셋이 돈다 | 리소스에서 노드 만들기 — **리소스 탐색기를 어디에 둘지 먼저 정한다**. 전송에서 정할 것은 없다 ([ADR-0146](decisions/0146-design-work-has-its-own-lane.md)). §3-34 |
+| C17 | **초안** | 전송·화면(CON-20)이 **다 돈다** — 탭 셋과 탐색기의 「리소스」 탭까지 (§3-34는 닫혔다) | 「구현됨」으로 올릴지 — 계약 문서를 코드와 한 번 더 대조한 뒤에 정한다 |
 
 **열둘이 「구현됨」이고 C17(작업공간)은 「초안」이다** (C12가 M7 다섯째 조각에서, C15가 ADR-0102 조각 4에서 올라왔다. C17은 M11이 구현한다 — §3-34). C8·C9·C10은 UI 자동화 확장과 함께 지웠다 ([ADR-0114](decisions/0114-remove-ui-automation.md) — §3-28). 상태 셋의 뜻은 [03-contracts/README](03-contracts/README.md) §상태에 적었다 — 적혀 있지 않아 올릴 때마다 사람이 다시 물었다.
 
@@ -47,6 +47,22 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18). **보안을 어디까지 조일지는 §3-33으로 미뤘다** — 관문은 다 있고 스위치 하나로 지나간다([ADR-0142](decisions/0142-open-mode.md)). **M11이 C17을 구현하면서 §3-34를 거의 닫았고**(전송 전부 + 화면 탭 셋 — 남은 것은 리소스에서 노드 만들기 하나다) **Qt를 걷으면서 생긴 §3-35도 닫았다** — 쓰는 앱이 없는 Studio 키 종류를 걷고, 걷다가 드러난 「시험 실행이 서비스 앱을 부를 수 없다」까지 함께 열었다 ([ADR-0150](decisions/0150-the-designer-key-is-gone.md)).
 
+### 3-36. 웹 편집기에 **실행 취소를 부르는 자리가 없다**
+
+캔버스는 `CanvasEditor.undo()`·`redo()`를 내주고, 화면 쪽 글과 ADR 여럿이 「한 번이 **실행 취소
+한 걸음**이다」라고 적어 둔다 ([ADR-0022](decisions/0022-studio-canvas.md)·
+[ADR-0044](decisions/0044-canvas-drag-and-drop.md)·[ADR-0155](decisions/0155-resources-are-a-tab-in-the-explorer.md),
+CON-20b의 속성·변수·리소스 절). **그런데 그 둘을 부르는 자리가 콘솔에 하나도 없다** — 단추도
+없고 `Ctrl+Z` 바인딩도 없다(캔버스가 bpmn-js의 `keyboard` 모듈을 붙이지 않는다). 명령 묶음은
+제대로 한 걸음인데 **되돌릴 길이 없다**.
+
+데스크톱 Studio에는 메뉴와 단축키가 있었다 — 웹으로 옮기며 빠진 것이고, 조각 12에서 리소스로
+노드를 만들다 드러났다(잘못 만든 노드를 지우려면 고르고 `Delete`다).
+
+**먼저 정할 것**: 단축키만 둘지(`Ctrl+Z`·`Ctrl+Shift+Z` — bpmn-js `keyboard`를 `bindTo`로 붙인다),
+머리 띠에 단추도 둘지. 단축키는 **캔버스가 떠 있을 때만** 들어야 한다 — 케이스 편집기·결정표
+격자에서 누른 `Ctrl+Z`가 그림을 되돌리면 안 된다 (화면 구성이라 먼저 묻는다).
+
 ### 3-35. Studio 키 종류가 남아 있다 (쓰는 앱이 없다) — **닫혔다** (2026-11-15)
 
 [ADR-0150](decisions/0150-the-designer-key-is-gone.md)이 걷었다 — 계약(C5 권한표·C7 키 종류·C15),
@@ -59,7 +75,7 @@ Center(등록 요청·`enrollments.py`·권한 관문·`organization.py`의 셈)
 (C15 §시험 실행의 외부 작업). 호출 토큰(24시간)은 청하는 쪽이 없어져 함께 걷었고, 남아 있던
 Studio 키·호출 토큰은 판 올리기 33이 **폐기 표시**한다.
 
-### 3-34. 작업공간(C17) — 알맹이는 돌고 전송이 없다
+### 3-34. 작업공간(C17) — **닫혔다** (2026-11-15)
 
 [ADR-0143](decisions/0143-design-happens-in-the-console.md), 계약 [C17](03-contracts/C17-workspaces.md) 「초안」.
 **도는 것**: 시험 실행의 알맹이 전부 (`bpm.core.testrun` — 작업 폴더·케이스·패키지 짓기·실행 전 검사·엔진
@@ -76,8 +92,10 @@ Studio 키·호출 토큰은 판 올리기 33이 **폐기 표시**한다.
 **화면도 탭 셋이 돈다** ([center-console-workspace.md](../server/docs/screens/center-console-workspace.md),
 M11 조각 4) — 탐색기·캔버스·속성 패널·결정표 격자·케이스 편집기·아래 탭 셋·시험 실행·실행 전 검사·
 배포 후보로 만들기·정보 탭·이벤트 칸 폼·결재 답 폼·패널 접기다.
-**없는 것은 하나다**: 리소스에서 노드 만들기 (STU-03 「캔버스에 추가」·끌어다 놓기 — 리소스 탐색기를
-어디에 둘지 먼저 정해야 한다).
+**마지막 하나였던 리소스에서 노드 만들기도 닫았다** ([ADR-0155](decisions/0155-resources-are-a-tab-in-the-explorer.md),
+M11 조각 12) — 왼쪽 탐색기가 「파일」·「리소스」 두 탭이 되고, 끌어다 놓기와 줄의 「+」가 **같은
+캔버스 명령 하나**를 부른다. 뿌리는 공유 프로세스·서비스 앱 둘이다(확장이 기여한 자원의 뿌리는
+깔린 확장이 없어 두지 않는다 — ADR-0114).
 
 **전송에서 먼저 정할 것은 없다** — 미정 셋을 [ADR-0146](decisions/0146-design-work-has-its-own-lane.md)으로 닫았다
 (C17·C12에 적혀 있다).
