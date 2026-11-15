@@ -1,6 +1,6 @@
 # 07. 스타일 가이드
 
-> 상태: **확인.** 모든 화면(Center 콘솔, 서비스 앱 관리 콘솔)이 이 문서와 `design/tokens.json` 하나를 따른다 ([ADR-0017](decisions/0017-web-nextjs-design-system.md)). 틀은 [ADR-0145](decisions/0145-console-is-workspace-shaped.md)가 정한 두 층이다 — 데스크톱 쪽은 Qt와 함께 걷었다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)).
+> 상태: **확인.** 모든 화면(Center 콘솔, 서비스 앱 관리 콘솔)이 이 문서와 `design/tokens.json` 하나를 따른다 ([ADR-0017](decisions/0017-web-nextjs-design-system.md)). 틀은 [ADR-0152](decisions/0152-console-chrome-is-one-top-bar.md)가 정한 **위 막대 하나**다 — 데스크톱 쪽은 Qt와 함께 걷었다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)).
 > 미리보기: `design/preview.html`을 브라우저로 연다 (밝게/어둡게 전환 단추, 명암비 표 포함). 생성물이다.
 > 화면 배치·문구의 개별 결정은 `06-screens/`, 공통 UX 원칙 U1~U17은 [docs/06-screens.md](06-screens.md) §2.
 
@@ -29,9 +29,9 @@
 | `bg.inverse` / `text.inverse` | 툴팁 |
 | `border.default` / `border.strong` | 구분선 / 입력칸·보조 단추 테두리 |
 | `text.primary` / `text.secondary` / `text.muted` | 본문 / 표 머리·보조 설명 / 설명 줄·빈 상태 (모두 바탕 셋 위에서 4.5:1 이상 확인됨) |
-| `primary` / `primary.hover` / `primary.subtle` / `primary.fg` | 주 단추·링크·고른 레일 묶음 / 위에 올림 / 고른 메뉴 줄·고른 탭의 바탕 / 주 단추 글자 |
+| `primary` / `primary.hover` / `primary.subtle` / `primary.fg` | 주 단추·링크·고른 메뉴 묶음의 밑줄 / 위에 올림 / 고른 메뉴 줄·고른 탭의 바탕 / 주 단추 글자 |
 | `focus` | 포커스 테두리 (2px, 2px 띄움) |
-| `chrome.bg` / `chrome.fg` / `chrome.muted` / `chrome.hover` / `chrome.border` / `chrome.side` / `chrome.side.hover` / `chrome.edge` | 웹 콘솔의 **남색 틀**(위 막대·왼쪽 탐색, §4-1) — 위 막대 바탕(가장 짙다) / 글자 / 보조 글자 / 위 막대에서 올림 / 구분선 / 왼쪽 탐색 바탕(위 막대보다 분명히 밝다 — 비슷하면 둘의 경계가 보이지 않는다) / 탐색에서 올림 / 위 막대 아래 띠(라벤더 2px — 위 막대와 탐색을 가른다). 남색 단계는 로그인 배경 그림(ADR-0120)에서 골랐다(`.chrome-side`가 탐색에 바꿔 끼운다). 틀 안에서는 `.chrome`이 `bg.surface`·`text.*`·`border.*`를 이것으로 바꿔 끼워 구성요소를 그대로 쓴다 (글자는 바탕·`chrome.hover` 위 둘 다 4.5:1 이상 확인됨) |
+| `chrome.bg` / `chrome.fg` / `chrome.muted` / `chrome.hover` / `chrome.border` / `chrome.side` / `chrome.side.hover` / `chrome.edge` | 웹 콘솔의 **남색 틀**(위 막대, §4-1) — 위 막대 바탕(가장 짙다) / 글자 / 보조 글자 / 위 막대에서 올림 / 구분선 / 왼쪽 탐색 바탕(**서비스 앱 콘솔만** 쓴다 — Center 콘솔의 레일·패널은 걷었다, ADR-0152) / 탐색에서 올림 / 위 막대 아래 띠(라벤더 2px — 위 막대와 본문을 가른다). 남색 단계는 로그인 배경 그림(ADR-0120)에서 골랐다(`.chrome-side`가 탐색에 바꿔 끼운다). 틀 안에서는 `.chrome`이 `bg.surface`·`text.*`·`border.*`를 이것으로 바꿔 끼워 구성요소를 그대로 쓴다 (글자는 바탕·`chrome.hover` 위 둘 다 4.5:1 이상 확인됨) |
 | `danger.fg` | 위험 단추 글자 (`status.failed.solid` 바탕 위) |
 
 브랜드 색은 `primary` 하나다(남보라 — NowView와 같은 값, [ADR-0119](decisions/0119-match-nowview-style.md)). 남색 틀(`chrome.*`)은 틀에만 쓴다. 그 밖의 색은 모두 **상태 색**이다.
@@ -78,7 +78,7 @@
 | 그림자 | `sm` 카드(표·빈 상태 — 선 + 옅은 그림자로 연회색 바탕에서 떠 보이게, NowView와 같은 결) / `md` 펼침 메뉴·팝오버 / `lg` 대화상자 |
 | 컨트롤 높이 | `control.sm` 28 / `md` **32**(기본) / `lg` 40 |
 | 표 줄 높이 | `row.default` 36 / `row.compact` 32 |
-| 콘솔 틀 | 왼쪽 탐색 `nav.width` 224 (접으면 64), 위 막대 `topbar.height` 48, 본문 여백 24 |
+| 콘솔 틀 | 위 막대 `topbar.height` 48(Center 콘솔은 이것 하나다), 왼쪽 탐색 `nav.width` 224 — **서비스 앱 콘솔만**, 본문 여백 24 |
 | 움직임 | `motion.fast` 120ms (올림·포커스), `base` 200ms (펼침·대화상자). 운영체제의 "동작 줄이기"를 따른다 |
 
 ## 3. 구성요소
@@ -100,7 +100,7 @@
 | **Timeline** | CON-01 노드 막대: 상태 `solid` 색, 재생됨은 점선, 이어 돈 지점은 세로 점선 | `RunTimeline` |
 | **LogView** | mono 13px, 최대 5000줄, 실패 줄은 `failed.fg` | `LogView` |
 | **Section (묶음)** | 한 화면 안의 기능 묶음. 제목은 **카드 안쪽 맨 위**에 `text.primary`·굵게(`weight.bold`)·`size.body-lg`로 쓰고, **그 아래 묶음 폭 전체에 옅은 선**(`border.default` 1px, 카드 양끝까지)을 긋는다. 꾸밈(세로 막대·이름표·아이콘)은 달지 않는다 — 진한 막대는 화면마다 줄지어 너무 셌고, 아이콘은 묶음이 하는 일이 아니라 갈래라 뜻을 싣지 못한다(§6은 하는 일로 고른다). 제목과 내용 사이는 `space.3`, 묶음과 묶음 사이도 `space.3`. 테두리 위에 걸친 회색 제목은 쓰지 않는다 — 내용과 붙어 보이고 묶음이 갈리지 않는다 | — |
-| **Tabs / Nav** | 탭은 둥근 알약(`radius.md`) — 선택된 것은 `primary.subtle` 바탕 + `primary` 글자 + 굵게, 나머지는 흰 바탕 + 선. 작업공간 안의 탭은 밑줄이다(고른 것만 `primary` 2px). 펼침 패널의 고른 줄은 `primary.subtle` 바탕 + 굵게이고, **레일의 고른 묶음은 `primary` 세로 막대**다 | `Tabs`, `SideNav` |
+| **Tabs / Nav** | 탭은 둥근 알약(`radius.md`) — 선택된 것은 `primary.subtle` 바탕 + `primary` 글자 + 굵게, 나머지는 흰 바탕 + 선. 작업공간 안의 탭은 밑줄이다(고른 것만 `primary` 2px). 펼친 메뉴의 고른 줄은 `primary.subtle` 바탕 + 굵게이고, **위 막대의 고른 묶음은 `primary` 밑줄 + 굵게**다 | `Tabs`, `SideNav` |
 
 - **웹 화면에서 손으로 쓴 칸·묶음도 같은 모양이다** — `<select>`·`<input>`·`<textarea>`는 입력칸(Field)처럼 `radius.md` + `border.strong`, `details`·`fieldset` 묶음은 카드처럼 `radius.lg` + `bg.surface`. 상태 배지는 `radius.full`. 섹션 제목(h2)은 굵기 `semibold` 하나다.
 
@@ -109,21 +109,23 @@
 ### 4-1. 웹 콘솔 (CON-00, SVC-00)
 
 ```
-+----+-----------+-------------------------------------------------+
-| [R]| [P] panel | [T] top bar 48px: crumb | user | [Refresh]      |
-| 56 | 224       +-------------------------------------------------+
-|    |           | [H] header band (white): h1      [sec] [prim]   |
-|    | group     | [F] filter card             [Reset] [Narrow]    |
-|    | rows      | [B] body: table -> detail below / side panel    |
-+----+-----------+-------------------------------------------------+
++-------------------------------------------------------------------+
+| [T] top bar 48px: mark BPM | groups (6) | user | [Refresh]        |
++-------------------------------------------------------------------+
+|                 [M] menu panel (under the clicked group)          |
++-------------------------------------------------------------------+
+| [H] header band (white): here > place / h1        [sec] [prim]    |
+| [F] filter card                              [Reset] [Narrow]     |
+| [B] body: table -> detail below / side panel                      |
++-------------------------------------------------------------------+
 ```
 
-- **두 층이다** ([ADR-0145](decisions/0145-console-is-workspace-shaped.md)) — 좌측 **아이콘 레일**(`size.rail.width` 56, 짙은 틀 `chrome.*`)과 그 옆의 **펼침 패널**(`size.nav.width` 224, 그 묶음의 줄 목록). 패널은 **접힌다** — 접으면 캔버스가 224px 넓어진다. 위 막대(48)는 레일 오른쪽에서 시작하고 **브레드크럼을 쥔다**(`<묶음> › <자리>`, 작업공간 안에서는 `작업공간 › <이름>`).
-- **짙은 색은 레일과 위 막대에만** 둔다. 펼침 패널과 본문은 밝다 — 전에는 왼쪽 탐색 224가 남색이라 설계 중에도 화면 왼쪽이 짙었다.
-- 레일의 아이콘은 **Lucide 한 벌**(§6)이고 **말풍선·`aria-label`이 필수**다 — 글 없는 아이콘은 뜻이 흐려진다. 고른 묶음은 `primary` 세로 막대 + 밝은 아이콘이다.
-- 본문 바탕은 `bg.canvas`(연회색), 카드·표는 `bg.surface`(흰색). 본문 맨 위는 **흰 머리 띠**(`bg.surface`, 아래 `border.default`)에 **제목 한 줄만** 담는다 — 지금 자리 줄은 위 막대로 올라갔다. 화면 전용 단추·링크는 제목 오른쪽, 필터는 흰 카드(`radius.lg`) 하나.
+- **틀은 위 막대 하나다** ([ADR-0152](decisions/0152-console-chrome-is-one-top-bar.md)) — 화면 폭 전체의 띠(`size.topbar.height` 48, 짙은 틀 `chrome.*`)에 **마크 + 「BPM」**(ADR-0153)과 **묶음 여섯**이 가로로 선다. 레일·펼침 패널은 걷었다 — 묶음이 여섯·줄이 열하나뿐이라 280px를 늘 쥐고도 패널이 거의 비어 있었다.
+- **짙은 색은 위 막대에만** 둔다. 펼친 메뉴와 본문은 밝다.
+- **묶음을 누르면 그 아래로 펼쳐지고 줄마다 한 줄 설명이 붙는다** — 설명은 **그 화면에 무엇이 있는지**를 말한다(아이콘 말풍선 한 마디를 대신한다). **줄이 하나인 묶음은 펼치지 않고 바로 간다.** 밖을 누르거나 `Esc`면 닫힌다.
+- 본문 바탕은 `bg.canvas`(연회색), 카드·표는 `bg.surface`(흰색). 본문 맨 위는 **흰 머리 띠**(`bg.surface`, 아래 `border.default`)에 **지금 자리 한 줄 + 제목 한 줄**을 담는다 — 위 막대를 메뉴가 쥐었으므로 지금 자리가 여기로 내려왔다(상세가 목록으로 돌아가는 길이다). 화면 전용 단추·링크는 제목 오른쪽, 필터는 흰 카드(`radius.lg`) 하나.
 - **제목은 한 단 낮다** — 표가 많은 화면에서 제목이 내용보다 커 눈이 먼저 제목에 갔다 (ADR-0145 §4).
-- 기준 폭 1280 이상, 최소 1024에서 깨지지 않는다. **결재함(CON-04)은 휴대폰(360px)에서도 답할 수 있어야** 한다 (결재자가 밖에 있을 수 있다) — 그래서 **860px 아래에서는 펼침 패널이 접혀 있고 펼치면 본문을 덮는다**. 그 밖의 페이지는 좁은 화면에서 읽기만 되면 된다.
+- 기준 폭 1280 이상, 최소 1024에서 깨지지 않는다. **결재함(CON-04)은 휴대폰(360px)에서도 답할 수 있어야** 한다 (결재자가 밖에 있을 수 있다) — 그래서 **1024px 아래에서는 묶음이 단추 하나로 접히고 누르면 묶음·줄 전부가 한 장에 펼쳐진다**. 그 밖의 페이지는 좁은 화면에서 읽기만 되면 된다.
 - 목록 → 고르면 아래에 상세 (프로토타입 습관 유지). 상세가 길면 오른쪽 패널(폭 480).
 - **작업공간(CON-20)은 본문을 가득 쓴다** — 머리 띠도 패딩도 틀이 그리지 않고 그 화면이 스스로 그린다 (ADR-0145 §3).
 - 쓰기 단추는 「관리자」 모드에서만 보인다 (CON-00 쓰기 권한).
@@ -146,17 +148,17 @@
 ## 6. 아이콘
 
 - **웹은 Lucide** 한 벌만 (`lucide-react`, ISC). 선 굵기 기본(2)을 바꾸지 않는다.
-- 웹에서 아이콘을 두는 곳: **레일**(묶음마다 하나 — 말풍선 필수), 보조 단추, 표의 잔일 단추. 메뉴 줄에는 두지 않는다.
-- 크기 16 (본문 옆·줄), 20 (단추), 22 (레일).
+- 웹에서 아이콘을 두는 곳: 보조 단추, 표의 잔일 단추, 좁은 화면의 메뉴 단추. **메뉴 줄에는 두지 않는다** — 줄은 이름과 한 줄 설명이 말한다 (ADR-0152).
+- 크기 16 (본문 옆·줄), 20 (단추).
 - 아이콘만 있는 단추는 툴팁·`aria-label` 필수.
 
 ### 6-1. BPM 흐름 마크
 
-화면에 제품 이름을 쓰지 않는다 — 「BPM」는 저장소 이름이다 ([ADR-0118](decisions/0118-no-product-name-on-screens.md)). 그 자리(웹 콘솔 탐색 맨 위·로그인 제목 위·브라우저 탭)에는 **BPM 흐름 마크**를 둔다: 시작 이벤트(빈 원) → 태스크(채운 둥근 네모) → 배타 게이트웨이(빈 마름모) → 끝 이벤트(굵은 원), 색은 `primary` 하나.
+화면에 저장소 이름(Chaeksas)을 쓰지 않는다 ([ADR-0118](decisions/0118-no-product-name-on-screens.md)). 그 자리(웹 콘솔 위 막대 맨 왼쪽·로그인 머리 띠·브라우저 탭)에는 **BPM 흐름 마크**를 두고, Center 콘솔에서는 그 옆에 **「BPM」**이 선다 ([ADR-0153](decisions/0153-the-console-stands-as-bpm.md)): 시작 이벤트(빈 원) → 태스크(채운 둥근 네모) → 배타 게이트웨이(빈 마름모) → 끝 이벤트(굵은 원), 색은 `primary` 하나.
 
 - 원본은 `design/bpm-mark.svg` 하나(`currentColor`)다. `scripts/gen_tokens.py`가 웹 구성요소 `BpmMark`(`server/web/packages/ui/src/bpm-mark.tsx`)와 콘솔마다 탭 아이콘 `app/icon.svg`(밝게·어둡게 `primary`)를 짓는다 — **생성물이니 직접 고치지 않는다**.
 - 그림만 있는 자리에는 툴팁·`aria-label`로 이름을 준다(「Center 콘솔」, 서비스 앱 이름). 글 옆에 붙는 자리(로그인 제목)는 장식이라 읽지 않는다.
-- 마크가 서는 자리는 **레일 맨 위**다 (ADR-0145 §5) — 누르면 첫 화면.
+- 마크가 서는 자리는 **위 막대 맨 왼쪽**이다 (ADR-0152 §1) — 「BPM」과 함께 서고, 누르면 첫 화면.
 
 ## 7. 구현 규칙 (코드 리뷰 체크리스트)
 

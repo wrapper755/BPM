@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 · **§1의 탭 목록(여섯)은 대체됨** ([ADR-0147](0147-workspace-has-three-tabs.md) — 탭 셋 + 탐색기가 가운데를 정한다) · **묶음 목록(운영 현황·로그·업무·배포·자원·관리)도 대체됨** ([ADR-0149](0149-console-menu-follows-the-work.md) → [ADR-0151](0151-console-follows-the-lifecycle.md) — 지금은 생애주기 차례다) · **§2 첫 화면(역할로 가른다)도 대체됨** ([ADR-0151](0151-console-follows-the-lifecycle.md) — 대시보드가 홈이다). 나머지(두 층 틀·작업공간 홈·캔버스가 주인·모양)는 그대로 산다 |
+| 상태 | 수락 · **§1의 탭 목록(여섯)은 대체됨** ([ADR-0147](0147-workspace-has-three-tabs.md) — 탭 셋 + 탐색기가 가운데를 정한다) · **묶음 목록(운영 현황·로그·업무·배포·자원·관리)도 대체됨** ([ADR-0149](0149-console-menu-follows-the-work.md) → [ADR-0151](0151-console-follows-the-lifecycle.md) — 지금은 생애주기 차례다) · **§2 첫 화면(역할로 가른다)도 대체됨** ([ADR-0151](0151-console-follows-the-lifecycle.md) — 대시보드가 홈이다). **§1의 두 층 틀(아이콘 레일 + 펼침 패널)도 대체됨** ([ADR-0152](0152-console-chrome-is-one-top-bar.md) — 위 막대 하나이고 지금 자리 줄은 본문 머리 띠로 내려갔다). 나머지(작업공간 홈·캔버스가 주인·모양)는 그대로 산다 |
 | 날짜 | 2026-11-12 |
 | 관련 | 화면 CON-00(틀)·**CON-20(새 — 작업공간)**, `docs/06-screens.md`·`docs/07-style-guide.md`, `design/tokens.json`, [ADR-0017](0017-web-nextjs-design-system.md)(웹 스택), [ADR-0118](0118-no-product-name-on-screens.md)(마크), [ADR-0121](0121-center-console-says-process.md)(콘솔은 「프로세스」라 쓴다), [ADR-0143](0143-design-happens-in-the-console.md)(편집기가 콘솔로 들어온다 — 이 결정의 까닭) |
 

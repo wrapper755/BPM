@@ -81,8 +81,9 @@ export async function login(_previous: ActionResult, form: FormData): Promise<Ac
       expires: new Date(made.expires_at),
     },
   );
-  // 첫 화면 — **설계할 수 있는 사람은 작업공간 홈**, 보기 전용은 「운영 › 프로세스」다 (ADR-0145 §2).
-  redirect(writes ? "/workspaces" : "/bots");
+  // 첫 화면은 **대시보드**이고 역할로 가르지 않는다 (ADR-0151 §3 — 전에는 쓰기 권한이 있으면
+  // 작업공간 홈, 없으면 「운영 › 프로세스」로 보냈다).
+  redirect("/dashboard");
 }
 
 export async function logout(): Promise<void> {

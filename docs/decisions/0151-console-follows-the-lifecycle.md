@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · **묶음을 레일에 그리는 것만 대체됨** ([ADR-0152](0152-console-chrome-is-one-top-bar.md) — 묶음 여섯과 그 차례는 그대로이고 위 막대의 가로 메뉴가 된다) |
 | 날짜 | 2026-11-15 |
 | 관련 | [ADR-0149](0149-console-menu-follows-the-work.md)(묶음 목록을 대체 — 「일의 흐름」이라는 축은 그대로다), [ADR-0145](0145-console-is-workspace-shaped.md) §2(첫 화면이 역할로 갈리는 것을 대체), [ADR-0081](0081-answering-on-behalf.md)(결재의 정식 길), [ADR-0143](0143-design-happens-in-the-console.md)(저작이 콘솔 안으로), 화면 `server/docs/screens/center-console.md`(CON-00·CON-21) |
 

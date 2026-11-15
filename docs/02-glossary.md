@@ -18,7 +18,7 @@
 
 | 화면 표기 | 코드 | 종류 | 뜻 |
 | --- | --- | --- | --- |
-| 저작 | `authoring` | 일 | BPM 프로세스를 **그리고 시험하고 배포 후보로 짓는** 일. 콘솔의 「저작」 묶음(CON-20)에서 한다 ([ADR-0151](decisions/0151-console-follows-the-lifecycle.md) — 콘솔·문서가 이 말을 쓴다. 업무 낱말인 「설계 변경」은 그대로다). 다음 단계는 **배포**이고 그다음이 **운영**이다 — 레일의 차례가 그것이다 |
+| 저작 | `authoring` | 일 | BPM 프로세스를 **그리고 시험하고 배포 후보로 짓는** 일. 콘솔의 「저작」 묶음(CON-20)에서 한다 ([ADR-0151](decisions/0151-console-follows-the-lifecycle.md) — 콘솔·문서가 이 말을 쓴다. 업무 낱말인 「설계 변경」은 그대로다). 다음 단계는 **배포**이고 그다음이 **운영**이다 — 위 막대 메뉴의 차례가 그것이다 |
 | 작업공간 | `workspace` | 폴더·화면 | **BPM 프로세스 한 벌**(정의 여럿·결정표·케이스·받아 둔 공유 프로세스). Center에 살고 콘솔의 CON-20에서 그리고 돌려 본다 (C17, [ADR-0143](decisions/0143-design-happens-in-the-console.md)) |
 | **데스크톱 앱** | — (묶는 말) | 화면 표기 | **지금은 없다** — Studio는 콘솔로 옮겼고([ADR-0143](decisions/0143-design-happens-in-the-console.md)) PC 실행기는 걷었다([ADR-0144](decisions/0144-remove-the-pc-runner.md)). RPA 데스크톱 일꾼이 오면 그것이 첫 데스크톱 앱이다 |
 | (배포된) BPM 프로세스 | `bot` | 업무 | **Center에서 서버 실행기로 전달되어 실행되는 BPM 프로세스.** 실행 중인 BPM 프로세스가 서비스 앱·Center를 부른다. 코드 식별자 `bot`은 옛 화면 이름(「Bot」)에서 왔고 **그대로 둔다** — 계약 칸·API 경로라 바꾸면 현장과 Center가 서로 못 알아본다 ([ADR-0111](decisions/0111-bpm-process-and-pc-runner-names.md)) |

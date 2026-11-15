@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ErrorBanner } from "@bpm/ui";
 import type { FileInfo } from "@bpm/api-types/c17-file-info";
@@ -56,15 +55,6 @@ export default async function WorkspacePage({ params }: { params: Promise<{ work
       actor={found.actor}
       current="/workspaces"
       full
-      crumb={
-        <>
-          <Link href="/workspaces" className="hover:underline">
-            작업공간
-          </Link>
-          <span className="text-text-muted"> › </span>
-          {info.name}
-        </>
-      }
     >
       <Workspace
         info={info}
