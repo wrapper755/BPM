@@ -256,6 +256,47 @@ export function readinessLabel(
 }
 
 /**
+ * **사람을 부르지 않는** 막힘 코드 — 새 판을 올리면 저절로 생긴다
+ * ([ADR-0158](../../../../docs/decisions/0158-the-banner-shows-only-what-you-can-fix.md)).
+ *
+ * 판을 올리면 옛 판의 배포가 덮이고, 실행기는 그 폴더를 지우지 않고 「이제 안 돈다」로 표시한다
+ * (ADR-0113). 맞는 상태이고 **운영자가 고칠 것이 없다** — 오류 띠에 넣으면 판을 올릴 때마다 빨간
+ * 줄이 하나씩 늘어 아무도 띠를 읽지 않게 되고, 정말 고칠 「확장 없음」이 그 속에 묻힌다.
+ */
+const QUIET_BLOCK_CODES = new Set(["deployment_withdrawn", "deployment_expired"]);
+
+/**
+ * 그 판의 「실행 불가」가 **배포가 덮여서**인가 — 그러면 알림이 아니다 (ADR-0158).
+ *
+ * **코드를 모르면 조용하지 않다.** 빈 목록도 모르는 것이라 그대로 띠에 간다 — 모르는 막힘을
+ * 소리 없이 숨기면 그것이야말로 「왜 안 도나」가 풀리지 않는 자리다.
+ */
+export function quietlyBlocked(codes: string[]): boolean {
+  return codes.length > 0 && codes.every((code) => QUIET_BLOCK_CODES.has(code));
+}
+
+/** 조용한 막힘의 표기 — `readinessLabel`의 말을 **그대로** 쓴다 (CON-12와 어긋나지 않게). */
+export function quietBlockLabel(codes: string[]): string {
+  return readinessLabel({ ready: false, blocked: codes })?.label ?? "배포 철회";
+}
+
+/**
+ * CON-02의 **오류 띠에 올릴 판** (ADR-0158) — 띠는 **카드와 같은 판을 본다**.
+ *
+ * 둘이 어긋나 있었다: 카드는 「철회된 판의 것을 세지 않는다」인데 띠는 `blocked > 0`인 판을
+ * **전부** 세었고, 사유도 보지 않아 **배포가 덮인 것**(`deployment_withdrawn`)을 「사전 점검 실행
+ * 불가」라고 했다. 운영 서버에 쌓인 빨간 줄 열 개가 **전부 그 둘이 겹친 것**이었다 — 새 판을
+ * 올리고 옛 판을 철회한, 아무도 손댈 데가 없는 줄이다.
+ */
+export function bannerRows(rows: BotRow[]): { notReady: BotRow[]; incomplete: BotRow[] } {
+  const live = rows.filter((row) => row.status !== "revoked");
+  return {
+    notReady: live.filter((row) => row.blocked > 0 && !quietlyBlocked(row.blocked_codes)),
+    incomplete: live.filter((row) => row.missing.length > 0),
+  };
+}
+
+/**
  * 그 배포가 이 실행기에서 **돌 준비가 됐는가** — 실행기가 보고한 `readiness`에서 찾는다 (C12).
  *
  * 판은 `version`까지 맞춰 본다 — 다른 판의 보고를 끌어다 쓰면 막 올린 판이 「준비됨」이 된다.
@@ -525,8 +566,10 @@ export interface ProcessGroup {
   lead: BotRow;
   /** 대표 판이 아닌 판들 (판이 높은 것부터) — 「다른 판」에 접힌다. */
   others: BotRow[];
-  /** 철회되지 않은 판 중 「실행 불가」·「리소스 없음」이 있는 판. */
+  /** 철회되지 않은 판 중 **사람이 손댈 것**이 있는 판 — 「실행 불가」·「리소스 없음」. */
   troubled: BotRow[];
+  /** 배포가 덮여 더 돌지 않는 판 — 차례를 바꾸지 않고 **조용한 표지로만** 보인다 (ADR-0158). */
+  retired: BotRow[];
 }
 
 /** 대표 판을 고르는 차례 — 지금 쓰는 판이 앞이다. */
@@ -546,14 +589,17 @@ export function groupProcesses(rows: BotRow[]): ProcessGroup[] {
       (a, b) => leadRank(a.status) - leadRank(b.status) || compareVersions(b.version, a.version),
     );
     const lead = ordered[0]!;
+    const live = versions.filter((one) => one.status !== "revoked");
     return {
       id,
       name: lead.name ?? versions.find((one) => one.name)?.name ?? null,
       lead,
       others: ordered.slice(1).sort((a, b) => compareVersions(b.version, a.version)),
-      troubled: versions.filter(
-        (one) => one.status !== "revoked" && (one.blocked > 0 || one.missing.length > 0),
+      troubled: live.filter(
+        (one) =>
+          (one.blocked > 0 && !quietlyBlocked(one.blocked_codes)) || one.missing.length > 0,
       ),
+      retired: live.filter((one) => one.blocked > 0 && quietlyBlocked(one.blocked_codes)),
     };
   });
 }
