@@ -1,10 +1,11 @@
 import Link from "next/link";
-import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
 import type { PackageInfo } from "@bpm/api-types/c5-package-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
+// 글·주소로 옮기는 일은 `lib/packages.ts`에 있다 — 브라우저 쪽 구성요소도 쓴다.
+import { STATUS_LABEL, packageHref } from "@/lib/packages";
 
 /**
  * CON-06 공통 패키지 (목록).
@@ -21,29 +22,11 @@ export const KIND_LABEL: Record<string, string> = {
   bpm_process: "프로세스",
 };
 
-/** C5 상태 → `status_map`의 「패키지」 표기. 모르는 값은 **그대로 보인다** (원칙 10). */
-export const STATUS_LABEL: Record<string, string> = {
-  candidate: "후보",
-  approved: "승인됨",
-  deprecated: "지원 종료",
-  revoked: "철회",
-};
-
 /** 연도까지 적는다 — 「01-01」로는 내일인지 내년인지 모른다 (CON-03과 같은 규칙). */
 export function time(value: string | null | undefined): string {
   if (!value) return "—";
   const at = new Date(value);
   return Number.isNaN(at.getTime()) ? value : at.toLocaleString("ko-KR");
-}
-
-/** 타입 라우트는 질의·경로가 붙은 주소를 리터럴로 요구한다 — 한 자리에서 만든다. */
-/**
- * 패키지 상세 주소 — **BPM 프로세스는 CON-02 「프로세스 상세」**(`/bots/…`), 나머지는 CON-06(`/packages/…`).
- * 종류를 모르면 `/packages/…`이고 그 상세가 종류를 읽어 넘긴다.
- */
-export function packageHref(row: { id: string; version: string; kind?: string }): Route {
-  const area = row.kind === "bpm_process" ? "bots" : "packages";
-  return `/${area}/${encodeURIComponent(row.id)}/${encodeURIComponent(row.version)}` as Route;
 }
 
 export default async function PackagesPage() {

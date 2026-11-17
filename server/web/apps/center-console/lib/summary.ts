@@ -558,13 +558,13 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-/** CON-02 카드 한 장 — BPM 프로세스 하나와 그 판들. */
+/** CON-02의 BPM 프로세스 하나와 그 판들 — **차례를 정하는 동안만** 묶는다 (ADR-0159). */
 export interface ProcessGroup {
   id: string;
   name: string | null;
-  /** 대표 판 — 카드 앞면의 지표가 이 판의 것이다. */
+  /** 대표 판 — **차례를 정할 때만** 쓴다 (화면에 따로 보이지 않는다). */
   lead: BotRow;
-  /** 대표 판이 아닌 판들 (판이 높은 것부터) — 「다른 판」에 접힌다. */
+  /** 대표 판이 아닌 판들 (판이 높은 것부터). */
   others: BotRow[];
   /** 철회되지 않은 판 중 **사람이 손댈 것**이 있는 판 — 「실행 불가」·「리소스 없음」. */
   troubled: BotRow[];
@@ -602,6 +602,23 @@ export function groupProcesses(rows: BotRow[]): ProcessGroup[] {
       retired: live.filter((one) => one.blocked > 0 && quietlyBlocked(one.blocked_codes)),
     };
   });
+}
+
+/**
+ * 묶음을 표의 줄로 편다 — **판마다 한 줄**이다 ([ADR-0159](../../../../docs/decisions/0159-con-02-is-a-table-like-the-others.md)).
+ *
+ * 묶음 안에서는 **판이 높은 것부터**다. 줄을 전부 모아 다시 정렬하면 같은 업무의 판이 표
+ * 여기저기에 떨어지므로, 차례는 묶음이 정한 그대로 둔다 (`sortGroups`).
+ *
+ * **업무 이름은 묶음의 것으로 덮는다** — 판마다 매니페스트 `name`이 있기도 없기도 한데, 같은
+ * BPM 프로세스의 줄이 어떤 것은 이름으로 어떤 것은 id로 보이면 같은 업무로 읽히지 않는다.
+ */
+export function flattenGroups(groups: ProcessGroup[]): BotRow[] {
+  return groups.flatMap((group) =>
+    [group.lead, ...group.others]
+      .sort((a, b) => compareVersions(b.version, a.version))
+      .map((row) => ({ ...row, name: group.name })),
+  );
 }
 
 /** 「상태」 거르기 — 기본은 철회를 뺀다 (되살아나지 않는 판이 화면을 차지하지 않게). */
