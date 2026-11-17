@@ -25,7 +25,10 @@ import {
   botLimitRows,
   compareVersions,
   filterGroups,
+  bannerRows,
   groupProcesses,
+  quietBlockLabel,
+  quietlyBlocked,
   sortGroups,
   statusFilterOf,
   type BotRow,
@@ -385,6 +388,22 @@ describe("readinessLabel", () => {
   it("모르는 코드는 「사전 점검 실행 불가」다", () => {
     expect(readinessLabel(row({ blocked: ["무엇인가"] }))?.label).toBe("사전 점검 실행 불가");
   });
+
+  it("배포가 덮인 것만으로 막혔으면 조용하다 (ADR-0158)", () => {
+    expect(quietlyBlocked(["deployment_withdrawn"])).toBe(true);
+    expect(quietlyBlocked(["deployment_withdrawn", "deployment_expired"])).toBe(true);
+  });
+
+  it("모르는 코드가 하나라도 섞이면 조용하지 않다 — 빈 목록도 모르는 것이다", () => {
+    expect(quietlyBlocked(["deployment_withdrawn", "settings_missing"])).toBe(false);
+    expect(quietlyBlocked(["무엇인가"])).toBe(false);
+    expect(quietlyBlocked([])).toBe(false);
+  });
+
+  it("조용한 표지의 말은 CON-12 「준비」와 같다", () => {
+    expect(quietBlockLabel(["deployment_withdrawn"])).toBe("배포 철회");
+    expect(quietBlockLabel(["deployment_expired"])).toBe("배포 만료");
+  });
 });
 
 describe("resumes", () => {
@@ -541,6 +560,39 @@ describe("CON-02 카드 — 판을 묶고 거르고 고른다", () => {
       version("a", "1.1.0"),
     ]);
     expect(group!.troubled).toEqual([]);
+  });
+
+  it("오류 띠는 카드와 같은 판을 본다 — 철회된 판은 띠에도 없다 (ADR-0158)", () => {
+    const rows = [
+      version("a", "1.0.0", { status: "revoked", blocked: 1, blocked_codes: ["settings_missing"] }),
+      version("a", "1.0.1", { missing: ["service_app x (missing)"], status: "revoked" }),
+      version("b", "1.0.0", { blocked: 1, blocked_codes: ["settings_missing"] }),
+    ];
+    const { notReady, incomplete } = bannerRows(rows);
+    expect(notReady.map((one) => one.id)).toEqual(["b"]);
+    expect(incomplete).toEqual([]);
+  });
+
+  it("배포가 덮인 판은 띠에 오지 않는다 — 판을 올릴 때마다 느는 줄이다 (ADR-0158)", () => {
+    const rows = [version("a", "1.0.0", { blocked: 1, blocked_codes: ["deployment_withdrawn"] })];
+    expect(bannerRows(rows).notReady).toEqual([]);
+  });
+
+  it("배포가 덮인 판은 경고가 아니라 조용한 표지다 (ADR-0158)", () => {
+    const [group] = groupProcesses([
+      version("a", "1.0.0", { blocked: 1, blocked_codes: ["deployment_withdrawn"] }),
+      version("a", "1.1.0"),
+    ]);
+    expect(group!.troubled).toEqual([]);
+    expect(group!.retired.map((one) => one.version)).toEqual(["1.0.0"]);
+  });
+
+  it("조용한 판은 「문제 먼저」로 당기지 않는다 — 판을 올릴 때마다 생기는 줄이다", () => {
+    const groups = groupProcesses([
+      version("a", "1.0.0", { blocked: 1, blocked_codes: ["deployment_withdrawn"] }),
+      version("b", "1.0.0", { blocked: 1, blocked_codes: ["extension_turned_off"] }),
+    ]);
+    expect(sortGroups(groups, "trouble").map((one) => one.id)).toEqual(["b", "a"]);
   });
 
   it("기본 거르기는 철회를 빼고, 철회만 남은 BPM 프로세스는 카드가 없다", () => {

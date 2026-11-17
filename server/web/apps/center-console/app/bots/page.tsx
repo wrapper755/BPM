@@ -16,10 +16,12 @@ import {
   SAMPLE,
   SCAN,
   STATUS_FILTERS,
+  bannerRows,
   compareVersions,
   deployedRunners,
   filterGroups,
   percent,
+  quietBlockLabel,
   sortGroups,
   statusFilterOf,
   summarize,
@@ -158,8 +160,8 @@ export default async function BotsPage({
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
   }
 
-  const notReady = rows.filter((row) => row.blocked > 0);
-  const incomplete = rows.filter((row) => row.missing.length > 0);
+  // **띠에 오는 것은 사람이 고칠 것뿐이다** (ADR-0158) — 세는 자리는 `lib/summary.ts`다.
+  const { notReady, incomplete } = bannerRows(rows);
   const groups = sortGroups(filterGroups(rows, { q: query.q, status }), sort);
   const admin = found.mode === "admin";
 
@@ -305,6 +307,7 @@ function ProcessCard({ group, admin }: { group: ProcessGroup; admin: boolean }) 
   const { lead } = group;
   const blocked = group.troubled.filter((row) => row.blocked > 0);
   const missing = group.troubled.filter((row) => row.missing.length > 0);
+  const retired = group.retired;
   return (
     <li className="flex flex-col gap-3 rounded-lg border border-border-default bg-bg-surface p-4">
       {/* 업무 이름이 먼저, id는 그 아래 작게 (화면 문서 CON-02 [I]) — 이름이 없으면 id가 제목이다. */}
@@ -353,7 +356,7 @@ function ProcessCard({ group, admin }: { group: ProcessGroup; admin: boolean }) 
         </dl>
       )}
 
-      {blocked.length > 0 || missing.length > 0 ? (
+      {blocked.length > 0 || missing.length > 0 || retired.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {blocked.map((row) => (
             <span
@@ -371,6 +374,16 @@ function ProcessCard({ group, admin }: { group: ProcessGroup; admin: boolean }) 
               className="rounded-md bg-status-warning-bg px-2 py-0.5 text-body-sm text-status-warning-fg"
             >
               {row.version} 리소스 {row.missing.length}개 없음
+            </span>
+          ))}
+          {/* **배포가 덮인 판** — 경고가 아니다 (ADR-0158). 말은 CON-12 「준비」와 같은 것을 쓴다. */}
+          {retired.map((row) => (
+            <span
+              key={`retired-${row.version}`}
+              title={row.blocked_codes.join(", ")}
+              className="rounded-md bg-status-neutral-bg px-2 py-0.5 text-body-sm text-status-neutral-fg"
+            >
+              {row.version} {quietBlockLabel(row.blocked_codes)}
             </span>
           ))}
         </div>
