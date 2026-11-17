@@ -349,15 +349,20 @@ def test_deployment_rows_carry_the_runner_the_version_went_to(client: TestClient
 
 
 def test_the_column_counts_runners(client: TestClient) -> None:
-    """화면이 **수를 센다** — 「배포」(건수)가 아니라 「배포된 실행기」다.
+    """화면이 **수를 센다** — 「배포」(건수)가 아니라 실행기 수다.
 
     **셈 자체는 `web`의 vitest가 잰다** (`lib/summary.test.ts`) — 여기서는 파이썬이 볼 수
     있는 것만 본다: 열 이름이 맞는가, 화면이 그 함수를 쓰는가.
+
+    CON-02는 **판마다 한 줄인 표**이고 열은 `table.tsx`가, 재료는 `page.tsx`가 짓는다
+    (ADR-0159).
     """
     page = (CONSOLE / "app" / "bots" / "page.tsx").read_text(encoding="utf-8")
-    # CON-02는 카드다 — 지표 이름은 `Metric label`이다.
-    assert 'label="배포된 실행기"' in page
-    assert 'label="배포"' not in page, "건수로 보이던 칸은 없다"
+    table = (CONSOLE / "app" / "bots" / "table.tsx").read_text(encoding="utf-8")
+    assert "DataTable" in table, "콘솔의 목록은 모두 같은 표다 (ADR-0159)"
+    assert 'header: "실행기"' in table
+    assert 'header: "배포"' not in table, "건수로 보이던 칸은 없다 — 건수는 말풍선에"
+    assert "row.runners" in table
     assert "deployedRunners" in page
 
 
