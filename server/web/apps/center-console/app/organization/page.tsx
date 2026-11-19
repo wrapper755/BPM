@@ -9,7 +9,7 @@ import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { fullTime } from "@/lib/time";
 import { LABEL as RUN_LABEL, time } from "@/app/runs/page";
-import { packageHref } from "@/app/packages/page";
+import { packageHref } from "@/lib/packages";
 import {
   KIND_LABEL,
   nodeParam,

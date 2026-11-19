@@ -25,6 +25,7 @@ import {
   botLimitRows,
   compareVersions,
   filterGroups,
+  flattenGroups,
   bannerRows,
   groupProcesses,
   quietBlockLabel,
@@ -538,7 +539,7 @@ function version(id: string, ver: string, over: Partial<BotRow> = {}): BotRow {
   };
 }
 
-describe("CON-02 카드 — 판을 묶고 거르고 고른다", () => {
+describe("CON-02 표 — 판을 묶어 차례를 정하고 줄로 편다", () => {
   it("판은 숫자 마디로 견준다 (글자로 견주면 0.10.0이 0.9.0 앞에 온다)", () => {
     expect(compareVersions("0.10.0", "0.9.0")).toBeGreaterThan(0);
     expect(compareVersions("1.0", "1.0.0")).toBe(0);
@@ -562,7 +563,7 @@ describe("CON-02 카드 — 판을 묶고 거르고 고른다", () => {
     expect(group!.troubled).toEqual([]);
   });
 
-  it("오류 띠는 카드와 같은 판을 본다 — 철회된 판은 띠에도 없다 (ADR-0158)", () => {
+  it("오류 띠는 본문과 같은 판을 본다 — 철회된 판은 띠에도 없다 (ADR-0158)", () => {
     const rows = [
       version("a", "1.0.0", { status: "revoked", blocked: 1, blocked_codes: ["settings_missing"] }),
       version("a", "1.0.1", { missing: ["service_app x (missing)"], status: "revoked" }),
@@ -595,7 +596,7 @@ describe("CON-02 카드 — 판을 묶고 거르고 고른다", () => {
     expect(sortGroups(groups, "trouble").map((one) => one.id)).toEqual(["b", "a"]);
   });
 
-  it("기본 거르기는 철회를 빼고, 철회만 남은 BPM 프로세스는 카드가 없다", () => {
+  it("기본 거르기는 철회를 빼고, 철회만 남은 BPM 프로세스는 줄이 없다", () => {
     const rows = [version("a", "1.0.0", { status: "revoked" }), version("b", "1.0.0")];
     expect(filterGroups(rows, { status: statusFilterOf(undefined) }).map((one) => one.id)).toEqual(["b"]);
     expect(filterGroups(rows, { status: "all" })).toHaveLength(2);
@@ -610,6 +611,44 @@ describe("CON-02 카드 — 판을 묶고 거르고 고른다", () => {
     const rows = [version("company1.sc01", "1.0.0", { name: "Invoice" }), version("company1.sc02", "1.0.0")];
     expect(filterGroups(rows, { q: "invoice", status: "all" }).map((one) => one.id)).toEqual(["company1.sc01"]);
     expect(filterGroups(rows, { q: "SC02", status: "all" }).map((one) => one.id)).toEqual(["company1.sc02"]);
+  });
+
+  it("줄은 판마다 하나이고, 같은 BPM 프로세스의 판은 붙어 선다 (ADR-0159)", () => {
+    const groups = sortGroups(
+      groupProcesses([
+        version("b", "0.9.0"),
+        version("a", "1.0.0"),
+        version("b", "0.10.0"),
+        version("a", "1.1.0", { status: "candidate" }),
+      ]),
+      "name",
+    );
+    expect(flattenGroups(groups).map((row) => `${row.id}@${row.version}`)).toEqual([
+      // 묶음 안에서는 **판이 높은 것부터** — 숫자 마디로 견주니 0.10.0이 0.9.0 앞이다.
+      "a@1.1.0",
+      "a@1.0.0",
+      "b@0.10.0",
+      "b@0.9.0",
+    ]);
+  });
+
+  it("줄의 차례는 묶음이 정한 그대로다 — 「문제 먼저」가 줄에서도 산다", () => {
+    const groups = groupProcesses([
+      version("a", "1.0.0", { sample: 10, successes: 10 }),
+      version("a", "1.1.0", { sample: 10, successes: 10 }),
+      version("b", "1.0.0", { sample: 10, successes: 10, blocked: 1, blocked_codes: ["settings_missing"] }),
+    ]);
+    // 문제가 있는 b가 통째로 앞에 오고, a의 두 판은 흩어지지 않는다.
+    expect(flattenGroups(sortGroups(groups, "trouble")).map((row) => row.id)).toEqual(["b", "a", "a"]);
+  });
+
+  it("업무 이름은 묶음의 것으로 덮는다 — 한 BPM 프로세스가 줄마다 다른 이름으로 보이지 않게", () => {
+    const groups = groupProcesses([
+      version("a", "1.0.0", { name: "매입 대사" }),
+      // 옛 판에는 매니페스트 `name`이 없을 수 있다 — 그래도 id로 떨어지지 않는다.
+      version("a", "0.9.0", { name: null }),
+    ]);
+    expect(flattenGroups(groups).map((row) => row.name)).toEqual(["매입 대사", "매입 대사"]);
   });
 
   it("문제 먼저 — 경고, 낮은 성공률, 표본 없음, 이름 차례", () => {

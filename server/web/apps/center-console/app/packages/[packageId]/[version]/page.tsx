@@ -9,7 +9,8 @@ import { Shell } from "@/components/Shell";
 import { PackageActions } from "@/components/PackageActions";
 import { namesOf, placeLine, workPlaceLabel } from "@/lib/organization";
 import { DeletePackage } from "../../tools";
-import { KIND_LABEL, STATUS_LABEL, packageHref, time } from "../../page";
+import { KIND_LABEL, time } from "../../page";
+import { STATUS_LABEL, packageHref } from "@/lib/packages";
 
 /**
  * CON-06 공통 패키지 (상세) — **CON-02 「프로세스 상세」도 같은 함수**(`PackageDetail`)로 그린다.
