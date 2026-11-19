@@ -28,7 +28,7 @@
 | `bg.surface` | 패널·카드·표·대화상자 |
 | `bg.subtle` | 표 머리, 줄 위에 올렸을 때, 읽기 전용 칸 |
 | `bg.inverse` / `text.inverse` | 툴팁 |
-| `border.default` / `border.strong` | 구분선 / 입력칸·보조 단추 테두리 |
+| `border.default` / `border.strong` | 구분선 / 입력칸·보조 단추 테두리 (`border.strong`은 `bg.surface` 위 **3:1 이상** — WCAG 1.4.11, 생성기가 막는다, ADR-0163) |
 | `text.primary` / `text.secondary` / `text.muted` | 본문 / 표 머리·보조 설명 / 설명 줄·빈 상태 (모두 바탕 셋 위에서 4.5:1 이상 확인됨) |
 | `primary` / `primary.hover` / `primary.subtle` / `primary.fg` | 주 단추·링크·고른 메뉴 묶음의 밑줄 / 위에 올림 / 고른 메뉴 줄·고른 탭의 바탕 / 주 단추 글자 |
 | `focus` | 포커스 테두리 (2px, 2px 띄움) |
@@ -161,9 +161,11 @@
 
 ### 6-1. BPM 흐름 마크
 
-화면에 저장소 이름(Chaeksas)을 쓰지 않는다 ([ADR-0118](decisions/0118-no-product-name-on-screens.md)). 그 자리(웹 콘솔 위 막대 맨 왼쪽·로그인 머리 띠·브라우저 탭)에는 **BPM 흐름 마크**를 두고, Center 콘솔에서는 그 옆에 **「BPM」**이 선다 ([ADR-0153](decisions/0153-the-console-stands-as-bpm.md)): 시작 이벤트(빈 원) → 태스크(채운 둥근 네모) → 배타 게이트웨이(빈 마름모) → 끝 이벤트(굵은 원), 색은 `primary` 하나.
+화면에 저장소 이름(Chaeksas)을 쓰지 않는다 ([ADR-0118](decisions/0118-no-product-name-on-screens.md)). 그 자리(웹 콘솔 위 막대 맨 왼쪽·로그인 머리 띠·브라우저 탭)에는 **BPM 흐름 마크**를 두고, Center 콘솔에서는 그 옆에 **「BPM」**이 선다 ([ADR-0153](decisions/0153-the-console-stands-as-bpm.md)): 시작 이벤트(빈 원) → 태스크(채운 둥근 네모) → 배타 게이트웨이(빈 마름모) → 끝 이벤트(굵은 원), 색은 `primary` 하나. 선은 **2.8**이다 — 1.8은 위 막대(20px)에서 흐렸다 (ADR-0163).
 
-- 원본은 `design/bpm-mark.svg` 하나(`currentColor`)다. `scripts/gen_tokens.py`가 웹 구성요소 `BpmMark`(`server/web/packages/ui/src/bpm-mark.tsx`)와 콘솔마다 탭 아이콘 `app/icon.svg`(밝게·어둡게 `primary`)를 짓는다 — **생성물이니 직접 고치지 않는다**.
+**정사각 기호**(`design/bpm-symbol.svg`, `BpmSymbol`)는 마크의 **가운데 두 도형(태스크 → 배타 게이트웨이)**만 남긴 것이고 **마크가 들어갈 폭이 없는 자리**(브라우저 탭 아이콘)에만 쓴다 (ADR-0163 — 가로로 긴 마크를 정사각에 넣으면 16px에서 실선이 된다). 마크를 고치면 기호도 같이 본다.
+
+- 원본은 `design/bpm-mark.svg` 하나(`currentColor`)다. `scripts/gen_tokens.py`가 웹 구성요소 `BpmMark`·`BpmSymbol`(`server/web/packages/ui/src/bpm-mark.tsx`)과 콘솔마다 탭 아이콘 `app/icon.svg`(**기호**로, 밝게·어둡게 `primary`)를 짓는다 — **생성물이니 직접 고치지 않는다**.
 - 그림만 있는 자리에는 툴팁·`aria-label`로 이름을 준다(「Center 콘솔」, 서비스 앱 이름). 글 옆에 붙는 자리(로그인 제목)는 장식이라 읽지 않는다.
 - 마크가 서는 자리는 **위 막대 맨 왼쪽**이다 (ADR-0152 §1) — 「BPM」과 함께 서고, 누르면 첫 화면.
 

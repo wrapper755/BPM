@@ -37,6 +37,8 @@ WEB_STATUS_MAP = WEB_SRC / "status-map.ts"
 PREVIEW = ROOT / "design" / "preview.html"
 #: BPM 흐름 마크 (ADR-0118) — 원본 하나, 웹 구성요소 하나, 콘솔마다 탭 아이콘 하나.
 MARK_SOURCE = ROOT / "design" / "bpm-mark.svg"
+# 정사각 기호 — 마크가 들어갈 폭이 없는 자리(탭 아이콘)에만 쓴다 (ADR-0163).
+SYMBOL_SOURCE = ROOT / "design" / "bpm-symbol.svg"
 WEB_MARK = WEB_SRC / "bpm-mark.tsx"
 CONSOLE_APPS = ROOT / "server" / "web" / "apps"
 CONSOLE_ICONS = [CONSOLE_APPS / app / "app" / "icon.svg" for app in ("center-console", "svc-console")]
@@ -94,15 +96,17 @@ def contrast_rows(colors: dict[str, str]) -> list[tuple[str, str, float, float, 
             True,
         )
     )
-    # UI 요소는 3:1. 테두리는 WCAG 1.4.11의 장식 예외라 **경고만** 한다 (통과=False).
+    # UI 요소는 3:1.
     rows.append(("primary", "bg.surface", contrast(colors["primary"], colors["bg.surface"]), AA_UI, True))
     rows.append(("focus", "bg.surface", contrast(colors["focus"], colors["bg.surface"]), AA_UI, True))
     # 남색 틀(웹 콘솔의 위 막대·탐색, 스타일 가이드 §2-1) — 글자는 바탕과 고른 줄 위 둘 다에서 읽혀야 한다.
     for fg in ("chrome.fg", "chrome.muted"):
         for bg in ("chrome.bg", "chrome.hover", "chrome.side", "chrome.side.hover"):
             rows.append((fg, bg, contrast(colors[fg], colors[bg]), AA_TEXT, True))
+    # 입력칸의 테두리는 **그 칸이 어디인지 말하는 유일한 경계**라 장식 예외가 아니다 — 막는다 (ADR-0163,
+    # WCAG 1.4.11. 경고로만 두었더니 2.6:1로 내려가도 아무도 몰랐다).
     rows.append(
-        ("border.strong", "bg.surface", contrast(colors["border.strong"], colors["bg.surface"]), AA_UI, False)
+        ("border.strong", "bg.surface", contrast(colors["border.strong"], colors["bg.surface"]), AA_UI, True)
     )
     return rows
 
@@ -266,17 +270,17 @@ def web_status_map_ts(tokens: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _mark_shapes() -> tuple[str, list[tuple[str, dict[str, str]]]]:
-    """원본 마크의 `viewBox`와 도형들. 도형만 받는다 — 원본에 다른 것을 넣으면 여기서 멈춘다."""
-    root = ET.fromstring(MARK_SOURCE.read_text(encoding="utf-8"))
+def _mark_shapes(source: Path = MARK_SOURCE) -> tuple[str, list[tuple[str, dict[str, str]]]]:
+    """원본 마크(또는 기호)의 `viewBox`와 도형들. 도형만 받는다 — 원본에 다른 것을 넣으면 여기서 멈춘다."""
+    root = ET.fromstring(source.read_text(encoding="utf-8"))
     shapes = []
     for child in root:
         tag = child.tag.split("}")[-1]
         if tag not in {"circle", "line", "rect", "path"}:
-            raise SystemExit(f"bpm-mark.svg: 도형이 아닌 요소 <{tag}> — 원, 선, 네모, 경로만 쓴다")
+            raise SystemExit(f"{source.name}: 도형이 아닌 요소 <{tag}> — 원, 선, 네모, 경로만 쓴다")
         colors = {v for v in child.attrib.values() if v.startswith("#")}
         if colors:
-            raise SystemExit(f"bpm-mark.svg: 색 값 {sorted(colors)} — currentColor만 쓴다 (색은 토큰에서 온다)")
+            raise SystemExit(f"{source.name}: 색 값 {sorted(colors)} — currentColor만 쓴다 (색은 토큰에서 온다)")
         shapes.append((tag, dict(child.attrib)))
     return root.attrib["viewBox"], shapes
 
@@ -286,19 +290,18 @@ def _svg_shapes(shapes: list[tuple[str, dict[str, str]]]) -> str:
 
 
 def web_mark_tsx() -> str:
-    """웹 구성요소 `BpmMark` — 색은 부모의 글자색(`currentColor`)이라 쓰는 쪽이 `text-primary`를 준다."""
-    view_box, shapes = _mark_shapes()
+    """웹 구성요소 `BpmMark`·`BpmSymbol` — 색은 부모의 글자색(`currentColor`)이라 쓰는 쪽이 `text-primary`를 준다."""
 
     def jsx(name: str) -> str:
         return re.sub(r"-([a-z])", lambda m: m.group(1).upper(), name)
 
-    body = "\n".join(
-        "      <" + tag + "".join(f' {jsx(k)}="{v}"' for k, v in attrs.items()) + " />" for tag, attrs in shapes
-    )
-    return f"""// {BANNER} (design/bpm-mark.svg)
-
-/** BPM 흐름 마크 (스타일 가이드 §6-1, ADR-0118). `label`이 없으면 장식이라 읽지 않는다. */
-export function BpmMark({{ label, className }}: {{ label?: string; className?: string }}) {{
+    def component(name: str, source: Path, doc: str) -> str:
+        view_box, shapes = _mark_shapes(source)
+        body = "\n".join(
+            "      <" + tag + "".join(f' {jsx(k)}="{v}"' for k, v in attrs.items()) + " />" for tag, attrs in shapes
+        )
+        return f"""/** {doc} `label`이 없으면 장식이라 읽지 않는다. */
+export function {name}({{ label, className }}: {{ label?: string; className?: string }}) {{
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -315,17 +318,29 @@ export function BpmMark({{ label, className }}: {{ label?: string; className?: s
 }}
 """
 
+    return (
+        f"// {BANNER} (design/bpm-mark.svg·bpm-symbol.svg)\n\n"
+        + component("BpmMark", MARK_SOURCE, "BPM 흐름 마크 (스타일 가이드 §6-1, ADR-0118·0163).")
+        + "\n"
+        + component(
+            "BpmSymbol",
+            SYMBOL_SOURCE,
+            "BPM 정사각 기호 — 마크가 들어갈 폭이 없는 자리에만 (스타일 가이드 §6-1, ADR-0163).",
+        )
+    )
+
 
 def console_icon_svg(tokens: dict[str, Any]) -> str:
-    """브라우저 탭 아이콘 — 마크를 정사각에 가운데 둔다. 색은 밝게·어둡게 `primary` (OS 테마를 따른다)."""
-    view_box, shapes = _mark_shapes()
+    """브라우저 탭 아이콘 — **정사각 기호**를 가운데 둔다 (ADR-0163 — 가로로 긴 마크는 16px에서 실선이 됐다).
+    색은 밝게·어둡게 `primary` (OS 테마를 따른다)."""
+    view_box, shapes = _mark_shapes(SYMBOL_SOURCE)
     x, y, w, h = (float(n) for n in view_box.split())
     side = max(w, h)
     square = f"{x - (side - w) / 2:g} {y - (side - h) / 2:g} {side:g} {side:g}"
     light = tokens["color"]["light"]["primary"]
     dark = tokens["color"]["dark"]["primary"]
     return (
-        f"<!-- {BANNER} (design/bpm-mark.svg) -->\n"
+        f"<!-- {BANNER} (design/bpm-symbol.svg) -->\n"
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{square}">'
         f"<style>g{{color:{light}}}@media (prefers-color-scheme: dark){{g{{color:{dark}}}}}</style>"
         f"<g>{_svg_shapes(shapes)}</g></svg>\n"
