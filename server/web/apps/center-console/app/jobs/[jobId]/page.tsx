@@ -72,7 +72,7 @@ export default async function JobPage({
 
       {job ? (
         <div className="flex flex-col gap-6">
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-body sm:grid-cols-4">
+          <dl className="meta-grid">
             <Row label="상태">
               <div className="flex flex-col gap-1">
                 <StatusBadge group="작업" label={STATE_LABEL[job.state] ?? job.state} />

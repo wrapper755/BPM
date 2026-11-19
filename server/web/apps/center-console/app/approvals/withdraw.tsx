@@ -25,13 +25,15 @@ export function WithdrawApproval({ requestId }: { requestId: string }) {
   }
 
   return (
-    <div className="mt-4 flex flex-col gap-2">
-      <Button variant="danger" disabled={pending} onClick={() => setAsking(true)}>
+    // 제목 오른쪽에 선다 (CON-04 상세 [H]) — **칠하지 않는다**(`danger-quiet`, ADR-0164). 칠한 위험 단추는
+    // 확인 창 안의 「회수」 하나다.
+    <div className="flex flex-col items-end gap-2">
+      <Button variant="danger-quiet" size="sm" disabled={pending} onClick={() => setAsking(true)}>
         회수...
       </Button>
       {error ? <ErrorBanner message={error} /> : null}
       {said ? (
-        <p className="text-body-sm text-text-secondary" role="status">
+        <p className="max-w-xs text-right text-body-sm text-text-secondary" role="status">
           {said}
         </p>
       ) : null}

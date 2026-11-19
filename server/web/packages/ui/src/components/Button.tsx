@@ -8,7 +8,7 @@ import { cn } from "../cn";
  * - 할 일이 없으면 끄고, **왜 꺼졌는지 가까이에 적는다** (U3). `disabledReason`은 그 보조다 —
  *   화면이 문장으로도 적어야 한다.
  */
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "danger-quiet";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANT: Record<ButtonVariant, string> = {
@@ -16,6 +16,9 @@ const VARIANT: Record<ButtonVariant, string> = {
   secondary: "bg-bg-surface text-text-primary border border-border-default shadow-sm hover:bg-bg-subtle",
   ghost: "bg-transparent text-text-primary border border-transparent hover:bg-bg-subtle",
   danger: "bg-status-failed-solid text-danger-fg hover:brightness-95 border border-transparent",
+  // 화면에 놓이는 되돌릴 수 없는 동작 — 칠하지 않는다 (ADR-0164). 칠한 `danger`는 확인 창 안에만.
+  "danger-quiet":
+    "bg-bg-surface text-status-failed-fg border border-border-default shadow-sm hover:bg-status-failed-bg",
 };
 
 const HEIGHT: Record<ButtonSize, string> = {

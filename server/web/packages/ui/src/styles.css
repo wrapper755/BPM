@@ -116,6 +116,45 @@ th {
   }
 }
 
+/* 「이름 / 값」 격자 (ADR-0164) — 상세 화면의 요약. 이름 바로 옆에 값이 서고 줄 사이에 옅은 선.
+   좁은 화면은 한 쌍, 넓은 화면(1024~)은 두 쌍이다 — 네 칸으로 흩었더니 1440px에서 이름과 값이 멀어져
+   짝이 안 보였다. 레이어 안이라 유틸리티가 이긴다. */
+@layer components {
+  .meta-grid {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: var(--space-4);
+    margin: 0;
+    font-size: var(--font-size-body-sm);
+  }
+  .meta-grid > dt,
+  .meta-grid > dd {
+    margin: 0;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-default);
+  }
+  .meta-grid > dt {
+    color: var(--text-muted);
+  }
+  .meta-grid > dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  @media (min-width: 1024px) {
+    .meta-grid {
+      grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr);
+      column-gap: var(--space-6);
+    }
+  }
+}
+
+/* 묶음 카드 안의 표는 제 테두리를 벗는다 — 카드 안에 카드가 서면 선이 두 겹이다 (ADR-0164). */
+[data-section] [data-table-frame] {
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+
 /* 포커스 표시는 지우지 않는다 (스타일 가이드 §7 — 키보드로만 쓰는 사람이 있다). */
 :focus-visible {
   outline: 2px solid var(--focus);

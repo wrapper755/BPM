@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button, ErrorBanner, StatusBadge } from "@bpm/ui";
+import { Button, ErrorBanner, MetaList, Section, StatusBadge } from "@bpm/ui";
 import type { ApprovalInfo, FormField } from "@bpm/api-types/c6-approval-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Markdown } from "@/components/Markdown";
@@ -16,16 +16,10 @@ import { STATE_LABEL, WITHDRAW_LABEL, time, where } from "../page";
  *
  * 「답하기」는 **일반 `<form>` + 서버 액션**이다 — JS 없이도 답할 수 있고, 폼과 맞지 않는
  * 답은 Center가 칸 이름과 함께 돌려주어 그 자리에 보인다 (C6 `answer_invalid`).
+ *
+ * **본문 + 오른쪽 요약** (ADR-0164) — 요약을 화면 폭 전체의 네 칸 격자로 흩었더니 이름과 값이 멀어지고
+ * 긴 설명이 1440px로 늘어져 읽히지 않았다. 「회수...」는 제목 오른쪽의 칠하지 않은 단추다.
  */
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-h2 font-semibold">{title}</h2>
-      {children}
-    </section>
-  );
-}
 
 /** 검토 자료 한 칸 — 목록은 글머리표로, 그 밖은 글자로 (CMN-01과 같은 규칙, C6). */
 function Shown({ value }: { value: unknown }) {
@@ -108,8 +102,9 @@ export default async function ApprovalPage({
 
   return (
     <Shell mode={found.mode} actor={found.actor} current="/approvals">
-      <header className="mb-4">
+      <header>
         <h1 className="text-h2 font-bold">{info?.title ?? "결재 요청"}</h1>
+        {canAnswer && info ? <WithdrawApproval requestId={info.request_id} /> : null}
       </header>
 
       {failure ? <ErrorBanner message={failure} /> : null}
@@ -120,7 +115,41 @@ export default async function ApprovalPage({
       ) : null}
 
       {info ? (
-        <div className="flex flex-col gap-6">
+        // 넓은 화면은 본문(왼쪽) + 요약(오른쪽), 좁은 화면은 요약이 먼저다 — 휴대폰 결재자가 무엇인지부터 본다.
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <aside className="flex flex-col gap-5 lg:sticky lg:top-[calc(var(--size-topbar-height)+1.5rem)] lg:order-2">
+            <Section title="요약">
+              <MetaList
+                items={[
+                  ["상태", <StatusBadge key="s" group="결재" label={STATE_LABEL[info.state] ?? info.state} />],
+                  ["실행하는 곳", where(info)],
+                  ["BPM 프로세스", `${info.bpm_process_id}@${info.version}`],
+                  ["노드", <span key="n" className="font-mono">{info.node_id}</span>],
+                  [
+                    "실행 id",
+                    <Link
+                      key="r"
+                      className="font-mono text-text-secondary break-all hover:text-primary"
+                      href={`/runs/${encodeURIComponent(info.run_id)}`}
+                    >
+                      {info.run_id}
+                    </Link>,
+                  ],
+                  ["요청 시각", time(info.created_at)],
+                  ["시한", time(info.expires_at)],
+                  ["전달됨", info.delivered ? "실행하는 쪽이 받아 갔습니다" : "아직"],
+                  [
+                    "담당",
+                    (info.assignees ?? []).length > 0
+                      ? (info.assignees ?? []).join(", ")
+                      : "담당자 없음 — 콘솔에서만 답합니다",
+                  ],
+                  ...(info.requested_by ? ([["요청한 쪽", info.requested_by]] as Array<[string, string]>) : []),
+                ]}
+              />
+            </Section>
+          </aside>
+          <div className="flex min-w-0 flex-col gap-5 lg:order-1">
           {/* 거절은 되돌림이다 — 요청은 다시 「대기」이고, 왜 거절됐는지가 위에 선다 (C6). */}
           {info.delivery_accepted === false && info.delivery_reason ? (
             <ErrorBanner
@@ -128,48 +157,14 @@ export default async function ApprovalPage({
             />
           ) : null}
 
-          <Section title="요약">
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-body sm:grid-cols-4">
-              <dt className="text-text-muted">상태</dt>
-              <dd>
-                <StatusBadge group="결재" label={STATE_LABEL[info.state] ?? info.state} />
-              </dd>
-              <dt className="text-text-muted">실행하는 곳</dt>
-              <dd>{where(info)}</dd>
-              <dt className="text-text-muted">프로세스</dt>
-              <dd>
-                {info.bpm_process_id}@{info.version}
-              </dd>
-              <dt className="text-text-muted">노드</dt>
-              <dd className="font-mono">{info.node_id}</dd>
-              <dt className="text-text-muted">실행 id</dt>
-              <dd className="font-mono">
-                <Link className="font-medium text-text-primary hover:text-primary" href={`/runs/${encodeURIComponent(info.run_id)}`}>
-                  {info.run_id}
-                </Link>
-              </dd>
-              <dt className="text-text-muted">요청 시각</dt>
-              <dd>{time(info.created_at)}</dd>
-              <dt className="text-text-muted">시한</dt>
-              <dd>{time(info.expires_at)}</dd>
-              <dt className="text-text-muted">전달됨</dt>
-              <dd>{info.delivered ? "실행하는 쪽이 받아 갔습니다" : "아직"}</dd>
-              <dt className="text-text-muted">담당</dt>
-              <dd>
-                {(info.assignees ?? []).length > 0
-                  ? (info.assignees ?? []).join(", ")
-                  : "담당자 없음 — 콘솔에서만 답합니다"}
-              </dd>
-              {info.requested_by ? (
-                <>
-                  <dt className="text-text-muted">요청한 쪽</dt>
-                  <dd>{info.requested_by}</dd>
-                </>
-              ) : null}
-            </dl>
-            {/* 결재 설명은 Markdown이다 (C14 「결재 설명」, ADR-0134). */}
-            {info.description ? <Markdown source={info.description} /> : null}
-          </Section>
+          {/* 결재 설명은 Markdown이다 (C14 「결재 설명」, ADR-0134). 읽기 좋은 폭에서 줄을 바꾼다. */}
+          {info.description ? (
+            <Section title="결재 설명">
+              <div className="max-w-[72ch] text-body leading-relaxed">
+                <Markdown source={info.description} />
+              </div>
+            </Section>
+          ) : null}
 
           {/* **값이 보이는 유일한 곳**이다 (C6). 접어 둔다 (U10). */}
           <Section title="결재에 필요한 값">
@@ -259,13 +254,13 @@ export default async function ApprovalPage({
                   </Button>
                 </div>
               </form>
-              <WithdrawApproval requestId={info.request_id} />
             </Section>
           ) : found.mode !== "admin" && info.state === "open" ? (
             <p className="text-body-sm text-text-muted">
               답하려면 「관리자」 모드로 들어오세요 — 지금은 보기 전용입니다.
             </p>
           ) : null}
+          </div>
         </div>
       ) : null}
     </Shell>

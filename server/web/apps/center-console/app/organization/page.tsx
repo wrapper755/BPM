@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { DataTable, EmptyState, ErrorBanner, StatusBadge, cn, type Column } from "@bpm/ui";
+import { DataTable, EmptyState, ErrorBanner, Section, StatusBadge, cn, type Column } from "@bpm/ui";
 import type { CompanyInfo } from "@bpm/api-types/c16-company-info";
 import type { DepartmentInfo } from "@bpm/api-types/c16-department-info";
 import type { StaffInfo } from "@bpm/api-types/c16-staff-info";
@@ -38,14 +38,6 @@ function href(kind: OrgKind, id: string): Route {
   return `/organization?node=${encodeURIComponent(nodeParam(kind, id))}` as Route;
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-h2 font-semibold">{title}</h2>
-      {children}
-    </section>
-  );
-}
 
 /** 나무 한 줄 — 「멈춤」이면 흐리게. 고른 줄은 진하게. */
 function TreeLine({
