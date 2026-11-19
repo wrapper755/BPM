@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { Column } from "@bpm/ui";
-import { cn } from "@bpm/ui";
+import { InfoTip, cn } from "@bpm/ui";
 import type { GroupSection, OperationRow } from "@/lib/connected-apps";
 
 /**
@@ -111,9 +111,9 @@ export function OperationTree({
                           <span aria-hidden className="inline-block w-3 text-text-secondary group-open/node:rotate-90">
                             ▸
                           </span>
-                          <span className="font-semibold" title={one.description ?? undefined}>
-                            {one.name}
-                          </span>
+                          <span className="font-semibold">{one.name}</span>
+                          {/* 묶음 설명은 눌러 펴는 「?」에 (U20, ADR-0162) — 단추라 눌러도 접히지 않는다. */}
+                          {one.description ? <InfoTip label={`${one.name} 설명`}>{one.description}</InfoTip> : null}
                           <span className="text-body-sm text-text-muted">({one.rows.length})</span>
                         </span>
                       ) : (

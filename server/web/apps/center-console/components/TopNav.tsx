@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { ChevronDown, Menu } from "lucide-react";
-import { BpmMark } from "@bpm/ui";
+import { BpmMark, InfoTip } from "@bpm/ui";
 
 /**
  * CON-00 [A]·[M] — **위 막대의 메뉴**다 ([ADR-0152](../../../../../docs/decisions/0152-console-chrome-is-one-top-bar.md)).
@@ -22,7 +22,7 @@ import { BpmMark } from "@bpm/ui";
  * 「누구인지」(`who`)는 그 장의 맨 아래에 선다.
  */
 
-/** 탐색 한 줄. **아직 없는 화면에는 `href`가 없다** — 끄고 이유(`later`)를 말풍선에 보인다 (U3). */
+/** 탐색 한 줄. **아직 없는 화면에는 `href`가 없다** — 끄고 이유(`later`)를 화면 글로 보인다 (U3·U20, ADR-0162). */
 export type NavItem =
   | { label: string; href: Route; note: string; later?: never }
   | { label: string; href?: never; note: string; later: string };
@@ -139,11 +139,12 @@ function Group({
 
   const only = group.items.length === 1 ? group.items[0] : null;
   if (only) {
-    // 갈 곳이 없는 묶음은 **끄고 까닭을 말풍선에** 둔다 (U3).
+    // 갈 곳이 없는 묶음은 **끄고 까닭을 눌러 펴는 「?」에** 둔다 (U3·U20, ADR-0162 — 말풍선은 휴대폰에서 안 뜬다).
     if (!only.href) {
       return (
-        <span className={`${shape} text-text-muted`} title={only.later}>
+        <span className={`${shape} text-text-muted`}>
           {group.label}
+          <InfoTip label={`${group.label} 설명`}>{only.later}</InfoTip>
         </span>
       );
     }
@@ -194,12 +195,14 @@ function Rows({
           </li>
         ) : (
           <li key={item.label}>
-            <span className="block rounded-lg px-3 py-2 text-text-muted" title={item.later}>
+            {/* 아직인 까닭은 그 줄 아래 글로 (U3·U20, ADR-0162). */}
+            <span className="block rounded-lg px-3 py-2 text-text-muted">
               <span className="flex items-center justify-between text-body-sm">
                 {item.label}
                 <span className="text-caption">아직</span>
               </span>
               <span className="block text-caption">{item.note}</span>
+              <span className="block text-caption">{item.later}</span>
             </span>
           </li>
         ),

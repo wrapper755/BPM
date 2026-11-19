@@ -67,12 +67,12 @@ export function ServerRunnerActions({
         <Button
           variant="danger"
           disabled={pending || online}
-          title={online ? "온라인인 실행기는 유실 처리할 수 없습니다." : undefined}
           onClick={() => setAsking("lost")}
         >
           유실 처리...
         </Button>
       </div>
+      {/* 꺼진 까닭은 말풍선이 아니라 이 글로만 (U3·U20, ADR-0162). */}
       {online ? (
         <p className="text-caption text-text-muted">
           「유실 처리」는 오프라인인 실행기만 할 수 있습니다 — 지금은 온라인입니다.
@@ -139,17 +139,16 @@ export function RestartRunner({
         variant="secondary"
         size="sm"
         disabled={pending || requested || !online}
-        title={
-          requested
-            ? "재시작을 요청해 두었습니다."
-            : !online
-              ? "오프라인인 실행기에는 재시작을 전할 수 없습니다."
-              : undefined
-        }
         onClick={() => setAsking(true)}
       >
         재시작...
       </Button>
+      {/* 꺼진 까닭은 단추 아래 글로 (U3·U20, ADR-0162 — 말풍선은 휴대폰에서 안 뜬다). */}
+      {requested || !online ? (
+        <p className="text-caption text-text-muted">
+          {requested ? "재시작을 요청해 두었습니다." : "오프라인인 실행기에는 재시작을 전할 수 없습니다."}
+        </p>
+      ) : null}
       {error ? <ErrorBanner message={error} /> : null}
       <ConfirmDialog
         open={asking}

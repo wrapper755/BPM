@@ -141,6 +141,11 @@ export default async function RunsPage({
 
   const org = await loadOrgNames();
   const processNames = await loadProcessNames();
+  // 거르기 칸의 후보 — 못 읽어도 목록은 그린다.
+  const runners = await center.serverRunners().catch(() => []);
+  const processChoices = [
+    ...new Map([...processNames].map(([key, name]) => [key.slice(0, key.lastIndexOf("@")), name])),
+  ].sort((a, b) => a[1].localeCompare(b[1], "ko"));
 
   const columns: Array<Column<RunInfo>> = [
     {
@@ -213,21 +218,38 @@ export default async function RunsPage({
         </label>
         <label className="flex flex-col gap-1 text-body-sm">
           프로세스
+          {/* id를 외워 치지 않게 **치면 후보가 뜬다** — 이름으로 찾고 id가 들어간다 (H6, ADR-0162). */}
           <input
             name="bpm_process_id"
+            list="run-processes"
             defaultValue={query.bpm_process_id ?? ""}
             placeholder="(전체)"
             className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
           />
+          <datalist id="run-processes">
+            {processChoices.map(([id, name]) => (
+              <option key={id} value={id} label={name} />
+            ))}
+          </datalist>
         </label>
         <label className="flex flex-col gap-1 text-body-sm">
           실행기
-          <input
+          {/* 실행기는 **등록된 것에서 고른다** (H6, ADR-0162). 주소로 온 모르는 id도 그대로 남긴다. */}
+          <select
             name="runner_id"
             defaultValue={query.runner_id ?? ""}
-            placeholder="(전체)"
             className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
-          />
+          >
+            <option value="">(전체)</option>
+            {runners.map((one) => (
+              <option key={one.server_runner_id} value={one.server_runner_id}>
+                {one.name}
+              </option>
+            ))}
+            {query.runner_id && !runners.some((one) => one.server_runner_id === query.runner_id) ? (
+              <option value={query.runner_id}>{query.runner_id}</option>
+            ) : null}
+          </select>
         </label>
         <label className="flex flex-col gap-1 text-body-sm">
           최근 n건

@@ -162,7 +162,6 @@ export function OrgItemTools({
               <button
                 type="button"
                 disabled={Boolean(one.off)}
-                title={one.off ?? undefined}
                 className="w-full px-3 py-2 text-left text-body hover:bg-bg-subtle disabled:cursor-not-allowed disabled:text-text-muted disabled:hover:bg-transparent"
                 onClick={() => {
                   setMenu(false);
@@ -171,6 +170,7 @@ export function OrgItemTools({
                 }}
               >
                 {one.label}
+                {/* 꺼진 까닭은 그 줄 아래 글로만 (U3·U20, ADR-0162). */}
                 {one.off ? <span className="block text-body-sm">{one.off}</span> : null}
               </button>
             </li>

@@ -105,21 +105,22 @@ export function RowMenu({ label, items }: { label: string; items: MenuItem[] }) 
       </Button>
       {menu ? (
         <ul
-          className="fixed z-20 flex min-w-[180px] flex-col border border-border-default bg-bg-surface py-1 shadow-md"
+          className="fixed z-20 flex min-w-[180px] max-w-[280px] flex-col border border-border-default bg-bg-surface py-1 shadow-md"
           style={{ top: menu.top, right: menu.right }}
         >
           {items.map((item) => (
             <li key={item.label}>
+              {/* 무엇을 하는지(또는 못 하는 까닭)는 말풍선이 아니라 그 줄 아래 글로 (U20, ADR-0162). */}
               <button
                 type="button"
-                title={item.tip}
-                className="w-full px-3 py-2 text-left text-body hover:bg-bg-subtle"
+                className="flex w-full flex-col px-3 py-2 text-left text-body hover:bg-bg-subtle"
                 onClick={() => {
                   setMenu(null);
                   item.onSelect();
                 }}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.tip ? <span className="text-caption text-text-muted">{item.tip}</span> : null}
               </button>
             </li>
           ))}
@@ -204,7 +205,8 @@ function AppFieldsForm({
           <span className="text-text-muted">주소·시험 주소의 호스트는 저절로 들어갑니다.</span>
         </label>
       </details>
-      <fieldset className="flex flex-col gap-1 text-body-sm" title={KEY_HINT(id)}>
+      {/* 키 설명은 아래 글에 있다 (U20, ADR-0162). */}
+      <fieldset className="flex flex-col gap-1 text-body-sm">
         <legend>인증</legend>
         <div className="flex flex-wrap gap-4 py-1">
           {(Object.keys(AUTH_LABEL) as AuthKind[]).map((kind) => (
@@ -639,7 +641,6 @@ function TestCall({
           <Button
             variant="primary"
             disabled={pending || names.length === 0 || app.untestable !== null}
-            title={app.untestable ?? undefined}
             onClick={call}
           >
             {pending ? "부르는 중..." : "부르기"}
@@ -805,12 +806,17 @@ function OperationEditor({
               value={fields.description}
               onChange={(e) => set("description", e.currentTarget.value)}
             />
-            <label
-              className="flex items-center gap-1 pb-2 text-body-sm"
-              title="아니오면 결과를 모르는 실패를 자동으로 다시 부르지 않습니다"
-            >
-              <input type="checkbox" checked={fields.idempotent} onChange={(e) => set("idempotent", e.currentTarget.checked)} />
-              다시 불러도 됨
+            {/* 칸 설명은 그 아래 글로 (U20, ADR-0162). */}
+            <label className="flex flex-col gap-0.5 pb-2 text-body-sm">
+              <span className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={fields.idempotent}
+                  onChange={(e) => set("idempotent", e.currentTarget.checked)}
+                />
+                다시 불러도 됨
+              </span>
+              <span className="text-caption text-text-muted">아니오면 결과를 모르는 실패를 자동으로 다시 부르지 않습니다</span>
             </label>
           </div>
           <div role="tablist" className="flex gap-1 border-b border-border-default">
@@ -841,14 +847,20 @@ function OperationEditor({
           />
           <TabHelp tab={tab} />
           {errors[tab] ? <p className="whitespace-pre-line text-body-sm text-status-failed-fg">{errors[tab]}</p> : null}
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            {/* 「시험...」이 꺼진 까닭은 단추 옆 글로 (U3·U20, ADR-0162). */}
+            {testTip ? (
+              <span id="operation-test-why" className="mr-auto self-center text-caption text-text-muted">
+                {testTip}
+              </span>
+            ) : null}
             <Button variant="secondary" onClick={onClose}>
               취소
             </Button>
             <Button
               variant="secondary"
               disabled={Boolean(testTip)}
-              title={testTip ?? undefined}
+              aria-describedby={testTip ? "operation-test-why" : undefined}
               onClick={() => setTesting(true)}
             >
               시험...

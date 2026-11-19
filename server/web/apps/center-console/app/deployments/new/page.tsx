@@ -92,10 +92,10 @@ export default async function NewDeploymentPage({
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-body-sm">
-                <span className="text-text-muted" title="이 프로세스가 서버에서 한꺼번에 도는 수. 비우면 기본입니다.">
-                  동시 실행 상한 (비우면 기본)
-                </span>
+                <span className="text-text-muted">동시 실행 상한 (비우면 기본)</span>
                 <input type="number" name="max_concurrency" min={1} className={FIELD} />
+                {/* 칸 설명은 그 아래 글로 (U20, ADR-0162). */}
+                <span className="text-caption text-text-muted">이 프로세스가 서버에서 한꺼번에 도는 수입니다.</span>
               </label>
           </fieldset>
 

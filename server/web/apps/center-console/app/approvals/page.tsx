@@ -169,16 +169,24 @@ export default async function ApprovalsPage({
           <input
             type="text"
             name="assignee"
+            list="approval-assignees"
             defaultValue={assignee}
             placeholder="(전체)"
             className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
           />
+          {/* 외워 치지 않게 지금 보이는 결재의 담당을 후보로 (H6, ADR-0162) — 모르는 이름도 칠 수 있다. */}
+          <datalist id="approval-assignees">
+            {[...new Set(rows.flatMap((row) => row.assignees ?? []))].sort().map((one) => (
+              <option key={one} value={one} />
+            ))}
+          </datalist>
         </label>
         <Link href="/approvals" className="ml-auto inline-flex h-9 items-center rounded-md px-3 text-body text-text-secondary hover:bg-bg-subtle">
           초기화
         </Link>
+        {/* 거르기 단추는 「좁히기」 하나다 (CON-00 [F], ADR-0162 H4). */}
         <Button type="submit" variant="secondary">
-          보기
+          좁히기
         </Button>
       </form>
 

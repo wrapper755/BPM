@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { DEPLOYMENT_REASON } from "@/lib/app-logs";
 import { redirect } from "next/navigation";
-import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import { DataTable, EmptyState, ErrorBanner, InfoTip, StatusBadge, type Column } from "@bpm/ui";
 import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import { CenterError, center, session } from "@/lib/center";
@@ -192,10 +192,12 @@ export default async function ServerRunnerPage({
       width: "20ch",
       cell: (row) =>
         row.readiness ? (
-          <span
-            title={row.readiness.detail.join("\n") || undefined}
-          >
+          // 준비의 까닭은 눌러 펴는 「?」에 (U20, ADR-0162).
+          <span className="inline-flex items-center gap-1">
             <StatusBadge group="BPM 프로세스 준비" label={row.readiness.label} />
+            {row.readiness.detail.length > 0 ? (
+              <InfoTip label="준비 상태 설명">{row.readiness.detail.join("\n")}</InfoTip>
+            ) : null}
           </span>
         ) : (
           "보고 없음"

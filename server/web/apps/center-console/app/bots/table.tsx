@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { DataTable, StatusBadge, type Column } from "@bpm/ui";
+import { DataTable, InfoTip, StatusBadge, type Column } from "@bpm/ui";
 import { PackageActions } from "@/components/PackageActions";
 import { STATUS_LABEL, packageHref } from "@/lib/packages";
 import { fullTime } from "@/lib/time";
@@ -196,30 +196,32 @@ function Rate({ part, whole, token }: { part: number; whole: number; token: stri
 function Warnings({ row }: { row: BotRow }) {
   const quiet = row.blocked > 0 && quietlyBlocked(row.blocked_codes);
   if (row.status === "revoked" || (row.blocked === 0 && row.missing.length === 0)) return NONE;
+  // 까닭(코드·없는 리소스)은 말풍선이 아니라 눌러 펴는 「?」에 (U20, ADR-0162).
+  const codes = row.blocked_codes.join(", ");
   return (
-    <span className="flex flex-wrap gap-1">
+    <span className="flex flex-wrap items-center gap-1">
       {row.blocked > 0 && !quiet ? (
-        <span
-          title={row.blocked_codes.join(", ") || undefined}
-          className="whitespace-nowrap rounded-md bg-status-failed-bg px-2 py-0.5 text-body-sm text-status-failed-fg"
-        >
-          실행 불가 {row.blocked}대
+        <span className="inline-flex items-center gap-1">
+          <span className="whitespace-nowrap rounded-md bg-status-failed-bg px-2 py-0.5 text-body-sm text-status-failed-fg">
+            실행 불가 {row.blocked}대
+          </span>
+          {codes ? <InfoTip label="실행 불가 까닭 설명">{codes}</InfoTip> : null}
         </span>
       ) : null}
       {row.missing.length > 0 ? (
-        <span
-          title={row.missing.join(", ")}
-          className="whitespace-nowrap rounded-md bg-status-warning-bg px-2 py-0.5 text-body-sm text-status-warning-fg"
-        >
-          리소스 {row.missing.length}개 없음
+        <span className="inline-flex items-center gap-1">
+          <span className="whitespace-nowrap rounded-md bg-status-warning-bg px-2 py-0.5 text-body-sm text-status-warning-fg">
+            리소스 {row.missing.length}개 없음
+          </span>
+          <InfoTip label="없는 리소스 설명">{row.missing.join(", ")}</InfoTip>
         </span>
       ) : null}
       {quiet ? (
-        <span
-          title={row.blocked_codes.join(", ")}
-          className="whitespace-nowrap rounded-md bg-status-neutral-bg px-2 py-0.5 text-body-sm text-status-neutral-fg"
-        >
-          {quietBlockLabel(row.blocked_codes)}
+        <span className="inline-flex items-center gap-1">
+          <span className="whitespace-nowrap rounded-md bg-status-neutral-bg px-2 py-0.5 text-body-sm text-status-neutral-fg">
+            {quietBlockLabel(row.blocked_codes)}
+          </span>
+          {codes ? <InfoTip label="막힌 까닭 설명">{codes}</InfoTip> : null}
         </span>
       ) : null}
     </span>
@@ -282,9 +284,8 @@ function columnsFor(admin: boolean): Array<Column<BotRow>> {
       width: "8ch",
       align: "right",
       cell: (row) => (
-        <span className="tabular-nums" title={CONFIRM_NOTE}>
-          {confirmRate(row)}
-        </span>
+        // 셈의 뜻(CONFIRM_NOTE)은 표 아래 화면 글에 있다 (U20, ADR-0162).
+        <span className="tabular-nums">{confirmRate(row)}</span>
       ),
     },
     {
@@ -300,13 +301,14 @@ function columnsFor(admin: boolean): Array<Column<BotRow>> {
       header: "실행기",
       width: "8ch",
       align: "right",
-      // **건수가 아니라 실행기 수**다. 건수는 말풍선에.
+      // **건수가 아니라 실행기 수**다. 건수는 그 아래 작게 (U20, ADR-0162 — 말풍선은 휴대폰에서 안 뜬다).
       cell: (row) =>
         row.runners === 0 ? (
           NONE
         ) : (
-          <span className="tabular-nums" title={`살아 있는 배포 ${row.deployments}건`}>
-            {row.runners}대
+          <span className="flex flex-col items-end tabular-nums">
+            <span>{row.runners}대</span>
+            <span className="whitespace-nowrap text-caption text-text-muted">배포 {row.deployments}건</span>
           </span>
         ),
     },

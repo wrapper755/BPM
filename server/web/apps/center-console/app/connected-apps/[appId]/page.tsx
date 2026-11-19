@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { Button, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import { Button, EmptyState, ErrorBanner, InfoTip, StatusBadge, type Column } from "@bpm/ui";
 import type { ExtensionResource } from "@bpm/api-types/c7-extension-resource";
 import type { ServiceAppResource } from "@bpm/api-types/c7-service-app-resource";
 import { CenterError, center, session } from "@/lib/center";
@@ -202,11 +202,16 @@ export default async function ConnectedAppPage({
             key: "idempotent",
             header: "다시 불러도 됨",
             width: "11ch",
-            cell: (row: OperationRow) => (
-              <span title="아니오면 결과를 모르는 실패를 자동으로 다시 부르지 않습니다">
-                {row.idempotent ? "예" : "아니오"}
-              </span>
-            ),
+            // 「아니오」의 뜻은 그 줄의 「?」에 (U20, ADR-0162).
+            cell: (row: OperationRow) =>
+              row.idempotent ? (
+                "예"
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  아니오
+                  <InfoTip label="다시 불러도 됨 설명">결과를 모르는 실패를 자동으로 다시 부르지 않습니다</InfoTip>
+                </span>
+              ),
           },
         ]
       : []),
@@ -228,12 +233,11 @@ export default async function ConnectedAppPage({
         const failed = row.counts?.failed_recent ?? 0;
         if (row.counts === null) return NONE;
         if (failed === 0) return "0";
+        const code = row.counts.last_error_code;
         return (
-          <span
-            className="text-status-warning-fg"
-            title={row.counts.last_error_code ? `마지막 오류: ${row.counts.last_error_code}` : undefined}
-          >
-            {failed}
+          <span className="inline-flex items-center gap-1">
+            <span className="text-status-warning-fg">{failed}</span>
+            {code ? <InfoTip label="마지막 오류 설명">마지막 오류: {code}</InfoTip> : null}
           </span>
         );
       },
@@ -259,20 +263,20 @@ export default async function ConnectedAppPage({
   return shell(
     <>
       <header className="mb-4 flex flex-col gap-1">
-        <div className="flex items-baseline gap-2">
+        <div className="flex flex-wrap items-baseline gap-2">
           <h1 className="text-h2 font-bold">{name}</h1>
           <span className="font-mono text-body-sm text-text-muted" title={external?.definition_hash ?? undefined}>
             {id}@{version}
           </span>
-          <span className="text-body-sm text-text-secondary" title={IMPL_HINT[impl]}>
+          {/* 구현·원본의 뜻은 눌러 펴는 「?」에 (U20, ADR-0162). */}
+          <span className="inline-flex items-center gap-1 text-body-sm text-text-secondary">
             {IMPL_LABEL[impl]}
+            <InfoTip label="구현 설명">{IMPL_HINT[impl]}</InfoTip>
           </span>
           {external ? (
-            <span
-              className="text-body-sm text-text-secondary"
-              title={SOURCE_HINT[external.source === "console" ? "console" : "consumer"]}
-            >
+            <span className="inline-flex items-center gap-1 text-body-sm text-text-secondary">
               원본 {SOURCE_LABEL[external.source === "console" ? "console" : "consumer"]}
+              <InfoTip label="원본 설명">{SOURCE_HINT[external.source === "console" ? "console" : "consumer"]}</InfoTip>
             </span>
           ) : null}
           <Hint text={SOURCE_NOTE} />
@@ -286,17 +290,19 @@ export default async function ConnectedAppPage({
           {external ? <span>만든 곳 {external.publisher ?? "—"}</span> : null}
           <span>맡은 일꾼 {workers && workers.length > 0 ? workers.join(", ") : "—"}</span>
           {address ? (
-            <span className="inline-flex items-center gap-1" title={address.note ?? undefined}>
+            <span className="inline-flex items-center gap-1">
               쓰는 주소 <span className="font-mono">{address.url ?? "—"}</span>
               <span className="text-caption text-text-muted">({address.source})</span>
+              {address.note ? <InfoTip label="주소 출처 설명">{address.note}</InfoTip> : null}
               <Hint
                 text={`주소는 맡은 일꾼의 설정 ${addressSetting(id)}에서 바꿉니다 (정의의 허용 호스트 안에서만). 바꾼 뒤 일꾼을 다시 띄우면 여기 보입니다.`}
               />
             </span>
           ) : null}
           {head.auth ? <span>인증 {head.auth}</span> : null}
-          <span title={statusWhy(status)}>
+          <span className="inline-flex items-center gap-1">
             <StatusBadge group="서비스 앱" label={statusLabel(status)} />
+            {statusWhy(status) ? <InfoTip label="상태 설명">{statusWhy(status)}</InfoTip> : null}
           </span>
         </p>
       </header>

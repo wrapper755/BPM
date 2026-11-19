@@ -357,7 +357,8 @@ export function Workspace({
         {/* 위 막대는 **메뉴가 쥐었다** (ADR-0152 §7) — 이 화면은 제 머리 띠에 지금 상태만 말한다. */}
         <p className="text-body-sm text-text-secondary">
           <span className="font-semibold text-text-primary">{info.name}</span>
-          {dirty ? <span title="저장하지 않은 변경이 있습니다"> *</span> : null}
+          {/* 말풍선이 아니라 글로 (U20, ADR-0162). */}
+          {dirty ? <span className="text-caption text-text-muted"> · 저장 안 함</span> : null}
           <span className="text-text-muted"> · v{info.version}</span>
         </p>
         <div role="tablist" aria-label="작업공간" className="flex gap-1">

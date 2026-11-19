@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { LogOut } from "lucide-react";
-import { Button } from "@bpm/ui";
+import { Button, InfoTip } from "@bpm/ui";
 import { logout } from "@/app/actions";
 import { openMode, session } from "@/lib/center";
 import type { Mode } from "@/lib/session";
@@ -130,22 +130,27 @@ export async function Shell({
       >
         <TopNav groups={groups} current={current} who={who} />
         {open ? (
-          <span
-            title="키·승인 없이 들어옵니다 — 등록 요청이 저절로 승인되고, 일꾼이 스스로 들어오고, 키 없는 호출이 관리자입니다 (BPM_CENTER__OPEN_MODE)"
-            className="inline-flex shrink-0 items-center gap-2 rounded-full px-2 py-1 text-caption whitespace-nowrap"
-            style={{
-              color: "var(--status-warning-fg)",
-              backgroundColor: "var(--status-warning-bg)",
-              borderRadius: "var(--radius-full)",
-            }}
-          >
+          <span className="inline-flex shrink-0 items-center">
             <span
-              aria-hidden
-              className="inline-block size-2 shrink-0"
-              style={{ backgroundColor: "var(--status-warning-solid)", borderRadius: "var(--radius-full)" }}
-            />
-            {/* 좁은 화면에서는 **점만** 남는다 — 말풍선이 뜻을 말한다 (자리를 로그아웃에 내준다). */}
-            <span className="hidden md:inline">열린 모드</span>
+              className="inline-flex shrink-0 items-center gap-2 rounded-full px-2 py-1 text-caption whitespace-nowrap"
+              style={{
+                color: "var(--status-warning-fg)",
+                backgroundColor: "var(--status-warning-bg)",
+                borderRadius: "var(--radius-full)",
+              }}
+            >
+              <span
+                aria-hidden
+                className="inline-block size-2 shrink-0"
+                style={{ backgroundColor: "var(--status-warning-solid)", borderRadius: "var(--radius-full)" }}
+              />
+              {/* 좁은 화면에서는 **점만** 남는다 — 뜻은 옆 「?」가 말한다 (자리를 로그아웃에 내준다, U20 ADR-0162). */}
+              <span className="hidden md:inline">열린 모드</span>
+            </span>
+            <InfoTip label="열린 모드 설명">
+              키·승인 없이 들어옵니다 — 등록 요청이 저절로 승인되고, 일꾼이 스스로 들어오고, 키 없는 호출이 관리자입니다
+              (BPM_CENTER__OPEN_MODE)
+            </InfoTip>
           </span>
         ) : null}
         {/* 좁은 화면에서는 **누구인지를 접는다** — 펼친 메뉴의 맨 아래로 간다 (CON-00). */}

@@ -28,6 +28,7 @@ import type { ExtensionVersionInfo } from "@bpm/api-types/c7-extension-version-i
 import type { ConsumerCreated } from "@bpm/api-types/c15-consumer-created";
 import type { ScheduleInfo } from "@bpm/api-types/c5-schedule-info";
 import type { ErrorBody } from "@bpm/api-types/c5-error-body";
+import { humanMessage } from "./errors";
 import type { RunListing } from "@bpm/api-types/c3-run-listing";
 import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import type { RunEventsResponse } from "@bpm/api-types/c3-run-events-response";
@@ -104,7 +105,7 @@ async function reach(path: string, init: RequestInit | undefined, token: string 
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as ErrorBody | null;
-    throw new CenterError(response.status, body, body?.message ?? `Center가 ${response.status}를 돌려줬습니다`);
+    throw new CenterError(response.status, body, humanMessage(response.status, body));
   }
   return response;
 }

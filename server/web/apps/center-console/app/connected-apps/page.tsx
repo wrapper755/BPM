@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import { Button, DataTable, EmptyState, ErrorBanner, InfoTip, StatusBadge, type Column } from "@bpm/ui";
 import type { TopicStatus } from "@bpm/api-types/c15-topic-status";
 import { CenterError, center, session } from "@/lib/center";
 import {
@@ -44,17 +44,9 @@ export function connectedAppHref(id: string): Route {
   return `/connected-apps/${encodeURIComponent(id)}` as Route;
 }
 
-/** 제목 옆 「?」 — 긴 설명은 툴팁으로. */
-export function Hint({ text }: { text: string }) {
-  return (
-    <span
-      title={text}
-      aria-label={text}
-      className="inline-flex size-5 cursor-help items-center justify-center rounded-full border border-border-strong text-caption text-text-secondary"
-    >
-      ?
-    </span>
-  );
+/** 제목 옆 「?」 — 긴 설명은 눌러 펴는 「?」로 (U20, ADR-0162 — 말풍선은 휴대폰에서 안 뜬다). */
+export function Hint({ text, label = "설명" }: { text: string; label?: string }) {
+  return <InfoTip label={label}>{text}</InfoTip>;
 }
 
 interface Row {
@@ -119,13 +111,23 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
       key: "impl",
       header: "구현",
       width: "10ch",
-      cell: (row) => <span title={IMPL_HINT[row.app.impl]}>{IMPL_LABEL[row.app.impl]}</span>,
+      cell: (row) => (
+        <span className="inline-flex items-center gap-1">
+          {IMPL_LABEL[row.app.impl]}
+          <InfoTip label="구현 설명">{IMPL_HINT[row.app.impl]}</InfoTip>
+        </span>
+      ),
     },
     {
       key: "source",
       header: "원본",
       width: "7ch",
-      cell: (row) => <span title={SOURCE_HINT[row.app.source]}>{SOURCE_LABEL[row.app.source]}</span>,
+      cell: (row) => (
+        <span className="inline-flex items-center gap-1">
+          {SOURCE_LABEL[row.app.source]}
+          <InfoTip label="원본 설명">{SOURCE_HINT[row.app.source]}</InfoTip>
+        </span>
+      ),
     },
     { key: "kinds", header: "종류", width: "10ch", cell: (row) => kindsLabel(row.app.kinds) },
     { key: "version", header: "버전", width: "10ch", mono: true, cell: (row) => row.app.version ?? "—" },
@@ -140,11 +142,16 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
       key: "status",
       header: "상태",
       width: "11ch",
-      cell: (row) => (
-        <span title={statusWhy(row.app.status)}>
-          <StatusBadge group="서비스 앱" label={statusLabel(row.app.status)} />
-        </span>
-      ),
+      cell: (row) => {
+        // 상태의 까닭은 눌러 펴는 「?」에 (U20, ADR-0162).
+        const why = statusWhy(row.app.status);
+        return (
+          <span className="inline-flex items-center gap-1">
+            <StatusBadge group="서비스 앱" label={statusLabel(row.app.status)} />
+            {why ? <InfoTip label="상태 설명">{why}</InfoTip> : null}
+          </span>
+        );
+      },
     },
     {
       key: "waiting",
