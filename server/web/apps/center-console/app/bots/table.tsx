@@ -158,7 +158,8 @@ function confirmRate(row: BotRow) {
 /**
  * 비율 막대 — 글자 + 가로 막대 (스타일 가이드 §7: **색만으로 뜻을 전하지 않는다**).
  *
- * 색은 `status_map`이 쓰는 상태 토큰에서 온다 (값을 코드에 적지 않는다).
+ * 색은 `status_map`이 쓰는 상태 토큰에서 온다 (값을 코드에 적지 않는다). 막대는 **가늘다**(4px) — 글자가
+ * 주인이고 막대는 눈짐작용이다 (ADR-0164 — 두꺼운 녹색 막대가 줄마다 서면 표가 시끄러웠다).
  */
 function Rate({ part, whole, token }: { part: number; whole: number; token: string }) {
   const shown = percent(part, whole);
@@ -168,7 +169,7 @@ function Rate({ part, whole, token }: { part: number; whole: number; token: stri
       <span className="tabular-nums">{shown}</span>
       <span
         aria-hidden
-        className="h-2 w-16 shrink-0 overflow-hidden"
+        className="h-1 w-12 shrink-0 overflow-hidden"
         style={{ backgroundColor: "var(--color-bg-subtle)", borderRadius: "var(--radius-full)" }}
       >
         <span
@@ -242,10 +243,10 @@ function columnsFor(admin: boolean): Array<Column<BotRow>> {
       // 업무 이름이 먼저, id는 그 아래 작게 (화면 문서 CON-02) — 이름이 없으면 id가 제목이다.
       cell: (row) => (
         <span className="flex min-w-0 flex-col">
-          <Link className={`truncate font-semibold underline ${row.name ? "" : "font-mono"}`} href={href(row)}>
+          <Link className={`truncate font-medium text-text-primary hover:text-primary ${row.name ? "" : "font-mono"}`} href={href(row)}>
             {row.name ?? row.id}
           </Link>
-          {row.name ? <span className="truncate font-mono text-body-sm text-text-muted">{row.id}</span> : null}
+          {row.name ? <span className="truncate text-caption font-normal text-text-muted">{row.id}</span> : null}
         </span>
       ),
     },
@@ -253,10 +254,10 @@ function columnsFor(admin: boolean): Array<Column<BotRow>> {
       key: "version",
       header: "판",
       width: "10ch",
-      mono: true,
+      // 판은 `v0.3.0` — 본문 글꼴·보조 글자색 (ADR-0164, mono는 기계 값에만).
       cell: (row) => (
-        <Link className="underline" href={href(row)}>
-          {row.version}
+        <Link className="text-text-secondary tabular-nums hover:text-primary" href={href(row)}>
+          v{row.version}
         </Link>
       ),
     },
@@ -270,13 +271,13 @@ function columnsFor(admin: boolean): Array<Column<BotRow>> {
       key: "success",
       header: "성공률",
       width: "15ch",
-      cell: (row) => <Rate part={row.successes} whole={row.sample} token="done" />,
+      cell: (row) => Rate({ part: row.successes, whole: row.sample, token: "done" }),
     },
     {
       key: "replay",
       header: "재생률",
       width: "15ch",
-      cell: (row) => <Rate part={row.replayed} whole={row.ai_tasks} token="replayed" />,
+      cell: (row) => Rate({ part: row.replayed, whole: row.ai_tasks, token: "replayed" }),
     },
     {
       key: "confirm",
@@ -295,7 +296,13 @@ function columnsFor(admin: boolean): Array<Column<BotRow>> {
       align: "right",
       cell: (row) => (row.sample === 0 ? NONE : <span className="tabular-nums">{row.sample}회</span>),
     },
-    { key: "last", header: "최근 성공", width: "17ch", cell: (row) => fullTime(row.last_success) },
+    {
+      key: "last",
+      header: "최근 성공",
+      width: "17ch",
+      // 시각은 한 줄 — 날짜와 시각이 두 줄로 갈리면 줄 높이가 둘쭉날쭉했다 (ADR-0164).
+      cell: (row) => <span className="whitespace-nowrap tabular-nums">{fullTime(row.last_success)}</span>,
+    },
     {
       key: "runners",
       header: "실행기",
@@ -312,16 +319,20 @@ function columnsFor(admin: boolean): Array<Column<BotRow>> {
           </span>
         ),
     },
-    { key: "warning", header: "경고", cell: (row) => <Warnings row={row} /> },
+    // 칸은 **함수로 부른다**(요소로 감싸지 않는다) — 값이 없을 때의 「—」가 그대로 나와야 휴대폰 카드가 그 줄을
+    // 뺄 수 있다 (ADR-0164 — `DataTable`은 요소 속을 그려 보지 않는다). 둘 다 훅이 없는 그리기 함수다.
+    { key: "warning", header: "경고", cell: (row) => Warnings({ row }) },
     ...(admin
       ? [
           {
             key: "actions",
             header: "",
-            width: "13ch",
+            width: "3rem",
+            align: "right",
             cell: (row: BotRow) =>
               ACTIONABLE.has(row.status) ? (
                 <PackageActions
+                  compact
                   packageId={row.id}
                   version={row.version}
                   status={row.status}

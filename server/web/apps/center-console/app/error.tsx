@@ -21,7 +21,7 @@ export default function Error({ error, retry }: { error: Error & { digest?: stri
         <Button variant="primary" onClick={() => retry()}>
           다시 시도
         </Button>
-        <Link href="/dashboard" className="inline-flex items-center px-2 text-primary underline">
+        <Link href="/dashboard" className="inline-flex items-center px-2 text-primary hover:underline">
           대시보드로
         </Link>
       </div>

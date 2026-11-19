@@ -161,7 +161,7 @@ export default async function RunsPage({
       cardTitle: true,
       // 실행 id 열은 없다 — 업무 이름이 상세로 가는 링크다 (화면 문서 CON-01).
       cell: (row) => (
-        <Link className="underline" href={`/runs/${encodeURIComponent(row.run_id)}`}>
+        <Link className="font-medium text-text-primary hover:text-primary" href={`/runs/${encodeURIComponent(row.run_id)}`}>
           <ProcessName id={row.bpm_process_id} version={row.version} names={processNames} />
         </Link>
       ),

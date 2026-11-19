@@ -55,7 +55,7 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
       key: "name",
       header: "이름",
       cell: (row) => (
-        <Link className="underline" href={`/server-runners/${encodeURIComponent(row.server_runner_id)}`}>
+        <Link className="font-medium text-text-primary hover:text-primary" href={`/server-runners/${encodeURIComponent(row.server_runner_id)}`}>
           {row.name}
         </Link>
       ),
@@ -142,7 +142,7 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
       width: "26ch",
       mono: true,
       cell: (row) => (
-        <Link className="underline" href={`/jobs/${encodeURIComponent(row.job_id)}`}>
+        <Link className="font-medium text-text-primary hover:text-primary" href={`/jobs/${encodeURIComponent(row.job_id)}`}>
           {row.job_id}
         </Link>
       ),

@@ -97,7 +97,7 @@ export default async function ApprovalsPage({
       header: "제목",
       cardTitle: true,
       cell: (row) => (
-        <Link className="underline" href={`/approvals/${encodeURIComponent(row.request_id)}`}>
+        <Link className="font-medium text-text-primary hover:text-primary" href={`/approvals/${encodeURIComponent(row.request_id)}`}>
           {row.title ?? "결재 요청"}
         </Link>
       ),

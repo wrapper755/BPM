@@ -135,7 +135,7 @@ export default async function OrganizationPage({ searchParams }: { searchParams:
       cell: (row) => {
         const version = row.versions?.[0];
         return version ? (
-          <Link className="underline" href={packageHref({ id: row.bpm_process_id, version, kind: "bpm_process" })}>
+          <Link className="font-medium text-text-primary hover:text-primary" href={packageHref({ id: row.bpm_process_id, version, kind: "bpm_process" })}>
             {row.bpm_process_id}
           </Link>
         ) : (
@@ -157,7 +157,7 @@ export default async function OrganizationPage({ searchParams }: { searchParams:
       header: "실행",
       mono: true,
       cell: (row) => (
-        <Link className="underline" href={`/runs/${encodeURIComponent(row.run_id)}` as Route}>
+        <Link className="font-medium text-text-primary hover:text-primary" href={`/runs/${encodeURIComponent(row.run_id)}` as Route}>
           {row.run_id}
         </Link>
       ),

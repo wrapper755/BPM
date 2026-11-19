@@ -12,11 +12,15 @@ export interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   required?: boolean;
   help?: string;
   error?: string;
+  /** 필수 표시 「*」를 단다 (기본). 모든 칸이 당연히 필수인 폼(로그인)은 끈다 — 소음이다 (ADR-0164). */
+  mark?: boolean;
+  /** 입력칸 오른쪽 안에 붙는 것 (비밀번호 보기 단추 등). */
+  trailing?: ReactNode;
   /** 입력칸 대신 다른 컨트롤을 쓸 때 (선택 상자 등). */
   control?: ReactNode;
 }
 
-export function Field({ label, required, help, error, control, className, ...rest }: FieldProps) {
+export function Field({ label, required, mark = true, trailing, help, error, control, className, ...rest }: FieldProps) {
   const id = useId();
   const helpId = `${id}-help`;
   const errorId = `${id}-error`;
@@ -26,10 +30,11 @@ export function Field({ label, required, help, error, control, className, ...res
     <div className={cn("flex flex-col gap-1", className)}>
       <label htmlFor={id} className="text-body-sm font-medium text-text-primary">
         {label}
-        {required ? <span aria-hidden> *</span> : null}
-        {required ? <span className="sr-only">(필수)</span> : null}
+        {required && mark ? <span aria-hidden> *</span> : null}
+        {required && mark ? <span className="sr-only">(필수)</span> : null}
       </label>
       {control ?? (
+        <span className="relative flex">
         <input
           id={id}
           required={required}
@@ -37,11 +42,14 @@ export function Field({ label, required, help, error, control, className, ...res
           aria-describedby={describedBy}
           style={{ height: "var(--size-control-md)", borderRadius: "var(--radius-md)" }}
           className={cn(
-            "border bg-bg-surface px-3 text-body text-text-primary",
+            "w-full border bg-bg-surface px-3 text-body text-text-primary",
+            trailing ? "pr-11" : undefined,
             error ? "border-status-failed-solid" : "border-border-strong",
           )}
           {...rest}
         />
+        {trailing ? <span className="absolute inset-y-0 right-1 flex items-center">{trailing}</span> : null}
+        </span>
       )}
       {help ? (
         <p id={helpId} className="text-caption text-text-muted">

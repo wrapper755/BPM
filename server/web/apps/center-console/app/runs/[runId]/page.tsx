@@ -432,7 +432,7 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
                   <dt className="text-text-muted">맡긴 서버 실행</dt>
                   <dd>
                     <Link
-                      className="underline font-mono"
+                      className="font-mono text-text-secondary hover:text-primary"
                       href={`/runs/${encodeURIComponent(info.parent_run_id)}`}
                     >
                       {info.parent_run_id}

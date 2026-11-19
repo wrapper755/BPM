@@ -57,7 +57,7 @@ export async function Schedules() {
       mono: true,
       cell: (row) =>
         row.last_job_id ? (
-          <Link className="underline" href={`/jobs/${encodeURIComponent(row.last_job_id)}`}>
+          <Link className="font-medium text-text-primary hover:text-primary" href={`/jobs/${encodeURIComponent(row.last_job_id)}`}>
             {row.last_job_id}
           </Link>
         ) : (

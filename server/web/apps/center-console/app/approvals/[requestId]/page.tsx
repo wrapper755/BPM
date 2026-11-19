@@ -144,7 +144,7 @@ export default async function ApprovalPage({
               <dd className="font-mono">{info.node_id}</dd>
               <dt className="text-text-muted">실행 id</dt>
               <dd className="font-mono">
-                <Link className="underline" href={`/runs/${encodeURIComponent(info.run_id)}`}>
+                <Link className="font-medium text-text-primary hover:text-primary" href={`/runs/${encodeURIComponent(info.run_id)}`}>
                   {info.run_id}
                 </Link>
               </dd>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { ChevronDown, Menu } from "lucide-react";
-import { BpmMark, InfoTip } from "@bpm/ui";
+import { AppTile, InfoTip } from "@bpm/ui";
 
 /**
  * CON-00 [A]·[M] — **위 막대의 메뉴**다 ([ADR-0152](../../../../../docs/decisions/0152-console-chrome-is-one-top-bar.md)).
@@ -15,7 +15,7 @@ import { BpmMark, InfoTip } from "@bpm/ui";
  *
  * **줄이 하나인 묶음은 펼치지 않는다** — 「대시보드」·「저작」은 눌러서 바로 간다(펼쳐 봐야 같은 이름 하나다).
  *
- * 묶음 여섯은 **알약 하나에 담긴 마디**이고 지금 자리의 묶음은 흰 알약이 떠 있다 (ADR-0161).
+ * 묶음 여섯은 **글자**이고 지금 자리의 묶음은 `primary` 2px 밑줄 + 굵게다 (ADR-0164 — ADR-0161의 알약을 걷었다).
  *
  * 좁은 화면(1024px 아래)에서는 여섯이 한 줄에 들어가지 않아 **단추 하나로 접고** 누르면 묶음·줄
  * 전부가 한 장에 펼쳐진다 — 결재함은 휴대폰에서도 답할 수 있어야 한다 (CON-00). 위 막대에서 접힌
@@ -56,15 +56,16 @@ export function TopNav({ groups, current, who }: { groups: NavGroup[]; current: 
   const here = groups.find((group) => group.items.some((item) => item.href === current)) ?? null;
 
   return (
-    <div ref={box} className="relative flex min-w-0 flex-1 items-center gap-1">
+    <div ref={box} className="relative flex h-full min-w-0 flex-1 items-center gap-1">
       {/* 마크 + 이름 — 누르면 첫 화면이다 (ADR-0153). 가로 막대라 긴 마크가 제 폭으로 들어간다. */}
       <Link
         href="/dashboard"
         title="첫 화면"
-        className="mr-1 flex shrink-0 items-center gap-2 rounded-md px-1 py-1 text-primary md:mr-4"
+        className="mr-1 flex shrink-0 items-center gap-2 rounded-md py-1 md:mr-5"
       >
-        <BpmMark className="h-6 w-auto" />
-        <span className="text-body-lg font-bold tracking-wide text-text-primary">BPM</span>
+        {/* 앱 타일 — `primary` 둥근 정사각에 흰 기호 (ADR-0164). 가로로 긴 마크는 막대에서 연결선이 흐렸다. */}
+        <AppTile />
+        <span className="text-body-lg font-semibold text-text-primary">BPM</span>
       </Link>
 
       {/* 좁은 화면 — 단추 하나. 누르면 묶음·줄 전부가 한 장에 뜬다. */}
@@ -80,10 +81,10 @@ export function TopNav({ groups, current, who }: { groups: NavGroup[]; current: 
       </button>
 
       {/* 넓은 화면 — 묶음 여섯이 가로로. */}
-      <nav aria-label="주요 탐색" className="hidden min-w-0 lg:block">
-        <ul className="flex list-none items-center gap-0.5 rounded-full bg-bg-subtle p-1">
+      <nav aria-label="주요 탐색" className="hidden h-full min-w-0 lg:block">
+        <ul className="m-0 flex h-full list-none items-stretch gap-1 p-0">
           {groups.map((group) => (
-            <li key={group.label} className="relative">
+            <li key={group.label} className="relative flex items-stretch">
               <Group
                 group={group}
                 here={here?.label === group.label}
@@ -119,7 +120,7 @@ export function TopNav({ groups, current, who }: { groups: NavGroup[]; current: 
   );
 }
 
-/** 묶음 하나 — **줄이 하나면 링크**, 여럿이면 펼치는 단추다. 지금 자리의 묶음은 흰 알약이다 (ADR-0161). */
+/** 묶음 하나 — **줄이 하나면 링크**, 여럿이면 펼치는 단추다. 지금 자리의 묶음은 `primary` 밑줄이다 (ADR-0164). */
 function Group({
   group,
   here,
@@ -131,11 +132,14 @@ function Group({
   open: boolean;
   onToggle: () => void;
 }) {
-  const shape = `flex items-center gap-1 rounded-full px-3.5 py-1.5 text-body-sm whitespace-nowrap transition-colors${
-    here || open
-      ? " bg-bg-surface text-text-primary shadow-sm"
-      : " text-text-secondary hover:text-text-primary"
-  }${here ? " font-semibold" : ""}`;
+  // 밑줄은 막대의 아래 선에 붙는다(안쪽 그림자 2px) — 묶음의 높이가 막대 전체다.
+  const shape = `flex h-full items-center gap-1 px-3 text-body-sm whitespace-nowrap transition-colors${
+    here
+      ? " font-semibold text-text-primary shadow-[inset_0_-2px_0_var(--primary)]"
+      : open
+        ? " text-text-primary"
+        : " text-text-secondary hover:text-text-primary"
+  }`;
 
   const only = group.items.length === 1 ? group.items[0] : null;
   if (only) {
