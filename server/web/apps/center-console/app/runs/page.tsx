@@ -153,6 +153,7 @@ export default async function RunsPage({
     {
       key: "bpm_process_id",
       header: "프로세스",
+      cardTitle: true,
       // 실행 id 열은 없다 — 업무 이름이 상세로 가는 링크다 (화면 문서 CON-01).
       cell: (row) => (
         <Link className="underline" href={`/runs/${encodeURIComponent(row.run_id)}`}>

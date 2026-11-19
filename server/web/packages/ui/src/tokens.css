@@ -1,12 +1,12 @@
 /* 생성 파일: design/tokens.json에서 만든다. 직접 고치지 말고 원본을 고친 뒤 scripts/gen_tokens.py */
 
 :root {
-  --bg-canvas: #F3F4F7;
+  --bg-canvas: #F6F5F1;
   --bg-surface: #FFFFFF;
-  --bg-subtle: #E8E8E8;
+  --bg-subtle: #EEECE6;
   --bg-inverse: #0A0A0A;
-  --border-default: #D5D5D5;
-  --border-strong: #AEAEAE;
+  --border-default: #E4E1D9;
+  --border-strong: #A39F95;
   --text-primary: #0A0A0A;
   --text-secondary: #45484D;
   --text-muted: #656565;
@@ -78,36 +78,36 @@
   --space-10: 40px;
   --space-12: 48px;
   --space-16: 64px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-full: 9999;
-  --size-control-sm: 28px;
-  --size-control-md: 32px;
-  --size-control-lg: 40px;
-  --size-row-compact: 32px;
-  --size-row-default: 36px;
+  --size-control-sm: 32px;
+  --size-control-md: 36px;
+  --size-control-lg: 44px;
+  --size-row-compact: 36px;
+  --size-row-default: 44px;
   --size-nav-width: 224px;
   --size-nav-collapsed: 64px;
-  --size-topbar-height: 48px;
+  --size-topbar-height: 56px;
 
   /* 그림자·움직임 */
-  --shadow-sm: 0 1px 2px rgba(16,24,40,0.06);
-  --shadow-md: 0 4px 12px rgba(16,24,40,0.10);
-  --shadow-lg: 0 12px 32px rgba(16,24,40,0.16);
+  --shadow-sm: 0 1px 2px rgba(40,36,28,0.04), 0 2px 8px rgba(40,36,28,0.04);
+  --shadow-md: 0 4px 12px rgba(40,36,28,0.06), 0 12px 32px rgba(40,36,28,0.08);
+  --shadow-lg: 0 16px 48px rgba(40,36,28,0.16);
   --motion-fast: 120ms;
   --motion-base: 200ms;
   --motion-easing: cubic-bezier(0.2, 0, 0, 1);
 }
 
 [data-theme="dark"] {
-  --bg-canvas: #090A0C;
-  --bg-surface: #171717;
-  --bg-subtle: #262626;
+  --bg-canvas: #0F0F0E;
+  --bg-surface: #1B1A18;
+  --bg-subtle: #282724;
   --bg-inverse: #FAFAFA;
-  --border-default: #3C3C3C;
-  --border-strong: #585858;
+  --border-default: #383632;
+  --border-strong: #5A5751;
   --text-primary: #FAFAFA;
   --text-secondary: #C4C4C4;
   --text-muted: #A1A1A1;
@@ -151,12 +151,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg-canvas: #090A0C;
-    --bg-surface: #171717;
-    --bg-subtle: #262626;
+    --bg-canvas: #0F0F0E;
+    --bg-surface: #1B1A18;
+    --bg-subtle: #282724;
     --bg-inverse: #FAFAFA;
-    --border-default: #3C3C3C;
-    --border-strong: #585858;
+    --border-default: #383632;
+    --border-strong: #5A5751;
     --text-primary: #FAFAFA;
     --text-secondary: #C4C4C4;
     --text-muted: #A1A1A1;

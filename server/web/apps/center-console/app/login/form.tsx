@@ -14,7 +14,7 @@ export function LoginForm({ note }: { note?: string }) {
       <form action={action} className="flex flex-col gap-4">
         <Field label="아이디" name="username" required autoComplete="username" autoCapitalize="none" />
         <Field label="비밀번호" name="password" type="password" required autoComplete="current-password" />
-        <Button type="submit" variant="primary" disabled={pending} className="self-end">
+        <Button type="submit" variant="primary" size="lg" disabled={pending} className="mt-2 w-full">
           {pending ? "확인 중..." : "로그인"}
         </Button>
       </form>

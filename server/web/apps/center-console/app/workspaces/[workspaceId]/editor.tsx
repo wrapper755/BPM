@@ -127,7 +127,10 @@ export function Workspace({
   const [showDetail, setShowDetail] = useState(true);
   const canvas = useRef<BpmnCanvasHandle>(null);
 
-  const editing = file !== null && canWrite && isEditable(file.path);
+  const wide = useWide();
+  // **좁은 화면에서는 보기만 한다** (ADR-0161 §6) — 그림·시험 결과는 보이고 고치기·돌리기는 넓은 화면의 것이다.
+  const canAct = canWrite && wide;
+  const editing = file !== null && canAct && isEditable(file.path);
   const shows = file ? opensWith(file.path) : null;
 
   /** 저장 안 한 것을 들고 떠나지 않게 브라우저에 묻게 한다 (U11 — 창을 닫는 길은 우리가 못 막는다). */
@@ -350,7 +353,7 @@ export function Workspace({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* [H] 머리 띠 — 지금 자리와 탭, 그리고 그 화면에서만 쓰는 것 (CON-00 [H]와 같은 결). */}
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-default bg-bg-surface px-5 py-3">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-default bg-bg-surface px-4 py-3 md:px-5">
         {/* 위 막대는 **메뉴가 쥐었다** (ADR-0152 §7) — 이 화면은 제 머리 띠에 지금 상태만 말한다. */}
         <p className="text-body-sm text-text-secondary">
           <span className="font-semibold text-text-primary">{info.name}</span>
@@ -375,7 +378,7 @@ export function Workspace({
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {canWrite ? (
+          {canAct ? (
             <Button
               variant="secondary"
               size="sm"
@@ -385,9 +388,9 @@ export function Workspace({
               실행 전 검사
             </Button>
           ) : null}
-          {canWrite ? <BuildButton workspaceId={info.id} onStarted={setBuild} /> : null}
+          {canAct ? <BuildButton workspaceId={info.id} onStarted={setBuild} /> : null}
           {/* 돌리는 중에는 「시험 실행...」 자리가 「중지」가 된다 (U5) — 단추를 둘 두지 않는다. */}
-          {canWrite ? (
+          {canAct ? (
             trial && isLive(trial.state) ? (
               <Button variant="secondary" size="sm" onClick={() => void stop()} disabled={trialBusy}>
                 중지
@@ -413,6 +416,12 @@ export function Workspace({
         </div>
       </header>
 
+      {wide ? null : (
+        <p className="border-b border-border-default bg-bg-subtle px-4 py-2 text-caption text-text-secondary">
+          좁은 화면에서는 보기만 합니다. 고치거나 시험 실행하려면 1024px보다 넓은 화면에서 여세요.
+        </p>
+      )}
+
       {build ? <BuildLine build={build} /> : null}
 
       {failure ? (
@@ -428,12 +437,12 @@ export function Workspace({
       <div className={tab === "저작" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
         <div className="flex min-h-0 flex-1">
         {/* [E] 탐색기 — 접힌다 (CON-20). 접어도 **여는 길이 남는다**. */}
-        {showFiles ? null : (
+        {showFiles || !wide ? null : (
           <Spine label="파일" onOpen={() => setShowFiles(true)} side="left" />
         )}
         <aside
           aria-label="파일"
-          hidden={!showFiles}
+          hidden={!showFiles || !wide}
           className="w-64 shrink-0 overflow-y-auto border-r border-border-default bg-bg-surface p-3"
         >
           {/* 탭 둘 — 「파일」과 「리소스」 (ADR-0155). 패널을 넷째로 늘리지 않는다. */}
@@ -513,7 +522,8 @@ export function Workspace({
             <BpmnCanvas
               key={file.path}
               ref={canvas}
-              mode={shows === "canvas" && canWrite ? "edit" : "view"}
+              // 좁은 화면은 보기만 — 단 **저장 안 한 변경이 있으면 내리지 않는다**(모드가 바뀌면 그림을 다시 읽어 그것을 잃는다).
+              mode={shows === "canvas" && canWrite && (wide || dirty) ? "edit" : "view"}
               xml={file.text}
               className="bpm-canvas"
               // 인자를 그대로 쓴다 — 캔버스는 **들인 뒤에 「아니다」라고도 말한다**(연 적밖에 없는
@@ -549,12 +559,12 @@ export function Workspace({
         </div>
 
         {/* [P] 상세 패널 — 고른 것 하나만 (STU-04). 접힌다. */}
-        {showDetail ? null : (
+        {showDetail || !wide ? null : (
           <Spine label="속성" onOpen={() => setShowDetail(true)} side="right" />
         )}
         <aside
           aria-label="속성"
-          hidden={!showDetail}
+          hidden={!showDetail || !wide}
           className="w-72 shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-3"
         >
           <div className="mb-2 flex items-center">
@@ -700,4 +710,20 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
       <dd className={mono ? "font-mono break-all" : "break-words"}>{value}</dd>
     </div>
   );
+}
+
+/**
+ * 화면이 1024px(`lg`) 이상인가 — 작업공간이 고칠 수 있는 폭이다 (ADR-0161 §6).
+ * 서버에서 그릴 때는 넓다고 본다(폭을 모른다) — 좁은 화면은 붙은 뒤 한 번 바뀐다.
+ */
+function useWide(): boolean {
+  const [wide, setWide] = useState(true);
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const note = () => setWide(query.matches);
+    note();
+    query.addEventListener("change", note);
+    return () => query.removeEventListener("change", note);
+  }, []);
+  return wide;
 }

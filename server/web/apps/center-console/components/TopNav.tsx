@@ -15,8 +15,11 @@ import { BpmMark } from "@bpm/ui";
  *
  * **줄이 하나인 묶음은 펼치지 않는다** — 「대시보드」·「저작」은 눌러서 바로 간다(펼쳐 봐야 같은 이름 하나다).
  *
+ * 묶음 여섯은 **알약 하나에 담긴 마디**이고 지금 자리의 묶음은 흰 알약이 떠 있다 (ADR-0161).
+ *
  * 좁은 화면(1024px 아래)에서는 여섯이 한 줄에 들어가지 않아 **단추 하나로 접고** 누르면 묶음·줄
- * 전부가 한 장에 펼쳐진다 — 결재함은 휴대폰에서도 답할 수 있어야 한다 (CON-00).
+ * 전부가 한 장에 펼쳐진다 — 결재함은 휴대폰에서도 답할 수 있어야 한다 (CON-00). 위 막대에서 접힌
+ * 「누구인지」(`who`)는 그 장의 맨 아래에 선다.
  */
 
 /** 탐색 한 줄. **아직 없는 화면에는 `href`가 없다** — 끄고 이유(`later`)를 말풍선에 보인다 (U3). */
@@ -29,7 +32,7 @@ export type NavGroup = { label: string; items: NavItem[] };
 /** 좁은 화면에서 **묶음 전부**를 한 장에 펼칠 때의 열쇠 — 묶음 이름과 겹치지 않는다. */
 const ALL = "\u0000all";
 
-export function TopNav({ groups, current }: { groups: NavGroup[]; current: string }) {
+export function TopNav({ groups, current, who }: { groups: NavGroup[]; current: string; who: string }) {
   const [open, setOpen] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
 
@@ -58,10 +61,10 @@ export function TopNav({ groups, current }: { groups: NavGroup[]; current: strin
       <Link
         href="/dashboard"
         title="첫 화면"
-        className="mr-1 flex shrink-0 items-center gap-2 rounded-md px-1 py-1 md:mr-3"
+        className="mr-1 flex shrink-0 items-center gap-2 rounded-md px-1 py-1 text-primary md:mr-4"
       >
-        <BpmMark className="h-5 w-auto" />
-        <span className="text-body font-bold tracking-wide">BPM</span>
+        <BpmMark className="h-6 w-auto" />
+        <span className="text-body-lg font-bold tracking-wide text-text-primary">BPM</span>
       </Link>
 
       {/* 좁은 화면 — 단추 하나. 누르면 묶음·줄 전부가 한 장에 뜬다. */}
@@ -71,14 +74,14 @@ export function TopNav({ groups, current }: { groups: NavGroup[]; current: strin
         aria-expanded={open === ALL}
         aria-label="메뉴"
         title="메뉴"
-        className="flex size-9 shrink-0 items-center justify-center rounded-md hover:bg-bg-subtle lg:hidden"
+        className="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-bg-subtle lg:hidden"
       >
         <Menu size={20} aria-hidden />
       </button>
 
       {/* 넓은 화면 — 묶음 여섯이 가로로. */}
       <nav aria-label="주요 탐색" className="hidden min-w-0 lg:block">
-        <ul className="flex list-none items-center gap-0.5 p-0">
+        <ul className="flex list-none items-center gap-0.5 rounded-full bg-bg-subtle p-1">
           {groups.map((group) => (
             <li key={group.label} className="relative">
               <Group
@@ -88,7 +91,7 @@ export function TopNav({ groups, current }: { groups: NavGroup[]; current: strin
                 onToggle={() => setOpen(open === group.label ? null : group.label)}
               />
               {open === group.label ? (
-                <div className="console-menu absolute top-full left-0 z-50 mt-1 w-72 rounded-lg border border-border-default p-2 shadow-md">
+                <div className="console-menu absolute top-full left-0 z-50 mt-2 w-72 rounded-xl border border-border-default p-2 shadow-md">
                   <Rows items={group.items} current={current} onGo={() => setOpen(null)} />
                 </div>
               ) : null}
@@ -99,7 +102,7 @@ export function TopNav({ groups, current }: { groups: NavGroup[]; current: strin
 
       {/* 좁은 화면의 한 장 — 묶음마다 이름 + 그 줄들. */}
       {open === ALL ? (
-        <div className="console-menu absolute top-full left-0 z-50 mt-1 max-h-[80vh] w-[min(20rem,calc(100vw-1rem))] overflow-y-auto rounded-lg border border-border-default p-2 shadow-md lg:hidden">
+        <div className="console-menu fixed inset-x-2 z-50 max-h-[80vh] overflow-y-auto rounded-xl border border-border-default p-2 shadow-md sm:absolute sm:inset-x-auto sm:top-full sm:left-0 sm:mt-2 sm:w-80 lg:hidden" style={{ top: "calc(var(--size-topbar-height) + 4px)" }}>
           {groups.map((group) => (
             <div key={group.label} className="mb-1">
               {/* 묶음과 줄의 이름이 같으면(「대시보드」) **묶음 머리를 그리지 않는다** — 같은 말이 두 줄이 된다. */}
@@ -109,13 +112,14 @@ export function TopNav({ groups, current }: { groups: NavGroup[]; current: strin
               <Rows items={group.items} current={current} onGo={() => setOpen(null)} />
             </div>
           ))}
+          <p className="mt-1 border-t border-border-default px-3 pt-2 pb-1 text-caption text-text-muted">{who}</p>
         </div>
       ) : null}
     </div>
   );
 }
 
-/** 묶음 하나 — **줄이 하나면 링크**, 여럿이면 펼치는 단추다. 지금 자리의 묶음은 `primary` 밑줄이다. */
+/** 묶음 하나 — **줄이 하나면 링크**, 여럿이면 펼치는 단추다. 지금 자리의 묶음은 흰 알약이다 (ADR-0161). */
 function Group({
   group,
   here,
@@ -127,16 +131,11 @@ function Group({
   open: boolean;
   onToggle: () => void;
 }) {
-  const shape = `flex items-center gap-1 rounded-md px-3 py-1.5 text-body-sm whitespace-nowrap hover:bg-bg-subtle${
-    here ? " font-semibold" : ""
-  }`;
-  const mark = here ? (
-    <span
-      aria-hidden
-      className="absolute inset-x-3 bottom-0 h-0.5 rounded-full"
-      style={{ backgroundColor: "var(--primary)" }}
-    />
-  ) : null;
+  const shape = `flex items-center gap-1 rounded-full px-3.5 py-1.5 text-body-sm whitespace-nowrap transition-colors${
+    here || open
+      ? " bg-bg-surface text-text-primary shadow-sm"
+      : " text-text-secondary hover:text-text-primary"
+  }${here ? " font-semibold" : ""}`;
 
   const only = group.items.length === 1 ? group.items[0] : null;
   if (only) {
@@ -150,14 +149,12 @@ function Group({
     }
     return (
       <Link href={only.href} className={shape} aria-current={here ? "true" : undefined}>
-        {mark}
         {group.label}
       </Link>
     );
   }
   return (
     <button type="button" onClick={onToggle} aria-expanded={open} className={shape}>
-      {mark}
       {group.label}
       <ChevronDown size={14} aria-hidden className={open ? "rotate-180" : undefined} />
     </button>
@@ -183,7 +180,7 @@ function Rows({
               href={item.href}
               onClick={onGo}
               aria-current={current === item.href ? "page" : undefined}
-              className={`block rounded-md px-3 py-2 hover:bg-bg-subtle${
+              className={`block rounded-lg px-3 py-2 hover:bg-bg-subtle${
                 current === item.href ? " bg-primary-subtle" : ""
               }`}
             >
@@ -197,7 +194,7 @@ function Rows({
           </li>
         ) : (
           <li key={item.label}>
-            <span className="block rounded-md px-3 py-2 text-text-muted" title={item.later}>
+            <span className="block rounded-lg px-3 py-2 text-text-muted" title={item.later}>
               <span className="flex items-center justify-between text-body-sm">
                 {item.label}
                 <span className="text-caption">아직</span>

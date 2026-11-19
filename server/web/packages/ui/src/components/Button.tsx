@@ -13,7 +13,7 @@ export type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary: "bg-primary text-primary-fg hover:bg-primary-hover border border-transparent",
-  secondary: "bg-bg-surface text-text-primary border border-border-strong hover:bg-bg-subtle",
+  secondary: "bg-bg-surface text-text-primary border border-border-default shadow-sm hover:bg-bg-subtle",
   ghost: "bg-transparent text-text-primary border border-transparent hover:bg-bg-subtle",
   danger: "bg-status-failed-solid text-danger-fg hover:brightness-95 border border-transparent",
 };
@@ -51,7 +51,7 @@ export function Button({
       style={{ height: HEIGHT[size], borderRadius: "var(--radius-md)" }}
       className={cn(
         "inline-flex items-center justify-center gap-2 px-4 text-body font-medium whitespace-nowrap",
-        "transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        "transition-[color,background-color,transform] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100",
         VARIANT[variant],
         className,
       )}

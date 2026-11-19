@@ -52,7 +52,7 @@ export default async function NewDeploymentPage({
       {failure ? <ErrorBanner message={failure} /> : null}
 
       <form className="filter-card flex flex-wrap items-end gap-3" method="get">
-        <label className="flex flex-col gap-1 text-body-sm">
+        <label className="flex max-w-full min-w-0 flex-col gap-1 text-body-sm">
           <span className="text-text-muted">프로세스@버전 (승인된 것)</span>
           <select name="bot" defaultValue={bot} className={FIELD}>
             <option value="">(고르세요)</option>
