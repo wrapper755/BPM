@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
+import { ActionMenu, Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
 import { approvePackage, deprecatePackage, revokePackage, type ActionResult } from "@/app/actions";
 
 /**
@@ -61,6 +61,7 @@ export function PackageActions({
   status,
   place,
   onDone,
+  compact,
 }: {
   packageId: string;
   version: string;
@@ -72,17 +73,29 @@ export function PackageActions({
   place?: string;
   /** 확인 창이 닫힌 뒤 — 메뉴를 닫는 데 쓴다. */
   onDone?: () => void;
+  /**
+   * **표의 줄**에서는 단추 대신 「⋯」 메뉴 하나다 (ADR-0164 — 줄마다 빨간 「승인 철회...」가 열다섯 번
+   * 서면 그것이 화면에서 가장 큰 소리였다). 상세 화면은 단추 그대로다(영역에 하나라서다).
+   */
+  compact?: boolean;
 }) {
   const [asking, setAsking] = useState<Ask | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
   const asks = asksFor(status);
-  if (asks.length === 0) return <span className="text-text-muted">—</span>;
+  if (asks.length === 0) return compact ? null : <span className="text-text-muted">—</span>;
   const shown = asking ? ASK[asking] : null;
 
   return (
     <div className="flex flex-col gap-1">
+      {compact ? (
+        <ActionMenu
+          label={`${packageId} ${version} 동작`}
+          disabled={pending}
+          items={asks.map((one) => ({ label: ASK[one].label, danger: ASK[one].danger, onSelect: () => setAsking(one) }))}
+        />
+      ) : (
       <div className="flex gap-2 whitespace-nowrap">
         {asks.map((one) => (
           <Button
@@ -96,6 +109,7 @@ export function PackageActions({
           </Button>
         ))}
       </div>
+      )}
       {error ? <ErrorBanner message={error} /> : null}
       <ConfirmDialog
         open={shown !== null}

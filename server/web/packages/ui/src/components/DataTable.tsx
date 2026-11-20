@@ -151,11 +151,14 @@ export function DataTable<T>({
   );
 }
 
-/** 카드에서 뺄 「값 없음」 — 빈 것, 「—」 글자, 「—」만 든 조각(`<>—</>`). */
+/**
+ * 카드에서 뺄 「값 없음」 — 빈 것, 「—」 글자, 「—」만 든 조각이나 꾸민 글자(`<>—</>`, `<span …>—</span>`).
+ * 단추·링크처럼 **제 할 일이 있는 요소**는 비어 보여도 남긴다 — 글자만 감싼 `span`만 들여다본다.
+ */
 function isBlank(node: ReactNode): boolean {
   if (node === null || node === undefined || node === false) return true;
   if (typeof node === "string") return node.trim() === "" || node.trim() === "—";
-  if (isValidElement<{ children?: ReactNode }>(node) && typeof node.type === "symbol") {
+  if (isValidElement<{ children?: ReactNode }>(node) && (typeof node.type === "symbol" || node.type === "span")) {
     return isBlank(node.props.children);
   }
   return false;

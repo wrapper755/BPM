@@ -14,7 +14,7 @@ export default async function NotFound() {
       title="찾을 수 없는 화면입니다"
       hint="주소가 틀렸거나 지워진 것입니다. 메뉴에서 다시 고르세요."
       action={
-        <Link href={found ? "/dashboard" : "/login"} className="text-primary underline">
+        <Link href={found ? "/dashboard" : "/login"} className="text-primary hover:underline">
           {found ? "대시보드로" : "로그인으로"}
         </Link>
       }

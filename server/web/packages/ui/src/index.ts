@@ -15,6 +15,8 @@ export { ConfirmDialog, Dialog, type ConfirmDialogProps, type DialogProps } from
 export { EmptyState, type EmptyStateProps } from "./components/EmptyState";
 export { ErrorBanner, type ErrorBannerProps } from "./components/ErrorBanner";
 export { InfoTip, type InfoTipProps } from "./components/InfoTip";
+export { ActionMenu, type ActionMenuItem, type ActionMenuProps } from "./components/ActionMenu";
 export { STATUS_MAP, STATUS_TOKENS, statusToken, type StatusGroup, type StatusToken } from "./status-map";
 export { BpmMark, BpmSymbol } from "./bpm-mark";
+export { AppTile } from "./app-tile";
 export { cn } from "./cn";

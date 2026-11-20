@@ -173,7 +173,7 @@ export default async function ConnectedAppPage({
       <EmptyState
         title={`연결된 앱이 아닙니다: ${id}`}
         action={
-          <Link className="underline" href="/connected-apps">
+          <Link className="font-medium text-text-primary hover:text-primary" href="/connected-apps">
             연결 앱 목록으로
           </Link>
         }

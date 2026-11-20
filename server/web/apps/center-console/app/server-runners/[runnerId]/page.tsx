@@ -108,13 +108,13 @@ export default async function ServerRunnerPage({
       width: "30ch",
       mono: true,
       cell: (row) => (
-        <Link className="underline" href={`/runs/${encodeURIComponent(row.run_id)}`}>
+        <Link className="font-medium text-text-primary hover:text-primary" href={`/runs/${encodeURIComponent(row.run_id)}`}>
           {row.run_id}
         </Link>
       ),
     },
     { key: "bpm_process_id", header: "서버 프로세스" },
-    { key: "version", header: "버전", width: "10ch", mono: true },
+    { key: "version", header: "버전", width: "10ch" },
     // 「현재 노드」는 보고가 늦으면 비어 있다 — 0이나 빈 글로 꾸미지 않는다.
     { key: "node_id", header: "현재 노드", width: "20ch", mono: true, cell: (row) => row.node_id ?? "—" },
     { key: "started_at", header: "시작", width: "16ch", cell: (row) => time(row.started_at) },
@@ -134,7 +134,7 @@ export default async function ServerRunnerPage({
       width: "30ch",
       mono: true,
       cell: (row) => (
-        <Link className="underline" href={`/runs/${encodeURIComponent(row.run_id)}`}>
+        <Link className="font-medium text-text-primary hover:text-primary" href={`/runs/${encodeURIComponent(row.run_id)}`}>
           {row.run_id}
         </Link>
       ),
@@ -156,14 +156,14 @@ export default async function ServerRunnerPage({
       cell: (row) => {
         if (row.waiting_for === "approval" && row.request_id) {
           return (
-            <Link className="underline" href={`/approvals/${encodeURIComponent(row.request_id)}`}>
+            <Link className="font-medium text-text-primary hover:text-primary" href={`/approvals/${encodeURIComponent(row.request_id)}`}>
               결재함
             </Link>
           );
         }
         if (row.waiting_for === "delegation" && row.job_id) {
           return (
-            <Link className="underline" href={`/jobs/${encodeURIComponent(row.job_id)}`}>
+            <Link className="font-medium text-text-primary hover:text-primary" href={`/jobs/${encodeURIComponent(row.job_id)}`}>
               작업
             </Link>
           );
@@ -175,7 +175,7 @@ export default async function ServerRunnerPage({
 
   const limitColumns: Array<Column<(typeof limits)[number]>> = [
     { key: "bot", header: "서버 프로세스" },
-    { key: "version", header: "배포 버전", width: "12ch", mono: true },
+    { key: "version", header: "배포 버전", width: "12ch" },
     {
       key: "limit",
       header: "상한",
@@ -207,7 +207,7 @@ export default async function ServerRunnerPage({
 
   const extensionColumns: Array<Column<(typeof extensions)[number]>> = [
     { key: "id", header: "확장", mono: true },
-    { key: "version", header: "버전", width: "12ch", mono: true },
+    { key: "version", header: "버전", width: "12ch" },
     {
       key: "enabled",
       header: "상태",

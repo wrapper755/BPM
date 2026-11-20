@@ -102,7 +102,7 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
       header: "이름",
       cell: (row) => (
         <Link className="flex flex-col py-1" href={connectedAppHref(row.app.id)}>
-          <span className="underline">{row.app.name}</span>
+          <span className="font-medium text-text-primary hover:text-primary">{row.app.name}</span>
           <span className="font-mono text-caption text-text-muted">{row.app.id}</span>
         </Link>
       ),
@@ -130,7 +130,7 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
       ),
     },
     { key: "kinds", header: "종류", width: "10ch", cell: (row) => kindsLabel(row.app.kinds) },
-    { key: "version", header: "버전", width: "10ch", mono: true, cell: (row) => row.app.version ?? "—" },
+    { key: "version", header: "버전", width: "10ch", cell: (row) => row.app.version ?? "—" },
     {
       key: "workers",
       header: "맡은 일꾼",

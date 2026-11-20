@@ -1,4 +1,4 @@
-import { BpmMark } from "@bpm/ui";
+import { AppTile } from "@bpm/ui";
 import { safeNext } from "@/lib/next-path";
 import { LoginForm } from "./form";
 
@@ -20,13 +20,13 @@ export default async function LoginPage({
   const { changed, next } = await searchParams;
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 py-10">
-      <div className="flex w-full max-w-[400px] flex-col gap-6 rounded-xl border border-border-default bg-bg-surface p-6 shadow-md sm:p-8">
-        <h1 className="flex flex-col items-center gap-3">
-          <span className="flex h-14 items-center justify-center rounded-lg bg-primary-subtle px-4 text-primary">
-            <BpmMark className="h-7 w-auto" />
-          </span>
-          <span className="text-h2 font-bold tracking-wide">BPM</span>
-        </h1>
+      <div className="flex w-full max-w-[400px] flex-col gap-6 rounded-xl border border-border-default bg-bg-surface p-6 shadow-sm sm:p-8">
+        {/* 앱 타일 + 제목 + 한 줄 (ADR-0164). */}
+        <div className="flex flex-col gap-1">
+          <AppTile size="lg" className="mb-3" />
+          <h1 className="text-h2 font-semibold text-text-primary">BPM에 로그인</h1>
+          <p className="text-body-sm text-text-muted">관리자 계정으로 들어오세요</p>
+        </div>
         <LoginForm
           note={changed === "1" ? "비밀번호를 바꿨습니다. 새 비밀번호로 들어오세요." : undefined}
           next={safeNext(next) ?? undefined}

@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 대체됨([ADR-0164](0164-neutral-pro.md) — 상태 색은 맑게, 대신 점으로만) |
 | 날짜 | 2026-11-16 |
 | 관련 | [ADR-0119](0119-match-nowview-style.md)(브랜드 색), [ADR-0118](0118-no-product-name-on-screens.md)(마크·토큰), `docs/07-style-guide.md` §2-2 |
 

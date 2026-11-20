@@ -174,8 +174,8 @@ def web_css(tokens: dict[str, Any]) -> str:
     lines.append("  /* 간격·둥글기·크기 */")
     for group in ("space", "radius", "size"):
         for key, value in tokens[group].items():
-            unit = "" if (group == "radius" and key == "full") else "px"
-            lines.append(f"  {css_var(group + '.' + str(key))}: {value}{unit};")
+            # 모두 px다 — `radius.full`도. 단위 없는 `9999`는 브라우저가 버려 둥근 것이 모두 네모였다 (ADR-0164).
+            lines.append(f"  {css_var(group + '.' + str(key))}: {value}px;")
     lines.append("")
     lines.append("  /* 그림자·움직임 */")
     for key, value in tokens["shadow"].items():

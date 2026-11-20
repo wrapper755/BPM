@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 일부 대체됨([ADR-0164](0164-neutral-pro.md) — 바탕색·위 막대 모양. 반응형·카드 목록은 그대로) |
 | 날짜 | 2026-11-20 |
 | 관련 | 화면 CON-00(틀·로그인), `docs/07-style-guide.md`, `design/tokens.json`, [ADR-0017](0017-web-nextjs-design-system.md)(Tailwind — **그대로 산다**), [ADR-0152](0152-console-chrome-is-one-top-bar.md)(위 막대 하나 — **구조는 그대로**, 짙은 틀만 이 결정이 대체한다), [ADR-0154](0154-the-login-band-is-mark-and-name.md)(로그인 띠 — 이 결정이 대체한다), [ADR-0157](0157-status-colours-stay-under-the-brand.md)(상태 색 — **그대로 산다**) |
 

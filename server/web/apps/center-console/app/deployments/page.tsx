@@ -129,7 +129,7 @@ export default async function DeploymentsPage({
         <h1 className="text-h2 font-bold">배포</h1>
         <div className="flex items-center gap-3">
           <Link
-            className="text-body-sm text-text-secondary underline"
+            className="text-body-sm text-text-secondary hover:text-primary"
             href={(showAll ? "/deployments" : "/deployments?all=1") as Route}
           >
             {showAll ? "살아 있는 것만" : "철회된 것도 보기"}

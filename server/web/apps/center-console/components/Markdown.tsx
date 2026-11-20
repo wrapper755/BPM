@@ -55,7 +55,7 @@ function inline(parts: Inline[]): ReactNode[] {
         return <code key={n} className="rounded-sm bg-bg-subtle px-1 font-mono text-body-sm">{part.text}</code>;
       case "link":
         return (
-          <a key={n} href={part.href} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+          <a key={n} href={part.href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
             {inline(part.children)}
           </a>
         );

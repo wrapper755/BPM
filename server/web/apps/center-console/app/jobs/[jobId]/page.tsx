@@ -83,7 +83,7 @@ export default async function JobPage({
             <Row label="프로세스">{botLabel(job)}</Row>
             <Row label="요청자">
               {from ? (
-                <Link className="underline" href={`/runs/${encodeURIComponent(from)}`}>
+                <Link className="font-medium text-text-primary hover:text-primary" href={`/runs/${encodeURIComponent(from)}`}>
                   서버 프로세스 ({from})
                 </Link>
               ) : (
@@ -95,7 +95,7 @@ export default async function JobPage({
             <Row label="전달 시각">{time(job.dispatched_at)}</Row>
             <Row label="실행 id">
               {job.run_id ? (
-                <Link className="font-mono underline" href={`/runs/${encodeURIComponent(job.run_id)}`}>
+                <Link className="font-mono text-text-secondary hover:text-primary" href={`/runs/${encodeURIComponent(job.run_id)}`}>
                   {job.run_id}
                 </Link>
               ) : (

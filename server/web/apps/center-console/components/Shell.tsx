@@ -124,10 +124,14 @@ export async function Shell({
   return (
     <div className="min-h-screen">
       {/* [A] 위 막대 — 마크·메뉴·누구인지. **틀은 이것 하나다.** 바탕과 같은 결의 흰 면에 아래 선 하나 (ADR-0161). */}
+      {/* 띠는 화면 폭 전체, **안쪽은 본문과 같은 최대 폭·같은 여백**이다 — 마크의 왼쪽 끝이 본문 제목과
+          줄이 맞는다 (ADR-0164 — 로고가 화면 끝에, 본문이 가운데에 따로 떠 있었다). 바탕은 칠한 면이다
+          (흐림 효과는 고정 위치로 펴는 메뉴·설명의 기준을 바꿔 걷었다). */}
       <header
-        className="fixed inset-x-0 top-0 z-40 flex items-center gap-2 border-b border-border-default bg-bg-surface/90 px-3 backdrop-blur md:gap-3 md:px-6"
+        className="fixed inset-x-0 top-0 z-40 border-b border-border-default bg-bg-surface"
         style={{ height: "var(--size-topbar-height)" }}
       >
+        <div className="mx-auto flex h-full w-full max-w-[1440px] items-center gap-2 px-4 md:gap-3 md:px-6 lg:px-8">
         <TopNav groups={groups} current={current} who={who} />
         {open ? (
           <span className="inline-flex shrink-0 items-center">
@@ -174,6 +178,7 @@ export async function Shell({
             <span className="hidden sm:inline">로그아웃</span>
           </Button>
         </form>
+        </div>
       </header>
 
       <main

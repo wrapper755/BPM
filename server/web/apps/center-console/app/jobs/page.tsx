@@ -87,7 +87,7 @@ export default async function JobsPage({
       width: "14ch",
       mono: true,
       cell: (row) => (
-        <Link className="underline" href={`/jobs/${encodeURIComponent(row.job_id)}`}>
+        <Link className="font-medium text-text-primary hover:text-primary" href={`/jobs/${encodeURIComponent(row.job_id)}`}>
           {row.job_id}
         </Link>
       ),
@@ -106,7 +106,7 @@ export default async function JobsPage({
       cell: (row) => {
         const from = delegatedFrom(row);
         return from ? (
-          <Link className="underline" href={`/runs/${encodeURIComponent(from)}`}>
+          <Link className="font-medium text-text-primary hover:text-primary" href={`/runs/${encodeURIComponent(from)}`}>
             서버 프로세스 ({from})
           </Link>
         ) : (
@@ -123,7 +123,7 @@ export default async function JobsPage({
       mono: true,
       cell: (row) =>
         row.run_id ? (
-          <Link className="underline" href={`/runs/${encodeURIComponent(row.run_id)}`}>
+          <Link className="font-medium text-text-primary hover:text-primary" href={`/runs/${encodeURIComponent(row.run_id)}`}>
             {row.run_id}
           </Link>
         ) : (

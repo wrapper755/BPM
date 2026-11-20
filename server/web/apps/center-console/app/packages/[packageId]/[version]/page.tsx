@@ -127,12 +127,12 @@ export async function PackageDetail({
       header: "id",
       mono: true,
       cell: (row) => (
-        <Link className="underline" href={packageHref(row)}>
+        <Link className="font-medium text-text-primary hover:text-primary" href={packageHref(row)}>
           {row.id}
         </Link>
       ),
     },
-    { key: "version", header: "버전", width: "12ch", mono: true },
+    { key: "version", header: "버전", width: "12ch" },
     { key: "kind", header: "종류", width: "16ch", cell: (row) => KIND_LABEL[row.kind] ?? row.kind },
     { key: "name", header: "이름", cell: (row) => row.name ?? "—" },
     {
