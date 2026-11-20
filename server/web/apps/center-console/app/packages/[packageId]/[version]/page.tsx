@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { DataTable, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import { DataTable, ErrorBanner, MetaList, Section, StatusBadge, type Column } from "@bpm/ui";
 import type { PackageInfo } from "@bpm/api-types/c5-package-info";
 import type { DependentInfo } from "@bpm/api-types/c5-dependent-info";
 import type { ProvidedProcess } from "@bpm/api-types/c1-manifest";
@@ -44,6 +44,12 @@ function requirements(info: PackageInfo): Array<[string, string]> {
     ["OS", (requires.os ?? []).join(", ")],
   ];
   return rows.filter(([, value]) => value !== "");
+}
+
+/** 내용 해시는 앞 12자만 — 「sha256:」 뒤를 줄인다. 전체는 말풍선이다. */
+function shortHash(hash: string): string {
+  const body = hash.replace(/^sha256:/, "");
+  return body.length > 12 ? `${body.slice(0, 12)}…` : body;
 }
 
 /** 사람 개입을 한 줄로. 아무것도 없으면 「없음」이다. */
@@ -155,133 +161,134 @@ export async function PackageDetail({
     },
   ];
 
+  const admin = found.mode === "admin";
+  const requires = info ? requirements(info) : [];
+  const missing = info?.missing_resources ?? [];
+
   return (
     <Shell mode={found.mode} actor={found.actor} current={area === "process" ? "/bots" : "/packages"}>
-      <header className="mb-4">
+      {/* 결재함 상세(CON-04)와 같은 모양 — 단추는 제목 오른쪽, 칠한 위험 단추는 확인 창 안에만 (ADR-0164). */}
+      <header>
         <h1 className="text-h2 font-bold">
-          {info?.name ?? packageId} <span className="font-mono text-h2">{version}</span>
+          {info?.name ?? packageId} <span className="font-normal text-text-secondary">v{version}</span>
         </h1>
+        {admin && info ? (
+          <div className="flex flex-wrap items-start justify-end gap-2">
+            <PackageActions
+              packageId={info.id}
+              version={info.version}
+              status={info.status}
+              place={placeLine(company, place ?? "—")}
+            />
+            <DeletePackage packageId={info.id} version={info.version} back={area === "process" ? "/bots" : "/packages"} />
+          </div>
+        ) : null}
       </header>
 
       {failure ? <ErrorBanner message={failure} /> : null}
 
       {info ? (
-        <div className="flex flex-col gap-6">
-          <section className="flex flex-col gap-2">
-            <h2 className="text-h2 font-semibold">요약</h2>
-            <dl className="meta-grid">
-              <dt className="text-text-muted">id</dt>
-              <dd className="font-mono">{info.id}</dd>
-              <dt className="text-text-muted">종류</dt>
-              <dd>{KIND_LABEL[info.kind] ?? info.kind}</dd>
-              <dt className="text-text-muted">상태</dt>
-              <dd>
-                <StatusBadge group="패키지" label={STATUS_LABEL[info.status] ?? info.status} />
-              </dd>
-              <dt className="text-text-muted">내용 해시</dt>
-              <dd className="truncate font-mono">{info.content_hash}</dd>
-              <dt className="text-text-muted">올린 시각</dt>
-              <dd>{time(info.uploaded_at)}</dd>
-              <dt className="text-text-muted">올린 이</dt>
-              <dd>{info.uploaded_by}</dd>
-              <dt className="text-text-muted">회사</dt>
-              <dd>{company ?? "—"}</dd>
-              {place ? (
-                <>
-                  <dt className="text-text-muted">업무 자리</dt>
-                  <dd>{place}</dd>
-                </>
-              ) : null}
-              <dt className="text-text-muted">승인</dt>
-              <dd>
-                {/* 사람이 서명하던 때의 승인에는 계정이 없다 — 서명 키만 남아 있다 (ADR-0090). */}
-                {info.signed_by
-                  ? `${info.approved_by ?? `서명 키 ${info.signed_by}`} · ${time(info.signed_at)}`
-                  : "아직"}
-              </dd>
-              <dt className="text-text-muted">내려받기</dt>
-              <dd>
-                {info.download_count
-                  ? `${info.download_count}회 · 마지막 ${time(info.last_downloaded_at)}`
-                  : "아직 없음"}
-              </dd>
-            </dl>
-            {info.manifest?.description ? (
-              <p className="text-body text-text-secondary">{info.manifest.description}</p>
-            ) : null}
-            {(info.missing_resources ?? []).length > 0 ? (
-              <p className="text-body-sm text-text-muted">
-                누락 리소스:{" "}
-                {(info.missing_resources ?? [])
+        // 넓은 화면은 본문(왼쪽) + 요약(오른쪽), 좁은 화면은 요약이 먼저다 (CON-04 상세와 같은 결).
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <aside className="flex flex-col gap-5 lg:sticky lg:top-[calc(var(--size-topbar-height)+1.5rem)] lg:order-2">
+            <Section title="요약">
+              <MetaList
+                items={[
+                  ["상태", <StatusBadge key="s" group="패키지" label={STATUS_LABEL[info.status] ?? info.status} />],
+                  ["종류", KIND_LABEL[info.kind] ?? info.kind],
+                  ["id", <span key="i" className="font-mono">{info.id}</span>],
+                  ["회사", company ?? "—"],
+                  ...(place ? ([["업무 자리", place]] as Array<[string, string]>) : []),
+                  ["올린 이", info.uploaded_by],
+                  ["올린 시각", time(info.uploaded_at)],
+                  [
+                    "승인",
+                    // 사람이 서명하던 때의 승인에는 계정이 없다 — 서명 키만 남아 있다 (ADR-0090).
+                    info.signed_by
+                      ? `${info.approved_by ?? `서명 키 ${info.signed_by}`} · ${time(info.signed_at)}`
+                      : "아직",
+                  ],
+                  [
+                    "내려받기",
+                    info.download_count
+                      ? `${info.download_count}회 · 마지막 ${time(info.last_downloaded_at)}`
+                      : "아직 없음",
+                  ],
+                  [
+                    "내용 해시",
+                    // 줄인 값의 전체는 말풍선에 (U20 — 줄인 id의 전체는 말풍선에 둘 수 있다).
+                    <span key="h" className="font-mono" title={info.content_hash}>
+                      {shortHash(info.content_hash)}
+                    </span>,
+                  ],
+                ]}
+              />
+            </Section>
+          </aside>
+
+          <div className="flex min-w-0 flex-col gap-5 lg:order-1">
+            {missing.length > 0 ? (
+              <ErrorBanner
+                message={`필요한 리소스가 Center에 없습니다 (배포 시 거부됨): ${missing
                   .map((one) => `${one.type} ${one.id} (${one.reason})`)
-                  .join(", ")}
-              </p>
+                  .join(", ")}`}
+              />
             ) : null}
-          </section>
 
-          <section className="flex flex-col gap-2">
-            <h2 className="text-h2 font-semibold">실행 요구</h2>
-            {requirements(info).length === 0 ? (
-              <p className="text-body-sm text-text-muted">요구하는 것이 없습니다.</p>
-            ) : (
-              <dl className="grid grid-cols-[12ch_1fr] gap-x-6 gap-y-1 text-body">
-                {requirements(info).map(([label, value]) => (
-                  <div key={label} className="contents">
-                    <dt className="text-text-muted">{label}</dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-          </section>
+            {info.manifest?.description ? (
+              <Section title="설명">
+                <p className="max-w-[72ch] text-body leading-relaxed">{info.manifest.description}</p>
+              </Section>
+            ) : null}
 
-          {info.kind === "process_lib" ? (
-            <section className="flex flex-col gap-2">
-              <h2 className="text-h2 font-semibold">제공 정의</h2>
-              {!provides ? (
-                <p className="text-body-sm text-text-muted">매니페스트에 `provides`가 없습니다.</p>
-              ) : (provides.processes ?? []).length === 0 ? (
-                <p className="text-body-sm text-text-muted">제공하는 정의가 없습니다.</p>
+            <Section title="실행 요구">
+              {requires.length === 0 ? (
+                <p className="text-body-sm text-text-muted">요구하는 것이 없습니다.</p>
               ) : (
-                <DataTable
-                  columns={processColumns}
-                  rows={provides.processes ?? []}
-                  rowKey={(row) => row.process_id}
-                  caption="제공 정의"
-                />
+                <dl className="m-0 grid grid-cols-[12ch_1fr] gap-x-6 gap-y-2 text-body">
+                  {requires.map(([label, value]) => (
+                    <div key={label} className="contents">
+                      <dt className="text-text-muted">{label}</dt>
+                      <dd className="m-0 min-w-0 break-words">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
               )}
-            </section>
-          ) : null}
+            </Section>
 
-          {/* BPM 프로세스를 참조하는 패키지는 없다 — `requires.libs`는 공유 BPM 프로세스만 가리킨다. */}
-          {area === "package" ? (
-          <section className="flex flex-col gap-2">
-            <h2 className="text-h2 font-semibold">이 패키지를 쓰는 패키지</h2>
-            {users.length === 0 ? (
-              <p className="text-body-sm text-text-muted">아직 없습니다.</p>
-            ) : (
-              <DataTable
-                columns={dependentColumns}
-                rows={users}
-                rowKey={(row) => `${row.id}@${row.version}:${row.relation}`}
-                caption="이 패키지를 쓰는 패키지"
-              />
-            )}
-          </section>
-          ) : null}
+            {info.kind === "process_lib" ? (
+              <Section title="제공 정의">
+                {!provides ? (
+                  <p className="text-body-sm text-text-muted">매니페스트에 `provides`가 없습니다.</p>
+                ) : (provides.processes ?? []).length === 0 ? (
+                  <p className="text-body-sm text-text-muted">제공하는 정의가 없습니다.</p>
+                ) : (
+                  <DataTable
+                    columns={processColumns}
+                    rows={provides.processes ?? []}
+                    rowKey={(row) => row.process_id}
+                    caption="제공 정의"
+                  />
+                )}
+              </Section>
+            ) : null}
 
-          {found.mode === "admin" ? (
-            <section className="flex flex-col gap-3">
-              <h2 className="text-h2 font-semibold">관리</h2>
-              <PackageActions
-                packageId={info.id}
-                version={info.version}
-                status={info.status}
-                place={placeLine(company, place ?? "—")}
-              />
-              <DeletePackage packageId={info.id} version={info.version} back={area === "process" ? "/bots" : "/packages"} />
-            </section>
-          ) : null}
+            {/* BPM 프로세스를 참조하는 패키지는 없다 — `requires.libs`는 공유 BPM 프로세스만 가리킨다. */}
+            {area === "package" ? (
+              <Section title="이 패키지를 쓰는 패키지">
+                {users.length === 0 ? (
+                  <p className="text-body-sm text-text-muted">아직 없습니다.</p>
+                ) : (
+                  <DataTable
+                    columns={dependentColumns}
+                    rows={users}
+                    rowKey={(row) => `${row.id}@${row.version}:${row.relation}`}
+                    caption="이 패키지를 쓰는 패키지"
+                  />
+                )}
+              </Section>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </Shell>

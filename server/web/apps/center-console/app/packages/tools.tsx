@@ -26,8 +26,9 @@ export function DeletePackage({
   const router = useRouter();
 
   return (
-    <div className="flex flex-col gap-2">
-      <Button variant="danger" disabled={pending} onClick={() => setAsking(true)}>
+    // 상세의 제목 오른쪽에 선다 — **칠하지 않는다** (ADR-0164, CON-04 「회수...」와 같은 결).
+    <div className="flex flex-col items-end gap-2">
+      <Button variant="danger-quiet" size="sm" disabled={pending} onClick={() => setAsking(true)}>
         삭제...
       </Button>
       {error ? <ErrorBanner message={error} /> : null}
