@@ -65,7 +65,7 @@ export function TopNav({ groups, current, who }: { groups: NavGroup[]; current: 
       >
         {/* 앱 타일 — `primary` 둥근 정사각에 흰 기호 (ADR-0164). 24에 「BPM」 16이 짝이다 (ADR-0166). */}
         <AppTile />
-        <span className="text-body-lg leading-none font-semibold tracking-tight text-text-primary">BPM</span>
+        <span className="text-body-lg leading-none font-bold tracking-tight text-text-primary">BPM</span>
       </Link>
 
       {/* 좁은 화면 — 단추 하나. 누르면 묶음·줄 전부가 한 장에 뜬다. */}
@@ -132,8 +132,9 @@ function Group({
   open: boolean;
   onToggle: () => void;
 }) {
-  // 밑줄은 막대의 아래 선에 붙는다(안쪽 그림자 2px) — 묶음의 높이가 막대 전체다.
-  const shape = `flex h-full items-center gap-1 px-3 text-body-sm whitespace-nowrap transition-colors${
+  // 밑줄은 막대의 아래 선에 붙는다(안쪽 그림자 2px) — 묶음의 높이가 막대 전체다. 글자는 14 — 막대는 화면의
+  // 제목 줄이라 본문 보조 글(13)보다 작아 보였다 (ADR-0167).
+  const shape = `flex h-full items-center gap-1 px-3 text-body whitespace-nowrap transition-colors${
     here
       ? " font-semibold text-text-primary shadow-[inset_0_-2px_0_var(--primary)]"
       : open

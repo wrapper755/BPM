@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { DataTable, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import { DataTable, ErrorBanner, StatusBadge, readPaging, type Column } from "@bpm/ui";
 import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
@@ -107,6 +107,8 @@ export default async function RunsPage({
     bpm_process_id?: string;
     runner_id?: string;
     limit?: string;
+    page?: string;
+    size?: string;
   }>;
 }) {
   const found = await session();
@@ -268,6 +270,16 @@ export default async function RunsPage({
             rows={rows}
             rowKey={(row) => row.run_id}
             caption="실행 목록"
+            // 「최근 n건」이 500까지라 쪽은 주소에 — 콘솔 서버가 그 쪽만 그린다 (ADR-0167).
+            paging={{
+              ...readPaging(query),
+              query: {
+                status: query.status,
+                bpm_process_id: query.bpm_process_id,
+                runner_id: query.runner_id,
+                limit: query.limit,
+              },
+            }}
             empty={{
               title: "조건에 맞는 실행이 없습니다.",
               hint: "Studio 시험 실행이나 서버 실행기가 보낸 기록이 여기 쌓입니다.",

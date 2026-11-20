@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 일부 대체됨([ADR-0167](0167-page-size-and-pages-on-the-server.md) — §1 글자 13 → 14, §3 10줄 → 줄 수 고르기·기본 20) |
 | 날짜 | 2026-11-20 |
 | 관련 | 화면 CON-00 [A]·[B], [ADR-0165](0165-lists-filter-as-you-go-and-page.md) §4(20줄 — **이 결정이 10줄로 바꾼다**), [ADR-0164](0164-neutral-pro.md)(앱 타일·위 막대), [ADR-0152](0152-console-chrome-is-one-top-bar.md) |
 

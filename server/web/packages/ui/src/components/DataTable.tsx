@@ -2,6 +2,7 @@ import { isValidElement, type ReactNode } from "react";
 import { cn } from "../cn";
 import { EmptyState } from "./EmptyState";
 import { Paged } from "./Paged";
+import { PAGE_SIZE, type Paging } from "./paging";
 
 /**
  * 표 (스타일 가이드 §3).
@@ -14,9 +15,10 @@ import { Paged } from "./Paged";
  *   두 모양을 함께 그리고 CSS로 하나만 보인다 — 서버에서 그리는 화면이 많아 폭을 JS로 재지 않는다.
  *   머리가 빈 열(단추 열 등)은 이름 없이 카드 맨 아래에 선다. **값이 없는 줄(「—」·빈 칸)은 카드에 그리지
  *   않는다** (H8, ADR-0162) — 표는 열이 맞아야 해서 그대로 두지만 카드에서는 「—」 줄이 대여섯이었다.
- * - **10줄씩 쪽으로 나눈다** (ADR-0165·0166) — 줄은 여기서(서버에서도) 다 그리고, 어느 쪽을 보일지는 `Paged`
- *   (브라우저)가 고른다. 칸 그리는 함수는 브라우저로 넘길 수 없어서 **그린 줄**을 넘긴다. 받은 줄이 바뀌면
- *   (거르기) 첫 쪽이다.
+ * - **쪽으로 나눈다** (ADR-0165·0167, 기본 20줄·고를 수 있다) — 줄은 여기서(서버에서도) 다 그리고, 어느 쪽을
+ *   보일지는 `Paged`(브라우저)가 고른다. 칸 그리는 함수는 브라우저로 넘길 수 없어서 **그린 줄**을 넘긴다. 받은
+ *   줄이 바뀌면(거르기) 첫 쪽이다. **줄이 수백을 넘는 목록은 `paging`을 넘긴다** — 그러면 여기서 그 쪽의 줄만
+ *   그리고 쪽은 주소에 싣는다(ADR-0167 — 다 그려 보내니 결재함 한 장이 8.3MB였다).
  */
 export interface Column<T> {
   key: string;
@@ -46,8 +48,10 @@ export interface DataTableProps<T> {
   empty?: { title: string; hint?: string; action?: ReactNode };
   caption?: string;
   className?: string;
-  /** 한 쪽의 줄 수 (ADR-0165). `0`이면 나누지 않는다. */
+  /** 한 쪽의 줄 수 (ADR-0165·0167). `0`이면 나누지 않는다. `paging`이 있으면 그쪽이 이긴다. */
   pageSize?: number;
+  /** 주소의 쪽 — 주면 **그 쪽의 줄만** 그린다 (ADR-0167). 화면이 `readPaging(searchParams)`로 읽는다. */
+  paging?: Paging;
 }
 
 export function DataTable<T>({
@@ -59,7 +63,8 @@ export function DataTable<T>({
   empty,
   caption,
   className,
-  pageSize = 10,
+  pageSize = PAGE_SIZE,
+  paging,
 }: DataTableProps<T>) {
   const shown = columns.filter((c) => showBusiness || !c.business);
   const rowHeight = density === "compact" ? "var(--size-row-compact)" : "var(--size-row-default)";
@@ -73,9 +78,14 @@ export function DataTable<T>({
   const value = (c: Column<T>, row: T) =>
     c.cell ? c.cell(row) : String((row as Record<string, unknown>)[c.key] ?? "");
 
-  const keys = rows.map((row, index) => rowKey(row, index));
+  // 주소로 쪽을 넘기면 그 쪽만 그린다 — 넘친 쪽은 마지막 쪽이다.
+  const size = paging ? paging.size : pageSize;
+  const page = paging ? Math.min(paging.page, Math.max(0, Math.ceil(rows.length / size) - 1)) : 0;
+  const from = paging ? page * size : 0;
+  const drawn = paging ? rows.slice(from, from + size) : rows;
+  const keys = drawn.map((row, index) => rowKey(row, from + index));
 
-  const cards = rows.map((row, index) => (
+  const cards = drawn.map((row, index) => (
     <li
       key={keys[index]}
       className="border border-border-default bg-bg-surface p-4 shadow-sm"
@@ -105,7 +115,7 @@ export function DataTable<T>({
     </li>
   ));
 
-  const lines = rows.map((row, index) => (
+  const lines = drawn.map((row, index) => (
     <tr key={keys[index]} className="transition-colors last:[&>td]:border-b-0 hover:bg-bg-canvas">
       {shown.map((c) => (
         <td
@@ -147,7 +157,8 @@ export function DataTable<T>({
     <Paged
       // 받은 줄이 바뀌면(거르기) 첫 쪽부터 — 열쇠로 상태를 새로 연다.
       key={`${keys.length}:${keys[0] ?? ""}`}
-      size={pageSize}
+      size={size}
+      link={paging ? { page, total: rows.length, query: paging.query } : undefined}
       cards={cards}
       lines={lines}
       head={head}

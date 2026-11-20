@@ -135,8 +135,8 @@ export async function Shell({
         <div className="mx-auto flex h-full w-full max-w-[1440px] items-center gap-2 px-4 md:gap-3 md:px-6 lg:px-8">
         <TopNav groups={groups} current={current} who={who} />
         {/* 오른쪽은 **한 묶음**이다 — 누구인지(배지·계정)와 할 일(단추) 사이에 옅은 선 하나. 글자는 묶음과
-            같은 13이다 (ADR-0166 — 배지 12·계정 13·단추 14가 한 줄에 따로 놀았다). */}
-        <div className="flex shrink-0 items-center gap-1 text-body-sm">
+            같은 14다 (ADR-0166·0167 — 배지 12·계정 13·단추 14가 한 줄에 따로 놀았다). */}
+        <div className="flex shrink-0 items-center gap-1 text-body">
           {open ? (
             <span className="inline-flex shrink-0 items-center">
               <span
