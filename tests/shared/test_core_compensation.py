@@ -129,11 +129,11 @@ def test_when_everything_succeeds_nothing_is_undone() -> None:
 
 
 def test_the_throw_event_starts_once() -> None:
-    """처리기를 돌고 돌아온 것은 두 번째 시작이 아니다 (종료 이벤트는 원래 「완료」를 남기지 않는다)."""
+    """처리기를 돌고 돌아온 것은 두 번째 시작이 아니다 — 시작 한 번, 돌아와서 끝날 때 완료 한 번 (C3)."""
     engine, run = start(HYBRID)
     engine.run_until_blocked(run)
     states = [e.data["state"] for e in run.log.events if e.kind == "node_state" and e.node_id == "End_Undo"]
-    assert states == ["started"]
+    assert states == ["started", "completed"]
 
 
 INTERMEDIATE = (

@@ -95,6 +95,13 @@ def test_a_straight_line_runs_to_the_end() -> None:
     kinds = [e.kind for e in run.log.events]
     assert kinds[0] == "run_started" and kinds[-1] == "run_finished"
     assert [e.seq for e in run.log.events] == list(range(1, len(run.log.events) + 1))
+    # 종료 이벤트도 끝났다고 적는다 — `started`에서 멈춘 채 `run_finished`가 오지 않는다 (C3).
+    assert node_states(run, "End_1") == ["started", "completed"]
+    assert (kinds[-2], run.log.events[-2].node_id) == ("node_state", "End_1")
+
+
+def node_states(run: Run, node_id: str) -> list[str]:
+    return [e.data["state"] for e in run.log.events if e.kind == "node_state" and e.node_id == node_id]
 
 
 def test_the_engine_gives_the_builtin_variables() -> None:
@@ -835,6 +842,8 @@ def test_a_parallel_gateway_forks_and_joins() -> None:
     assert run.instances["Task_After"] == 1
     joins = [e for e in run.log.events if e.data.get("message") == "합류 완료"]
     assert len(joins) == 1
+    # 먼저 온 토큰은 합류에서 사라질 뿐이다 — 합류의 `completed`는 마지막 토큰이 올 때 한 번이다 (C3).
+    assert node_states(run, "Gw_Join") == ["started", "started", "completed"]
 
 
 def test_an_inclusive_gateway_takes_every_true_branch() -> None:
@@ -891,6 +900,9 @@ def test_a_subprocess_runs_inside_and_comes_back() -> None:
     engine, run = start(process)
     assert engine.run_until_blocked(run) is State.DONE
     assert run.variables["안쪽"] == 1 and run.variables["뒤"] == 2
+    # 안쪽 종료가 바깥 하위 프로세스보다 먼저 끝났다고 적힌다 (C3).
+    done = [e.node_id for e in run.log.events if e.data.get("state") == "completed"]
+    assert done.index("Sub_End") < done.index("Sub_1")
 
 
 def test_a_sequential_loop_collects_results_in_order() -> None:

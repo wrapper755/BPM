@@ -77,6 +77,7 @@ from bpm.core.run_state import (
     correlation_of,
     event_kind,
     new_token_id,
+    task_type,
 )
 from bpm.core.senders import EmailMessage, SendError, WebhookRequest
 from bpm.core.services import RETRYABLE_STATUS, OpCall, OpOutcome, ServiceCallError, ServicePending
@@ -111,6 +112,9 @@ def handle_end(context: Context) -> Outcome:
         detour = context.engine.compensate(context)
         if detour is not None:
             return detour
+    # 종료 이벤트도 끝났다고 적는다 (C3) — `Consume`은 덜 찬 합류도 쓰니 `_apply`가 대신 적을 수 없다.
+    # 바깥 하위 프로세스를 깨우기 **전에** 적어야 줄이 안쪽 → 바깥 차례로 선다.
+    context.emit("node_state", state="completed", task_type=task_type(context.node))
     if token.scope:
         parent_id = token.scope[-1]
         key = f"sub:{parent_id}"
