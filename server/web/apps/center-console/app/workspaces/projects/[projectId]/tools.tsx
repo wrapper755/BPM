@@ -63,8 +63,10 @@ export function NewProcess({ projectId, shared = false }: { projectId: string; s
  *
  * 하나라도 걸리면 아무것도 만들지 않고 걸린 줄을 창 안에 그대로 보인다. 받아 둔 공유 프로세스 사본(`libs/`)은
  * Center가 버리고 돌려주므로, 다 들어온 뒤 「설치」 단추 하나로 잇는다.
+ *
+ * **탭마다 하나다** — 들일 칸(C17 `?kind=`)은 누른 탭이 정하고 창에서 다시 묻지 않는다.
  */
-export function ImportProcesses({ projectId }: { projectId: string }) {
+export function ImportProcesses({ projectId, shared = false }: { projectId: string; shared?: boolean }) {
   const [open, setOpen] = useState(false);
   const [result, action, pending] = useActionState<ImportResult, FormData>(importIntoProject, {});
   const [installed, setInstalled] = useState<{ failed: string[] } | null>(null);
@@ -77,7 +79,11 @@ export function ImportProcesses({ projectId }: { projectId: string }) {
       <Button variant="secondary" onClick={() => setOpen(true)}>
         파일에서 가져오기...
       </Button>
-      <Dialog open={open} title="파일에서 가져오기" onClose={() => setOpen(false)}>
+      <Dialog
+        open={open}
+        title={shared ? "공통 패키지 가져오기" : "프로세스 가져오기"}
+        onClose={() => setOpen(false)}
+      >
         {done ? (
           <div className="flex flex-col gap-3 text-body-sm">
             <p>{result.made?.length ?? 0}개를 들였습니다.</p>
@@ -123,18 +129,7 @@ export function ImportProcesses({ projectId }: { projectId: string }) {
                 ))}
               </ul>
             ) : null}
-            <label className="flex flex-col gap-1 text-body-sm">
-              어디로
-              <select
-                name="kind"
-                defaultValue="bpm_process"
-                className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
-              >
-                <option value="bpm_process">프로세스</option>
-                <option value="process_lib">공통 패키지</option>
-              </select>
-              <span className="text-text-muted">든 것 모두가 이 칸으로 갑니다. 섞인 zip은 두 번 나눠 들이세요.</span>
-            </label>
+            <input type="hidden" name="kind" value={shared ? "process_lib" : "bpm_process"} />
             <label className="flex flex-col gap-1 text-body-sm">
               파일
               <input type="file" name="file" accept=".zip" required className="text-body-sm" />

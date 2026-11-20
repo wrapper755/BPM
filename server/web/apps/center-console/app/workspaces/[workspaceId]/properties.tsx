@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Button } from "@bpm/ui";
 import { ELEMENT_FORMS, EVENT_KINDS } from "@bpm/bpmn-canvas";
 import type { ElementField, NodeProperties, PropertyPatch } from "@bpm/bpmn-canvas";
+import type { ServiceAppResource } from "@bpm/api-types/c7-service-app-resource";
+
+import { loadWorkspaceResources } from "@/app/actions";
+import { serviceCallHints, type Suggestion } from "@/lib/resources";
 import {
   eventFields,
   eventPatch,
@@ -30,6 +34,28 @@ import {
 const isActivity = (type: string) => /Task$/.test(type) || type === "CallActivity" || type === "SubProcess";
 
 const INPUT = "w-full border border-border-strong bg-bg-surface px-2 py-1 text-body-sm";
+
+/**
+ * 서비스 앱 목록 — 편집기를 띄운 동안 **한 번만** 읽는다. 요소를 고를 때마다 Center에 묻지 않는다.
+ * 못 읽으면 빈 목록이고, 빈 목록이면 고를 거리도 경고도 없다 (`serviceCallHints`).
+ */
+let serviceApps: Promise<ServiceAppResource[]> | null = null;
+
+function useServiceApps(wanted: boolean): ServiceAppResource[] {
+  const [apps, setApps] = useState<ServiceAppResource[]>([]);
+  useEffect(() => {
+    if (!wanted) return;
+    serviceApps ??= loadWorkspaceResources()
+      .then((found) => found.apps)
+      .catch(() => []);
+    let live = true;
+    void serviceApps.then((found) => live && setApps(found));
+    return () => {
+      live = false;
+    };
+  }, [wanted]);
+  return apps;
+}
 
 export function Properties({
   node,
@@ -252,6 +278,20 @@ function ElementBlock({
 }) {
   const form = ELEMENT_FORMS[name];
   const stray = strayKeys(body, form?.fields ?? []);
+  // 서비스 앱 태스크만 — 앱·작업 칸에 등록된 것을 띄우고, 없는 이름이면 그 자리에서 한 줄 말한다.
+  const isServiceCall = name === "serviceCall";
+  const apps = useServiceApps(isServiceCall);
+  const hints = isServiceCall
+    ? serviceCallHints(apps, String(body.app_id ?? ""), String(body.operation ?? ""))
+    : null;
+  const extra = (field: string): { suggestions?: Suggestion[]; warning?: string } =>
+    !hints
+      ? {}
+      : field === "app_id"
+        ? { suggestions: hints.apps, warning: hints.appWarning }
+        : field === "operation"
+          ? { suggestions: hints.operations, warning: hints.operationWarning }
+          : {};
   return (
     <section className="border-t border-border-default pt-3">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -273,6 +313,7 @@ function ElementBlock({
               body={body}
               canWrite={canWrite}
               onChange={(text) => onChange(withField(body, field, text))}
+              {...extra(field.name)}
             />
           ))}
         </div>
@@ -300,12 +341,19 @@ function FieldView({
   body,
   canWrite,
   onChange,
+  suggestions,
+  warning,
 }: {
   field: ElementField;
   body: Body;
   canWrite: boolean;
   onChange: (text: string) => void;
+  /** 칸에 띄울 고를 거리 (`<datalist>`) — 고르지 않고 쳐도 된다. */
+  suggestions?: Suggestion[];
+  /** 적은 값이 등록된 것에 없다는 한 줄. 저장은 막지 않는다. */
+  warning?: string;
 }) {
+  const listId = useId();
   const value = toInput(field, body[field.name]);
   const label = `${field.name}${field.required ? " *" : ""}`;
   if (field.kind === "bool") {
@@ -362,8 +410,20 @@ function FieldView({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={!canWrite}
+          list={suggestions?.length ? listId : undefined}
+          aria-invalid={warning ? true : undefined}
         />
       )}
+      {suggestions?.length ? (
+        <datalist id={listId}>
+          {suggestions.map((one) => (
+            <option key={one.value} value={one.value}>
+              {one.label}
+            </option>
+          ))}
+        </datalist>
+      ) : null}
+      {warning ? <span className="text-caption text-status-warning-fg">{warning}</span> : null}
     </Labelled>
   );
 }

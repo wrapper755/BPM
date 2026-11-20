@@ -132,3 +132,43 @@ export function resourceRoots(
     },
   ];
 }
+
+/** 칸에 띄울 고를 거리 하나 — `value`가 칸에 들어가고 `label`은 옆에 보이는 이름이다. */
+export interface Suggestion {
+  value: string;
+  label?: string;
+}
+
+export interface ServiceCallHints {
+  apps: Suggestion[];
+  operations: Suggestion[];
+  /** 적은 값이 등록된 것에 없을 때의 한 줄. 막지 않는다 — 검사는 쓰기를 막지 않는다 (C17). */
+  appWarning?: string;
+  operationWarning?: string;
+}
+
+/**
+ * 서비스 앱 태스크(`bpm:serviceCall`)의 `app_id`·`operation` 칸에 띄울 거리 — 「리소스」 탭과
+ * **같은 목록**(C7 서비스 앱)에서 온다. 손으로 친 오타를 실행 전 검사까지 가서야 알지 않게.
+ *
+ * **목록이 비면 아무 말도 하지 않는다** — 못 읽은 것(또는 아직 등록된 앱이 없는 것)을 「없는 앱」으로
+ * 단정하면 멀쩡한 그림에 경고가 붙는다. 칸이 비어 있을 때도 말하지 않는다 (필수는 검사가 본다).
+ */
+export function serviceCallHints(apps: ServiceAppResource[], appId: string, operation: string): ServiceCallHints {
+  const found = apps.find((one) => one.app_id === appId.trim());
+  const operations = (found?.operations ?? []).map((one) => ({
+    value: one.name,
+    label: one.description ?? undefined,
+  }));
+  const hints: ServiceCallHints = {
+    apps: apps.map((one) => ({ value: one.app_id, label: one.name ?? undefined })),
+    operations,
+  };
+  if (apps.length > 0 && appId.trim() && !found) {
+    hints.appWarning = `등록된 서비스 앱에 「${appId.trim()}」이 없습니다.`;
+  }
+  if (found && operations.length > 0 && operation.trim() && !operations.some((one) => one.value === operation.trim())) {
+    hints.operationWarning = `「${found.app_id}」에 「${operation.trim()}」 작업이 없습니다.`;
+  }
+  return hints;
+}

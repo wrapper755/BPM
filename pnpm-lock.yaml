@@ -127,6 +127,9 @@ importers:
       bpmn-moddle:
         specifier: 10.3.1
         version: 10.3.1
+      diagram-js-minimap:
+        specifier: 5.6.0
+        version: 5.6.0
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -989,6 +992,9 @@ packages:
     resolution: {integrity: sha512-zaXChbFqLccq+rji1fnKD9dL90kO7XLJoaENMVqFOxslax8QD7eumwBBpLYS36br7zva9R4bz3YTu0ey3mbHAA==}
     peerDependencies:
       diagram-js: '*'
+
+  diagram-js-minimap@5.6.0:
+    resolution: {integrity: sha512-PY/MmgqCvi78r5jreUaUuHz5I+fgFAnN/ldJqjHcKTILpqg0qVhuzbQaOGEjWcreuObxD/9zk1+fjtTzhOA77w==}
 
   diagram-js@15.28.0:
     resolution: {integrity: sha512-szp5V8ipbwMNB2aR1c7ABvN1N4bVdl5K1uO6Lpcn+LQ/Sw5C9fKwo6GOaV0ZVX8rWoZKb4ki34Qt6UZ8Z/Ig9w==}
@@ -2010,6 +2016,12 @@ snapshots:
       diagram-js: 15.28.0
       min-dash: 5.1.0
       min-dom: 5.3.0
+
+  diagram-js-minimap@5.6.0:
+    dependencies:
+      min-dash: 5.1.0
+      min-dom: 5.3.0
+      tiny-svg: 4.1.4
 
   diagram-js@15.28.0:
     dependencies:

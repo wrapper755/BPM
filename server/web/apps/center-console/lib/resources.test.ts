@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PackageInfo } from "@bpm/api-types/c5-package-info";
 import type { ServiceAppResource } from "@bpm/api-types/c7-service-app-resource";
 
-import { appRows, resourceRoots, sharedRows } from "./resources";
+import { appRows, resourceRoots, serviceCallHints, sharedRows } from "./resources";
 
 /**
  * CON-20b 「리소스」 탭이 **무엇을 줄로 세우고 그 줄이 무엇을 만드는가** (ADR-0155).
@@ -118,5 +118,24 @@ describe("뿌리", () => {
   it("찾는 중에 비면 「없습니다」가 아니라 「찾는 것이 없습니다」다", () => {
     const [shared] = resourceRoots([], [], [], "무엇");
     expect(shared?.empty).toBe("찾는 것이 없습니다.");
+  });
+});
+
+describe("서비스 앱 태스크 칸의 고를 거리", () => {
+  it("등록된 앱과 그 앱의 작업을 띄운다", () => {
+    const found = serviceCallHints([app()], "erp", "");
+    expect(found.apps).toEqual([{ value: "erp", label: "ERP" }]);
+    expect(found.operations.map((one) => one.value)).toEqual(["create_invoice", "void_invoice"]);
+    expect(found.appWarning).toBeUndefined();
+  });
+
+  it("없는 앱·없는 작업은 한 줄로 알린다", () => {
+    expect(serviceCallHints([app()], "erq", "").appWarning).toContain("erq");
+    expect(serviceCallHints([app()], "erp", "create_invoce").operationWarning).toContain("create_invoce");
+    expect(serviceCallHints([app()], "erp", "void_invoice").operationWarning).toBeUndefined();
+  });
+
+  it("목록이 비면 아무 말도 하지 않는다 — 못 읽은 것을 「없다」로 단정하지 않는다", () => {
+    expect(serviceCallHints([], "anything", "op")).toEqual({ apps: [], operations: [] });
   });
 });

@@ -82,7 +82,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
               {one.description ? <span className="text-body-sm text-text-secondary">{one.description}</span> : null}
               <span className="text-caption text-text-muted">{companyName.get(one.company) ?? one.company}</span>
               <span className="mt-auto text-caption text-text-muted" title={one.id}>
-                {fullTime(one.updated_at)} · {one.updated_by}
+                최근 수정 {fullTime(one.updated_at)}
               </span>
             </Link>
           </li>
