@@ -33,6 +33,10 @@ import type { RunListing } from "@bpm/api-types/c3-run-listing";
 import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import type { RunEventsResponse } from "@bpm/api-types/c3-run-events-response";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
+import type { ProjectInfo } from "@bpm/api-types/c17-project-info";
+import type { ProjectCreateRequest } from "@bpm/api-types/c17-project-create-request";
+import type { ProjectUpdateRequest } from "@bpm/api-types/c17-project-update-request";
+import type { ProjectImportResult } from "@bpm/api-types/c17-project-import-result";
 import type { WorkspaceCreateRequest } from "@bpm/api-types/c17-workspace-create-request";
 import type { TrialInfo } from "@bpm/api-types/c17-test-run-info";
 import type { TrialCreateRequest } from "@bpm/api-types/c17-test-run-create-request";
@@ -153,11 +157,35 @@ async function workspaceFile(path: string): Promise<{ text: string; revision: st
 }
 
 const ws = (workspaceId: string) => `/api/v1/workspaces/${encodeURIComponent(workspaceId)}`;
+const pj = (projectId: string) => `/api/v1/projects/${encodeURIComponent(projectId)}`;
 
 /** 파일 경로는 조각마다 감싼다 — `/`는 그대로 두어야 Center가 자리를 읽는다 (C17 경로 규칙). */
 const filePath = (path: string) => path.split("/").map(encodeURIComponent).join("/");
 
 export const center = {
+  /**
+   * 프로젝트 (C17·CON-20a·20c, ADR-0175) — 작업공간을 묶고 회사를 정한다. 회사가 정해진 계정은
+   * **제 회사 것만** 본다 (C16).
+   */
+  projects: (query: { q?: string } = {}) =>
+    call<ProjectInfo[]>(`/api/v1/projects${query.q ? `?q=${encodeURIComponent(query.q)}` : ""}`),
+  project: (projectId: string) => call<ProjectInfo>(pj(projectId)),
+  createProject: (body: ProjectCreateRequest) =>
+    call<ProjectInfo>("/api/v1/projects", { method: "POST", body: JSON.stringify(body) }),
+  /** 이름·설명 — **회사는 바뀌지 않는다**. */
+  updateProject: (projectId: string, body: ProjectUpdateRequest) =>
+    call<ProjectInfo>(pj(projectId), { method: "PATCH", body: JSON.stringify(body) }),
+  /** 비어 있을 때만 지운다 (409 `not_empty`). */
+  deleteProject: (projectId: string) => call<void>(pj(projectId), { method: "DELETE" }),
+  projectWorkspaces: (projectId: string) => call<WorkspaceInfo[]>(`${pj(projectId)}/workspaces`),
+  /** 옛 작업 폴더 zip — 여럿을 담았으면 **프로세스 여럿**이다. 하나라도 걸리면 아무것도 만들지 않는다. */
+  importIntoProject: (projectId: string, raw: ArrayBuffer) =>
+    call<ProjectImportResult>(`${pj(projectId)}/import`, {
+      method: "POST",
+      body: raw,
+      headers: { "Content-Type": "application/octet-stream" },
+    }),
+
   /**
    * 작업공간 (C17·CON-20). 회사가 정해진 계정은 **제 회사 것만** 본다 — 콘솔이 거르지 않는다 (C16).
    */

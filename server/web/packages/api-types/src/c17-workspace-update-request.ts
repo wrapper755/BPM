@@ -12,6 +12,7 @@ export interface WorkspaceUpdateRequest {
   entry?: string | null;
   name?: string | null;
   place?: Place | null;
+  project?: string | null;
   /**
    * 이 계약의 schema 번호
    */

@@ -1,41 +1,24 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button, Dialog, ErrorBanner, Field } from "@bpm/ui";
-import { createWorkspace, type ActionResult } from "@/app/actions";
+import { createProject, type ActionResult } from "@/app/actions";
 
 /**
- * CON-20a의 손잡이 — 「새 작업공간」과 「파일에서 가져오기」는 **같은 창**이다.
+ * CON-20a 「새 프로젝트」 (ADR-0175). **회사는 만든 뒤 바뀌지 않는다** — 창 안에 그렇게 적는다.
  *
- * 가져오기도 작업공간 하나를 만들어 그 안에 넣는 일이라(C17 `POST …/import`), 창을 둘로 두면
- * 「가져오려면 먼저 만드세요」를 사람에게 떠넘기게 된다. 파일 칸은 비워 둘 수 있다.
+ * 회사가 정해진 계정에게는 회사 칸이 없다(`companies`가 빈다) — 그 계정의 회사다 (C16).
  */
-export function NewWorkspace() {
-  const [open, setOpen] = useState<false | "empty" | "import">(false);
-  const router = useRouter();
-  const [result, action, pending] = useActionState<ActionResult, FormData>(async (previous, form) => {
-    const made = await createWorkspace(previous, form);
-    if (!made.error) {
-      setOpen(false);
-      router.refresh();
-    }
-    return made;
-  }, {});
+export function NewProject({ companies }: { companies: { id: string; name: string }[] }) {
+  const [open, setOpen] = useState(false);
+  const [result, action, pending] = useActionState<ActionResult, FormData>(createProject, {});
 
   return (
-    <div className="flex gap-2">
-      <Button variant="secondary" onClick={() => setOpen("import")}>
-        파일에서 가져오기...
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        새 프로젝트...
       </Button>
-      <Button variant="tonal" onClick={() => setOpen("empty")}>
-        새 작업공간...
-      </Button>
-      <Dialog
-        open={open !== false}
-        title={open === "import" ? "파일에서 가져오기" : "새 작업공간"}
-        onClose={() => setOpen(false)}
-      >
+      <Dialog open={open} title="새 프로젝트" onClose={() => setOpen(false)}>
         <form action={action} className="flex flex-col gap-3">
           {result.error ? <ErrorBanner message={result.error} /> : null}
           <Field
@@ -44,28 +27,36 @@ export function NewWorkspace() {
             required
             autoComplete="off"
             autoCapitalize="none"
-            help="영문 소문자·숫자·.·_·- 로 시작하는 64자까지. 배포 후보를 지을 때 그대로 패키지 id가 됩니다."
+            help="영문 소문자·숫자·.·_·- 로 시작하는 64자까지."
           />
           <Field label="이름" name="name" required autoComplete="off" />
-          <Field label="판" name="version" defaultValue="0.1.0" help="다음에 지을 판입니다." />
-          <Field label="설명" name="description" autoComplete="off" />
-          {open === "import" ? (
+          {companies.length > 0 ? (
             <label className="flex flex-col gap-1 text-body-sm">
-              파일
-              <input type="file" name="file" accept=".bpmn,.zip" className="text-body-sm" />
-              <span className="text-text-muted">
-                밖에서 그린 .bpmn 하나 또는 옛 작업 폴더 zip입니다. 받을 수 없는 자리의 파일이 있으면
-                아무것도 넣지 않고 그 까닭을 말합니다.
-              </span>
+              회사
+              <select
+                name="company"
+                defaultValue={companies.length === 1 ? companies[0]?.id : ""}
+                required
+                className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
+              >
+                {companies.length > 1 ? <option value="">(고르세요)</option> : null}
+                {companies.map((one) => (
+                  <option key={one.id} value={one.id}>
+                    {one.name}
+                  </option>
+                ))}
+              </select>
+              <span className="text-text-muted">안의 프로세스가 이 회사를 물려받습니다. 만든 뒤에는 바꿀 수 없습니다.</span>
             </label>
           ) : null}
+          <Field label="설명" name="description" autoComplete="off" />
           <div className="flex justify-end">
             <Button type="submit" variant="primary" disabled={pending}>
-              {open === "import" ? "가져오기" : "만들기"}
+              만들기
             </Button>
           </div>
         </form>
       </Dialog>
-    </div>
+    </>
   );
 }

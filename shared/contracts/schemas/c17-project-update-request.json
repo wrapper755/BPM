@@ -1,0 +1,43 @@
+{
+  "$id": "urn:bpm:contracts:c17-project-update-request",
+  "additionalProperties": true,
+  "description": "`PATCH /api/v1/projects/{id}` — 이름·설명. **회사는 여기 없다** (안의 작업공간이 물려받았다).",
+  "properties": {
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Name"
+    },
+    "schema": {
+      "description": "이 계약의 schema 번호",
+      "title": "Schema",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema"
+  ],
+  "title": "ProjectUpdateRequest",
+  "type": "object"
+}

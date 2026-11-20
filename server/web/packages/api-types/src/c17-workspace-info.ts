@@ -15,6 +15,7 @@ export interface WorkspaceInfo {
   libs?: InstalledLibInfo[];
   name: string;
   place?: Place | null;
+  project: string;
   revision: string;
   updated_at: string;
   updated_by: string;

@@ -5,7 +5,9 @@
 /**
  * `POST /api/v1/workspaces` — 빈 한 벌을 만든다.
  *
- * `company`를 비우면 **부르는 계정의 회사**다 (C16). 만든 뒤에는 바뀌지 않는다.
+ * `project`를 적으면 그 프로젝트에 넣고 회사는 그 프로젝트의 것이다(`company`를 함께 적으면 같아야 한다).
+ * 비우면 **그 회사의 기본 프로젝트**(id가 회사 id인 것)다 (ADR-0175 §6). `company`를 비우면 **부르는
+ * 계정의 회사**다 (C16). 만든 뒤에는 회사가 바뀌지 않는다.
  */
 export interface WorkspaceCreateRequest {
   company?: string | null;
@@ -13,6 +15,7 @@ export interface WorkspaceCreateRequest {
   id: string;
   name: string;
   place?: Place | null;
+  project?: string | null;
   /**
    * 이 계약의 schema 번호
    */

@@ -48,7 +48,7 @@ const NAV: Array<{ label: string; items: Array<NavItem & { adminOnly?: boolean }
     // 공통 패키지도 여기다 — 그림을 그릴 때 들여 쓰고 짓는 것이지 배포되는 것이 아니다 (ADR-0169).
     label: "저작",
     items: [
-      { label: "작업공간", href: "/workspaces", note: "그림을 그리고 그 자리에서 돌려 본다" },
+      { label: "프로젝트", href: "/workspaces", note: "프로세스를 묶고 그림을 그려 그 자리에서 돌려 본다" },
       { label: "공통 패키지", href: "/packages", note: "여러 프로세스가 함께 쓰는 도구·정의 묶음" },
     ],
   },

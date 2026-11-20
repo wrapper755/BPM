@@ -4,7 +4,9 @@
 
 **작업공간 하나 = BPM 프로세스 한 벌**이다
 ([ADR-0143](../../../../../docs/decisions/0143-design-happens-in-the-console.md)) —
-새 개념이 아니라 데스크톱 Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다.
+새 개념이 아니라 데스크톱 Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다. 작업공간은 **프로젝트**
+하나에 속하고 회사를 거기서 물려받는다 — 프로젝트는 묶는 층일 뿐이라 짓기·판·배포는 작업공간마다다
+([ADR-0175](../../../../../docs/decisions/0175-projects-hold-processes.md)).
 
 여기 있는 것은 **전송 모양과 받는 쪽이 믿지 않는 규칙**이다. 돌리는 일(엔진·케이스·판정)은
 `bpm.core.testrun`이고 Center는 그것을 알지 못한다 — `bpm-center`는 `bpm-core`를 의존하지 않는다
@@ -119,19 +121,66 @@ def check_file_path(path: str) -> str | None:
     return None
 
 
+# ─────────────────────────── 프로젝트 ───────────────────────────
+
+
+class ProjectCreateRequest(SchemaVersioned):
+    """`POST /api/v1/projects` — 프로젝트 하나 (ADR-0175).
+
+    `company`를 비우면 **부르는 계정의 회사**, Center 관리자면 기본 회사다 (C16). 만든 뒤에는 바뀌지 않는다.
+    """
+
+    id: WorkspaceId
+    name: str = Field(min_length=1, max_length=100)
+    description: str | None = None
+    company: str | None = None
+
+
+class ProjectUpdateRequest(SchemaVersioned):
+    """`PATCH /api/v1/projects/{id}` — 이름·설명. **회사는 여기 없다** (안의 작업공간이 물려받았다)."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = None
+
+
+class ProjectInfo(ContractModel):
+    """프로젝트 하나. 파일이 없어 **DB가 원본**이다."""
+
+    id: str
+    name: str
+    description: str | None = None
+    company: str
+    #: 안의 작업공간 수.
+    processes: int = Field(ge=0)
+    #: 프로젝트 **또는 안의 작업공간**이 마지막으로 바뀐 때 — 카드가 「최근 손댄 것」으로 줄 세운다.
+    updated_at: Timestamp
+    updated_by: str
+
+
+class LibToInstall(ContractModel):
+    """가져오며 버린 `libs/` 사본이 가리키던 공유 BPM 프로세스 — 콘솔이 「설치」로 잇는다."""
+
+    workspace_id: str
+    package_id: str
+    version: str
+
+
 # ─────────────────────────── 작업공간 ───────────────────────────
 
 
 class WorkspaceCreateRequest(SchemaVersioned):
     """`POST /api/v1/workspaces` — 빈 한 벌을 만든다.
 
-    `company`를 비우면 **부르는 계정의 회사**다 (C16). 만든 뒤에는 바뀌지 않는다.
+    `project`를 적으면 그 프로젝트에 넣고 회사는 그 프로젝트의 것이다(`company`를 함께 적으면 같아야 한다).
+    비우면 **그 회사의 기본 프로젝트**(id가 회사 id인 것)다 (ADR-0175 §6). `company`를 비우면 **부르는
+    계정의 회사**다 (C16). 만든 뒤에는 회사가 바뀌지 않는다.
     """
 
     id: WorkspaceId
     name: str = Field(min_length=1, max_length=100)
     version: str = "0.1.0"
     description: str | None = None
+    project: str | None = None
     company: str | None = None
     place: Place | None = None
 
@@ -148,6 +197,8 @@ class WorkspaceUpdateRequest(SchemaVersioned):
     place: Place | None = None
     #: 진입 정의의 경로 (`process/<이름>.bpmn`).
     entry: str | None = None
+    #: 옮길 프로젝트 — **같은 회사만** (422 `company_mismatch`, ADR-0175 §3).
+    project: str | None = None
 
 
 class InstalledLibInfo(ContractModel):
@@ -174,6 +225,9 @@ class WorkspaceInfo(ContractModel):
     name: str
     version: str
     description: str | None = None
+    #: 속한 프로젝트 (ADR-0175).
+    project: str
+    #: 프로젝트에서 물려받은 회사 (C16).
     company: str
     #: 업무 자리 (C16 — 회사는 위 칸이다). 매니페스트 `place`로 그대로 간다 (ADR-0127).
     place: Place | None = None
@@ -186,6 +240,13 @@ class WorkspaceInfo(ContractModel):
     revision: str
     #: 받아 둔 공유 BPM 프로세스 (§공유 BPM 프로세스 설치). 배포 후보를 지을 때 `requires.libs`로 간다.
     libs: list[InstalledLibInfo] = Field(default_factory=list)
+
+
+class ProjectImportResult(ContractModel):
+    """`POST /api/v1/projects/{id}/import` — 작업 폴더 zip 하나로 작업공간 여럿."""
+
+    workspaces: list[WorkspaceInfo] = Field(default_factory=list)
+    libs_to_install: list[LibToInstall] = Field(default_factory=list)
 
 
 class FileInfo(ContractModel):
@@ -479,6 +540,11 @@ __all__ = [
     "TrialInfo",
     "TrialReport",
     "TrialTarget",
+    "LibToInstall",
+    "ProjectCreateRequest",
+    "ProjectImportResult",
+    "ProjectInfo",
+    "ProjectUpdateRequest",
     "WorkspaceCreateRequest",
     "DecisionInputInfo",
     "DecisionOutputInfo",

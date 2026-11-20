@@ -427,3 +427,32 @@ def test_a_virtual_worker_becomes_staff(tmp_path: Path) -> None:
     # 22판이 지어 둔 접수 BPM 프로세스의 자리는 23판이 표째 지운다 — 자리는 매니페스트에서 읽는다 (ADR-0127).
     assert _columns(db, "process_places") == []
     conn.close()
+
+
+# ─────────────────────────── 34판 — 프로젝트 (ADR-0175 §6) ───────────────────────────
+
+
+def test_workspaces_move_into_one_project_per_company(tmp_path: Path) -> None:
+    db = tmp_path / "center.sqlite3"
+    conn = sqlite3.connect(db)
+    migrate(conn, baseline=SCHEMA, steps=[one for one in MIGRATIONS if one.version <= 33])
+    conn.execute(
+        "INSERT INTO companies (id, name, state, created_at, updated_at)"
+        " VALUES ('company2', '회사2', 'active', '2026-11-01T00:00:00+00:00', '2026-11-01T00:00:00+00:00')"
+    )
+    for wid, company, at in (("a.one", "default", "01"), ("a.two", "default", "05"), ("b.one", "company2", "03")):
+        conn.execute(
+            "INSERT INTO workspaces (id, company, created_at, created_by, updated_at, updated_by)"
+            " VALUES (?, ?, ?, '김설계', ?, '김설계')",
+            (wid, company, f"2026-11-{at}T00:00:00+00:00", f"2026-11-{at}T00:00:00+00:00"),
+        )
+    conn.commit()
+    migrate(conn, baseline=SCHEMA)
+    assert conn.execute("SELECT id, name, company, updated_at FROM projects ORDER BY id").fetchall() == [
+        ("company2", "회사2", "company2", "2026-11-03T00:00:00+00:00"),
+        ("default", "기본 회사", "default", "2026-11-05T00:00:00+00:00"),
+    ]
+    assert conn.execute("SELECT id, project FROM workspaces ORDER BY id").fetchall() == [
+        ("a.one", "default"), ("a.two", "default"), ("b.one", "company2"),
+    ]
+    conn.close()

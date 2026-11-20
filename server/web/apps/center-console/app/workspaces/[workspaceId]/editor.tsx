@@ -1,6 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import type { Route } from "next";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, ErrorBanner } from "@bpm/ui";
 import type { BpmnCanvasHandle, NodeProperties, NodeState, PropertyPatch, TaskSpec } from "@bpm/bpmn-canvas";
@@ -93,6 +96,8 @@ export function Workspace({
   canWrite,
   departments,
   staff,
+  project,
+  siblings,
 }: {
   info: WorkspaceInfo;
   files: FileInfo[];
@@ -103,6 +108,10 @@ export function Workspace({
   /** 업무 자리를 고르는 거리 (C16) — 서버 쪽이 읽어 준다. */
   departments: { id: string; name: string }[];
   staff: { id: string; name: string }[];
+  /** 속한 프로젝트 (ADR-0175) — 머리 띠의 링크가 CON-20c로 돌아간다. */
+  project: { id: string; name: string };
+  /** 같은 프로젝트의 프로세스 — 탐색기 맨 위에서 고르면 그리로 간다. */
+  siblings: { id: string; name: string }[];
 }) {
   const [tab, setTab] = useState<Tab>("저작");
   // 「정보」 탭이 고치면 그 자리에서 바뀐다 — 머리 띠의 이름·판과 진입 정의가 함께 따라간다.
@@ -126,6 +135,8 @@ export function Workspace({
   const [left, setLeft] = useState<(typeof LEFT_TABS)[number]>("파일");
   const [showDetail, setShowDetail] = useState(true);
   const canvas = useRef<BpmnCanvasHandle>(null);
+  const router = useRouter();
+  const projectHref = `/workspaces/projects/${encodeURIComponent(project.id)}` as Route;
 
   const wide = useWide();
   // **좁은 화면에서는 보기만 한다** (ADR-0161 §6) — 그림·시험 결과는 보이고 고치기·돌리기는 넓은 화면의 것이다.
@@ -356,6 +367,10 @@ export function Workspace({
       <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-default bg-bg-surface px-4 py-3 md:px-5">
         {/* 위 막대는 **메뉴가 쥐었다** (ADR-0152 §7) — 이 화면은 제 머리 띠에 지금 상태만 말한다. */}
         <p className="text-body-sm text-text-secondary">
+          <Link href={projectHref} className="hover:underline">
+            {project.name}
+          </Link>
+          <span className="text-text-muted"> › </span>
           <span className="font-semibold text-text-primary">{info.name}</span>
           {/* 말풍선이 아니라 글로 (U20, ADR-0162). */}
           {dirty ? <span className="text-caption text-text-muted"> · 저장 안 함</span> : null}
@@ -446,6 +461,30 @@ export function Workspace({
           hidden={!showFiles || !wide}
           className="w-64 shrink-0 overflow-y-auto border-r border-border-default bg-bg-surface p-3"
         >
+          {/* 같은 프로젝트의 프로세스 (ADR-0175) — 고르면 그리로 간다. 저장 안 한 것이 있으면 먼저 묻는다. */}
+          {siblings.length > 1 ? (
+            <label className="mb-3 flex flex-col gap-1 text-caption text-text-muted">
+              프로세스
+              <select
+                value={info.id}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (dirty && !window.confirm("저장하지 않은 변경이 있습니다. 버리고 옮길까요?")) {
+                    event.target.value = info.id;
+                    return;
+                  }
+                  router.push(`/workspaces/${encodeURIComponent(next)}`);
+                }}
+                className="h-8 rounded-md border border-border-strong bg-bg-surface px-2 text-body-sm text-text-primary"
+              >
+                {siblings.map((one) => (
+                  <option key={one.id} value={one.id}>
+                    {one.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           {/* 탭 둘 — 「파일」과 「리소스」 (ADR-0155). 패널을 넷째로 늘리지 않는다. */}
           <div className="mb-2 flex items-center">
             <div role="tablist" aria-label="탐색기" className="flex gap-1">

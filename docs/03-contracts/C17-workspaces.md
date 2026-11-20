@@ -2,11 +2,11 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **초안** (2026-11-13) — **다 돈다**: 작업공간·파일·묶음·가져오기(30판), 시험 실행(31판), **실행 전 검사와 배포 후보 짓기**(32판), 공유 BPM 프로세스 설치. **화면**(CON-20)도 탭 셋이 돈다 (M11 조각 4). **`> 미정:` 셋은 [ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)으로 닫았다** (시험 자리·검사와 짓기의 자리·누가 올리나). [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
+| 상태 | **초안** (2026-11-13) — **다 돈다**: 작업공간·파일·묶음·가져오기(30판), 시험 실행(31판), **실행 전 검사와 배포 후보 짓기**(32판), 공유 BPM 프로세스 설치, **프로젝트**(34판, [ADR-0175](../decisions/0175-projects-hold-processes.md)). **화면**(CON-20)도 탭 셋이 돈다 (M11 조각 4). **`> 미정:` 셋은 [ADR-0146](../decisions/0146-design-work-has-its-own-lane.md)으로 닫았다** (시험 자리·검사와 짓기의 자리·누가 올리나). [ADR-0143](../decisions/0143-design-happens-in-the-console.md)이 정한 「작업 폴더는 서버에 산다」를 전송으로 적은 것이다. 시험 실행의 알맹이(`bpm.core.testrun`)는 이미 돈다 (M11 조각 3a) |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 콘솔(BFF) → Center, Center → 서버 실행기 (시험 실행·짓기는 C12 작업으로 내려간다) |
-| 코드 위치 | Center `workspaces.py`·`trials.py`·`design_work.py`(판단)·`api/workspaces.py`(길), 모델 `contracts.workspace`, 실행기 `testmode.py`. 알맹이는 `bpm.core.testrun` |
-| 관련 ADR | [0143](../decisions/0143-design-happens-in-the-console.md), **[0146](../decisions/0146-design-work-has-its-own-lane.md)(시험 자리·검사와 짓기·누가 올리나)**, [0145](../decisions/0145-console-is-workspace-shaped.md), [0022](../decisions/0022-studio-canvas.md)(캔버스를 거쳐 고친다 — 웹에서도 그대로), [0109](../decisions/0109-studio-writes-decision-tables.md)·**[0148](../decisions/0148-center-reads-and-writes-decision-tables.md)**(결정표는 캔버스 밖이고 Center가 쓴다), [0028](../decisions/0028-replay-memory.md)(배운 것), [0082](../decisions/0082-batch-start.md)(맡기기), [0142](../decisions/0142-open-mode.md)(이 계약이 보안을 더 급하게 만든다) |
+| 코드 위치 | Center `projects.py`·`workspaces.py`·`trials.py`·`design_work.py`(판단)·`api/projects.py`·`api/workspaces.py`(길), 모델 `contracts.workspace`, 실행기 `testmode.py`. 알맹이는 `bpm.core.testrun` |
+| 관련 ADR | [0143](../decisions/0143-design-happens-in-the-console.md), **[0175](../decisions/0175-projects-hold-processes.md)(프로젝트가 작업공간을 묶는다)**, **[0146](../decisions/0146-design-work-has-its-own-lane.md)(시험 자리·검사와 짓기·누가 올리나)**, [0145](../decisions/0145-console-is-workspace-shaped.md), [0022](../decisions/0022-studio-canvas.md)(캔버스를 거쳐 고친다 — 웹에서도 그대로), [0109](../decisions/0109-studio-writes-decision-tables.md)·**[0148](../decisions/0148-center-reads-and-writes-decision-tables.md)**(결정표는 캔버스 밖이고 Center가 쓴다), [0028](../decisions/0028-replay-memory.md)(배운 것), [0082](../decisions/0082-batch-start.md)(맡기기), [0142](../decisions/0142-open-mode.md)(이 계약이 보안을 더 급하게 만든다) |
 | 관련 화면 | CON-20 작업공간 (STU-01·02·04·05·06·07·08·09·12를 대신한다) |
 
 ## 목적
@@ -16,6 +16,9 @@
 
 **작업공간 하나 = BPM 프로세스 한 벌**이다 (ADR-0143 §1). 새 개념을 만들지 않는다 — 데스크톱
 Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정의 하나만 복사하면 그림의 process id가 겹친다).
+
+**작업공간은 프로젝트 하나에 속한다** (ADR-0175). 프로젝트는 **묶는 층**이고 회사를 정한다 — 짓기·판·검사·
+시험 실행·배포는 묶지 않고 작업공간마다다. 그래서 C1·C5·C12는 프로젝트를 모른다.
 
 ## 전송
 
@@ -31,6 +34,20 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 
 ## 모델
 
+### ProjectInfo
+
+| 필드 | 타입 | 필수 | 뜻 | 추가된 schema |
+| --- | --- | --- | --- | --- |
+| `id` | str | ✓ | `^[a-z0-9][a-z0-9._-]{0,63}$` (작업공간 id와 같은 규칙, 이름 공간은 따로다) | 1 |
+| `name` | str | ✓ | 화면 이름 (1~100자) | 1 |
+| `description` | str | | 설명 | 1 |
+| `company` | str | ✓ | 이 프로젝트의 회사 (C16). 만들 때 정해지고 바뀌지 않는다. **안의 작업공간이 물려받는다** | 1 |
+| `processes` | int | ✓ | 안의 작업공간 수 | 1 |
+| `updated_at` | str | ✓ | 프로젝트 또는 안의 작업공간이 마지막으로 바뀐 때 | 1 |
+| `updated_by` | str | ✓ | 그때의 행위자 | 1 |
+
+프로젝트에는 파일이 없어 **DB가 원본**이다.
+
 ### WorkspaceInfo
 
 | 필드 | 타입 | 필수 | 뜻 | 추가된 schema |
@@ -39,7 +56,8 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | `name` | str | ✓ | 화면 이름 (1~100자) | 1 |
 | `version` | str | ✓ | 다음에 지을 판 (C1 `version`) | 1 |
 | `description` | str | | 설명 — 패키지로 간다 (C1 `description`) | 1 |
-| `company` | str | ✓ | 이 작업공간의 회사 (C16). 만들 때 정해지고 바뀌지 않는다 | 1 |
+| `project` | str | ✓ | 속한 프로젝트 (ADR-0175). 같은 회사의 프로젝트로만 옮긴다 | 1 |
+| `company` | str | ✓ | 이 작업공간의 회사 (C16) — **프로젝트의 것을 물려받는다**. 바뀌지 않는다 | 1 |
 | `place` | object | | 업무 자리 `{company, department?, staff?}` (C16, [ADR-0127](../decisions/0127-studio-picks-the-work-place.md)) | 1 |
 | `entry` | str | | 진입 정의의 경로 (`process/<이름>.bpmn`). 없으면 아직 고르지 않았다 | 1 |
 | `updated_at` | str | ✓ | 마지막으로 파일이 바뀐 때 | 1 |
@@ -67,14 +85,38 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 - 확장자는 자리마다 정해져 있다: `process/`는 `.bpmn`·`.dmn`, `cases/`는 `.cases.json`, `memory/`는 `specs.json`.
 - `libs/`는 **쓸 수 없다** — 받아 둔 공유 BPM 프로세스라 설치가 넣는다 (§공유 BPM 프로세스 설치).
 
+## 프로젝트
+
+| 길 | 권한 | 하는 일 |
+| --- | --- | --- |
+| `GET /projects` | 읽기 | 목록 (`?q=` — id·이름) |
+| `POST /projects` | 관리자 | 만들기 `{schema, id, name, description?, company?}` — `company`를 비우면 부르는 계정의 회사, Center 관리자면 기본 회사. 같은 id가 있으면 409 `exists` |
+| `GET /projects/{id}` | 읽기 | `ProjectInfo` |
+| `PATCH /projects/{id}` | 관리자 | 이름·설명. **회사는 바꾸지 않는다** |
+| `DELETE /projects/{id}` | 관리자 | 지운다. **안에 작업공간이 있으면 409 `not_empty`** — 함께 지우지 않는다 |
+| `GET /projects/{id}/workspaces` | 읽기 | 안의 작업공간 (`WorkspaceInfo[]`, 이름 차례) |
+| `POST /projects/{id}/import` | 관리자 | **옛 작업 폴더 zip을 받아 작업공간을 만든다** — 뿌리에 `process.json`이 있으면 하나, 없으면 **`process.json`이 있는 폴더마다 하나**다(Company1 `bpm/company1/` 통째). id·이름·판은 각 `process.json`의 것이다. 응답은 `ProjectImportResult` |
+
+- **하나라도 못 들이면 아무것도 만들지 않는다** — 같은 id의 작업공간이 있음(409 `exists`, `detail.ids`)·
+  경로 규칙(422 `bad_path`)·id 규칙(422 `input_invalid`)·`process.json`이 없음(422 `no_process`).
+- **`libs/` 사본은 버린다** — 받아 둔 공유 BPM 프로세스는 설치로만 들어온다(§공유 BPM 프로세스 설치). 버린 것은
+  `process.json`의 `libs` 기록째 응답의 `libs_to_install`로 돌려주고, 콘솔이 「설치」로 잇는다.
+
+### ProjectImportResult
+
+| 필드 | 타입 | 뜻 |
+| --- | --- | --- |
+| `workspaces` | `WorkspaceInfo[]` | 만든 작업공간 |
+| `libs_to_install` | object[] | `{workspace_id, package_id, version}` — 버린 `libs/` 사본이 가리키던 공유 BPM 프로세스 |
+
 ## 작업공간
 
 | 길 | 권한 | 하는 일 |
 | --- | --- | --- |
 | `GET /workspaces` | 읽기 | 목록 (`?company=`·`?q=`) |
-| `POST /workspaces` | 관리자 | 만들기 — 빈 한 벌(`process/`·`cases/`와 `process.json`). 같은 id가 있으면 409 `exists` |
+| `POST /workspaces` | 관리자 | 만들기 — 빈 한 벌(`process/`·`cases/`와 `process.json`). `project`를 적으면 그 프로젝트에(회사를 함께 적으면 같아야 한다 — 422 `company_mismatch`), 비우면 **그 회사의 프로젝트 중 id가 회사 id인 것**에 넣는다(없으면 만든다 — 34판이 옮긴 자리와 같다). 같은 id가 있으면 409 `exists` |
 | `GET /workspaces/{id}` | 읽기 | `WorkspaceInfo` |
-| `PATCH /workspaces/{id}` | 관리자 | 이름·판·설명·업무 자리·진입 정의 (STU-06이 하던 일) |
+| `PATCH /workspaces/{id}` | 관리자 | 이름·판·설명·업무 자리·진입 정의 (STU-06이 하던 일)·**`project`(옮기기 — 같은 회사만, 422 `company_mismatch`)** |
 | `DELETE /workspaces/{id}` | 관리자 | 지운다. **배포된 패키지는 그대로다** (패키지가 원본이고 작업공간은 그것을 짓는 자리다) |
 | `POST /workspaces/{id}/import` | 관리자 | `.bpmn` 하나 또는 **옛 작업 폴더 zip**을 받아 넣는다 (ADR-0143 §2 — 밖에서 그린 그림이 들어오는 자리). 파일 이름은 `X-BPM-File-Name` 헤더이고 **UTF-8 퍼센트 인코딩**이다 (헤더는 ASCII다 — `X-BPM-Actor`와 같은 규칙, CLAUDE.md §5). 없으면 zip으로 본다 |
 
@@ -282,12 +324,16 @@ Center가 마지막 결과를 **그때 본 파일 revision 묶음**과 함께 �
 | 400 | `bad_request` | |
 | 403 | `forbidden` | 보기 전용 계정이 고치려 함 |
 | 404 | `not_found` | 없는 작업공간·파일, **남의 회사 것**, 그 지시를 받지 않은 실행기가 묶음·build를 집으려 함 |
-| 409 | `exists` | 같은 id의 작업공간 |
+| 409 | `exists` | 같은 id의 작업공간·프로젝트 |
+| 409 | `not_empty` | 작업공간이 든 프로젝트를 지우려 함 |
 | 409 | `stale` | `If-Match`가 지금 `revision`과 다르다 — 아무것도 쓰지 않았다 |
 | 409 | `entry_in_use` | 진입 정의를 지우려 함 |
 | 409 | `build_done` | 이미 받은 build에 **다른** zip을 올리려 함 (같은 것은 200) |
 | 422 | `bad_path` | §경로 규칙을 어겼다 |
 | 422 | `bad_table` | 결정표에 **막는 흠**이 있다 (칸 문법·빈 이름·겹친 출력 이름…) — 아무것도 쓰지 않았다 |
+| 422 | `company_mismatch` | 다른 회사의 프로젝트에 작업공간을 넣거나 옮기려 함 |
+| 422 | `no_process` | 가져올 zip에 `process.json`이 하나도 없다 |
+| 422 | `bad_process` | 가져올 zip의 `process.json`이 JSON 객체로 읽히지 않는다 |
 | 422 | `no_entry` | 진입 정의 없이 돌리거나 지으려 함 |
 | 503 | `no_runner` | 시험 실행·검사·짓기를 맡을 서버 실행기가 없다. **검사는 담아 둔 결과가 있으면 그것을 준다** |
 
@@ -302,3 +348,4 @@ C5와 같다 — 모르는 칸은 **무시하고 버리지 않는다**(파일은
 | 2026-11-13 | 1 | 초안 — 작업공간·파일·시험 실행·실행 전 검사·배포 후보로 만들기·공유 BPM 프로세스 설치 | [0143](../decisions/0143-design-happens-in-the-console.md) |
 | 2026-11-13 | 1 | **결정표 격자**(`GET`·`PUT …/decisions/{path}`) — 브라우저가 DMN을 해석하지 않는다 | [0148](../decisions/0148-center-reads-and-writes-decision-tables.md) |
 | 2026-11-13 | 1 | **`> 미정:` 셋을 닫았다** — 시험 작업은 `jobs[]`로 가고 **자리만 따로**(`capacity.test_max`), 검사와 짓기는 **작업이 아니라** 하트비트의 `checks[]`·`builds[]`이고 **검사는 가르지 않는다**(revision 캐시로 받친다), 지은 zip은 `POST …/builds/{build_id}/artifact`로 받아 **Center가 제 이름으로** 등록한다(C5 권한표 그대로). 묶음을 받는 길 `GET …/bundle` | [0146](../decisions/0146-design-work-has-its-own-lane.md) |
+| 2026-11-20 | 1 | **프로젝트** — `/projects`·`ProjectInfo`·`ProjectImportResult`, `WorkspaceInfo.project`, 작업공간 만들기·고치기의 `project`. 34판이 이미 있는 작업공간을 회사마다 프로젝트 하나(id = 회사 id)로 옮긴다 | [0175](../decisions/0175-projects-hold-processes.md) |

@@ -95,6 +95,18 @@
       ],
       "default": null
     },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    },
     "schema": {
       "description": "이 계약의 schema 번호",
       "title": "Schema",

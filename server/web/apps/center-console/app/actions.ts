@@ -861,21 +861,61 @@ export async function removeOrgItem(kind: "department" | "staff", id: string, co
   redirect(orgHref("company", company));
 }
 
-// ─────────────────────────── 작업공간 (C17·CON-20) ───────────────────────────
+// ─────────────────────────── 프로젝트 (C17·CON-20a·20c, ADR-0175) ───────────────────────────
 
-/** 저장의 답 — 새 `revision`을 돌려줘야 **다음 저장이 또 `If-Match`를 싣는다** (C17). */
-export interface SaveResult {
-  revision?: string;
-  error?: string;
-  /** 남이 먼저 저장했다 (409 `stale`) — 화면이 합치지 않고 묻는다. */
-  stale?: boolean;
+const projectHref = (projectId: string) => `/workspaces/projects/${encodeURIComponent(projectId)}`;
+
+/** 새 프로젝트 — **회사는 여기서 정해지고 바뀌지 않는다**. 만들면 그 프로젝트로 간다. */
+export async function createProject(_previous: ActionResult, form: FormData): Promise<ActionResult> {
+  const id = String(form.get("id") ?? "").trim();
+  const name = String(form.get("name") ?? "").trim();
+  const description = String(form.get("description") ?? "").trim();
+  const company = String(form.get("company") ?? "").trim();
+  if (!id) return { error: "id를 넣으세요." };
+  if (!name) return { error: "이름을 넣으세요." };
+  try {
+    await center.createProject({
+      schema: 1,
+      id,
+      name,
+      ...(description ? { description } : {}),
+      ...(company ? { company } : {}),
+    });
+    revalidatePath("/workspaces");
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+  redirect(projectHref(id) as Route);
 }
 
-/**
- * 새 작업공간 (C17). 파일을 함께 주면 만든 뒤 **바로 가져온다** — 「파일에서 가져오기」가
- * 빈 작업공간을 남기고 실패하지 않게 한 걸음으로 묶는다.
- */
-export async function createWorkspace(_previous: ActionResult, form: FormData): Promise<ActionResult> {
+/** 이름·설명 고치기. */
+export async function updateProject(_previous: ActionResult, form: FormData): Promise<ActionResult> {
+  const id = String(form.get("project") ?? "");
+  const name = String(form.get("name") ?? "").trim();
+  if (!name) return { error: "이름을 넣으세요." };
+  try {
+    await center.updateProject(id, { schema: 1, name, description: String(form.get("description") ?? "").trim() });
+    revalidatePath(projectHref(id));
+    return {};
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 지우기 — 비어 있을 때만 (409 `not_empty`). 지우면 프로젝트 홈으로. */
+export async function deleteProject(projectId: string): Promise<ActionResult> {
+  try {
+    await center.deleteProject(projectId);
+    revalidatePath("/workspaces");
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+  redirect("/workspaces");
+}
+
+/** 프로젝트 안의 새 프로세스 — 회사는 묻지 않는다(프로젝트의 것이다). `.bpmn` 하나를 함께 받는다. 만들면 편집기로. */
+export async function createProcess(_previous: ActionResult, form: FormData): Promise<ActionResult> {
+  const project = String(form.get("project") ?? "");
   const id = String(form.get("id") ?? "").trim();
   const name = String(form.get("name") ?? "").trim();
   const version = String(form.get("version") ?? "").trim() || "0.1.0";
@@ -885,16 +925,79 @@ export async function createWorkspace(_previous: ActionResult, form: FormData): 
   const file = form.get("file");
   const bringing = file instanceof File && file.size > 0 ? file : null;
   try {
-    // `schema`는 이 계약의 번호다 (C17 schema 1) — 모델이 요구한다.
-    await center.createWorkspace({ schema: 1, id, name, version, ...(description ? { description } : {}) });
-    if (bringing) {
-      await center.importIntoWorkspace(id, await bringing.arrayBuffer(), bringing.name);
+    await center.createWorkspace({ schema: 1, id, name, version, project, ...(description ? { description } : {}) });
+    // 밖에서 그린 `.bpmn` 하나를 함께 주면 만든 뒤 **바로 넣는다** — 빈 프로세스를 남기고 실패하지 않게.
+    if (bringing) await center.importIntoWorkspace(id, await bringing.arrayBuffer(), bringing.name);
+    revalidatePath(projectHref(project));
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+  redirect(`/workspaces/${encodeURIComponent(id)}` as Route);
+}
+
+/** 가져오기의 답 — 만든 것과 **설치해야 할 공유 프로세스** (C17 `ProjectImportResult`). */
+export interface ImportResult extends ActionResult {
+  made?: string[];
+  libs?: { workspace_id: string; package_id: string; version: string }[];
+  /** 걸린 까닭 줄 (같은 id·경로 규칙) — 창 안에 그대로 보인다. */
+  reasons?: string[];
+}
+
+/** 옛 작업 폴더 zip → 프로세스 여럿. 하나라도 걸리면 **아무것도 만들지 않는다**. */
+export async function importIntoProject(_previous: ImportResult, form: FormData): Promise<ImportResult> {
+  const project = String(form.get("project") ?? "");
+  const file = form.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "zip 파일을 고르세요." };
+  try {
+    const result = await center.importIntoProject(project, await file.arrayBuffer());
+    revalidatePath(projectHref(project));
+    return { made: (result.workspaces ?? []).map((one) => one.id), libs: result.libs_to_install ?? [] };
+  } catch (cause) {
+    const detail = cause instanceof CenterError ? (cause.body?.detail as Record<string, unknown> | undefined) : undefined;
+    const ids = Array.isArray(detail?.ids) ? (detail.ids as string[]).map((one) => `이미 있는 id: ${one}`) : [];
+    const paths = Array.isArray(detail?.paths) ? (detail.paths as string[]) : [];
+    return { error: message(cause), reasons: [...ids, ...paths] };
+  }
+}
+
+/** 가져오며 버린 `libs/` 사본을 설치로 잇는다 — 줄마다 따로 부르고 **실패한 줄만** 돌려준다. */
+export async function installImportedLibs(
+  projectId: string,
+  libs: { workspace_id: string; package_id: string; version: string }[],
+): Promise<{ failed: string[] }> {
+  const failed: string[] = [];
+  for (const one of libs) {
+    try {
+      await center.installLib(one.workspace_id, { schema: 1, package_id: one.package_id, version: one.version });
+    } catch (cause) {
+      failed.push(`${one.workspace_id} ← ${one.package_id} ${one.version}: ${message(cause)}`);
     }
-    revalidatePath("/workspaces");
+  }
+  revalidatePath(projectHref(projectId));
+  return { failed };
+}
+
+/** 다른 프로젝트로 옮기기 — **같은 회사만** (422 `company_mismatch`). */
+export async function moveProcess(workspaceId: string, from: string, to: string): Promise<ActionResult> {
+  try {
+    await center.updateWorkspace(workspaceId, { schema: 1, project: to });
+    revalidatePath(projectHref(from));
+    revalidatePath(projectHref(to));
+    revalidatePath(`/workspaces/${workspaceId}`);
     return {};
   } catch (cause) {
     return { error: message(cause) };
   }
+}
+
+// ─────────────────────────── 작업공간 (C17·CON-20) ───────────────────────────
+
+/** 저장의 답 — 새 `revision`을 돌려줘야 **다음 저장이 또 `If-Match`를 싣는다** (C17). */
+export interface SaveResult {
+  revision?: string;
+  error?: string;
+  /** 남이 먼저 저장했다 (409 `stale`) — 화면이 합치지 않고 묻는다. */
+  stale?: boolean;
 }
 
 /** 파일 저장 (C17 `PUT …/files/{path}`). `revision`이 낡으면 **아무것도 쓰이지 않는다**. */
@@ -917,7 +1020,8 @@ export async function saveWorkspaceFile(
 export async function deleteWorkspace(workspaceId: string): Promise<ActionResult> {
   try {
     await center.deleteWorkspace(workspaceId);
-    revalidatePath("/workspaces");
+    // 프로젝트 화면(`/workspaces/projects/…`)의 표도 함께 — 아래 전부를 새로 읽는다.
+    revalidatePath("/workspaces", "layout");
     return {};
   } catch (cause) {
     return { error: message(cause) };
