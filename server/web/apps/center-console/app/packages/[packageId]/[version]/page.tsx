@@ -169,7 +169,7 @@ export async function PackageDetail({
         <div className="flex flex-col gap-6">
           <section className="flex flex-col gap-2">
             <h2 className="text-h2 font-semibold">요약</h2>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-body sm:grid-cols-4">
+            <dl className="meta-grid">
               <dt className="text-text-muted">id</dt>
               <dd className="font-mono">{info.id}</dd>
               <dt className="text-text-muted">종류</dt>

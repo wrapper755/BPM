@@ -104,6 +104,7 @@ export function DataTable<T>({
       ))}
     </ul>
     <div
+      data-table-frame
       className={cn("hidden overflow-auto border border-border-default bg-bg-surface shadow-sm md:block", className)}
       style={{ borderRadius: "var(--radius-lg)" }}
     >

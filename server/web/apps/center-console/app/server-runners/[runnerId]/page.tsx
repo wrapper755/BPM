@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { DEPLOYMENT_REASON } from "@/lib/app-logs";
 import { redirect } from "next/navigation";
-import { DataTable, EmptyState, ErrorBanner, InfoTip, StatusBadge, type Column } from "@bpm/ui";
+import { DataTable, EmptyState, ErrorBanner, InfoTip, Section, StatusBadge, type Column } from "@bpm/ui";
 import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import { CenterError, center, session } from "@/lib/center";
@@ -25,14 +25,6 @@ import { keyByPrefix } from "@/lib/center-keys";
  */
 
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-h2 font-semibold">{title}</h2>
-      {children}
-    </section>
-  );
-}
 
 /**
  * 보고된 확장 하나의 상태 (C12 `ExtensionState` → `status_map` 「확장」, ADR-0043).
@@ -261,7 +253,7 @@ export default async function ServerRunnerPage({
           ) : null}
 
           <Section title="서버 실행기">
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-body sm:grid-cols-4">
+            <dl className="meta-grid">
               <dt className="text-text-muted">온라인</dt>
               <dd>
                 <StatusBadge group="온라인" label={info.online ? "온라인" : "오프라인"} />

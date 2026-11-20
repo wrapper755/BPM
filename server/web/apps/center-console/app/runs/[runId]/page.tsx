@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { DataTable, ErrorBanner, StatusBadge, statusToken, type Column } from "@bpm/ui";
+import { DataTable, ErrorBanner, Section, StatusBadge, statusToken, type Column } from "@bpm/ui";
 import type { RunEvent } from "@bpm/api-types/c3-run-event";
 import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import type { ExternalTaskInfo } from "@bpm/api-types/c15-external-task-info";
@@ -145,14 +145,6 @@ export function counts(events: RunEvent[]): Record<string, number> {
   return found;
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-h2 font-semibold">{title}</h2>
-      {children}
-    </section>
-  );
-}
 
 function Empty({ kind }: { kind: string }) {
   return <p className="text-body-sm text-text-muted">{kind} 이벤트가 없습니다.</p>;
@@ -388,7 +380,7 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
       {info ? (
         <div className="flex flex-col gap-6">
           <Section title="요약">
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-body sm:grid-cols-4">
+            <dl className="meta-grid">
               <dt className="text-text-muted">상태</dt>
               <dd>
                 <StatusBadge group="실행·노드" label={LABEL[info.status ?? ""] ?? info.status ?? "—"} />
