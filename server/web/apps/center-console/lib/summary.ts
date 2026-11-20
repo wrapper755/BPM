@@ -621,9 +621,8 @@ export function flattenGroups(groups: ProcessGroup[]): BotRow[] {
   );
 }
 
-/** 「상태」 거르기 — 기본은 철회를 뺀다 (되살아나지 않는 판이 화면을 차지하지 않게). */
+/** 「상태」 거르기 — 고르는 값은 **상태 이름**이고 기본은 「전체」다 (ADR-0171 — 「철회 빼고」를 걷었다). */
 export const STATUS_FILTERS = [
-  { value: "active", label: "철회 빼고" },
   { value: "all", label: "전체" },
   { value: "approved", label: "승인됨" },
   { value: "candidate", label: "후보" },
@@ -634,7 +633,7 @@ export const STATUS_FILTERS = [
 export type StatusFilter = (typeof STATUS_FILTERS)[number]["value"];
 
 export function statusFilterOf(value: string | undefined): StatusFilter {
-  return STATUS_FILTERS.some((one) => one.value === value) ? (value as StatusFilter) : "active";
+  return STATUS_FILTERS.some((one) => one.value === value) ? (value as StatusFilter) : "all";
 }
 
 /**
@@ -644,8 +643,7 @@ export function statusFilterOf(value: string | undefined): StatusFilter {
 export function filterGroups(rows: BotRow[], query: { q?: string; status: StatusFilter }): ProcessGroup[] {
   const q = (query.q ?? "").trim().toLowerCase();
   const kept = rows.filter((row) => {
-    if (query.status === "active" && row.status === "revoked") return false;
-    if (query.status !== "active" && query.status !== "all" && row.status !== query.status) return false;
+    if (query.status !== "all" && row.status !== query.status) return false;
     return !q || row.id.toLowerCase().includes(q) || (row.name ?? "").toLowerCase().includes(q);
   });
   return groupProcesses(kept);
@@ -654,7 +652,7 @@ export function filterGroups(rows: BotRow[], query: { q?: string; status: Status
 export type GroupSort = "trouble" | "name";
 
 /**
- * 「문제 먼저」 — 경고가 있는 것, 대표 판의 성공률이 낮은 것, 표본이 없는 것, 이름 차례.
+ * 「경고」 정렬 (ADR-0171 — 값은 열 이름이다) — 경고가 있는 것, 대표 판의 성공률이 낮은 것, 표본이 없는 것, 이름 차례.
  * **판정이 아니라 차례만** 바꾼다 (CON-02 — 「투입 가능」 같은 판정은 두지 않는다).
  */
 export function sortGroups(groups: ProcessGroup[], sort: GroupSort): ProcessGroup[] {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DataTable, InfoTip, StatusBadge, type Column } from "@bpm/ui";
 import { PackageActions } from "@/components/PackageActions";
@@ -59,13 +60,15 @@ export function ProcessTable({
     }
     const params = new URLSearchParams();
     if (typed.trim()) params.set("q", typed.trim());
-    if (status !== "active") params.set("status", status);
+    if (status !== "all") params.set("status", status);
     if (sort !== "trouble") params.set("sort", sort);
     const search = params.toString();
     window.history.replaceState(null, "", search ? `?${search}` : window.location.pathname);
   }, [typed, status, sort]);
 
   const shown = flattenGroups(sortGroups(filterGroups(rows, { q: text, status }), sort));
+  // 「번호」는 **지금 보이는 차례**다 — 거르기·정렬이 바뀌면 다시 1부터 (ADR-0171).
+  const number = new Map(shown.map((row, index) => [`${row.id}@${row.version}`, index + 1]));
 
   return (
     <>
@@ -75,16 +78,35 @@ export function ProcessTable({
         method="get"
         onSubmit={(event) => event.preventDefault()}
       >
-        <label className="flex flex-col gap-1 text-body-sm">
-          이름
-          <input
-            name="q"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="(전체)"
-            className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
-          />
-        </label>
+        {/* 「초기화」는 이름 칸 바로 옆의 아이콘 단추다 (ADR-0171). 주소로도 가 닿게 링크로 둔다 — JS가 없으면
+            그냥 `/bots`로 간다 (폼의 `method="get"`과 같은 결). */}
+        <div className="flex flex-col gap-1 text-body-sm">
+          <label htmlFor="bots-q">이름</label>
+          <span className="flex items-center gap-1">
+            <input
+              id="bots-q"
+              name="q"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="(전체)"
+              className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
+            />
+            <Link
+              href="/bots"
+              aria-label="초기화"
+              title="초기화"
+              onClick={(event) => {
+                event.preventDefault();
+                setText("");
+                setStatus("all");
+                setSort("trouble");
+              }}
+              className="inline-flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-bg-subtle hover:text-text-primary"
+            >
+              <RotateCcw size={16} aria-hidden />
+            </Link>
+          </span>
+        </div>
         <label className="flex flex-col gap-1 text-body-sm">
           상태
           <select
@@ -108,27 +130,15 @@ export function ProcessTable({
             onChange={(event) => setSort(event.target.value === "name" ? "name" : "trouble")}
             className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
           >
-            <option value="trouble">문제 먼저</option>
-            <option value="name">이름순</option>
+            {/* 값은 열 이름이다 — 칸 이름이 이미 「정렬」이다 (ADR-0171). */}
+            <option value="trouble">경고</option>
+            <option value="name">이름</option>
           </select>
         </label>
-        {/* 주소로도 가 닿게 둔다 — JS가 없으면 그냥 `/bots`로 간다 (폼의 `method="get"`과 같은 결). */}
-        <Link
-          href="/bots"
-          onClick={(event) => {
-            event.preventDefault();
-            setText("");
-            setStatus("active");
-            setSort("trouble");
-          }}
-          className="ml-auto inline-flex h-9 items-center rounded-md px-3 text-body text-text-secondary hover:bg-bg-subtle"
-        >
-          초기화
-        </Link>
       </form>
 
       <DataTable
-        columns={columnsFor(admin)}
+        columns={columnsFor(admin, number)}
         rows={shown}
         rowKey={(row) => `${row.id}@${row.version}`}
         caption="프로세스"
@@ -237,12 +247,21 @@ function Warnings({ row }: { row: BotRow }) {
  *
  * 승인 단추는 **판마다** 그 줄에 드러나 있다 (ADR-0090 — 판마다 할 수 있는 것이 다르다).
  */
-function columnsFor(admin: boolean): Array<Column<BotRow>> {
+function columnsFor(admin: boolean, number: Map<string, number>): Array<Column<BotRow>> {
   const href = (row: BotRow) => packageHref({ id: row.id, version: row.version, kind: "bpm_process" });
   return [
     {
+      key: "number",
+      header: "번호",
+      width: "6ch",
+      align: "right",
+      cell: (row) => <span className="text-text-muted">{number.get(`${row.id}@${row.version}`)}</span>,
+    },
+    {
       key: "process",
       header: "프로세스",
+      // 휴대폰 카드의 제목 — 첫 열(번호)이 제목이면 카드마다 숫자 하나가 머리에 선다 (CON-15와 같은 결).
+      cardTitle: true,
       // 업무 이름만 보이고 id는 말풍선에 (U2 — 화면 문서 CON-02). 이름이 없으면 id가 제목이다.
       cell: (row) => (
         <Link
