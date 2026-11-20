@@ -141,3 +141,87 @@ export function workspaceTip(rows: WorkspaceInfo[]): WorkspaceTip {
   const sorted = [...rows].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   return { total: rows.length, latest: sorted[0]?.name ?? null };
 }
+
+/** 「지금 할 일」의 줄 수 — 넘치면 「그 밖에 n건」이다 ([ADR-0183](../../../../../docs/decisions/0183-dashboard-shows-what-to-do-now.md)). */
+export const TODO_LIMIT = 8;
+
+export type TodoKind = "failed" | "approval" | "candidate";
+
+export interface TodoItem {
+  kind: TodoKind;
+  /** 표의 열쇠이자 가는 곳의 id — 실행 id·요청 id·`<패키지 id>@<판>`. */
+  key: string;
+  /** 사람이 읽는 제목. 없으면 화면이 BPM 프로세스 이름을 찾는다(이름표는 `server-only`라 여기 들이지 않는다). */
+  title: string | null;
+  bpm_process_id: string | null;
+  version: string | null;
+  /** 언제부터인가 — 실패는 끝난(없으면 시작한) 때, 결재는 올라온 때, 후보는 올린 때. */
+  since: string;
+}
+
+export interface Todo {
+  items: TodoItem[];
+  /** 자른 뒤 남은 수 — 종류마다. */
+  more: Record<TodoKind, number>;
+}
+
+/**
+ * 「지금 할 일」 — **사람이 손대야 풀리는 것**만 (ADR-0183). 카드가 이미 받은 재료로만 센다.
+ *
+ * 실패(24시간 안)는 **새것부터** 맨 앞에 — 이미 일어난 일이다. 그다음 결재·후보를 **오래된 것부터** 섞는다
+ * (17일 묵은 결재가 어제 올라온 후보 뒤에 숨지 않게). 재료가 `null`이면(못 받았으면) 그 종류는 없다.
+ */
+export function todo(
+  input: { runs: RunInfo[] | null; approvals: ApprovalInfo[] | null; packages: PackageInfo[] | null },
+  now: number = Date.now(),
+  limit: number = TODO_LIMIT,
+): Todo {
+  const failed: TodoItem[] = (input.runs ?? [])
+    .filter((run) => run.status === "failed")
+    .map((run) => ({ run, at: run.finished_at ?? run.started_at ?? null }))
+    .filter((one): one is { run: RunInfo; at: string } => {
+      const age = hoursSince(one.at, now);
+      return age !== null && age <= TODAY_HOURS;
+    })
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+    .map(({ run, at }) => ({
+      kind: "failed",
+      key: run.run_id,
+      title: null,
+      bpm_process_id: run.bpm_process_id ?? null,
+      version: run.version ?? null,
+      since: at,
+    }));
+  const waiting: TodoItem[] = [
+    ...(input.approvals ?? [])
+      .filter((one) => one.state === "open")
+      .map(
+        (one): TodoItem => ({
+          kind: "approval",
+          key: one.request_id,
+          title: one.title ?? null,
+          bpm_process_id: one.bpm_process_id,
+          version: one.version,
+          since: one.created_at,
+        }),
+      ),
+    ...(input.packages ?? [])
+      .filter((one) => one.status === "candidate")
+      .map(
+        (one): TodoItem => ({
+          kind: "candidate",
+          key: `${one.id}@${one.version}`,
+          title: one.name ?? null,
+          bpm_process_id: one.id,
+          version: one.version,
+          since: one.uploaded_at,
+        }),
+      ),
+  ].sort((a, b) => Date.parse(a.since) - Date.parse(b.since));
+
+  const all = [...failed, ...waiting];
+  const items = all.slice(0, limit);
+  const more: Record<TodoKind, number> = { failed: 0, approval: 0, candidate: 0 };
+  for (const one of all.slice(limit)) more[one.kind] += 1;
+  return { items, more };
+}

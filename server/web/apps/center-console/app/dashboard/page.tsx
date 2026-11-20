@@ -8,12 +8,16 @@ import {
   jobQueue,
   runnerHealth,
   runsToday,
+  todo,
   waitingApprovals,
   workspaceTip,
+  type TodoItem,
+  type TodoKind,
 } from "@/lib/dashboard";
+import { loadProcessNames, processNamer } from "@/lib/names";
 import { Shell } from "@/components/Shell";
 import { duration } from "@/lib/summary";
-import { time } from "@/lib/time";
+import { between, time, took } from "@/lib/time";
 
 /**
  * CON-21 대시보드 — **홈이다** ([ADR-0151](../../../../../docs/decisions/0151-console-follows-the-lifecycle.md) §3).
@@ -45,6 +49,17 @@ export default async function DashboardPage() {
   const health = runners.value ? runnerHealth(runners.value) : null;
   const queue = jobs.value ? jobQueue(jobs.value, now) : null;
   const spaces = workspaces.value ? workspaceTip(workspaces.value) : null;
+  // 「지금 할 일」 — 카드가 받은 재료로만 (ADR-0183). 못 받은 종류는 빠지고 아래 까닭을 적는다.
+  const todos = todo(
+    { runs: runs.value ? (runs.value.runs ?? []) : null, approvals: approvals.value, packages: packages.value },
+    now,
+  );
+  const named = processNamer(await loadProcessNames());
+  const missing = [
+    runs.error ? `실패한 실행을 읽지 못했습니다 — ${runs.error}` : null,
+    approvals.error ? `결재를 읽지 못했습니다 — ${approvals.error}` : null,
+    packages.error ? `승인 기다리는 후보를 읽지 못했습니다 — ${packages.error}` : null,
+  ].filter((one): one is string => one !== null);
 
   return (
     <Shell mode={found.mode} actor={found.actor} current="/dashboard">
@@ -53,13 +68,16 @@ export default async function DashboardPage() {
         <p className="text-body-sm text-text-muted">{time(new Date(now).toISOString())} 기준</p>
       </header>
 
+      <TodoList todo={todos} named={named} missing={missing} now={now} />
+
       <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
         <Card
-          title="오늘 실행"
+          // 큰 숫자가 **실패 수**다 — 「오늘 실행 0건」이 무엇인지 헷갈리지 않게 (ADR-0183).
+          title="최근 24시간 실패"
           href="/runs?status=failed"
           link="실행 기록 보기"
           value={today ? String(today.failed) : null}
-          unit="건 실패"
+          unit="건"
           note={
             today
               ? // 도는 중·기다리는 중은 **오늘 시작한 것만이 아니다** (`runsToday`) — 「지금」이라고 적는다.
@@ -141,6 +159,97 @@ export default async function DashboardPage() {
         />
       </ul>
     </Shell>
+  );
+}
+
+const KIND: Record<TodoKind, { label: string; tone: string; list: Route; listName: string }> = {
+  failed: {
+    label: "실패",
+    tone: "bg-status-failed-bg text-status-failed-fg",
+    list: "/runs?status=failed",
+    listName: "실패",
+  },
+  approval: { label: "결재", tone: "bg-bg-subtle text-text-secondary", list: "/approvals", listName: "결재" },
+  candidate: {
+    label: "승인",
+    tone: "bg-bg-subtle text-text-secondary",
+    list: "/deployments?tab=pending",
+    listName: "승인",
+  },
+};
+
+function todoHref(item: TodoItem): Route {
+  if (item.kind === "failed") return `/runs/${encodeURIComponent(item.key)}` as Route;
+  if (item.kind === "approval") return `/approvals/${encodeURIComponent(item.key)}` as Route;
+  return "/deployments?tab=pending";
+}
+
+/**
+ * 「지금 할 일」 ([ADR-0183](../../../../../docs/decisions/0183-dashboard-shows-what-to-do-now.md)) — 사람이 손대야
+ * 풀리는 것만. 줄 전체가 그 항목으로 가는 링크이고 **쓰기 단추는 없다** (ADR-0151 — 같은 단추는 한 곳).
+ */
+function TodoList({
+  todo: found,
+  named,
+  missing,
+  now,
+}: {
+  todo: ReturnType<typeof todo>;
+  named: ReturnType<typeof processNamer>;
+  missing: string[];
+  now: number;
+}) {
+  const more = (Object.keys(found.more) as TodoKind[]).filter((kind) => found.more[kind] > 0);
+  return (
+    <section className="mb-6 rounded-lg border border-border-default bg-bg-surface">
+      <h2 className="border-b border-border-default px-4 py-3 text-body font-semibold">지금 할 일</h2>
+      {found.items.length === 0 ? (
+        <p className="px-4 py-4 text-body-sm text-text-muted">지금 손댈 것이 없습니다.</p>
+      ) : (
+        <ul className="m-0 list-none p-0">
+          {found.items.map((item) => {
+            const what =
+              item.kind === "candidate"
+                ? `${item.title ?? item.bpm_process_id} · v${item.version}`
+                : (item.title ?? named(item.bpm_process_id, item.version) ?? item.bpm_process_id ?? "—");
+            // 실패는 **언제 끝났나**, 결재·승인은 **얼마나 기다렸나**가 요점이다.
+            const when =
+              item.kind === "failed" ? time(item.since) : took(between(item.since, null, new Date(now)));
+            return (
+              <li key={`${item.kind}:${item.key}`} className="border-b border-border-default last:border-b-0">
+                <Link
+                  href={todoHref(item)}
+                  className="flex items-center gap-3 px-4 py-3 text-body hover:bg-bg-subtle"
+                >
+                  <span className={`w-12 shrink-0 rounded-sm px-2 py-0.5 text-center text-caption font-semibold ${KIND[item.kind].tone}`}>
+                    {KIND[item.kind].label}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-text-primary">{what}</span>
+                  <span className="shrink-0 whitespace-nowrap text-body-sm tabular-nums text-text-muted">{when}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {more.length > 0 || missing.length > 0 ? (
+        <div className="flex flex-col gap-1 border-t border-border-default px-4 py-3 text-body-sm text-text-muted">
+          {more.length > 0 ? (
+            <p className="flex flex-wrap gap-x-3">
+              <span>그 밖에</span>
+              {more.map((kind) => (
+                <Link key={kind} href={KIND[kind].list} className="text-primary hover:underline">
+                  {KIND[kind].listName} {found.more[kind]}건
+                </Link>
+              ))}
+            </p>
+          ) : null}
+          {missing.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
