@@ -14,9 +14,10 @@ export type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary: "bg-primary text-primary-fg hover:bg-primary-hover border border-transparent",
-  // 옅은 면 + `primary` 글자 — 칠하지 않은 입구 (ADR-0168). 누르면 `primary`를 8% 섞는다.
+  // 옅은 면 + `primary` 글자 — 칠하지 않은 입구 (ADR-0168). 면은 `primary` 12%, 누르면 20% (ADR-0170 —
+  // `primary.subtle` 그대로는 흰 표 위에서 단추로 안 보였다).
   tonal:
-    "bg-primary-subtle text-primary border border-transparent hover:bg-[color-mix(in_srgb,var(--primary)_8%,var(--primary-subtle))]",
+    "bg-[color-mix(in_srgb,var(--primary)_12%,var(--primary-subtle))] text-primary border border-transparent hover:bg-[color-mix(in_srgb,var(--primary)_20%,var(--primary-subtle))]",
   secondary: "bg-bg-surface text-text-primary border border-border-default shadow-sm hover:bg-bg-subtle",
   ghost: "bg-transparent text-text-primary border border-transparent hover:bg-bg-subtle",
   danger: "bg-status-failed-solid text-danger-fg hover:brightness-95 border border-transparent",

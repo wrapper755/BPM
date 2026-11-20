@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 일부 대체됨([ADR-0170](0170-menu-notes-become-tooltips.md) — `tonal` 면의 짙기) |
 | 날짜 | 2026-11-20 |
 | 관련 | 화면 CON-00 [H]·CON-14·CON-15·CON-17·CON-18·CON-20, [ADR-0164](0164-neutral-pro.md)(남보라 하나·「⋯」), [ADR-0157](0157-status-colours-stay-under-the-brand.md)(가장 진한 색은 주 단추 하나) |
 
