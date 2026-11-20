@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 import { Autocomplete, Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
 import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import { CenterError, center, session } from "@/lib/center";
@@ -7,12 +8,47 @@ import { Shell } from "@/components/Shell";
 import { AutoFilter } from "@/components/AutoFilter";
 import { loadProcessNames } from "@/lib/names";
 import { fullTime } from "@/lib/time";
+import { namesOf, placeLine, workPlaceLabel } from "@/lib/organization";
+import { PendingTable, type PendingRow } from "./pending";
 import { RevokeDeployment } from "./tools";
 
 /**
- * CON-15 배포 — 배포를 **만들고 철회하는 한 곳**이다 (ADR-0090). CON-03·CON-12의 배포 줄은
- * 여기로 잇기만 한다 (같은 단추는 한 곳). 봉투는 Center가 서명한다 — 화면은 누가 했는지를 보인다.
+ * CON-15 배포 — **후보를 승인하고** 배포를 **만들고 철회하는 한 곳**이다 (ADR-0090·ADR-0181). 탭 둘 —
+ * 「승인 대기」(`?tab=pending`)와 「배포됨」(기본). CON-12의 배포 줄은 여기로 잇기만 한다 (같은 단추는 한 곳).
+ * 봉투는 Center가 서명한다 — 화면은 누가 했는지를 보인다.
  */
+
+/** 탭 줄 — **링크**라 JS 없이 돈다 (CON-01 상세와 같은 줄). 고른 탭은 주소 `?tab=`에 남는다. */
+function TabBar({ pending, waiting }: { pending: boolean; waiting: number | null }) {
+  const items: Array<{ href: Route; label: string; count?: number | null; here: boolean }> = [
+    { href: "/deployments?tab=pending", label: "승인 대기", count: waiting, here: pending },
+    { href: "/deployments", label: "배포됨", here: !pending },
+  ];
+  return (
+    <nav aria-label="배포" className="mb-4 overflow-x-auto border-b border-border-default">
+      <ul className="m-0 flex list-none gap-1 p-0">
+        {items.map((item) => (
+          <li key={item.label}>
+            <Link
+              href={item.href}
+              aria-current={item.here ? "page" : undefined}
+              className={`flex items-center gap-1.5 px-3 py-2.5 whitespace-nowrap text-body${
+                item.here
+                  ? " font-semibold text-text-primary shadow-[inset_0_-2px_0_var(--primary)]"
+                  : " text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              {item.label}
+              {item.count !== undefined && item.count !== null ? (
+                <span className="text-body-sm text-text-muted tabular-nums">{item.count}</span>
+              ) : null}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
 
 /** 배포 하나의 지금 상태 (`status_map` 「배포」). 때는 콘솔 서버의 시각으로 본다. */
 function stateOf(row: DeploymentInfo, now: number): string {
@@ -37,11 +73,65 @@ const STATES = [
 export default async function DeploymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ state?: string; process?: string; created?: string }>;
+  searchParams: Promise<{ tab?: string; state?: string; process?: string; created?: string }>;
 }) {
   const found = await session();
   if (!found) redirect("/login");
   const asked = await searchParams;
+  const pending = asked.tab === "pending";
+  const admin = found.mode === "admin";
+
+  // 후보는 **두 탭 모두** 읽는다 — 탭의 건수다. 못 읽으면 건수 없이 서고 「승인 대기」 탭이 까닭을 보인다.
+  let candidates: PendingRow[] = [];
+  let candidateFailure: string | null = null;
+  try {
+    const all = await center.packages();
+    const waiting = all
+      .filter((one) => one.status === "candidate")
+      .sort((a, b) => a.uploaded_at.localeCompare(b.uploaded_at));
+    // 승인 창에 보일 회사·업무 자리의 **이름** (C16, CON-02와 같다) — 그 탭에서만, 못 읽으면 id로 보인다.
+    const none = () => ({}) as Record<string, string>;
+    const [companies, departments, staff] =
+      pending && waiting.length > 0
+        ? await Promise.all([
+            center.companies().then(namesOf, none),
+            center.departments().then(namesOf, none),
+            center.staffList().then(namesOf, none),
+          ])
+        : [none(), none(), none()];
+    candidates = waiting.map((one) => ({
+      ...one,
+      place_line: placeLine(
+        one.company ? (companies[one.company] ?? one.company) : null,
+        workPlaceLabel(one.place, { departments, staff }),
+      ),
+    }));
+  } catch (cause) {
+    candidateFailure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
+  }
+  const header = (
+    <>
+      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <h1 className="text-h2 font-bold">배포</h1>
+        {admin ? (
+          <Link href="/deployments/new">
+            <Button variant="tonal">새 배포...</Button>
+          </Link>
+        ) : null}
+      </header>
+      <TabBar pending={pending} waiting={candidateFailure ? null : candidates.length} />
+    </>
+  );
+
+  if (pending) {
+    return (
+      <Shell mode={found.mode} actor={found.actor} current="/deployments?tab=pending">
+        {header}
+        {candidateFailure ? <ErrorBanner message={candidateFailure} /> : <PendingTable rows={candidates} admin={admin} />}
+      </Shell>
+    );
+  }
+
   const state = asked.state ?? "";
   const process = (asked.process ?? "").trim();
 
@@ -177,14 +267,7 @@ export default async function DeploymentsPage({
 
   return (
     <Shell mode={found.mode} actor={found.actor} current="/deployments">
-      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-h2 font-bold">배포</h1>
-        {found.mode === "admin" ? (
-          <Link href="/deployments/new">
-            <Button variant="tonal">새 배포...</Button>
-          </Link>
-        ) : null}
-      </header>
+      {header}
 
       {/* 「철회된 것도 보기」는 「상태」 칸이 맡는다 (CON-15). */}
       <AutoFilter>

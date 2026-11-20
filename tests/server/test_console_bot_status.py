@@ -220,7 +220,7 @@ def test_the_nav_opens_the_page() -> None:
     """탐색의 꺼진 줄이 **주소를 갖는다** — 화면이 생겼으니 「아직 없습니다」가 남아 있으면 거짓말이다."""
     shell = (CONSOLE / "components" / "Shell.tsx").read_text(encoding="utf-8")
     # 줄에 한 줄 설명(`note`)이 붙었다 (ADR-0152) — 이름과 주소가 **한 줄에 같이** 있는지만 본다.
-    assert '{ label: "프로세스", href: "/bots"' in shell
+    assert '{ label: "프로세스 현황", href: "/bots"' in shell
     assert "CON-02는 아직" not in shell
     assert (CONSOLE / "app" / "bots" / "page.tsx").is_file()
 

@@ -3,7 +3,7 @@ import type { Route } from "next";
 import { LogOut } from "lucide-react";
 import { Button } from "@bpm/ui";
 import { logout } from "@/app/actions";
-import { session } from "@/lib/center";
+import { center, session } from "@/lib/center";
 import type { Mode } from "@/lib/session";
 import { BAR_BUTTON } from "./bar-button";
 import { Refresh } from "./Refresh";
@@ -12,7 +12,7 @@ import { TopNav, type NavGroup, type NavItem } from "./TopNav";
 
 /**
  * CON-00 공통 틀 — **위 막대 하나다** ([ADR-0152](../../../../../docs/decisions/0152-console-chrome-is-one-top-bar.md)):
- * 화면 폭 전체의 **밝은 띠**(56)에 마크 + 「BPM」 + 묶음 일곱, 그 아래가 본문이다
+ * 화면 폭 전체의 **밝은 띠**(56)에 마크 + 「BPM」 + 묶음 여덟, 그 아래가 본문이다
  * ([ADR-0161](../../../../../docs/decisions/0161-soft-cards.md) — 짙은 틀을 벗었다. 본문은 가운데 최대 폭 안에 선다).
  * 레일(56)과 펼침 패널(224)은 걷었다 — 묶음이 여섯·줄이 열하나뿐이라 280px를 늘 쥐고도 패널이
  * 거의 비어 있었다.
@@ -24,20 +24,19 @@ import { TopNav, type NavGroup, type NavItem } from "./TopNav";
  */
 
 /**
- * 묶음 일곱 (CON-00 [A]·[M]) — **BPM 생애주기 차례**다: 대시보드 → 저작 → 라이브러리 → 배포 → 운영 → 연결 → 권한·조직
- * ([ADR-0151](../../../../../docs/decisions/0151-console-follows-the-lifecycle.md), 「라이브러리」는
- * [ADR-0176](../../../../../docs/decisions/0176-projects-have-shared-packages.md)). 가로 막대라 **왼쪽에서
+ * 묶음 여덟 (CON-00 [A]·[M]) — **BPM 생애주기 차례**다: 대시보드 → 결재함 → 저작 → 라이브러리 → 배포 → 운영 → 시스템 → 권한·조직
+ * ([ADR-0181](../../../../../docs/decisions/0181-menu-puts-approvals-on-top-and-approval-in-deploy.md) — 차례의 축은
+ * [ADR-0151](../../../../../docs/decisions/0151-console-follows-the-lifecycle.md)). 가로 막대라 **왼쪽에서
  * 오른쪽으로 읽힌다**.
  *
  * **줄마다 한 줄 설명(`note`)이 붙는다** — 그 화면에 **무엇이 있는지**를 말한다 (ADR-0152 §2).
  * 이름만으로는 눌러 봐야 아는 것을 글로 먼저 말하는 자리다.
  *
- * **줄 이름과 화면 제목이 같다** — 전에는 「운영 현황 › 프로세스」와 「로그 › 프로세스」가 같은
- * 이름이어서 눌러 봐야 어느 쪽인지 알았다 (ADR-0121이 화면 제목으로만 가르던 것이다).
+ * **줄 이름과 화면 제목이 같다** (ADR-0149) — 그래서 CON-02는 「프로세스 현황」이다. 저작의 「프로세스」(작업공간)와
+ * 같은 이름이면 눌러 봐야 어느 쪽인지 안다.
  *
- * **결재함·작업 지시가 「운영」에 있다** — 결재의 정식 길은 **대리 답용 키의 API**이고
- * ([ADR-0081](../../../../../docs/decisions/0081-answering-on-behalf.md)) 콘솔 결재함은 ①막힌 것 찾기
- * ②담당자 없는 결재 답하기 ③감사용이다. 셋 다 운영자의 일이라 「업무」 묶음을 따로 두지 않는다.
+ * **결재함은 제 묶음이고 기다리는 수가 옆에 선다** — 결재하는 사람의 주 화면이다. 결재의 정식 길이 **대리 답용 키의
+ * API**라는 것([ADR-0081](../../../../../docs/decisions/0081-answering-on-behalf.md))은 그대로다.
  */
 const NAV: Array<{ label: string; items: Array<NavItem & { adminOnly?: boolean }> }> = [
   {
@@ -46,37 +45,43 @@ const NAV: Array<{ label: string; items: Array<NavItem & { adminOnly?: boolean }
     items: [{ label: "대시보드", href: "/dashboard", note: "실패·막힘·기다림을 한 화면에서" }],
   },
   {
+    // 건수는 `Shell`이 채운다 — 여기는 자리만.
+    label: "결재함",
+    items: [{ label: "결재함", href: "/approvals", note: "사람이 답해야 풀리는 것들" }],
+  },
+  {
     // 저작이 콘솔 안으로 들어왔다 (ADR-0143) — 작업공간 하나가 BPM 프로세스 한 벌이다 (C17).
     // 공통 패키지를 **만드는** 자리도 프로젝트 안이다 (ADR-0176).
     label: "저작",
     items: [{ label: "프로젝트", href: "/workspaces", note: "프로세스를 묶고 그림을 그려 그 자리에서 돌려 본다" }],
   },
   {
-    // 지어 올린 공통 패키지를 **회사 범위로 보고 고르는** 자리 — 배포되는 것이 아니다 (ADR-0169·0176).
+    // **이미 지어 올린** 공통 패키지를 회사 범위로 보고 고르는 서가 — 만드는 자리가 아니다 (ADR-0176·0181).
     label: "라이브러리",
     items: [{ label: "공통 패키지", href: "/packages", note: "지어 올린 공유 프로세스 — 프로세스가 설치해서 부른다" }],
   },
   {
-    // 내보내는 것 — 지은 것을 현장에 올린다. 줄이 하나라 펼치지 않고 바로 간다.
+    // 후보 → 승인 → 배포가 **한 화면의 탭 둘**이다 (CON-15).
     label: "배포",
-    items: [{ label: "배포", href: "/deployments", note: "승인된 판을 실행기에 올리고 철회한다" }],
-  },
-  {
-    // 지키는 것 — 지금 모습·지나온 기록·막힌 결재·내려갈 작업이 **한 묶음**이다 (ADR-0151 §1).
-    label: "운영",
     items: [
-      { label: "프로세스", href: "/bots", note: "배포된 것이 지금 어떤 상태인가" },
-      { label: "실행 기록", href: "/runs", note: "지나간 실행을 찾아 무엇이 막혔는지 본다" },
-      { label: "결재함", href: "/approvals", note: "사람이 답해야 풀리는 것들" },
-      { label: "작업 지시", href: "/jobs", note: "언제 돌릴지 시키고 대기열을 본다" },
-      // 실행이 도는 자리 — 판의 것이 아니라 CON-02 아래에서 떼어 냈다 (ADR-0172).
-      { label: "서버 실행기", href: "/server-runners", note: "실행이 도는 곳과 Center 대기열" },
+      { label: "승인 대기", href: "/deployments?tab=pending", note: "올라온 후보를 승인한다 — 승인해야 배포할 수 있다" },
+      { label: "배포", href: "/deployments", note: "승인된 판을 실행기에 올리고 철회한다" },
     ],
   },
   {
-    // 바깥을 들이는 것 — 앱 카탈로그(CON-18)와 그것을 맡는 일꾼(CON-17)은 한 짝이다.
-    label: "연결",
+    // 지키는 것 — 업무의 지금 모습·지나온 기록·내려갈 작업.
+    label: "운영",
     items: [
+      { label: "프로세스 현황", href: "/bots", note: "판마다 준비도·성공률과 도는 곳" },
+      { label: "실행 기록", href: "/runs", note: "지나간 실행을 찾아 무엇이 막혔는지 본다" },
+      { label: "작업 지시", href: "/jobs", note: "언제 돌릴지 시키고 대기열을 본다" },
+    ],
+  },
+  {
+    // 일이 도는 기반 — 실행기(CON-12)와 바깥 앱 카탈로그(CON-18)·그것을 맡는 일꾼(CON-17).
+    label: "시스템",
+    items: [
+      { label: "서버 실행기", href: "/server-runners", note: "실행이 도는 곳과 Center 대기열" },
       { label: "앱", href: "/connected-apps", note: "프로세스가 부르는 바깥 앱 목록" },
       { label: "일꾼", href: "/consumers", note: "그 앱들의 일감을 가져가는 쪽" },
     ],
@@ -96,6 +101,15 @@ const NAV: Array<{ label: string; items: Array<NavItem & { adminOnly?: boolean }
     ],
   },
 ];
+
+/** 기다리는 결재 수 — **못 읽으면 `null`**이고 배지를 그리지 않는다. 막대 때문에 화면이 깨지지 않는다. */
+async function openApprovals(): Promise<number | null> {
+  try {
+    return (await center.approvals({ state: "open" })).length;
+  } catch {
+    return null;
+  }
+}
 
 export async function Shell({
   mode,
@@ -119,13 +133,16 @@ export async function Shell({
   children: React.ReactNode;
 }) {
   // **회사가 정해진 계정**(회사 관리자·회사 보기 전용)에게는 Center 관리자만의 메뉴를 가린다 (C16).
-  const company = (await session())?.company ?? null;
+  const [found, waiting] = await Promise.all([session(), openApprovals()]);
+  const company = found?.company ?? null;
   const centerAdmin = mode === "admin" && !company;
   const roleLabel = mode === "admin" ? (company ? "회사 관리자" : "관리자") : "보기 전용";
   const who = `${actor} · ${roleLabel}${company ? ` · ${company}` : ""}`;
   const groups: NavGroup[] = NAV.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.adminOnly || centerAdmin),
+    items: group.items
+      .filter((item) => !item.adminOnly || centerAdmin)
+      .map((item) => (item.href === "/approvals" ? { ...item, badge: waiting } : item)),
   })).filter((group) => group.items.length > 0);
 
   return (

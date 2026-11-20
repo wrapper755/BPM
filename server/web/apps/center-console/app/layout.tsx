@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // `data-theme`은 그리기 전에 스크립트가 단다 — 서버가 그린 것과 달라도 경고하지 않게 한다 (ADR-0181).
+    // `data-theme`은 그리기 전에 스크립트가 단다 — 서버가 그린 것과 달라도 경고하지 않게 한다 (ADR-0182).
     <html lang="ko" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />

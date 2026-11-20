@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · **줄의 묶음은 대체됨** ([ADR-0181](0181-menu-puts-approvals-on-top-and-approval-in-deploy.md) — 「서버 실행기」는 「시스템」 아래다. 제 줄을 갖는 것·일정이 작업 지시로 간 것은 그대로) |
 | 날짜 | 2026-11-20 |
 | 관련 | CON-02·CON-05·CON-12·CON-21, [ADR-0151](0151-console-follows-the-lifecycle.md)(메뉴 여섯 — 묶음은 그대로, 「운영」에 줄 하나), [ADR-0149](0149-console-menu-follows-the-work.md), [ADR-0144](0144-remove-the-pc-runner.md), [ADR-0110](0110-center-keeps-the-schedule.md) |
 
