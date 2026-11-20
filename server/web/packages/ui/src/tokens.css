@@ -1,11 +1,11 @@
 /* 생성 파일: design/tokens.json에서 만든다. 직접 고치지 말고 원본을 고친 뒤 scripts/gen_tokens.py */
 
 :root {
-  --bg-canvas: #F7F8FA;
+  --bg-canvas: #F8FAFC;
   --bg-surface: #FFFFFF;
-  --bg-subtle: #F1F3F6;
+  --bg-subtle: #F1F5F9;
   --bg-inverse: #0F172A;
-  --border-default: #E5E7EB;
+  --border-default: #E4E7EC;
   --border-strong: #8A94A6;
   --text-primary: #0F172A;
   --text-secondary: #475569;
@@ -86,8 +86,8 @@
   --size-control-sm: 32px;
   --size-control-md: 36px;
   --size-control-lg: 44px;
-  --size-row-compact: 36px;
-  --size-row-default: 44px;
+  --size-row-compact: 40px;
+  --size-row-default: 48px;
   --size-nav-width: 224px;
   --size-nav-collapsed: 64px;
   --size-topbar-height: 56px;
@@ -102,20 +102,20 @@
 }
 
 [data-theme="dark"] {
-  --bg-canvas: #0B0D12;
-  --bg-surface: #12151C;
-  --bg-subtle: #1A1E27;
+  --bg-canvas: #09090B;
+  --bg-surface: #111113;
+  --bg-subtle: #18181B;
   --bg-inverse: #F8FAFC;
-  --border-default: #232834;
-  --border-strong: #5F6878;
-  --text-primary: #F1F5F9;
-  --text-secondary: #CBD5E1;
-  --text-muted: #94A3B8;
+  --border-default: #27272A;
+  --border-strong: #63636B;
+  --text-primary: #FAFAFA;
+  --text-secondary: #D4D4D8;
+  --text-muted: #A1A1AA;
   --text-inverse: #0F172A;
   --primary: #818CF8;
   --primary-hover: #A5B4FC;
   --primary-subtle: #1E1B4B;
-  --primary-fg: #0B0D12;
+  --primary-fg: #09090B;
   --focus: #818CF8;
   --chrome-bg: #0A1124;
   --chrome-fg: #F4F5F9;
@@ -137,7 +137,7 @@
   --status-failed-fg: #FCA5A5;
   --status-failed-bg: #2A1215;
   --status-failed-solid: #F87171;
-  --danger-fg: #0B0D12;
+  --danger-fg: #09090B;
   --status-waiting-fg: #C4B5FD;
   --status-waiting-bg: #221A3D;
   --status-waiting-solid: #A78BFA;
@@ -151,20 +151,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg-canvas: #0B0D12;
-    --bg-surface: #12151C;
-    --bg-subtle: #1A1E27;
+    --bg-canvas: #09090B;
+    --bg-surface: #111113;
+    --bg-subtle: #18181B;
     --bg-inverse: #F8FAFC;
-    --border-default: #232834;
-    --border-strong: #5F6878;
-    --text-primary: #F1F5F9;
-    --text-secondary: #CBD5E1;
-    --text-muted: #94A3B8;
+    --border-default: #27272A;
+    --border-strong: #63636B;
+    --text-primary: #FAFAFA;
+    --text-secondary: #D4D4D8;
+    --text-muted: #A1A1AA;
     --text-inverse: #0F172A;
     --primary: #818CF8;
     --primary-hover: #A5B4FC;
     --primary-subtle: #1E1B4B;
-    --primary-fg: #0B0D12;
+    --primary-fg: #09090B;
     --focus: #818CF8;
     --chrome-bg: #0A1124;
     --chrome-fg: #F4F5F9;
@@ -186,7 +186,7 @@
     --status-failed-fg: #FCA5A5;
     --status-failed-bg: #2A1215;
     --status-failed-solid: #F87171;
-    --danger-fg: #0B0D12;
+    --danger-fg: #09090B;
     --status-waiting-fg: #C4B5FD;
     --status-waiting-bg: #221A3D;
     --status-waiting-solid: #A78BFA;

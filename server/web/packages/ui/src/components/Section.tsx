@@ -17,11 +17,11 @@ export interface SectionProps {
 export function Section({ title, action, children, className }: SectionProps) {
   return (
     <section data-section className={cn("min-w-0 rounded-lg border border-border-default bg-bg-surface shadow-sm", className)}>
-      <header className="flex items-center justify-between gap-3 border-b border-border-default px-4 py-3 md:px-5">
+      <header className="flex items-center justify-between gap-3 border-b border-border-default px-5 py-4 md:px-6">
         <h2 className="text-body-lg font-semibold text-text-primary">{title}</h2>
         {action}
       </header>
-      <div className="flex min-w-0 flex-col gap-3 px-4 py-4 md:px-5">{children}</div>
+      <div className="flex min-w-0 flex-col gap-4 px-5 py-5 md:px-6">{children}</div>
     </section>
   );
 }
