@@ -6,7 +6,8 @@ import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { AutoFilter } from "@/components/AutoFilter";
-import { loadNodeNames, loadProcessNames } from "@/lib/names";
+import { loadNodeNames, loadProcessNames, processNamer } from "@/lib/names";
+import { time } from "@/lib/time";
 
 /**
  * CON-04 결재함 (목록).
@@ -29,13 +30,6 @@ export const WITHDRAW_LABEL: Record<string, string> = {
   admin_withdraw: "관리자 회수",
   host_lost: "실행기 기록 유실",
 };
-
-export function time(value: string | null | undefined): string {
-  if (!value) return "—";
-  const at = new Date(value);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
-}
 
 /** 실행하는 곳 — 그 결재를 올린 **실행기 이름** (CON-04). 자리가 하나다 (ADR-0144). */
 export function where(row: ApprovalInfo): string {
@@ -138,7 +132,7 @@ export default async function ApprovalsPage({
       key: "bpm_process_id",
       header: "프로세스",
       minWidth: "20ch",
-      cell: (row) => processNames.get(`${row.bpm_process_id}@${row.version}`) ?? `${row.bpm_process_id}@${row.version}`,
+      cell: (row) => processNamer(processNames)(row.bpm_process_id, row.version) ?? `${row.bpm_process_id}@${row.version}`,
     },
     {
       // **키만** 보인다 (U10) — 값은 상세에서 접힌 채로만.

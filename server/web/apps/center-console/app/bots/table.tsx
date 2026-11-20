@@ -6,7 +6,7 @@ import { DataTable, InfoTip, StatusBadge, type Column } from "@bpm/ui";
 import { FilterReset } from "@/components/FilterReset";
 import { PackageActions } from "@/components/PackageActions";
 import { STATUS_LABEL, packageHref } from "@/lib/packages";
-import { fullTime } from "@/lib/time";
+import { time } from "@/lib/time";
 import {
   SAMPLE,
   SCAN,
@@ -142,9 +142,9 @@ export function ProcessTable({
 }
 
 /**
- * 「확인률」은 C3 요약의 **`confirmations`**(확인만 센 수)로 잰다. 그 칸은 **선택 칸**이라
+ * 「실행당 확인」은 C3 요약의 **`confirmations`**(확인만 센 수)로 잰다. 그 칸은 **선택 칸**이라
  * 옛 PC 실행기가 보낸 기록에는 없다 — 그런 실행은 **분모에도 넣지 않는다**(`confirm_sample`).
- * 0으로 세면 「확인이 없었다」와 「세지 않았다」가 같아져 확인률이 조용히 낮아진다.
+ * 0으로 세면 「확인이 없었다」와 「세지 않았다」가 같아져 평균이 조용히 낮아진다.
  *
  * 셈의 뜻은 **열 머리의 「?」**에 있다 — 표 아래 각주는 걷었다 (U20, ADR-0162).
  */
@@ -156,7 +156,7 @@ const SAMPLE_NOTE = `끝난 실행만 셉니다 — 도는 중인 실행은 들�
 /** 비어 있는 셈 — 「—」 (0으로 보이면 「없었다」로 읽힌다). */
 const NONE = <span className="text-text-muted">—</span>;
 
-/** 확인률 — **분모는 그 칸을 보낸 실행 수**다. 0이면 「—」다. */
+/** 실행당 확인 — 평균 횟수다(비율이 아니다). **분모는 그 칸을 보낸 실행 수**이고 0이면 「—」다. */
 function confirmRate(row: BotRow) {
   return row.confirm_sample === 0 ? NONE : `${(row.confirmations / row.confirm_sample).toFixed(1)}회`;
 }
@@ -297,7 +297,7 @@ function columnsFor(admin: boolean, number: Map<string, number>): Array<Column<B
     },
     {
       key: "confirm",
-      header: "확인률",
+      header: "실행당 확인",
       note: CONFIRM_NOTE,
       width: "10ch",
       align: "right",
@@ -316,7 +316,7 @@ function columnsFor(admin: boolean, number: Map<string, number>): Array<Column<B
       header: "최근 성공",
       width: "17ch",
       // 시각은 한 줄 — 날짜와 시각이 두 줄로 갈리면 줄 높이가 둘쭉날쭉했다 (ADR-0164).
-      cell: (row) => <span className="whitespace-nowrap tabular-nums">{fullTime(row.last_success)}</span>,
+      cell: (row) => <span className="whitespace-nowrap tabular-nums">{time(row.last_success)}</span>,
     },
     {
       key: "runners",

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { DataTable, EmptyState, ErrorBanner, InfoTip, StatusBadge, type Column } from "@bpm/ui";
 import type { TopicStatus } from "@bpm/api-types/c15-topic-status";
 import { CenterError, center, session } from "@/lib/center";
+import { time } from "@/lib/time";
 import {
   IMPL_HINT,
   IMPL_LABEL,
@@ -34,12 +35,6 @@ import { AutoFilter } from "@/components/AutoFilter";
 export const SOURCE_NOTE =
   "원본이 「콘솔」인 앱은 여기서 만들고 고칩니다(Center가 서명합니다). 원본이 「일꾼」인 앱은 맡은 일꾼이 뜰 때 올립니다 — 고치거나 내리려면 일꾼 쪽 정의·설정을 바꿉니다.";
 
-/** 연도까지 적는다 (CON-03과 같은 규칙). */
-export function time(value: string | null | undefined): string {
-  if (!value) return "—";
-  const at = new Date(value);
-  return Number.isNaN(at.getTime()) ? value : at.toLocaleString("ko-KR");
-}
 
 export function connectedAppHref(id: string): Route {
   return `/connected-apps/${encodeURIComponent(id)}` as Route;

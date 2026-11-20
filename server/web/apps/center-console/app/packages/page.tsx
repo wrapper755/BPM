@@ -4,7 +4,7 @@ import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@b
 import type { PackageInfo } from "@bpm/api-types/c5-package-info";
 import { CenterError, center, session } from "@/lib/center";
 import { compareVersions } from "@/lib/summary";
-import { fullTime } from "@/lib/time";
+import { time } from "@/lib/time";
 import { Shell } from "@/components/Shell";
 // 글·주소로 옮기는 일은 `lib/packages.ts`에 있다 — 브라우저 쪽 구성요소도 쓴다.
 import { STATUS_LABEL, packageHref } from "@/lib/packages";
@@ -24,12 +24,6 @@ export const KIND_LABEL: Record<string, string> = {
   bpm_process: "프로세스",
 };
 
-/** 연도까지 적는다 — 「01-01」로는 내일인지 내년인지 모른다 (CON-03과 같은 규칙). */
-export function time(value: string | null | undefined): string {
-  if (!value) return "—";
-  const at = new Date(value);
-  return Number.isNaN(at.getTime()) ? value : at.toLocaleString("ko-KR");
-}
 
 export default async function PackagesPage() {
   const found = await session();
@@ -105,7 +99,7 @@ export default async function PackagesPage() {
       key: "uploaded_at",
       header: "올린 시각",
       width: "17ch",
-      cell: (row) => <span className="whitespace-nowrap tabular-nums">{fullTime(row.uploaded_at)}</span>,
+      cell: (row) => <span className="whitespace-nowrap tabular-nums">{time(row.uploaded_at)}</span>,
     },
     { key: "uploaded_by", header: "올린 이", width: "14ch" },
     // 내어 준 횟수 (C5 `download_count`) — 같은 곳이 다시 받아도 센다. 쓰는 곳 수가 아니다.

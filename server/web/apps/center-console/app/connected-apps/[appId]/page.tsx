@@ -26,7 +26,8 @@ import { Shell } from "@/components/Shell";
 import { OperationTree } from "./tree";
 import { SOURCE_HINT, SOURCE_LABEL, appGroupsOf, untestableReason } from "@/lib/adapter-editor";
 import { AddOperationButton, AppActions, OperationMenu, type AppContext } from "../editor";
-import { Hint, SOURCE_NOTE, time } from "../page";
+import { Hint, SOURCE_NOTE } from "../page";
+import { time } from "@/lib/time";
 import { AutoFilter } from "@/components/AutoFilter";
 
 /**

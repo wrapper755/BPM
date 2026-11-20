@@ -15,10 +15,26 @@ export interface NodeRow {
   seconds: number | null;
 }
 
-/** 노드마다 **처음 시작**과 **마지막 상태**를 모은다 (반복·재시도는 한 줄로 접는다). */
+/**
+ * 노드마다 **처음 시작**과 **마지막 상태**를 모은다 (반복·재시도는 한 줄로 접는다).
+ *
+ * **끝난 실행에는 도는 노드가 없다** — 엔진은 종료 이벤트에 `started`만 남기고(`Consume`으로 토큰을
+ * 걷는다) 곧바로 `run_finished`를 쓴다. 그대로 두면 「완료」된 실행의 마지막 줄이 「실행 중」이다.
+ * 그래서 `run_finished`를 만나면 열린 줄(`started`·`waiting`)을 그 시각에 닫는다 — 성공이면 「완료」,
+ * 아니면 「취소됨」(실패한 노드는 제 `failed`를 이미 남겼다. 남은 것은 실패에 끌려 멈춘 것이다).
+ */
 export function timeline(events: RunEvent[]): NodeRow[] {
   const byNode = new Map<string, NodeRow>();
   for (const event of events) {
+    if (event.kind === "run_finished") {
+      const closed = event.data?.status === "success" ? "completed" : "cancelled";
+      for (const row of byNode.values()) {
+        if (row.state !== "started" && row.state !== "waiting") continue;
+        row.state = closed;
+        row.ended_at = event.ts;
+      }
+      continue;
+    }
     if (event.kind !== "node_state" || !event.node_id) continue;
     const state = String(event.data?.state ?? "");
     const found = byNode.get(event.node_id) ?? {

@@ -9,7 +9,9 @@ import { FINISHED, TASK_KIND, TASK_STATE, type ResumeRow, duration, resumes, tas
 import { type NodeBar, type NodeRow, bars, llmSteps, timeline } from "@/lib/timeline";
 import { Shell } from "@/components/Shell";
 import { Diagram, type DiagramState } from "./diagram";
-import { LABEL, loadOrgNames, seconds, time } from "../page";
+import { LABEL, loadOrgNames } from "../page";
+import { time, took } from "@/lib/time";
+import { loadProcessNames, processNamer } from "@/lib/names";
 import { orgName } from "@/lib/organization";
 
 /**
@@ -50,6 +52,8 @@ const NODE_STATE: Record<string, string> = {
   waiting: "기다리는 중",
   replayed: "재생됨",
   skipped: "대기",
+  // 끝난 실행에 열린 채 남은 줄 — 화면이 닫는다 (`lib/timeline.ts`).
+  cancelled: "취소됨",
 };
 
 /** C3 `human_*` 종류 → 표기 (「사람 개입」의 「무엇」). 모르는 종류는 그대로 보인다. */
@@ -228,6 +232,10 @@ export default async function RunPage({
     }
   }
 
+  // 그 판의 패키지를 못 읽었으면(지운 판) 같은 BPM 프로세스의 다른 판 이름을 쓴다 — 머리가 id로 서지 않게.
+  if (!processName && info?.bpm_process_id) {
+    processName = processNamer(await loadProcessNames())(info.bpm_process_id, info.version);
+  }
   const org = await loadOrgNames();
   const nodes = timeline(events);
   const llm = llmSteps(events);
@@ -279,7 +287,7 @@ export default async function RunPage({
     },
     { key: "started_at", header: "시작", width: "14ch", cell: (row) => time(row.started_at) },
     { key: "ended_at", header: "끝", width: "14ch", cell: (row) => time(row.ended_at) },
-    { key: "seconds", header: "소요", width: "10ch", align: "right", cell: (row) => seconds(row.seconds) },
+    { key: "seconds", header: "소요", width: "10ch", align: "right", cell: (row) => took(row.seconds) },
   ];
 
   const agentColumns: Array<Column<RunEvent>> = [
@@ -454,7 +462,7 @@ export default async function RunPage({
                 {time(info.started_at)} · {time(info.finished_at)}
               </dd>
               <dt className="text-text-muted">소요</dt>
-              <dd>{seconds(info.duration_s)}</dd>
+              <dd>{took(info.duration_s)}</dd>
               <dt className="text-text-muted">AI 태스크 단계</dt>
               <dd>{seen.agent ?? 0}</dd>
               {/* `run_finished`가 센 것 — 도는 중에는 「—」다 (목록의 셈 열과 같다, C3). */}

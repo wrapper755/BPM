@@ -4,7 +4,7 @@ import type { ScheduleInfo } from "@bpm/api-types/c5-schedule-info";
 import { CenterError, center } from "@/lib/center";
 import { scheduleResult, schedulesOf } from "@/lib/summary";
 import { STATE_LABEL } from "@/app/jobs/labels";
-import { fullTime } from "@/lib/time";
+import { fullTime, time } from "@/lib/time";
 
 /**
  * CON-05 [S] 「일정」 — 타이머로 시작하는 배포의 다음 차례·마지막 차례 (C5 §일정, ADR-0110).
@@ -61,7 +61,7 @@ export function Schedules({ data }: { data: ScheduleData }) {
       // **연도까지** — 매달·매년 일정은 「01-01」로는 언제인지 모른다.
       cell: (row) => (row.problem ? "—" : row.next_at ? fullTime(row.next_at) : "끝남"),
     },
-    { key: "last_slot", header: "마지막 차례", width: "18ch", cell: (row) => fullTime(row.last_slot) },
+    { key: "last_slot", header: "마지막 차례", width: "18ch", cell: (row) => time(row.last_slot) },
     {
       key: "last_job_id",
       header: "그 작업",

@@ -9,7 +9,7 @@ import { cancelControl } from "@/lib/jobs";
 import { CancelJob } from "./cancel";
 import { AutoFilter } from "@/components/AutoFilter";
 import { Schedules, loadSchedules } from "@/components/Schedules";
-import { loadProcessNames } from "@/lib/names";
+import { loadProcessNames, processNamer } from "@/lib/names";
 import { LABEL as RUN_LABEL } from "@/app/runs/page";
 import {
   STATES,
@@ -17,8 +17,8 @@ import {
   delegatedFrom,
   reason,
   stateNote,
-  time,
 } from "./labels";
+import { time } from "@/lib/time";
 
 /**
  * CON-05 작업 지시 (목록).
@@ -59,9 +59,8 @@ export default async function JobsPage({
 
   // 이름표는 `<id>@<판>` 열쇠다 — 판을 비우고 만든 작업도 이름이 서게 id로도 찾는다.
   const processNames = await loadProcessNames();
-  const byId = new Map([...processNames].map(([key, name]) => [key.slice(0, key.lastIndexOf("@")), name]));
-  const nameOf = (row: JobInfo) =>
-    (row.version ? processNames.get(`${row.bpm_process_id}@${row.version}`) : null) ?? byId.get(row.bpm_process_id) ?? null;
+  const named = processNamer(processNames);
+  const nameOf = (row: JobInfo) => named(row.bpm_process_id, row.version);
 
   const columns: Array<Column<JobInfo>> = [
     {

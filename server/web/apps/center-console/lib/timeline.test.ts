@@ -74,3 +74,32 @@ describe("llmSteps", () => {
     expect(llmSteps(events)).toBe(3);
   });
 });
+
+describe("timeline", () => {
+  it("끝난 실행에 열린 채 남은 줄(종료 이벤트)은 그 시각에 닫는다", () => {
+    const rows = timeline([
+      ev("node_state", t(0), "work", { state: "started" }),
+      ev("node_state", t(5), "work", { state: "completed" }),
+      ev("node_state", t(5), "End", { state: "started" }),
+      ev("run_finished", t(6), null, { status: "success" }),
+    ]);
+    expect(rows.map((row) => [row.node_id, row.state, row.ended_at])).toEqual([
+      ["work", "completed", t(5)],
+      ["End", "completed", t(6)],
+    ]);
+  });
+
+  it("성공하지 못한 실행의 열린 줄은 「취소됨」이고 실패한 줄은 그대로다", () => {
+    const rows = timeline([
+      ev("node_state", t(0), "ask", { state: "started" }),
+      ev("node_state", t(1), "ask", { state: "waiting" }),
+      ev("node_state", t(0), "calc", { state: "started" }),
+      ev("node_state", t(2), "calc", { state: "failed" }),
+      ev("run_finished", t(3), null, { status: "failed" }),
+    ]);
+    expect(rows.map((row) => [row.node_id, row.state])).toEqual([
+      ["ask", "cancelled"],
+      ["calc", "failed"],
+    ]);
+  });
+});

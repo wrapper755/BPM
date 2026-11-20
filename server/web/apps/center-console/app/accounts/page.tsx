@@ -3,7 +3,7 @@ import { DataTable, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
 import type { AccountInfo } from "@bpm/api-types/c5-account-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
-import { fullTime } from "@/lib/time";
+import { time } from "@/lib/time";
 import { AccountMenu, NewAccount } from "./tools";
 
 /**
@@ -47,9 +47,9 @@ export default async function AccountsPage() {
       key: "last_login_at",
       header: "마지막 로그인",
       width: "20ch",
-      cell: (row) => (row.last_login_at ? fullTime(row.last_login_at) : "—"),
+      cell: (row) => (row.last_login_at ? time(row.last_login_at) : "—"),
     },
-    { key: "created", header: "만든 이", width: "16ch", cell: (row) => `${row.created_by} · ${fullTime(row.created_at)}` },
+    { key: "created", header: "만든 이", width: "16ch", cell: (row) => `${row.created_by} · ${time(row.created_at)}` },
     {
       key: "actions",
       header: "",
