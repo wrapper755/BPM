@@ -97,6 +97,7 @@ export async function Shell({
   mode,
   actor,
   current,
+  here,
   full,
   children,
 }: {
@@ -109,6 +110,8 @@ export async function Shell({
    * 이름도 거기 있다 (ADR-0152 §7).
    */
   full?: boolean;
+  /** 목록 **아래의** 화면이면 그 이름(「새 배포」) — 지금 자리 줄 끝에 붙고 목록이 링크가 된다 (CON-00 [H]). */
+  here?: string;
   children: React.ReactNode;
 }) {
   // **회사가 정해진 계정**(회사 관리자·회사 보기 전용)에게는 Center 관리자만의 메뉴를 가린다 (C16).
@@ -202,7 +205,7 @@ export async function Shell({
           ...(full ? { height: "calc(100vh - var(--size-topbar-height))" } : {}),
         }}
       >
-        {full ? null : <Crumb groups={groups} current={current} />}
+        {full ? null : <Crumb groups={groups} current={current} here={here} />}
         {children}
       </main>
     </div>
@@ -214,19 +217,34 @@ export async function Shell({
  * (ADR-0152 §4 — 그래서 화면마다 「…로 돌아가기」를 두지 않는다).
  *
  * **묶음과 줄의 이름이 같으면 줄을 그리지 않는다**(「대시보드」) — 제목이 이미 그 말이라
- * 「대시보드 / 대시보드」가 위아래로 선다.
+ * 「대시보드 / 대시보드」가 위아래로 선다. **단 목록 아래의 화면(`here`)이면 그린다** — 「배포 › 새 배포」.
+ * 지우면 목록으로 돌아갈 길이 없다(「배포」는 묶음과 줄이 같은 이름이라 「새 배포」에 줄이 없었다).
  */
-function Crumb({ groups, current }: { groups: NavGroup[]; current: string }) {
+function Crumb({ groups, current, here }: { groups: NavGroup[]; current: string; here?: string }) {
   const group = groups.find((one) => one.items.some((item) => item.href === current));
   const item = group?.items.find((one) => one.href === current);
-  if (!group || !item?.href || group.label === item.label) return null;
+  if (!group || !item?.href) return null;
+  const same = group.label === item.label;
+  if (same && !here) return null;
   return (
     <nav aria-label="지금 자리" className="page-crumb min-w-0 truncate text-body-sm">
-      <span className="text-text-muted">{group.label}</span>
-      <span className="text-text-muted"> › </span>
+      {same ? null : (
+        <>
+          <span className="text-text-muted">{group.label}</span>
+          <span className="text-text-muted"> › </span>
+        </>
+      )}
       <Link href={item.href as Route} className="text-text-secondary hover:underline">
         {item.label}
       </Link>
+      {here ? (
+        <>
+          <span className="text-text-muted"> › </span>
+          <span aria-current="page" className="text-text-muted">
+            {here}
+          </span>
+        </>
+      ) : null}
     </nav>
   );
 }
