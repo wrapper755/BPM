@@ -96,7 +96,7 @@ export default async function DashboardPage() {
         />
         <Card
           title="실행기"
-          href="/bots?tab=server"
+          href="/server-runners"
           link="서버 실행기 보기"
           value={health ? `${health.online} / ${health.total}` : null}
           unit="대 온라인"

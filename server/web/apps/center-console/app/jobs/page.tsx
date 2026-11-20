@@ -8,6 +8,7 @@ import { Shell } from "@/components/Shell";
 import { cancelControl } from "@/lib/jobs";
 import { CancelJob } from "./cancel";
 import { AutoFilter } from "@/components/AutoFilter";
+import { Schedules, loadSchedules } from "@/components/Schedules";
 import { loadProcessNames } from "@/lib/names";
 import { LABEL as RUN_LABEL } from "@/app/runs/page";
 import {
@@ -43,6 +44,8 @@ export default async function JobsPage({
   const state = STATES.includes(asked.state ?? "") ? (asked.state as string) : "";
   const admin = found.mode === "admin";
 
+  // 「일정」은 목록과 **나란히** 읽는다 — 표를 다 그린 뒤에 부르면 쉬던 연결이 닫혀 있다 (Schedules).
+  const schedules = loadSchedules();
   let rows: JobInfo[] = [];
   let failure: string | null = null;
   try {
@@ -214,6 +217,9 @@ export default async function JobsPage({
       ) : (
         <DataTable columns={columns} rows={rows} rowKey={(row) => row.job_id} caption="작업 지시 목록" numbered />
       )}
+
+      {/* [S] 「일정」 — 차례마다 작업을 만드는 것이라 작업 지시 아래다 (ADR-0172). 없으면 영역이 없다. */}
+      <Schedules data={await schedules} />
     </Shell>
   );
 }

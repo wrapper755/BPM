@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 — §5의 **콘솔 배지만** 대체됨([ADR-0173](0173-top-bar-right-is-icons.md)) |
 | 날짜 | 2026-11-11 |
 | 관련 | 계약 C4·C5(§인증·§등록 승인)·C7(§폴더 키)·C12·C15(§일꾼 들이기), [ADR-0090](0090-center-admin-accounts.md)(콘솔 로그인은 그대로다), [ADR-0092](0092-keys-are-issued-and-delivered-by-center.md)·[ADR-0093](0093-studio-is-let-in-by-approval.md)(등록 승인), [ADR-0117](0117-bundled-server-runner-joins-by-shared-secret.md)(들이기 비밀 — 이 스위치가 그것을 넓힌 것이다), [ADR-0122](0122-consumer-folder.md)·[ADR-0123](0123-folder-keys.md)(일꾼 폴더)·[ADR-0137](0137-consumers-are-managed-in-the-console.md)(일꾼의 원본은 Center DB다), 화면 CON-00, `server/deploy/.env.example` |
 
