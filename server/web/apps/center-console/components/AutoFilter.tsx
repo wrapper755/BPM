@@ -12,7 +12,7 @@ import { cn } from "@bpm/ui";
  * 묻는다** — 「좁히기」 단추를 누르는 한 번이 없다. Enter도 든다.
  *
  * 속은 그대로 **GET 폼**이라 JS가 없어도 Enter로 돈다. 빈 칸은 주소에 싣지 않는다. 쪽(`page`)은 싣지 않아
- * 조건이 바뀌면 첫 쪽이다. 「조건 지우기」는 **조건이 있을 때만** 보인다.
+ * 조건이 바뀌면 첫 쪽이다 — 고른 줄 수(`size`)는 남긴다 (ADR-0167). 「조건 지우기」는 **조건이 있을 때만** 보인다.
  */
 const WAIT_MS = 400;
 
@@ -31,11 +31,13 @@ export function AutoFilter({ className, children }: { className?: string; childr
     for (const [key, value] of new FormData(form.current)) {
       if (typeof value === "string" && value.trim() !== "") query.append(key, value.trim());
     }
+    const size = params.get("size");
+    if (size) query.set("size", size);
     const next = query.size > 0 ? `${pathname}?${query}` : pathname;
     start(() => router.replace(next as Route, { scroll: false }));
   };
 
-  const active = [...params.keys()].some((key) => key !== "page");
+  const active = [...params.keys()].some((key) => key !== "page" && key !== "size");
 
   return (
     <form

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Autocomplete, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import { Autocomplete, DataTable, EmptyState, ErrorBanner, StatusBadge, readPaging, type Column } from "@bpm/ui";
 import type { ApprovalInfo } from "@bpm/api-types/c6-approval-info";
 import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import { CenterError, center, session } from "@/lib/center";
@@ -64,7 +64,7 @@ const STATES = [
 export default async function ApprovalsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ state?: string; host?: string; assignee?: string }>;
+  searchParams: Promise<{ state?: string; host?: string; assignee?: string; page?: string; size?: string }>;
 }) {
   const found = await session();
   if (!found) redirect("/login");
@@ -88,10 +88,15 @@ export default async function ApprovalsPage({
   }
 
   // id 대신 보일 이름 — BPM 프로세스·단계(노드) (ADR-0165). 못 받으면 id 그대로다.
+  // 쪽은 주소에 — 콘솔 서버가 그 쪽만 그린다 (ADR-0167 — 다 그려 보내니 한 장이 8.3MB였다).
+  const paging = { ...readPaging(asked), query: { state, host, assignee } };
+  const pageRows = rows.slice(paging.page * paging.size, (paging.page + 1) * paging.size);
   const [processNames, nodeNames, people] = await Promise.all([
     loadProcessNames(),
-    loadNodeNames(rows.map((row) => [row.bpm_process_id, row.version] as [string, string])),
-    assigneeChoices(),
+    // 이름은 **보일 쪽의 것만** 묻는다.
+    loadNodeNames(pageRows.map((row) => [row.bpm_process_id, row.version] as [string, string])),
+    // 거르지 않았으면 받은 목록이 전부다 — 두 번 받지 않는다 (ADR-0167).
+    assigneeChoices(state || host || assignee ? null : rows),
   ]);
 
   const columns: Array<Column<ApprovalInfo>> = [
@@ -219,6 +224,7 @@ export default async function ApprovalsPage({
           rows={rows}
           rowKey={(row) => row.request_id}
           caption="결재 목록"
+          paging={paging}
         />
       )}
     </Shell>
@@ -235,9 +241,9 @@ function keysLine(keys: string[]): string {
  * 「담당」 자동 완성의 후보 — **모든 결재의 담당**(거른 목록만 보면 고른 뒤 후보가 하나로 준다)과 조직의
  * 직원 이름. 못 받으면 비어 있다 — 칸은 그대로 칠 수 있다.
  */
-async function assigneeChoices(): Promise<string[]> {
+async function assigneeChoices(known: ApprovalInfo[] | null): Promise<string[]> {
   const [all, staff] = await Promise.all([
-    center.approvals().catch(() => []),
+    known ?? center.approvals().catch(() => []),
     center.staffList().catch(() => []),
   ]);
   return [...all.flatMap((one) => one.assignees ?? []), ...staff.map((one) => one.name)];

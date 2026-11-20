@@ -10,6 +10,7 @@
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from "./components/Button";
 export { StatusBadge, type StatusBadgeProps } from "./components/StatusBadge";
 export { DataTable, type Column, type DataTableProps } from "./components/DataTable";
+export { PAGE_SIZE, PAGE_SIZES, readPaging, type Paging } from "./components/paging";
 export { Field, type FieldProps } from "./components/Field";
 export { ConfirmDialog, Dialog, type ConfirmDialogProps, type DialogProps } from "./components/Dialog";
 export { EmptyState, type EmptyStateProps } from "./components/EmptyState";
