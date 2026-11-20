@@ -258,7 +258,7 @@ export function NewAppButton({ groups, workers }: { groups: AppContext["groups"]
   const [result, action, pending] = useActionState<ActionResult, FormData>(createConnectedApp, {});
   return (
     <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
+      <Button variant="tonal" onClick={() => setOpen(true)}>
         새 연결 앱...
       </Button>
       <Dialog open={open} title="새 연결 앱" width={560} onClose={() => setOpen(false)}>

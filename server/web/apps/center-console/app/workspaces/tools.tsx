@@ -28,7 +28,7 @@ export function NewWorkspace() {
       <Button variant="secondary" onClick={() => setOpen("import")}>
         파일에서 가져오기...
       </Button>
-      <Button variant="primary" onClick={() => setOpen("empty")}>
+      <Button variant="tonal" onClick={() => setOpen("empty")}>
         새 작업공간...
       </Button>
       <Dialog

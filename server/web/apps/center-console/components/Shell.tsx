@@ -45,16 +45,17 @@ const NAV: Array<{ label: string; items: Array<NavItem & { adminOnly?: boolean }
   },
   {
     // 저작이 콘솔 안으로 들어왔다 (ADR-0143) — 작업공간 하나가 BPM 프로세스 한 벌이다 (C17).
+    // 공통 패키지도 여기다 — 그림을 그릴 때 들여 쓰고 짓는 것이지 배포되는 것이 아니다 (ADR-0169).
     label: "저작",
-    items: [{ label: "작업공간", href: "/workspaces", note: "그림을 그리고 그 자리에서 돌려 본다" }],
-  },
-  {
-    // 내보내는 것 — 지은 것을 현장에 올린다.
-    label: "배포",
     items: [
-      { label: "배포", href: "/deployments", note: "승인된 판을 실행기에 올리고 철회한다" },
+      { label: "작업공간", href: "/workspaces", note: "그림을 그리고 그 자리에서 돌려 본다" },
       { label: "공통 패키지", href: "/packages", note: "여러 프로세스가 함께 쓰는 도구·정의 묶음" },
     ],
+  },
+  {
+    // 내보내는 것 — 지은 것을 현장에 올린다. 줄이 하나라 펼치지 않고 바로 간다.
+    label: "배포",
+    items: [{ label: "배포", href: "/deployments", note: "승인된 판을 실행기에 올리고 철회한다" }],
   },
   {
     // 지키는 것 — 지금 모습·지나온 기록·막힌 결재·내려갈 작업이 **한 묶음**이다 (ADR-0151 §1).
