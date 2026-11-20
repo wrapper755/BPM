@@ -15,8 +15,7 @@ import { loadProcessNames } from "@/lib/names";
  * 값은 **실행하는 쪽이 보낸 이벤트에서** 나온다 (C3). Center가 받을 때 요약을 만들어 두므로
  * 목록을 그릴 때 줄을 다시 읽지 않는다.
  *
- * 좁히기는 상태·BPM 프로세스·**실행기**다. 「실행기」는 C3 `RunInfo.runner_id`인데 **Center가 읽을 때
- * 채우는 값**이다 (보낸 키 → C4 키 묶기). 열로는 두지 않는다 — 실행 자리가 서버 하나라 줄마다 같았다 (ADR-0144).
+ * 좁히기는 상태·BPM 프로세스다. **실행기는 열로도 거르기로도 두지 않는다** — 실행 자리가 서버 하나다 (ADR-0144).
  *
  * 「최근 n건」은 없다 — 쪽으로 나누므로 늘 Center의 최대(`MAX_LIMIT`)를 받아 쪽을 자른다.
  *
@@ -93,7 +92,6 @@ export default async function RunsPage({
   searchParams: Promise<{
     status?: string;
     bpm_process_id?: string;
-    runner_id?: string;
     page?: string;
     size?: string;
   }>;
@@ -109,7 +107,6 @@ export default async function RunsPage({
     const listing = await center.runs({
       status: query.status,
       bpm_process_id: query.bpm_process_id,
-      runner_id: query.runner_id,
       limit: MAX_RUNS,
     });
     rows = listing.runs ?? [];
@@ -120,8 +117,6 @@ export default async function RunsPage({
 
   const org = await loadOrgNames();
   const processNames = await loadProcessNames();
-  // 거르기 칸의 후보 — 못 읽어도 목록은 그린다.
-  const runners = await center.serverRunners().catch(() => []);
   const processChoices = [
     ...new Map([...processNames].map(([key, name]) => [key.slice(0, key.lastIndexOf("@")), name])),
   ].sort((a, b) => a[1].localeCompare(b[1], "ko"));
@@ -210,25 +205,6 @@ export default async function RunsPage({
             ))}
           </datalist>
         </label>
-        <label className="flex flex-col gap-1 text-body-sm">
-          실행기
-          {/* 실행기는 **등록된 것에서 고른다** (H6, ADR-0162). 주소로 온 모르는 id도 그대로 남긴다. */}
-          <select
-            name="runner_id"
-            defaultValue={query.runner_id ?? ""}
-            className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
-          >
-            <option value="">(전체)</option>
-            {runners.map((one) => (
-              <option key={one.server_runner_id} value={one.server_runner_id}>
-                {one.name}
-              </option>
-            ))}
-            {query.runner_id && !runners.some((one) => one.server_runner_id === query.runner_id) ? (
-              <option value={query.runner_id}>{query.runner_id}</option>
-            ) : null}
-          </select>
-        </label>
       </AutoFilter>
 
       {failure ? (
@@ -246,7 +222,6 @@ export default async function RunsPage({
               query: {
                 status: query.status,
                 bpm_process_id: query.bpm_process_id,
-                runner_id: query.runner_id,
               },
             }}
             empty={{

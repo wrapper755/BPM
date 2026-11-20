@@ -2,7 +2,6 @@ import { timerRequester } from "@/lib/summary";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
-import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import type { JobInfo } from "@bpm/api-types/c5-job-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
@@ -35,25 +34,20 @@ const MAX_JOBS = 1000;
 export default async function JobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ state?: string | string[]; runner?: string }>;
+  searchParams: Promise<{ state?: string }>;
 }) {
   const found = await session();
   if (!found) redirect("/login");
   const asked = await searchParams;
-  // 상태는 여러 개 (체크 칸) — 하나면 글자, 여럿이면 배열로 온다.
-  const states = ([] as string[]).concat(asked.state ?? []).filter((one) => STATES.includes(one));
-  const runner = asked.runner ?? "";
+  // 상태는 고르기 하나 — 빈 값이 「전체」다 (다른 목록과 같은 모양). 실행기 거르기는 없다 — 자리가 서버 하나다 (ADR-0144).
+  const state = STATES.includes(asked.state ?? "") ? (asked.state as string) : "";
   const admin = found.mode === "admin";
 
   let rows: JobInfo[] = [];
-  let runners: ServerRunnerInfo[] = [];
   let failure: string | null = null;
   try {
-    // 고르는 칸의 후보 — 못 읽어도 목록은 보인다(빈 칸이 된다).
-    runners = await center.serverRunners().catch(() => []);
     rows = await center.jobs({
-      state: states.length > 0 ? states.join(",") : undefined,
-      target_id: runner || undefined,
+      state: state || undefined,
       limit: MAX_JOBS,
     });
   } catch (cause) {
@@ -158,7 +152,7 @@ export default async function JobsPage({
     });
   }
 
-  const filtered = states.length > 0 || Boolean(runner);
+  const filtered = Boolean(state);
 
   return (
     <Shell mode={found.mode} actor={found.actor} current="/jobs">
@@ -176,34 +170,19 @@ export default async function JobsPage({
 
       {/* 고르는 대로 든다 — 「좁히기」가 없다 (ADR-0165). */}
       <AutoFilter>
-        <fieldset className="flex flex-col gap-1 text-body-sm">
-          <legend className="text-text-muted">상태</legend>
-          <div className="flex flex-wrap gap-3">
-            {STATES.map((one) => (
-              <label key={one} className="flex items-center gap-1">
-                <input type="checkbox" name="state" value={one} defaultChecked={states.includes(one)} />
-                {STATE_LABEL[one]}
-              </label>
-            ))}
-          </div>
-        </fieldset>
         <label className="flex flex-col gap-1 text-body-sm">
-          <span className="text-text-muted">실행기</span>
-          {/* 실행기 id(`srv_…`)를 외워 치지 않고 **등록된 것에서 고른다** (H6, ADR-0162). */}
+          <span className="text-text-muted">상태</span>
           <select
-            name="runner"
-            defaultValue={runner}
+            name="state"
+            defaultValue={state}
             className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
           >
-            <option value="">(전체)</option>
-            {runners.map((one) => (
-              <option key={one.server_runner_id} value={one.server_runner_id}>
-                {one.name}
+            <option value="">전체</option>
+            {STATES.map((one) => (
+              <option key={one} value={one}>
+                {STATE_LABEL[one]}
               </option>
             ))}
-            {runner && !runners.some((one) => one.server_runner_id === runner) ? (
-              <option value={runner}>{runner}</option>
-            ) : null}
           </select>
         </label>
       </AutoFilter>
