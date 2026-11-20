@@ -15,11 +15,10 @@ import { loadProcessNames } from "@/lib/names";
  * 값은 **실행하는 쪽이 보낸 이벤트에서** 나온다 (C3). Center가 받을 때 요약을 만들어 두므로
  * 목록을 그릴 때 줄을 다시 읽지 않는다.
  *
- * 좁히기는 상태·BPM 프로세스·**실행기**·**최근 n건**이다. 「실행기」는 C3 `RunInfo.runner_id`인데
- * **Center가 읽을 때 채우는 값**이다 (보낸 키 → C4 키 묶기) — 보내는 쪽이 제 id를 적지 않는다.
+ * 좁히기는 상태·BPM 프로세스·**실행기**다. 「실행기」는 C3 `RunInfo.runner_id`인데 **Center가 읽을 때
+ * 채우는 값**이다 (보낸 키 → C4 키 묶기). 열로는 두지 않는다 — 실행 자리가 서버 하나라 줄마다 같았다 (ADR-0144).
  *
- * Studio가 보낸 기록에는 `runner_id`가 **없다** — 그 키에 묶인 실행기가 없어서다. 화면은 「—」로
- * 보이고 「실행한 쪽」이 `Studio`라고 말한다.
+ * 「최근 n건」은 없다 — 쪽으로 나누므로 늘 Center의 최대(`MAX_LIMIT`)를 받아 쪽을 자른다.
  *
  * 셈 열(AI 태스크·재생·결재·확인)은 `run_finished`가 세어 보낸 것이다 — **도는 중에는
  * 비어 있고 「—」로 보인다** (줄을 다시 읽어 세지 않는다, C3).
@@ -36,24 +35,13 @@ export const LABEL: Record<string, string> = {
 
 const CHOICES = ["", "running", "waiting", "success", "failed", "cancelled"];
 
-/** C3 `executor` → 화면 표기 (「실행한 쪽」 열). 지나간 기록의 `studio`도 풀어 쓴다 (ADR-0150). */
-const EXECUTOR: Record<string, string> = {
-  server_runner: "서버 실행기",
-  studio: "Studio",
-};
-
-/** 「최근 n건」 — 화면 설계서의 10~500, 기본 100. */
-const LIMITS = [10, 50, 100, 200, 500];
-const DEFAULT_LIMIT = 100;
+/** Center가 한 번에 주는 최대 (C3 `GET /runs` `limit` — Center `MAX_LIMIT`). 그보다 많으면 표 아래가 말한다. */
+const MAX_RUNS = 500;
 
 /** 셈 열 — **센 적이 없으면 「—」**다 (끝나지 않은 실행). 0과 다르다. */
 function tally(value: number | null | undefined): string {
   return value === null || value === undefined ? "—" : String(value);
 }
-
-/** 실행기가 없는 기록이 있다는 말 (U3 — 「—」 옆에 까닭을 둔다). */
-export const NO_RUNNER_NOTE =
-  "「실행기」가 비어 있는 기록은 실행기에 묶이지 않은 토큰(자동화·지나간 기록)이 보낸 것입니다.";
 
 export function time(value: string | null | undefined): string {
   if (!value) return "—";
@@ -106,7 +94,6 @@ export default async function RunsPage({
     status?: string;
     bpm_process_id?: string;
     runner_id?: string;
-    limit?: string;
     page?: string;
     size?: string;
   }>;
@@ -123,7 +110,7 @@ export default async function RunsPage({
       status: query.status,
       bpm_process_id: query.bpm_process_id,
       runner_id: query.runner_id,
-      limit: Number(query.limit) || DEFAULT_LIMIT,
+      limit: MAX_RUNS,
     });
     rows = listing.runs ?? [];
     total = listing.total ?? rows.length;
@@ -159,8 +146,6 @@ export default async function RunsPage({
       ),
     },
     { key: "version", header: "버전", width: "10ch", cell: (row) => row.version ?? "—" },
-    { key: "executor", header: "실행한 쪽", width: "12ch", cell: (row) => EXECUTOR[row.executor ?? ""] ?? "—" },
-    { key: "runner_id", header: "실행기", width: "16ch", cell: (row) => row.runner_id ?? "—" },
     // 자리는 Center가 그 실행의 작업에서 붙인다 (C16) — Studio 시험 실행·작업 없는 실행은 「—」.
     { key: "company", header: "회사", width: "12ch", cell: (row) => orgName(row.company, org.company) },
     { key: "department", header: "부서", width: "12ch", cell: (row) => orgName(row.department, org.department) },
@@ -244,22 +229,7 @@ export default async function RunsPage({
             ) : null}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-body-sm">
-          최근 n건
-          <select
-            name="limit"
-            defaultValue={String(Number(query.limit) || DEFAULT_LIMIT)}
-            className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
-          >
-            {LIMITS.map((one) => (
-              <option key={one} value={one}>
-                {one}건
-              </option>
-            ))}
-          </select>
-        </label>
       </AutoFilter>
-      <p className="mb-4 text-body-sm text-text-muted">{NO_RUNNER_NOTE}</p>
 
       {failure ? (
         <ErrorBanner message={failure} />
@@ -270,14 +240,13 @@ export default async function RunsPage({
             rows={rows}
             rowKey={(row) => row.run_id}
             caption="실행 목록" numbered
-            // 「최근 n건」이 500까지라 쪽은 주소에 — 콘솔 서버가 그 쪽만 그린다 (ADR-0167).
+            // 500건까지 받으므로 쪽은 주소에 — 콘솔 서버가 그 쪽만 그린다 (ADR-0167).
             paging={{
               ...readPaging(query),
               query: {
                 status: query.status,
                 bpm_process_id: query.bpm_process_id,
                 runner_id: query.runner_id,
-                limit: query.limit,
               },
             }}
             empty={{
@@ -285,7 +254,11 @@ export default async function RunsPage({
               hint: "Studio 시험 실행이나 서버 실행기가 보낸 기록이 여기 쌓입니다.",
             }}
           />
-          {rows.length > 0 ? <p className="text-body-sm text-text-muted">{total}건</p> : null}
+          {rows.length > 0 ? (
+            <p className="text-body-sm text-text-muted">
+              {total > rows.length ? `전체 ${total}건 중 최근 ${rows.length}건` : `${total}건`}
+            </p>
+          ) : null}
         </div>
       )}
     </Shell>
