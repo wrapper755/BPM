@@ -46,6 +46,7 @@ export default async function DeploymentsPage({
   }
 
   const now = Date.now();
+  // 「대상」 열은 없다 — 실행 자리가 서버 하나라 줄마다 같은 이름이었다 (ADR-0144). 철회 확인 창이 말한다.
   const target = (row: DeploymentInfo): string => {
     const type = String(row.target.type ?? "");
     const id = String(row.target.id ?? "");
@@ -68,7 +69,6 @@ export default async function DeploymentsPage({
       mono: true,
       cell: (row) => `${row.bpm_process_id}@${row.version}`,
     },
-    { key: "target", header: "대상", cell: target },
     {
       key: "state",
       header: "상태",
@@ -87,9 +87,8 @@ export default async function DeploymentsPage({
       header: "동시 실행",
       width: "9ch",
       align: "right",
-      // 서버 배포에만 있다. 적지 않았으면 「기본」 — 계약의 기본값을 화면에 베끼지 않는다 (CON-12와 같다).
-      cell: (row) =>
-        String(row.target.type) === "server_runner" ? (row.max_concurrency ?? "기본") : <span className="text-text-muted">—</span>,
+      // 적지 않았으면 「기본」 — 계약의 기본값을 화면에 베끼지 않는다 (CON-12와 같다).
+      cell: (row) => row.max_concurrency ?? "기본",
     },
     {
       key: "who",
@@ -110,7 +109,8 @@ export default async function DeploymentsPage({
           {
             key: "actions",
             header: "",
-            width: "10ch",
+            width: "4rem",
+            align: "right",
             cell: (row: DeploymentInfo) =>
               row.revoked_at ? null : (
                 <RevokeDeployment

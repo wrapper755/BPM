@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
+import { ActionMenu, ConfirmDialog, ErrorBanner } from "@bpm/ui";
 import { revokeDeployment } from "@/app/actions";
 
 /**
- * CON-15 「철회...」 — **되살릴 수 없어** 확인 창을 거치고 기본은 「취소」다 (U9).
+ * CON-15 「철회...」 — **되살릴 수 없어** 확인 창을 거치고 기본은 「취소」다 (U9). 줄 끝 「⋯」 안의 빨간 글자다
+ * (ADR-0164 — 줄마다 빨간 단추가 서면 그것이 화면에서 가장 큰 소리였다).
  * Center가 철회 봉투에 서명하고, 현장은 다음 하트비트에 그 BPM 프로세스를 내린다.
  */
 export function RevokeDeployment({ deploymentId, label }: { deploymentId: string; label: string }) {
@@ -15,10 +16,12 @@ export function RevokeDeployment({ deploymentId, label }: { deploymentId: string
   const [pending, start] = useTransition();
   const router = useRouter();
   return (
-    <div className="flex flex-col gap-1">
-      <Button size="sm" variant="danger" disabled={pending} onClick={() => setAsking(true)}>
-        철회...
-      </Button>
+    <div className="flex flex-col items-end gap-1">
+      <ActionMenu
+        label={`${label} 동작`}
+        disabled={pending}
+        items={[{ label: "철회...", danger: true, onSelect: () => setAsking(true) }]}
+      />
       {error ? <ErrorBanner message={error} /> : null}
       <ConfirmDialog
         open={asking}
