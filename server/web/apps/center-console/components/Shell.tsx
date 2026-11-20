@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { LogOut } from "lucide-react";
-import { Button, InfoTip } from "@bpm/ui";
+import { Button } from "@bpm/ui";
 import { logout } from "@/app/actions";
-import { openMode, session } from "@/lib/center";
+import { session } from "@/lib/center";
 import type { Mode } from "@/lib/session";
 import { BAR_BUTTON } from "./bar-button";
 import { Refresh } from "./Refresh";
@@ -65,6 +65,8 @@ const NAV: Array<{ label: string; items: Array<NavItem & { adminOnly?: boolean }
       { label: "실행 기록", href: "/runs", note: "지나간 실행을 찾아 무엇이 막혔는지 본다" },
       { label: "결재함", href: "/approvals", note: "사람이 답해야 풀리는 것들" },
       { label: "작업 지시", href: "/jobs", note: "언제 돌릴지 시키고 대기열을 본다" },
+      // 실행이 도는 자리 — 판의 것이 아니라 CON-02 아래에서 떼어 냈다 (ADR-0172).
+      { label: "서버 실행기", href: "/server-runners", note: "실행이 도는 곳과 Center 대기열" },
     ],
   },
   {
@@ -118,8 +120,6 @@ export async function Shell({
   const company = (await session())?.company ?? null;
   const centerAdmin = mode === "admin" && !company;
   const roleLabel = mode === "admin" ? (company ? "회사 관리자" : "관리자") : "보기 전용";
-  // 열린 모드는 **켜 둔 것을 잊는 것**이 위험이라 늘 보이는 자리에 둔다 (ADR-0142 §5).
-  const open = await openMode();
   const who = `${actor} · ${roleLabel}${company ? ` · ${company}` : ""}`;
   const groups: NavGroup[] = NAV.map((group) => ({
     ...group,
@@ -138,33 +138,9 @@ export async function Shell({
       >
         <div className="mx-auto flex h-full w-full max-w-[1440px] items-center gap-2 px-4 md:gap-3 md:px-6 lg:px-8">
         <TopNav groups={groups} current={current} who={who} />
-        {/* 오른쪽은 **한 묶음**이다 — 누구인지(배지·계정)와 할 일(단추) 사이에 옅은 선 하나. 글자는 묶음과
-            같은 14다 (ADR-0166·0167 — 배지 12·계정 13·단추 14가 한 줄에 따로 놀았다). */}
+        {/* 오른쪽은 **한 묶음**이다 — 누구인지와 할 일(아이콘 둘) 사이에 옅은 선 하나 (ADR-0166). 「열린 모드」
+            배지는 없다 — 서버의 동작이라 Center가 말한다 (ADR-0173). */}
         <div className="flex shrink-0 items-center gap-1 text-body">
-          {open ? (
-            <span className="inline-flex shrink-0 items-center">
-              <span
-                className="inline-flex h-6 shrink-0 items-center gap-1.5 px-2 whitespace-nowrap"
-                style={{
-                  color: "var(--status-warning-fg)",
-                  backgroundColor: "var(--status-warning-bg)",
-                  borderRadius: "var(--radius-full)",
-                }}
-              >
-                <span
-                  aria-hidden
-                  className="inline-block size-2 shrink-0"
-                  style={{ backgroundColor: "var(--status-warning-solid)", borderRadius: "var(--radius-full)" }}
-                />
-                {/* 좁은 화면에서는 **점만** 남는다 — 뜻은 옆 「?」가 말한다 (자리를 로그아웃에 내준다, U20 ADR-0162). */}
-                <span className="hidden md:inline">열린 모드</span>
-              </span>
-              <InfoTip label="열린 모드 설명">
-                키·승인 없이 들어옵니다 — 등록 요청이 저절로 승인되고, 일꾼이 스스로 들어오고, 키 없는 호출이 관리자입니다
-                (BPM_CENTER__OPEN_MODE)
-              </InfoTip>
-            </span>
-          ) : null}
           {/* 좁은 화면에서는 **누구인지를 접는다** — 펼친 메뉴의 맨 아래로 간다 (CON-00). */}
           <span className="ml-2 hidden shrink-0 whitespace-nowrap lg:inline" title={who}>
             {actor}
@@ -177,16 +153,8 @@ export async function Shell({
           <span aria-hidden className="mx-2 hidden h-5 w-px shrink-0 bg-border-default lg:block" />
           <Refresh />
           <form action={logout} className="shrink-0">
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              title="로그아웃"
-              aria-label="로그아웃"
-              className={BAR_BUTTON}
-            >
-              <LogOut size={16} aria-hidden className="sm:hidden" />
-              <span className="hidden sm:inline">로그아웃</span>
+            <Button type="submit" variant="ghost" size="sm" title="로그아웃" aria-label="로그아웃" className={BAR_BUTTON}>
+              <LogOut size={18} aria-hidden />
             </Button>
           </form>
         </div>

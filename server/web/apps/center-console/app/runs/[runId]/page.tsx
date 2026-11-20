@@ -150,10 +150,52 @@ function Empty({ kind }: { kind: string }) {
   return <p className="text-body-sm text-text-muted">{kind} 이벤트가 없습니다.</p>;
 }
 
-export default async function RunPage({ params }: { params: Promise<{ runId: string }> }) {
+/** 요약 아래의 탭 (ADR-0174). 「흐름」이 기본이다. */
+const TABS = ["flow", "waits", "ai", "logs"] as const;
+type Tab = (typeof TABS)[number];
+
+/** 탭 줄 — **링크**라 JS 없이 돈다. 고른 탭은 주소 `?tab=`에 남는다 (ADR-0174). 넘치면 이 줄만 가로로 민다. */
+function TabBar({ runId, tab, items }: { runId: string; tab: Tab; items: Array<{ key: Tab; label: string; count?: number }> }) {
+  return (
+    <nav aria-label="실행 상세" className="-mb-px overflow-x-auto border-b border-border-default">
+      <ul className="m-0 flex list-none gap-1 p-0">
+        {items.map((item) => {
+          const here = item.key === tab;
+          return (
+            <li key={item.key}>
+              <Link
+                href={`/runs/${runId}${item.key === "flow" ? "" : `?tab=${item.key}`}`}
+                scroll={false}
+                replace
+                aria-current={here ? "page" : undefined}
+                className={`flex items-center gap-1.5 px-3 py-2.5 whitespace-nowrap text-body${
+                  here
+                    ? " font-semibold text-text-primary shadow-[inset_0_-2px_0_var(--primary)]"
+                    : " text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                {item.label}
+                {item.count !== undefined ? <span className="text-body-sm text-text-muted">{item.count}</span> : null}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+export default async function RunPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ runId: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const found = await session();
   if (!found) redirect("/login");
   const { runId } = await params;
+  const asked = (await searchParams).tab;
 
   let info: RunInfo | null = null;
   let events: RunEvent[] = [];
@@ -357,6 +399,16 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
     { key: "message", header: "글", cell: (row) => String(row.data?.message ?? "") },
   ];
 
+  // 탭 — 「기다림·외부 작업」은 **둘 다 없으면 탭이 없다** (빈 섹션을 그리지 않는 것과 같은 결, ADR-0174).
+  const hasWaits = waits.length > 0 || tasks.length > 0 || tasksFailed;
+  const tabs: Array<{ key: Tab; label: string; count?: number }> = [
+    { key: "flow", label: "흐름" },
+    ...(hasWaits ? [{ key: "waits" as const, label: "기다림·외부 작업", count: waits.length + tasks.length }] : []),
+    { key: "ai", label: "AI·사람", count: agent.length + human.length },
+    { key: "logs", label: "로그", count: logs.length },
+  ];
+  const tab: Tab = tabs.some((one) => one.key === asked) ? (asked as Tab) : "flow";
+
   return (
     <Shell mode={found.mode} actor={found.actor} current="/runs">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-4">
@@ -436,98 +488,121 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
             {info.error_code ? <ErrorBanner message={`오류 코드: ${info.error_code}`} /> : null}
           </Section>
 
-          <Section title="다이어그램">
-            {diagram ? (
-              <Diagram xml={diagram} states={diagramStates} />
-            ) : (
-              <p className="text-body-sm text-text-muted">다이어그램을 읽지 못했습니다 — {diagramFailure}</p>
-            )}
-          </Section>
+          <div className="flex flex-col gap-4">
+            <TabBar runId={runId} tab={tab} items={tabs} />
 
-          <Section title="노드 타임라인">
-            {nodes.length === 0 ? (
-              <Empty kind="노드" />
-            ) : (
+            {tab === "flow" ? (
               <>
-                <Bars rows={nodeBars} names={names} />
-                {waits.length > 0 ? (
-                  <p className="text-body-sm text-text-muted">점선은 그 노드가 기다린 구간입니다 (아래 「이어 돈 기록」).</p>
-                ) : null}
-                <DataTable columns={nodeColumns} rows={nodes} rowKey={(row) => row.node_id} caption="노드" />
+                <Section title="다이어그램">
+                  {diagram ? (
+                    <Diagram xml={diagram} states={diagramStates} />
+                  ) : (
+                    <p className="text-body-sm text-text-muted">다이어그램을 읽지 못했습니다 — {diagramFailure}</p>
+                  )}
+                </Section>
+
+                <Section title="노드 타임라인">
+                  {nodes.length === 0 ? (
+                    <Empty kind="노드" />
+                  ) : (
+              <>
+                      <Bars rows={nodeBars} names={names} />
+                      {waits.length > 0 ? (
+                        <p className="text-body-sm text-text-muted">점선은 그 노드가 기다린 구간입니다 (아래 「이어 돈 기록」).</p>
+            ) : null}
+                      <DataTable columns={nodeColumns} rows={nodes} rowKey={(row) => row.node_id} caption="노드" />
               </>
-            )}
-          </Section>
-
-          {/*
-            「이어 돈 기록」 — **기다림이 있을 때만 보인다** (화면 문서). C3가 두 줄을 「서버만
-            쓴다」고 두었으니 PC 실행에서는 늘 비는데, 빈 섹션을 늘 그리면 PC 실행 상세마다
-            뜻 없는 한 줄이 선다.
-          */}
-          {waits.length > 0 ? (
-            <Section title="이어 돈 기록">
-              <p className="text-body-sm text-text-secondary">
-                이어 돈 횟수 {totals.resumed}회 · 기다린 시간 합 {duration(totals.seconds)}
-              </p>
-              <DataTable
-                columns={resumeColumns}
-                rows={waits}
-                rowKey={(row) => String(row.seq)}
-                caption="기다림 (서버 실행)"
-              />
+              )}
             </Section>
-          ) : null}
 
-          {/*
-            「외부 작업」 — **일감이 있을 때만 보인다** (화면 문서). PC·서버·시험 실행이 같은 모양이다
-            (셋 다 C15로 부른다). 값은 오지 않는다 (원칙 6).
-          */}
-          {tasksFailed ? (
-            <Section title="외부 작업">
-              <p className="text-body-sm text-text-muted">외부 작업을 읽지 못했습니다.</p>
-            </Section>
-          ) : tasks.length > 0 ? (
-            <Section title="외부 작업">
-              <DataTable columns={taskColumns} rows={tasks} rowKey={(row) => row.task_id} caption="외부 작업" />
-              <p className="text-body-sm text-text-muted">
-                바깥 기능은 Center에 일감을 올리고 그 토픽의 일꾼이 가져갑니다. 「기다림」이 오래면 일꾼이
-                없거나 조용한 것입니다 — 「리소스」의 「토픽」 표를 보세요. 7일이 지나 지워진 일감은 보이지
-                않습니다.
-              </p>
-            </Section>
-          ) : null}
+              </>
+            ) : null}
 
-          <Section title="AI 태스크 단계">
-            {agent.length === 0 ? (
-              <Empty kind="AI 태스크" />
-            ) : (
-              <DataTable columns={agentColumns} rows={agent} rowKey={(row) => String(row.seq)} caption="AI 단계" />
-            )}
-          </Section>
+            {tab === "waits" ? (
+              <>
+                {/*
+                  「이어 돈 기록」 — **기다림이 있을 때만 보인다** (화면 문서). C3가 두 줄을 「서버만
+                  쓴다」고 두었으니 PC 실행에서는 늘 비는데, 빈 섹션을 늘 그리면 PC 실행 상세마다
+                  뜻 없는 한 줄이 선다.
+                */}
+                {waits.length > 0 ? (
+                  <Section title="이어 돈 기록">
+                    <p className="text-body-sm text-text-secondary">
+                      이어 돈 횟수 {totals.resumed}회 · 기다린 시간 합 {duration(totals.seconds)}
+                    </p>
+                    <DataTable
+                      columns={resumeColumns}
+                      rows={waits}
+                      rowKey={(row) => String(row.seq)}
+                      caption="기다림 (서버 실행)"
+                    />
+                  </Section>
+            ) : null}
 
-          <Section title="사람 개입">
-            {human.length === 0 ? (
-              <Empty kind="결재·확인" />
-            ) : (
-              <DataTable columns={humanColumns} rows={human} rowKey={(row) => String(row.seq)} caption="사람 개입" />
-            )}
-          </Section>
+                {/*
+                  「외부 작업」 — **일감이 있을 때만 보인다** (화면 문서). PC·서버·시험 실행이 같은 모양이다
+                  (셋 다 C15로 부른다). 값은 오지 않는다 (원칙 6).
+                */}
+                {tasksFailed ? (
+                  <Section title="외부 작업">
+                    <p className="text-body-sm text-text-muted">외부 작업을 읽지 못했습니다.</p>
+                  </Section>
+                ) : tasks.length > 0 ? (
+                  <Section title="외부 작업">
+                    <DataTable columns={taskColumns} rows={tasks} rowKey={(row) => row.task_id} caption="외부 작업" />
+                    <p className="text-body-sm text-text-muted">
+                      바깥 기능은 Center에 일감을 올리고 그 토픽의 일꾼이 가져갑니다. 「기다림」이 오래면 일꾼이
+                      없거나 조용한 것입니다 — 「리소스」의 「토픽」 표를 보세요. 7일이 지나 지워진 일감은 보이지
+                      않습니다.
+                    </p>
+                  </Section>
+            ) : null}
 
-          <Section title="로그">
-            {logs.length === 0 ? (
-              <Empty kind="로그" />
-            ) : (
-              <DataTable columns={logColumns} rows={logs} rowKey={(row) => String(row.seq)} caption="로그" />
-            )}
-          </Section>
+              </>
+            ) : null}
 
-          <Section title="원본 이벤트">
-            <details>
-              <summary className="cursor-pointer text-body-sm text-text-muted">{events.length}줄</summary>
-              <pre className="overflow-auto bg-bg-surface p-3 text-body-sm">
-                {events.map((event) => JSON.stringify(event)).join("\n")}
-              </pre>
-            </details>
-          </Section>
+            {tab === "ai" ? (
+              <>
+                <Section title="AI 태스크 단계">
+                  {agent.length === 0 ? (
+                    <Empty kind="AI 태스크" />
+                  ) : (
+                    <DataTable columns={agentColumns} rows={agent} rowKey={(row) => String(row.seq)} caption="AI 단계" />
+                  )}
+                </Section>
+
+                <Section title="사람 개입">
+                  {human.length === 0 ? (
+                    <Empty kind="결재·확인" />
+                  ) : (
+                    <DataTable columns={humanColumns} rows={human} rowKey={(row) => String(row.seq)} caption="사람 개입" />
+                  )}
+                </Section>
+
+              </>
+            ) : null}
+
+            {tab === "logs" ? (
+              <>
+                <Section title="로그">
+                  {logs.length === 0 ? (
+                    <Empty kind="로그" />
+                  ) : (
+                    <DataTable columns={logColumns} rows={logs} rowKey={(row) => String(row.seq)} caption="로그" />
+                  )}
+                </Section>
+
+                <Section title="원본 이벤트">
+                  <details>
+                    <summary className="cursor-pointer text-body-sm text-text-muted">{events.length}줄</summary>
+                    <pre className="overflow-auto bg-bg-surface p-3 text-body-sm">
+                      {events.map((event) => JSON.stringify(event)).join("\n")}
+                    </pre>
+                  </details>
+                </Section>
+              </>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </Shell>

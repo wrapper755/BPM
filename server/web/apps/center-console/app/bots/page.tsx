@@ -4,8 +4,6 @@ import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { namesOf, placeLine, workPlaceLabel } from "@/lib/organization";
-import { ServerRunners } from "@/components/ServerRunners";
-import { Schedules } from "@/components/Schedules";
 // 거르기와 표는 **브라우저 쪽**에 있다 (ADR-0160) — 서버는 줄을 다 보내 두기만 한다.
 import { ProcessTable } from "./table";
 import {
@@ -143,13 +141,7 @@ export default async function BotsPage({
         </div>
       )}
 
-      {/* 실행이 도는 곳 — 서버 실행기 목록·승인 대기·대기열 (옛 CON-12 목록). */}
-      <div className="mt-8">
-        <ServerRunners admin={found.mode === "admin"} />
-      </div>
-
-      {/* [S] 「일정」 — 타이머로 시작하는 배포 (C5 §일정). 없으면 영역이 없다. */}
-      {failure ? null : <Schedules />}
+      {/* 표 아래에 붙은 영역이 없다 — 서버 실행기·대기열은 「운영 › 서버 실행기」, 일정은 작업 지시다 (ADR-0172). */}
     </Shell>
   );
 }
