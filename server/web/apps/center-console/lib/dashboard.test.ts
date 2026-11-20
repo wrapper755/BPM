@@ -20,6 +20,7 @@ import {
   jobQueue,
   runnerHealth,
   runsToday,
+  todo,
   waitingApprovals,
   workspaceTip,
 } from "./dashboard";
@@ -165,5 +166,42 @@ describe("작업공간 (C6)", () => {
 
   it("없으면 이름이 null이다", () => {
     expect(workspaceTip([])).toEqual({ total: 0, latest: null });
+  });
+});
+
+describe("todo (지금 할 일, ADR-0183)", () => {
+  const run = (id: string, status: string, hours: number) =>
+    ({ run_id: id, status, bpm_process_id: "p", version: "1.0.0", started_at: hoursAgo(hours + 0.1), finished_at: hoursAgo(hours) }) as RunInfo;
+  const approval = (id: string, hours: number, state = "open") =>
+    ({ request_id: id, state, title: id, bpm_process_id: "p", version: "1.0.0", created_at: hoursAgo(hours) }) as ApprovalInfo;
+  const pkg = (id: string, status: string, hours: number) =>
+    ({ id, version: "0.1.0", name: id, status, uploaded_at: hoursAgo(hours) }) as PackageInfo;
+
+  it("실패(24시간 안)를 새것부터 먼저, 그다음 결재·승인을 오래된 것부터 섞는다", () => {
+    const out = todo(
+      {
+        runs: [run("old-fail", "failed", 30), run("f1", "failed", 5), run("f2", "failed", 1), run("ok", "success", 1)],
+        approvals: [approval("a-new", 2), approval("a-old", 400), approval("done", 500, "answered")],
+        packages: [pkg("c1", "candidate", 50), pkg("ok", "approved", 900)],
+      },
+      NOW,
+    );
+    expect(out.items.map((one) => one.key)).toEqual(["f2", "f1", "a-old", "c1@0.1.0", "a-new"]);
+    expect(out.more).toEqual({ failed: 0, approval: 0, candidate: 0 });
+  });
+
+  it("줄 수를 넘으면 자르고 남은 것을 종류마다 센다", () => {
+    const out = todo(
+      { runs: [run("f1", "failed", 1)], approvals: [approval("a1", 3), approval("a2", 2), approval("a3", 1)], packages: [] },
+      NOW,
+      2,
+    );
+    expect(out.items.map((one) => one.key)).toEqual(["f1", "a1"]);
+    expect(out.more).toEqual({ failed: 0, approval: 2, candidate: 0 });
+  });
+
+  it("못 받은 재료(null)는 그 종류만 빠진다", () => {
+    const out = todo({ runs: null, approvals: [approval("a1", 1)], packages: null }, NOW);
+    expect(out.items.map((one) => one.kind)).toEqual(["approval"]);
   });
 });
