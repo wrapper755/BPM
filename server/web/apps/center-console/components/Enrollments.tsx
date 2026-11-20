@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import type { EnrollmentInfo } from "@bpm/api-types/c5-enrollment-info";
 import { Button, DataTable, Dialog, ErrorBanner, Field, StatusBadge, type Column } from "@bpm/ui";
 import { decideEnrollment } from "@/app/actions";
+import { time } from "@/lib/time";
 
 /**
  * 「승인 대기」 (CON-12, C5 §등록 승인, ADR-0092) — **요청이 있을 때만** 목록 위에 보인다.
@@ -50,7 +51,7 @@ export function Enrollments({ rows, canDecide }: { rows: EnrollmentInfo[]; canDe
       cell: (row) => String(row.versions?.server_runner ?? Object.values(row.versions ?? {})[0] ?? "—"),
     },
     { key: "remote_addr", header: "요청한 곳", width: "16ch", mono: true, cell: (row) => row.remote_addr ?? "—" },
-    { key: "requested_at", header: "요청 시각", width: "12ch", cell: (row) => clock(row.requested_at) },
+    { key: "requested_at", header: "요청 시각", width: "12ch", cell: (row) => time(row.requested_at) },
     { key: "expires_at", header: "남은 시간", width: "10ch", cell: (row) => left(row.expires_at) },
     {
       key: "existing",
@@ -148,12 +149,6 @@ export function Enrollments({ rows, canDecide }: { rows: EnrollmentInfo[]; canDe
       </Dialog>
     </section>
   );
-}
-
-function clock(value: string): string {
-  const at = new Date(value);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
 }
 
 function left(value: string): string {

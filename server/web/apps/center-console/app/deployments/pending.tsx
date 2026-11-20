@@ -3,7 +3,7 @@ import { DataTable, EmptyState, type Column } from "@bpm/ui";
 import type { PackageInfo } from "@bpm/api-types/c5-package-info";
 import { PackageActions } from "@/components/PackageActions";
 import { packageHref } from "@/lib/packages";
-import { fullTime } from "@/lib/time";
+import { time } from "@/lib/time";
 
 /**
  * CON-15 「승인 대기」 탭 — 후보인 판을 **BPM 프로세스와 공통 패키지를 함께** 보인다
@@ -52,7 +52,7 @@ export function PendingTable({ rows, admin }: { rows: PendingRow[]; admin: boole
       cell: (row) => <span className="text-text-secondary tabular-nums">v{row.version}</span>,
     },
     { key: "kind", header: "종류", width: "11ch", cell: (row) => KIND[row.kind] ?? row.kind },
-    { key: "when", header: "올린 시각", width: "18ch", cell: (row) => fullTime(row.uploaded_at) },
+    { key: "when", header: "올린 시각", width: "18ch", cell: (row) => time(row.uploaded_at) },
     {
       key: "who",
       header: "올린 이",

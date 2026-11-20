@@ -4,7 +4,7 @@ import { EmptyState, ErrorBanner } from "@bpm/ui";
 import type { ProjectInfo } from "@bpm/api-types/c17-project-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
-import { fullTime } from "@/lib/time";
+import { time } from "@/lib/time";
 import { AutoFilter } from "@/components/AutoFilter";
 import { FilterReset } from "@/components/FilterReset";
 import { NewProject } from "./tools";
@@ -80,9 +80,12 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                 </span>
               </span>
               {one.description ? <span className="text-body-sm text-text-secondary">{one.description}</span> : null}
-              <span className="text-caption text-text-muted">{companyName.get(one.company) ?? one.company}</span>
+              {/* 회사의 기본 프로젝트는 회사 이름을 그대로 쓴다(`projects.default_for`) — 같은 글자를 두 번 세우지 않는다. */}
+              {(companyName.get(one.company) ?? one.company) === one.name ? null : (
+                <span className="text-caption text-text-muted">{companyName.get(one.company) ?? one.company}</span>
+              )}
               <span className="mt-auto text-caption text-text-muted" title={one.id}>
-                최근 수정 {fullTime(one.updated_at)}
+                최근 수정 {time(one.updated_at)}
               </span>
             </Link>
           </li>

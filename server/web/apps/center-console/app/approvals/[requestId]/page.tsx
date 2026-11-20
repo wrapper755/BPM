@@ -7,7 +7,9 @@ import { Markdown } from "@/components/Markdown";
 import { Shell } from "@/components/Shell";
 import { answerApproval } from "@/app/actions";
 import { WithdrawApproval } from "../withdraw";
-import { STATE_LABEL, WITHDRAW_LABEL, time, where } from "../page";
+import { STATE_LABEL, WITHDRAW_LABEL, where } from "../page";
+import { fullTime, time } from "@/lib/time";
+import { loadNodeNames, loadProcessNames, processNamer } from "@/lib/names";
 
 /**
  * CON-04 결재함 (상세) — 검토 자료와 답하기.
@@ -99,6 +101,13 @@ export default async function ApprovalPage({
   const fields = info?.form?.fields ?? [];
   const review = Object.entries(info?.review ?? {});
   const canAnswer = found.mode === "admin" && info?.state === "open";
+  // 사람은 이름으로 읽는다 — id는 말풍선에 (U2). 못 받으면 id 그대로다.
+  const [processNames, nodeNames] = await Promise.all([
+    loadProcessNames(),
+    info ? loadNodeNames([[info.bpm_process_id, info.version]]) : Promise.resolve(new Map<string, string>()),
+  ]);
+  const processName = info ? processNamer(processNames)(info.bpm_process_id, info.version) : null;
+  const nodeName = info ? nodeNames.get(`${info.bpm_process_id}@${info.version}#${info.node_id}`) : undefined;
 
   return (
     <Shell mode={found.mode} actor={found.actor} current="/approvals">
@@ -123,8 +132,18 @@ export default async function ApprovalPage({
                 items={[
                   ["상태", <StatusBadge key="s" group="결재" label={STATE_LABEL[info.state] ?? info.state} />],
                   ["실행하는 곳", where(info)],
-                  ["BPM 프로세스", `${info.bpm_process_id}@${info.version}`],
-                  ["노드", <span key="n" className="font-mono">{info.node_id}</span>],
+                  [
+                    "BPM 프로세스",
+                    <span key="p" title={`${info.bpm_process_id}@${info.version}`}>
+                      {processName ? `${processName} · v${info.version}` : `${info.bpm_process_id}@${info.version}`}
+                    </span>,
+                  ],
+                  [
+                    "노드",
+                    <span key="n" className={nodeName ? "" : "font-mono"} title={info.node_id}>
+                      {nodeName ?? info.node_id}
+                    </span>,
+                  ],
                   [
                     "실행 id",
                     <Link
@@ -136,7 +155,7 @@ export default async function ApprovalPage({
                     </Link>,
                   ],
                   ["요청 시각", time(info.created_at)],
-                  ["시한", time(info.expires_at)],
+                  ["시한", fullTime(info.expires_at)],
                   ["전달됨", info.delivered ? "실행하는 쪽이 받아 갔습니다" : "아직"],
                   [
                     "담당",

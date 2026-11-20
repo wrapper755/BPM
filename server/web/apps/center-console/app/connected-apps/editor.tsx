@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ConfirmDialog, Dialog, ErrorBanner, Field } from "@bpm/ui";
+import { time } from "@/lib/time";
 import type { ExtensionTestResult } from "@bpm/api-types/c7-extension-test-result";
 import type { ExtensionVersionInfo } from "@bpm/api-types/c7-extension-version-info";
 import {
@@ -501,11 +502,11 @@ function Versions({ open, id, onClose }: { open: boolean; id: string; onClose: (
                 <td className="pr-3 font-mono" title={one.definition_hash}>
                   {one.version}
                 </td>
-                <td className="pr-3">{new Date(one.registered_at).toLocaleString("ko-KR")}</td>
+                <td className="pr-3">{time(one.registered_at)}</td>
                 <td className="pr-3">{one.registered_by ?? "—"}</td>
                 <td>
                   {one.revoked_at
-                    ? `${new Date(one.revoked_at).toLocaleString("ko-KR")}${one.revoked_by ? ` · ${one.revoked_by}` : ""}`
+                    ? `${time(one.revoked_at)}${one.revoked_by ? ` · ${one.revoked_by}` : ""}`
                     : "—"}
                 </td>
               </tr>

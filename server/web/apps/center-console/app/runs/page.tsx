@@ -7,7 +7,8 @@ import { Shell } from "@/components/Shell";
 import { sourceLabel } from "@/lib/labels";
 import { namesOf, orgName } from "@/lib/organization";
 import { AutoFilter } from "@/components/AutoFilter";
-import { loadProcessNames } from "@/lib/names";
+import { loadProcessNames, processNamer } from "@/lib/names";
+import { time, took } from "@/lib/time";
 
 /**
  * CON-01 로그 (목록).
@@ -42,18 +43,6 @@ function tally(value: number | null | undefined): string {
   return value === null || value === undefined ? "—" : String(value);
 }
 
-export function time(value: string | null | undefined): string {
-  if (!value) return "—";
-  const at = new Date(value);
-  if (Number.isNaN(at.getTime())) return value;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
-}
-
-export function seconds(value: number | null | undefined): string {
-  return value === null || value === undefined ? "—" : `${Math.round(value * 10) / 10}초`;
-}
-
 /**
  * 회사·부서·직원 이름표 (C16) — 「회사」·「부서」·「직원」 열은 `RunInfo`의 id를 이름으로 보인다.
  * **못 받아도 목록은 그린다** — 빈 표면 id 그대로 보인다 (U3).
@@ -83,7 +72,7 @@ function ProcessName({
   names: Map<string, string>;
 }) {
   if (!id) return <>—</>;
-  return <span title={id}>{names.get(`${id}@${version ?? ""}`) ?? id}</span>;
+  return <span title={id}>{processNamer(names)(id, version) ?? id}</span>;
 }
 
 export default async function RunsPage({
@@ -177,7 +166,7 @@ export default async function RunsPage({
       header: "소요",
       width: "10ch",
       align: "right",
-      cell: (row) => seconds(row.duration_s),
+      cell: (row) => took(row.duration_s),
     },
     { key: "ai_tasks", header: "AI 태스크", width: "11ch", align: "right", cell: (row) => tally(row.ai_tasks) },
     { key: "replayed_tasks", header: "재생", width: "8ch", align: "right", cell: (row) => tally(row.replayed_tasks) },

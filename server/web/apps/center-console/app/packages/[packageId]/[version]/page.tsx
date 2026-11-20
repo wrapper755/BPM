@@ -9,7 +9,8 @@ import { Shell } from "@/components/Shell";
 import { PackageActions } from "@/components/PackageActions";
 import { namesOf, placeLine, workPlaceLabel } from "@/lib/organization";
 import { DeletePackage } from "../../tools";
-import { KIND_LABEL, time } from "../../page";
+import { KIND_LABEL } from "../../page";
+import { time } from "@/lib/time";
 import { STATUS_LABEL, packageHref } from "@/lib/packages";
 
 /**

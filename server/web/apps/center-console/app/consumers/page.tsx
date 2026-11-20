@@ -5,7 +5,7 @@ import { CENTER_PUBLIC_URL, CenterError, center, session } from "@/lib/center";
 import { KINDS_UNSET, cameFrom, kindMismatches, kindsLabel, type AppChoice } from "@/lib/consumers";
 import { IMPL_LABEL, connectedApps, kindsLabel as appKindsLabel, workersOf } from "@/lib/connected-apps";
 import { Shell } from "@/components/Shell";
-import { fullTime } from "@/lib/time";
+import { time } from "@/lib/time";
 import { ConsumerMenu, NewConsumer } from "./tools";
 
 /**
@@ -81,7 +81,7 @@ export default async function ConsumersPage() {
       key: "last_fetch_at",
       header: "마지막 가져감",
       width: "18ch",
-      cell: (row) => (row.last_fetch_at ? fullTime(row.last_fetch_at) : "아직 없음"),
+      cell: (row) => (row.last_fetch_at ? time(row.last_fetch_at) : "아직 없음"),
     },
     {
       key: "source",
@@ -90,7 +90,7 @@ export default async function ConsumersPage() {
       cell: (row) => (
         <span className="flex flex-col">
           {cameFrom(row.source, row.approved_by)}
-          <span className="text-caption text-text-muted">{fullTime(row.approved_at)}</span>
+          <span className="text-caption text-text-muted">{time(row.approved_at)}</span>
         </span>
       ),
     },

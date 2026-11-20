@@ -8,9 +8,10 @@ import type { StaffInfo } from "@bpm/api-types/c16-staff-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { fullTime } from "@/lib/time";
-import { LABEL as RUN_LABEL, time } from "@/app/runs/page";
+import { LABEL as RUN_LABEL } from "@/app/runs/page";
+import { time } from "@/lib/time";
 import { packageHref } from "@/lib/packages";
-import { loadProcessNames } from "@/lib/names";
+import { loadProcessNames, processNamer } from "@/lib/names";
 import {
   KIND_LABEL,
   nodeParam,
@@ -112,9 +113,8 @@ export default async function OrganizationPage({ searchParams }: { searchParams:
   }
   // 표에는 **프로세스 이름**을 보인다 — id는 말풍선에 (U2). 이름표를 못 받으면 id 그대로다.
   const names = await loadProcessNames();
-  const byId = new Map([...names].map(([key, name]) => [key.slice(0, key.lastIndexOf("@")), name] as const));
-  const processName = (id: string, version?: string) =>
-    (version ? names.get(`${id}@${version}`) : undefined) ?? byId.get(id) ?? id;
+  const named = processNamer(names);
+  const processName = (id: string, version?: string) => named(id, version) ?? id;
   const selectedKey = wanted ? nodeParam(wanted.kind, wanted.id) : "";
   const isSelected = (kind: OrgKind, id: string) => selectedKey === nodeParam(kind, id);
 

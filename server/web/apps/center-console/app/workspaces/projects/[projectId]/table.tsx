@@ -6,7 +6,7 @@ import { ActionMenu, Button, ConfirmDialog, DataTable, Dialog, ErrorBanner, type
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import { FilterReset } from "@/components/FilterReset";
 import { deleteWorkspace, moveProcess, setProcessKind } from "@/app/actions";
-import { fullTime } from "@/lib/time";
+import { time } from "@/lib/time";
 import { filterProcesses } from "@/lib/projects";
 import { ImportProcesses, NewProcess } from "./tools";
 
@@ -78,7 +78,7 @@ export function ProcessRows({
         row.place ? [row.place.company, row.place.department, row.place.staff].filter(Boolean).join(" › ") : "—",
     },
     // 「누가」는 두지 않는다 — 열린 모드에서는 모두 「열린 모드」라 아무것도 말하지 않는다.
-    { key: "updated_at", header: "최근 수정", cell: (row) => <span className="whitespace-nowrap">{fullTime(row.updated_at)}</span> },
+    { key: "updated_at", header: "최근 수정", cell: (row) => <span className="whitespace-nowrap">{time(row.updated_at)}</span> },
     ...(admin
       ? [{ key: "menu", header: "", width: "3rem", cell: (row: WorkspaceInfo) => <RowMenu row={row} projectId={projectId} targets={targets} /> }]
       : []),

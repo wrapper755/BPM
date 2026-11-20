@@ -34,13 +34,6 @@ export const REASON_LABEL: Record<string, string> = {
 /** 맡기기의 요청자 예약값 (C5 `server_bot:<run_id>`). */
 const SERVER_BOT = "server_bot:";
 
-export function time(value: string | null | undefined): string {
-  if (!value) return "—";
-  const at = new Date(value);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
-}
-
 /** 대상 — 실행기 이름(id), 비우면 「Center가 고름」 (C5 `JobTarget`). */
 export function targetName(job: JobInfo): string {
   return job.target.id ?? "Center가 고름";

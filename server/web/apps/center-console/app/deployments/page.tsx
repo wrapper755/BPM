@@ -6,8 +6,8 @@ import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { AutoFilter } from "@/components/AutoFilter";
-import { loadProcessNames } from "@/lib/names";
-import { fullTime } from "@/lib/time";
+import { loadProcessNames, processNamer } from "@/lib/names";
+import { fullTime, time } from "@/lib/time";
 import { namesOf, placeLine, workPlaceLabel } from "@/lib/organization";
 import { PendingTable, type PendingRow } from "./pending";
 import { RevokeDeployment } from "./tools";
@@ -153,7 +153,8 @@ export default async function DeploymentsPage({
   const now = Date.now();
   // 거르기 (CON-15, ADR-0165 — 고르는 대로 든다). 프로세스는 「<id>@<버전>」과 이름의 **일부**로 걸린다.
   const processNames = await loadProcessNames();
-  const nameOf = (row: DeploymentInfo) => processNames.get(`${row.bpm_process_id}@${row.version}`) ?? null;
+  const named = processNamer(processNames);
+  const nameOf = (row: DeploymentInfo) => named(row.bpm_process_id, row.version);
   const choices = [...new Set(rows.map((row) => row.bpm_process_id))].sort();
   const needle = process.toLowerCase();
   rows = rows.filter(
@@ -161,7 +162,7 @@ export default async function DeploymentsPage({
       (state === "all" || stateOf(row, now) === (state || "활성")) &&
       (!needle ||
         `${row.bpm_process_id}@${row.version}`.toLowerCase().includes(needle) ||
-        (processNames.get(`${row.bpm_process_id}@${row.version}`) ?? "").toLowerCase().includes(needle)),
+        (nameOf(row) ?? "").toLowerCase().includes(needle)),
   );
   // 「대상」 열은 없다 — 실행 자리가 서버 하나라 줄마다 같은 이름이었다 (ADR-0144). 철회 확인 창이 말한다.
   const target = (row: DeploymentInfo): string => {
@@ -244,7 +245,7 @@ export default async function DeploymentsPage({
       // 화면 이름이 「배포」라 「배포한 때」는 같은 말이 겹쳤다.
       header: "날짜",
       width: "18ch",
-      cell: (row) => fullTime(row.signed_at),
+      cell: (row) => time(row.signed_at),
     },
     ...(found.mode === "admin"
       ? [

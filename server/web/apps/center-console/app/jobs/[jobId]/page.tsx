@@ -14,8 +14,8 @@ import {
   reason,
   stateNote,
   targetName,
-  time,
 } from "../labels";
+import { time } from "@/lib/time";
 
 /**
  * CON-05 작업 지시 (상세).
