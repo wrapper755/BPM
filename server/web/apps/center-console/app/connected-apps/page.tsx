@@ -193,7 +193,7 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
   ];
 
   const table = (list: Row[], caption: string, className?: string) => (
-    <DataTable columns={columns} rows={list} rowKey={(row) => row.app.id} caption={caption} className={className} />
+    <DataTable columns={columns} rows={list} rowKey={(row) => row.app.id} caption={caption} numbered className={className} />
   );
 
   return (

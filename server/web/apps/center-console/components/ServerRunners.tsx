@@ -12,7 +12,7 @@ import { CancelQueuedJob } from "@/app/server-runners/queue-cancel";
 import { RestartRunner } from "@/app/server-runners/actions-ui";
 
 /**
- * 서버 실행기 목록·승인 대기·대기열 — CON-02 「BPM 프로세스」의 「서버」 탭이 그린다 (CON-12 「목록」).
+ * 서버 실행기 목록·승인 대기·대기열 — 「운영 › 서버 실행기」(`/server-runners`, CON-12 「목록」, ADR-0172).
  *
  * **목록과 상세로 나눈다** — 「실행 중」·「기다리는 실행」·「BPM 프로세스별 상한」은 **실행기 하나의
  * 것**이라 상세(`/server-runners/<id>`)에 있다.
@@ -55,7 +55,7 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
       key: "name",
       header: "이름",
       cell: (row) => (
-        <Link className="font-medium text-text-primary hover:text-primary" href={`/server-runners/${encodeURIComponent(row.server_runner_id)}`}>
+        <Link className="font-medium whitespace-nowrap text-text-primary hover:text-primary" href={`/server-runners/${encodeURIComponent(row.server_runner_id)}`}>
           {row.name}
         </Link>
       ),
@@ -106,13 +106,20 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
     {
       key: "key",
       header: "API 키",
-      width: "26ch",
-      mono: true,
-      // 만료는 **연도까지** 적는다 — 「01-01」로는 내일인지 내년인지 모른다 (CON-03과 같다).
+      width: "22ch",
+      // 앞자리와 만료를 **두 줄로 고정**한다 — 한 줄에 몰면 글자가 아무 데서나 꺾였다 (CON-12).
+      // 만료는 **연도까지** 적는다 — 「01-01」로는 내일인지 내년인지 모른다.
       cell: (row) =>
-        row.key_prefix
-          ? `${row.key_prefix}… ${row.key_expires_at ? `(${fullTime(row.key_expires_at)}까지)` : "(무기한)"}`
-          : "—",
+        row.key_prefix ? (
+          <span className="flex flex-col whitespace-nowrap">
+            <span className="font-mono">{row.key_prefix}…</span>
+            <span className="text-caption text-text-muted">
+              {row.key_expires_at ? `${fullTime(row.key_expires_at)}까지` : "무기한"}
+            </span>
+          </span>
+        ) : (
+          "—"
+        ),
     },
     // 「재시작...」 (ADR-0117) — 같이 배포된 실행기에서 사람이 할 일은 상태를 보고 재시작하는 것뿐이다.
     ...(admin
@@ -120,7 +127,7 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
           {
             key: "restart",
             header: "",
-            width: "12ch",
+            width: "6ch",
             cell: (row: ServerRunnerInfo) => (
               <RestartRunner
                 runnerId={row.server_runner_id}
@@ -181,11 +188,12 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
   const online = rows.filter((row) => row.online).length;
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-3">
-        <h2 className="text-h2 font-semibold">
+    <div className="flex flex-col gap-10">
+      <section className="flex flex-col gap-4">
+        {/* 화면 제목이다 — 제 메뉴 줄이 생겨 목록의 머리가 되었다 (ADR-0172). */}
+        <h1 className="text-h2 font-bold">
           서버 실행기{rows.length > 0 ? ` · ${online}/${rows.length} 온라인` : ""}
-        </h2>
+        </h1>
 
         {failure ? <ErrorBanner message={failure} /> : null}
 
@@ -201,13 +209,13 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
             columns={columns}
             rows={rows}
             rowKey={(row) => row.server_runner_id}
-            caption="서버 실행기 목록"
+            caption="서버 실행기 목록" numbered
           />
         ) : null}
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-h2 font-semibold">대기열</h2>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-h3 font-semibold">대기열</h2>
         {queue.length === 0 ? (
           <p className="text-body-sm text-text-muted">기다리는 작업이 없습니다.</p>
         ) : (
@@ -215,7 +223,7 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
             columns={queueColumns}
             rows={queue}
             rowKey={(row) => row.job_id}
-            caption="Center 대기열"
+            caption="Center 대기열" numbered
           />
         )}
         <p className="text-caption text-text-muted">

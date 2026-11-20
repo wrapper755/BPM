@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
+import { ActionMenu, Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
 import { markRunnerLost, restartRunner, setRunnerPaused } from "@/app/actions";
 
 /**
@@ -133,19 +133,17 @@ export function RestartRunner({
     });
   }
 
+  // 줄 동작은 「⋯」다 (ADR-0164 — 다른 목록과 같다). 할 수 없으면 「⋯」를 끄고 까닭은 그 아래 글로 (U3·U20 — 말풍선은 휴대폰에서 안 뜬다).
+  const blocked = requested || !online;
   return (
-    <div className="flex flex-col gap-1">
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={pending || requested || !online}
-        onClick={() => setAsking(true)}
-      >
-        재시작...
-      </Button>
-      {/* 꺼진 까닭은 단추 아래 글로 (U3·U20, ADR-0162 — 말풍선은 휴대폰에서 안 뜬다). */}
-      {requested || !online ? (
-        <p className="text-caption text-text-muted">
+    <div className="flex flex-col items-end gap-1">
+      <ActionMenu
+        label={`${name} 동작`}
+        disabled={pending || blocked}
+        items={[{ label: "재시작...", onSelect: () => setAsking(true) }]}
+      />
+      {blocked ? (
+        <p className="max-w-[18ch] text-right text-caption text-text-muted">
           {requested ? "재시작을 요청해 두었습니다." : "오프라인인 실행기에는 재시작을 전할 수 없습니다."}
         </p>
       ) : null}

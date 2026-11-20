@@ -22,14 +22,16 @@ function stateOf(row: DeploymentInfo, now: number): string {
   return "활성";
 }
 
-/** 「상태」 거르기 — 빈 값은 **살아 있는 것**(철회되지 않은 것)이다. 철회된 것도 행이 남는다 (C5). */
+/**
+ * 「상태」 거르기 — 고르는 값은 **표의 「상태」와 같은 말**이고 기본(빈 값)은 「활성」이다 (CON-15 — 「(살아 있는 것)」은
+ * 표에 없는 말이었다, ADR-0171과 같은 결). 철회된 것도 행이 남는다 (C5).
+ */
 const STATES = [
-  { value: "", label: "(살아 있는 것)" },
-  { value: "활성", label: "활성" },
+  { value: "", label: "활성" },
   { value: "예약", label: "예약" },
   { value: "만료", label: "만료" },
   { value: "철회됨", label: "철회됨" },
-  { value: "all", label: "(전체)" },
+  { value: "all", label: "전체" },
 ];
 
 export default async function DeploymentsPage({
@@ -47,7 +49,7 @@ export default async function DeploymentsPage({
   const names = new Map<string, string>();
   let failure: string | null = null;
   try {
-    // 살아 있는 것만 볼 때만 Center가 거른다 — 나머지 상태는 철회된 것까지 받아 여기서 가른다.
+    // 「활성」(기본)일 때만 Center가 철회된 것을 거른다 — 나머지 상태는 철회된 것까지 받아 여기서 가른다.
     const [deployments, runners] = await Promise.all([
       center.deployments({ active: state === "" ? true : undefined }),
       center.serverRunners(),
@@ -61,11 +63,12 @@ export default async function DeploymentsPage({
   const now = Date.now();
   // 거르기 (CON-15, ADR-0165 — 고르는 대로 든다). 프로세스는 「<id>@<버전>」과 이름의 **일부**로 걸린다.
   const processNames = await loadProcessNames();
+  const nameOf = (row: DeploymentInfo) => processNames.get(`${row.bpm_process_id}@${row.version}`) ?? null;
   const choices = [...new Set(rows.map((row) => row.bpm_process_id))].sort();
   const needle = process.toLowerCase();
   rows = rows.filter(
     (row) =>
-      (state === "" || state === "all" || stateOf(row, now) === state) &&
+      (state === "all" || stateOf(row, now) === (state || "활성")) &&
       (!needle ||
         `${row.bpm_process_id}@${row.version}`.toLowerCase().includes(needle) ||
         (processNames.get(`${row.bpm_process_id}@${row.version}`) ?? "").toLowerCase().includes(needle)),
@@ -97,11 +100,25 @@ export default async function DeploymentsPage({
     },
     {
       key: "bot",
-      header: "프로세스@버전",
-      mono: true,
+      header: "프로세스",
       // 휴대폰 카드의 제목 — 첫 열(번호)이 제목이면 카드마다 숫자 하나가 머리에 선다.
       cardTitle: true,
-      cell: (row) => `${row.bpm_process_id}@${row.version}`,
+      // 업무 이름만, id는 말풍선에 (U2 — CON-02와 같은 결). 이름이 없으면 id가 고정폭으로 선다.
+      cell: (row) => {
+        const name = nameOf(row);
+        return name ? (
+          <span title={row.bpm_process_id}>{name}</span>
+        ) : (
+          <span className="font-mono text-body-sm">{row.bpm_process_id}</span>
+        );
+      },
+    },
+    {
+      key: "version",
+      header: "판",
+      width: "10ch",
+      // 판은 별도 열 — 본문 글꼴·보조 글자색 (CON-02 「판」과 같다, ADR-0164).
+      cell: (row) => <span className="text-text-secondary tabular-nums">v{row.version}</span>,
     },
     {
       key: "state",
@@ -150,7 +167,7 @@ export default async function DeploymentsPage({
               row.revoked_at ? null : (
                 <RevokeDeployment
                   deploymentId={row.deployment_id}
-                  label={`${row.bpm_process_id}@${row.version} → ${target(row)}`}
+                  label={`${nameOf(row) ?? row.bpm_process_id} v${row.version} → ${target(row)}`}
                 />
               ),
           } as Column<DeploymentInfo>,

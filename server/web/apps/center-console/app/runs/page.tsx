@@ -15,11 +15,9 @@ import { loadProcessNames } from "@/lib/names";
  * 값은 **실행하는 쪽이 보낸 이벤트에서** 나온다 (C3). Center가 받을 때 요약을 만들어 두므로
  * 목록을 그릴 때 줄을 다시 읽지 않는다.
  *
- * 좁히기는 상태·BPM 프로세스·**실행기**·**최근 n건**이다. 「실행기」는 C3 `RunInfo.runner_id`인데
- * **Center가 읽을 때 채우는 값**이다 (보낸 키 → C4 키 묶기) — 보내는 쪽이 제 id를 적지 않는다.
+ * 좁히기는 상태·BPM 프로세스다. **실행기는 열로도 거르기로도 두지 않는다** — 실행 자리가 서버 하나다 (ADR-0144).
  *
- * Studio가 보낸 기록에는 `runner_id`가 **없다** — 그 키에 묶인 실행기가 없어서다. 화면은 「—」로
- * 보이고 「실행한 쪽」이 `Studio`라고 말한다.
+ * 「최근 n건」은 없다 — 쪽으로 나누므로 늘 Center의 최대(`MAX_LIMIT`)를 받아 쪽을 자른다.
  *
  * 셈 열(AI 태스크·재생·결재·확인)은 `run_finished`가 세어 보낸 것이다 — **도는 중에는
  * 비어 있고 「—」로 보인다** (줄을 다시 읽어 세지 않는다, C3).
@@ -36,24 +34,13 @@ export const LABEL: Record<string, string> = {
 
 const CHOICES = ["", "running", "waiting", "success", "failed", "cancelled"];
 
-/** C3 `executor` → 화면 표기 (「실행한 쪽」 열). 지나간 기록의 `studio`도 풀어 쓴다 (ADR-0150). */
-const EXECUTOR: Record<string, string> = {
-  server_runner: "서버 실행기",
-  studio: "Studio",
-};
-
-/** 「최근 n건」 — 화면 설계서의 10~500, 기본 100. */
-const LIMITS = [10, 50, 100, 200, 500];
-const DEFAULT_LIMIT = 100;
+/** Center가 한 번에 주는 최대 (C3 `GET /runs` `limit` — Center `MAX_LIMIT`). 그보다 많으면 표 아래가 말한다. */
+const MAX_RUNS = 500;
 
 /** 셈 열 — **센 적이 없으면 「—」**다 (끝나지 않은 실행). 0과 다르다. */
 function tally(value: number | null | undefined): string {
   return value === null || value === undefined ? "—" : String(value);
 }
-
-/** 실행기가 없는 기록이 있다는 말 (U3 — 「—」 옆에 까닭을 둔다). */
-export const NO_RUNNER_NOTE =
-  "「실행기」가 비어 있는 기록은 실행기에 묶이지 않은 토큰(자동화·지나간 기록)이 보낸 것입니다.";
 
 export function time(value: string | null | undefined): string {
   if (!value) return "—";
@@ -105,8 +92,6 @@ export default async function RunsPage({
   searchParams: Promise<{
     status?: string;
     bpm_process_id?: string;
-    runner_id?: string;
-    limit?: string;
     page?: string;
     size?: string;
   }>;
@@ -122,8 +107,7 @@ export default async function RunsPage({
     const listing = await center.runs({
       status: query.status,
       bpm_process_id: query.bpm_process_id,
-      runner_id: query.runner_id,
-      limit: Number(query.limit) || DEFAULT_LIMIT,
+      limit: MAX_RUNS,
     });
     rows = listing.runs ?? [];
     total = listing.total ?? rows.length;
@@ -133,8 +117,6 @@ export default async function RunsPage({
 
   const org = await loadOrgNames();
   const processNames = await loadProcessNames();
-  // 거르기 칸의 후보 — 못 읽어도 목록은 그린다.
-  const runners = await center.serverRunners().catch(() => []);
   const processChoices = [
     ...new Map([...processNames].map(([key, name]) => [key.slice(0, key.lastIndexOf("@")), name])),
   ].sort((a, b) => a[1].localeCompare(b[1], "ko"));
@@ -151,6 +133,8 @@ export default async function RunsPage({
       key: "bpm_process_id",
       header: "프로세스",
       cardTitle: true,
+      // 이름이 되도록 다 보이게 — 결재함의 제목 열과 같은 폭 (ADR-0165).
+      minWidth: "26ch",
       // 실행 id 열은 없다 — 업무 이름이 상세로 가는 링크다 (화면 문서 CON-01).
       cell: (row) => (
         <Link className="font-medium text-text-primary hover:text-primary" href={`/runs/${encodeURIComponent(row.run_id)}`}>
@@ -158,16 +142,36 @@ export default async function RunsPage({
         </Link>
       ),
     },
-    { key: "version", header: "버전", width: "10ch", cell: (row) => row.version ?? "—" },
-    { key: "executor", header: "실행한 쪽", width: "12ch", cell: (row) => EXECUTOR[row.executor ?? ""] ?? "—" },
-    { key: "runner_id", header: "실행기", width: "16ch", cell: (row) => row.runner_id ?? "—" },
+    // 판은 「v<판>」, 보조 글자색 — 다른 목록의 「판」과 같다 (CON-02·CON-05·CON-15).
+    {
+      key: "version",
+      header: "판",
+      width: "10ch",
+      cell: (row) => (row.version ? <span className="text-text-secondary tabular-nums">v{row.version}</span> : "—"),
+    },
     // 자리는 Center가 그 실행의 작업에서 붙인다 (C16) — Studio 시험 실행·작업 없는 실행은 「—」.
-    { key: "company", header: "회사", width: "12ch", cell: (row) => orgName(row.company, org.company) },
+    {
+      key: "company",
+      header: "회사",
+      width: "12ch",
+      cell: (row) => (row.company ? <span className="whitespace-nowrap">{orgName(row.company, org.company)}</span> : "—"),
+    },
     { key: "department", header: "부서", width: "12ch", cell: (row) => orgName(row.department, org.department) },
     { key: "staff", header: "직원", width: "12ch", cell: (row) => orgName(row.staff, org.staff) },
     { key: "source", header: "시작 방식", width: "10ch", cell: (row) => sourceLabel(row.source) },
-    { key: "started_at", header: "시작", width: "14ch", cell: (row) => time(row.started_at) },
-    { key: "finished_at", header: "끝", width: "14ch", cell: (row) => time(row.finished_at) },
+    // 시각은 한 줄 (CON-05와 같다). 없으면 글자 「—」 그대로 — 휴대폰 카드가 그 줄을 뺀다.
+    {
+      key: "started_at",
+      header: "시작",
+      width: "12ch",
+      cell: (row) => (row.started_at ? <span className="whitespace-nowrap tabular-nums">{time(row.started_at)}</span> : "—"),
+    },
+    {
+      key: "finished_at",
+      header: "끝",
+      width: "12ch",
+      cell: (row) => (row.finished_at ? <span className="whitespace-nowrap tabular-nums">{time(row.finished_at)}</span> : "—"),
+    },
     {
       key: "duration_s",
       header: "소요",
@@ -225,41 +229,7 @@ export default async function RunsPage({
             ))}
           </datalist>
         </label>
-        <label className="flex flex-col gap-1 text-body-sm">
-          실행기
-          {/* 실행기는 **등록된 것에서 고른다** (H6, ADR-0162). 주소로 온 모르는 id도 그대로 남긴다. */}
-          <select
-            name="runner_id"
-            defaultValue={query.runner_id ?? ""}
-            className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
-          >
-            <option value="">(전체)</option>
-            {runners.map((one) => (
-              <option key={one.server_runner_id} value={one.server_runner_id}>
-                {one.name}
-              </option>
-            ))}
-            {query.runner_id && !runners.some((one) => one.server_runner_id === query.runner_id) ? (
-              <option value={query.runner_id}>{query.runner_id}</option>
-            ) : null}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-body-sm">
-          최근 n건
-          <select
-            name="limit"
-            defaultValue={String(Number(query.limit) || DEFAULT_LIMIT)}
-            className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
-          >
-            {LIMITS.map((one) => (
-              <option key={one} value={one}>
-                {one}건
-              </option>
-            ))}
-          </select>
-        </label>
       </AutoFilter>
-      <p className="mb-4 text-body-sm text-text-muted">{NO_RUNNER_NOTE}</p>
 
       {failure ? (
         <ErrorBanner message={failure} />
@@ -269,15 +239,13 @@ export default async function RunsPage({
             columns={columns}
             rows={rows}
             rowKey={(row) => row.run_id}
-            caption="실행 목록"
-            // 「최근 n건」이 500까지라 쪽은 주소에 — 콘솔 서버가 그 쪽만 그린다 (ADR-0167).
+            caption="실행 목록" numbered
+            // 500건까지 받으므로 쪽은 주소에 — 콘솔 서버가 그 쪽만 그린다 (ADR-0167).
             paging={{
               ...readPaging(query),
               query: {
                 status: query.status,
                 bpm_process_id: query.bpm_process_id,
-                runner_id: query.runner_id,
-                limit: query.limit,
               },
             }}
             empty={{
@@ -285,7 +253,11 @@ export default async function RunsPage({
               hint: "Studio 시험 실행이나 서버 실행기가 보낸 기록이 여기 쌓입니다.",
             }}
           />
-          {rows.length > 0 ? <p className="text-body-sm text-text-muted">{total}건</p> : null}
+          {rows.length > 0 ? (
+            <p className="text-body-sm text-text-muted">
+              {total > rows.length ? `전체 ${total}건 중 최근 ${rows.length}건` : `${total}건`}
+            </p>
+          ) : null}
         </div>
       )}
     </Shell>

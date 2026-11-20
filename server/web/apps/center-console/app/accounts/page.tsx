@@ -74,7 +74,7 @@ export default async function AccountsPage() {
       {failure ? (
         <ErrorBanner message={failure} />
       ) : (
-        <DataTable columns={columns} rows={rows} rowKey={(row) => row.username} caption="관리자 계정" />
+        <DataTable columns={columns} rows={rows} rowKey={(row) => row.username} caption="관리자 계정" numbered />
       )}
     </Shell>
   );

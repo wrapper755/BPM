@@ -115,7 +115,8 @@ export function PackageActions({
           <Button
             key={one}
             size="sm"
-            variant={one === "approve" ? "primary" : one === "revoke" ? "danger" : "secondary"}
+            // 화면에 놓이는 되돌릴 수 없는 동작은 칠하지 않는다 (ADR-0164 — 칠한 위험 단추는 확인 창 안에만).
+            variant={one === "approve" ? "primary" : one === "revoke" ? "danger-quiet" : "secondary"}
             disabled={pending}
             onClick={() => setAsking(one)}
           >

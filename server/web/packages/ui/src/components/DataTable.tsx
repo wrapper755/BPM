@@ -55,6 +55,11 @@ export interface DataTableProps<T> {
   pageSize?: number;
   /** 주소의 쪽 — 주면 **그 쪽의 줄만** 그린다 (ADR-0167). 화면이 `readPaging(searchParams)`로 읽는다. */
   paging?: Paging;
+  /**
+   * 맨 앞에 「번호」 열 — 받은 줄의 차례, **위에서부터 1**이고 쪽을 넘겨도 이어진다(`paging`이어도). 콘솔의 목록 화면은
+   * 다 단다(CON-00 [B] — 「몇째 줄」로 가리킨다). 휴대폰 카드의 제목은 번호가 아니라 그다음 열이다.
+   */
+  numbered?: boolean;
 }
 
 export function DataTable<T>({
@@ -68,18 +73,14 @@ export function DataTable<T>({
   className,
   pageSize = PAGE_SIZE,
   paging,
+  numbered = false,
 }: DataTableProps<T>) {
-  const shown = columns.filter((c) => showBusiness || !c.business);
+  const own = columns.filter((c) => showBusiness || !c.business);
   const rowHeight = density === "compact" ? "var(--size-row-compact)" : "var(--size-row-default)";
 
   if (rows.length === 0 && empty) {
     return <EmptyState title={empty.title} hint={empty.hint} action={empty.action} />;
   }
-
-  const title = shown.find((c) => c.cardTitle) ?? shown[0];
-  const rest = shown.filter((c) => c !== title);
-  const value = (c: Column<T>, row: T) =>
-    c.cell ? c.cell(row) : String((row as Record<string, unknown>)[c.key] ?? "");
 
   // 주소로 쪽을 넘기면 그 쪽만 그린다 — 넘친 쪽은 마지막 쪽이다.
   const size = paging ? paging.size : pageSize;
@@ -87,6 +88,23 @@ export function DataTable<T>({
   const from = paging ? page * size : 0;
   const drawn = paging ? rows.slice(from, from + size) : rows;
   const keys = drawn.map((row, index) => rowKey(row, from + index));
+
+  // 「번호」는 받은 줄 전체에서의 차례다 — 쪽을 넘겨도 이어진다.
+  const numberOf = new Map(drawn.map((row, index) => [row, from + index + 1]));
+  const number: Column<T> = {
+    key: "__number",
+    header: "번호",
+    width: "6ch",
+    align: "right",
+    cell: (row) => <span className="text-text-muted">{numberOf.get(row)}</span>,
+  };
+  const shown = numbered ? [number, ...own] : own;
+
+  // 카드의 제목은 번호가 아니다 — 카드마다 숫자 하나가 머리에 서면 무엇인지 읽히지 않는다.
+  const title = shown.find((c) => c.cardTitle) ?? own[0];
+  const rest = shown.filter((c) => c !== title);
+  const value = (c: Column<T>, row: T) =>
+    c.cell ? c.cell(row) : String((row as Record<string, unknown>)[c.key] ?? "");
 
   const cards = drawn.map((row, index) => (
     <li

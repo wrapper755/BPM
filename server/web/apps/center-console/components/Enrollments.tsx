@@ -88,7 +88,7 @@ export function Enrollments({ rows, canDecide }: { rows: EnrollmentInfo[]; canDe
       <h2 className="text-h2 font-semibold">승인 대기</h2>
       <p className="text-body-sm text-text-secondary">승인을 기다리는 요청 {rows.length}건</p>
       {error ? <ErrorBanner message={error} /> : null}
-      <DataTable columns={columns} rows={rows} rowKey={(one) => one.enrollment_id} caption="승인 대기" />
+      <DataTable columns={columns} rows={rows} rowKey={(one) => one.enrollment_id} caption="승인 대기" numbered />
 
       <Dialog
         open={asking?.kind === "approve"}

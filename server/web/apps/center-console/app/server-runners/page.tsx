@@ -1,6 +1,16 @@
 import { redirect } from "next/navigation";
+import { session } from "@/lib/center";
+import { Shell } from "@/components/Shell";
+import { ServerRunners } from "@/components/ServerRunners";
 
-/** 서버 실행기 목록은 CON-02 「BPM 프로세스」의 「서버」 탭으로 옮겼다 — 옛 주소는 그리로 넘긴다. */
-export default function ServerRunnersPage() {
-  redirect("/bots?tab=server");
+/** CON-12 목록 — 메뉴 「운영 › 서버 실행기」 (ADR-0172). 실행기 표·「승인 대기」·Center 대기열. */
+export default async function ServerRunnersPage() {
+  const found = await session();
+  if (!found) redirect("/login");
+
+  return (
+    <Shell mode={found.mode} actor={found.actor} current="/server-runners">
+      <ServerRunners admin={found.mode === "admin"} />
+    </Shell>
+  );
 }

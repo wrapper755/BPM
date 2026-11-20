@@ -14,7 +14,7 @@ export function Refresh() {
   const router = useRouter();
   const [pending, start] = useTransition();
   return (
-    // 좁은 화면(640 아래)에서는 **아이콘만** — 위 막대에 메뉴 단추·배지가 설 자리를 남긴다 (ADR-0161). 이름은 말풍선과 보조기기에 남는다.
+    // **늘 아이콘만**이다 — 이름은 말풍선과 보조기기에 있다 (ADR-0173, U20). 읽는 동안 돈다.
     <Button
       variant="ghost"
       size="sm"
@@ -24,8 +24,7 @@ export function Refresh() {
       aria-label={pending ? "읽는 중" : "새로 고침"}
       className={BAR_BUTTON}
     >
-      <RefreshCw size={16} aria-hidden className={`sm:hidden${pending ? " animate-spin" : ""}`} />
-      <span className="hidden sm:inline">{pending ? "읽는 중..." : "새로 고침"}</span>
+      <RefreshCw size={18} aria-hidden className={pending ? "animate-spin" : undefined} />
     </Button>
   );
 }

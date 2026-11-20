@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
+import { ActionMenu, Button, ConfirmDialog, Dialog, ErrorBanner } from "@bpm/ui";
 import { cancelJob } from "@/app/actions";
 import { STOP_CONFIRM, type CancelControl } from "@/lib/jobs";
 
@@ -15,13 +15,18 @@ import { STOP_CONFIRM, type CancelControl } from "@/lib/jobs";
  *   Center는 202로 받고 화면은 「중지 요청함 — 다음 하트비트에 반영」, 실행기가 닫으면 「취소됨」.
  *
  * 진행 글은 목록이 Center의 `cancel_requested`·`cancel_result`에서 다시 그린다 (지어내지 않는다).
+ *
+ * **목록의 줄에서는 「⋯」 메뉴 하나다**(`compact`, ADR-0164 — 「중지...」는 그 안의 빨간 글자). 줄 칸에는 오류를 펼
+ * 자리가 없어 오류는 작은 창으로 보인다.
  */
 export function CancelJob({
   jobId,
   control,
+  compact,
 }: {
   jobId: string;
   control: CancelControl;
+  compact?: boolean;
 }) {
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +41,47 @@ export function CancelJob({
   }
 
   if (control === null) return null;
+
+  const confirm = (
+    <ConfirmDialog
+      open={asking}
+      title="도는 실행을 멈출까요?"
+      description={STOP_CONFIRM}
+      confirmLabel="중지"
+      danger
+      onConfirm={apply}
+      onCancel={() => setAsking(false)}
+    />
+  );
+
+  if (compact) {
+    return (
+      <>
+        <ActionMenu
+          label="작업 동작"
+          disabled={pending}
+          items={[
+            control === "cancel"
+              ? { label: "취소", onSelect: apply }
+              : { label: "중지...", danger: true, onSelect: () => setAsking(true) },
+          ]}
+        />
+        {confirm}
+        <Dialog
+          open={error !== null}
+          title="취소하지 못했습니다"
+          onClose={() => setError(null)}
+          footer={
+            <Button variant="secondary" onClick={() => setError(null)}>
+              닫기
+            </Button>
+          }
+        >
+          <ErrorBanner message={error ?? ""} />
+        </Dialog>
+      </>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-1">
@@ -56,15 +102,7 @@ export function CancelJob({
         </div>
       )}
       {error ? <ErrorBanner message={error} /> : null}
-      <ConfirmDialog
-        open={asking}
-        title="도는 실행을 멈출까요?"
-        description={STOP_CONFIRM}
-        confirmLabel="중지"
-        danger
-        onConfirm={apply}
-        onCancel={() => setAsking(false)}
-      />
+      {confirm}
     </div>
   );
 }
