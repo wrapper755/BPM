@@ -1,0 +1,7 @@
+<!-- BPM 정사각 기호의 원본 (스타일 가이드 §6-1, ADR-0163). 마크의 가운데 두 도형 — 태스크 → 배타 게이트웨이.
+     마크가 들어갈 폭이 없는 자리(브라우저 탭 아이콘)에만 쓴다. 색은 currentColor 하나. 고친 뒤 scripts/gen_tokens.py. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect x="2" y="9" width="15" height="14" rx="4" fill="currentColor"/>
+  <line x1="17" y1="16" x2="20" y2="16" stroke="currentColor" stroke-width="2.6"/>
+  <path d="M25 10 L31 16 L25 22 L19 16 Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
+</svg>
