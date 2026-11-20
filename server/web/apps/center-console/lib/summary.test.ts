@@ -596,10 +596,11 @@ describe("CON-02 표 — 판을 묶어 차례를 정하고 줄로 편다", () =>
     expect(sortGroups(groups, "trouble").map((one) => one.id)).toEqual(["b", "a"]);
   });
 
-  it("기본 거르기는 철회를 빼고, 철회만 남은 BPM 프로세스는 줄이 없다", () => {
+  it("기본 거르기는 「전체」다 — 철회된 판도 서고, 옛 주소의 `active`도 「전체」로 읽는다 (ADR-0171)", () => {
     const rows = [version("a", "1.0.0", { status: "revoked" }), version("b", "1.0.0")];
-    expect(filterGroups(rows, { status: statusFilterOf(undefined) }).map((one) => one.id)).toEqual(["b"]);
-    expect(filterGroups(rows, { status: "all" })).toHaveLength(2);
+    expect(filterGroups(rows, { status: statusFilterOf(undefined) })).toHaveLength(2);
+    expect(statusFilterOf("active")).toBe("all");
+    expect(filterGroups(rows, { status: "revoked" }).map((one) => one.id)).toEqual(["a"]);
   });
 
   it("상태로 거르면 대표 판도 그 상태에서 고른다", () => {

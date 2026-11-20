@@ -44,7 +44,7 @@ export default async function NewDeploymentPage({
   const picked = approved.find((one) => `${one.id}@${one.version}` === bot);
 
   return (
-    <Shell mode={found.mode} actor={found.actor} current="/deployments">
+    <Shell mode={found.mode} actor={found.actor} current="/deployments" here="새 배포">
       <header className="mb-4">
         <h1 className="text-h2 font-bold">새 배포</h1>
       </header>
