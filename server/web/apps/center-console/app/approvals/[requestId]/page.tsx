@@ -8,7 +8,7 @@ import { Shell } from "@/components/Shell";
 import { answerApproval } from "@/app/actions";
 import { WithdrawApproval } from "../withdraw";
 import { STATE_LABEL, WITHDRAW_LABEL, where } from "../page";
-import { fullTime, time } from "@/lib/time";
+import { between, fullTime, time, took } from "@/lib/time";
 import { loadNodeNames, loadProcessNames, processNamer } from "@/lib/names";
 
 /**
@@ -40,12 +40,65 @@ function Shown({ value }: { value: unknown }) {
   return <>{String(value)}</>;
 }
 
+/** 선택지가 이만큼 이하면 단추 줄로 보인다 — 결재의 결정이 드롭다운 안에 숨지 않게 (CON-04). */
+const BUTTON_CHOICES = 4;
+
+/**
+ * 선택지 단추 줄 — **라디오**라 JS 없이 돌고 서버 액션은 `<select>`와 같은 값을 받는다.
+ * 고른 것은 `primary` 테두리 + `primary.subtle` 바탕이다. 키보드 초점은 감춘 라디오에 있으니 그 테두리를 단추에 그린다.
+ */
+function ChoiceButtons({
+  name,
+  choices,
+  preset,
+  bad,
+}: {
+  name: string;
+  choices: Array<{ value: string; label: string }>;
+  preset: string | null;
+  bad: boolean;
+}) {
+  return (
+    <span className="flex flex-wrap gap-2">
+      {choices.map((one) => (
+        <label key={one.value} className="cursor-pointer">
+          <input
+            type="radio"
+            name={name}
+            value={one.value}
+            defaultChecked={preset === one.value}
+            className="peer sr-only"
+          />
+          <span
+            className={`inline-flex h-9 items-center rounded-md border bg-bg-surface px-4 text-body text-text-primary hover:border-primary peer-checked:border-primary peer-checked:bg-primary-subtle peer-checked:font-semibold peer-checked:text-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus ${bad ? "border-status-failed-solid" : "border-border-strong"}`}
+          >
+            {one.label}
+          </span>
+        </label>
+      ))}
+    </span>
+  );
+}
+
 /** 폼 칸 하나 → 입력 칸 (C6 `type`). 모르는 종류는 글 칸이다. */
 function Field({ field, bad }: { field: FormField; bad: boolean }) {
   const border = bad ? "border-status-failed-solid" : "border-border-strong";
   const common = `h-9 border px-2 text-body bg-bg-surface ${border}`;
   // 계약의 `default`는 아무 타입이나 올 수 있다 (C6) — 칸 종류에 맞춰 읽는다.
   const preset: unknown = field.default;
+  const choices = (field.choices ?? []).map((one) => ({ value: String(one), label: String(one) }));
+  if (field.type === "choice" && choices.length > 0 && choices.length <= BUTTON_CHOICES) {
+    // 단추 줄은 칸이 여럿이라 `<label>`로 감싸지 않는다 — 묶음 이름은 `<legend>`다.
+    return (
+      <fieldset className="flex flex-col gap-1 text-body-sm">
+        <legend className={`mb-1 ${bad ? "text-status-failed-fg" : "text-text-muted"}`}>
+          {field.label}
+          {field.required ? " *" : ""}
+        </legend>
+        <ChoiceButtons name={field.key} choices={choices} preset={preset == null ? null : String(preset)} bad={bad} />
+      </fieldset>
+    );
+  }
   return (
     <label className="flex flex-col gap-1 text-body-sm">
       <span className={bad ? "text-status-failed-fg" : "text-text-muted"}>
@@ -131,7 +184,7 @@ export default async function ApprovalPage({
               <MetaList
                 items={[
                   ["상태", <StatusBadge key="s" group="결재" label={STATE_LABEL[info.state] ?? info.state} />],
-                  ["실행하는 곳", where(info)],
+                  ["기다린 시간", took(between(info.created_at, info.answered_at))],
                   [
                     "BPM 프로세스",
                     <span key="p" title={`${info.bpm_process_id}@${info.version}`}>
@@ -139,33 +192,43 @@ export default async function ApprovalPage({
                     </span>,
                   ],
                   [
-                    "노드",
+                    "단계",
                     <span key="n" className={nodeName ? "" : "font-mono"} title={info.node_id}>
                       {nodeName ?? info.node_id}
                     </span>,
                   ],
-                  [
-                    "실행 id",
-                    <Link
-                      key="r"
-                      className="font-mono text-text-secondary break-all hover:text-primary"
-                      href={`/runs/${encodeURIComponent(info.run_id)}`}
-                    >
-                      {info.run_id}
-                    </Link>,
-                  ],
-                  ["요청 시각", time(info.created_at)],
-                  ["시한", fullTime(info.expires_at)],
-                  ["전달됨", info.delivered ? "실행하는 쪽이 받아 갔습니다" : "아직"],
                   [
                     "담당",
                     (info.assignees ?? []).length > 0
                       ? (info.assignees ?? []).join(", ")
                       : "담당자 없음 — 콘솔에서만 답합니다",
                   ],
+                  ["요청 시각", time(info.created_at)],
+                  ["시한", fullTime(info.expires_at)],
                   ...(info.requested_by ? ([["요청한 쪽", info.requested_by]] as Array<[string, string]>) : []),
                 ]}
               />
+              <Link
+                className="mt-3 inline-block text-body-sm text-primary hover:underline"
+                href={`/runs/${encodeURIComponent(info.run_id)}`}
+              >
+                실행 기록 보기 →
+              </Link>
+              {/* 사람이 외워 쓸 일이 없는 값 — 접어 둔다 (U2). */}
+              <details className="mt-3 border-t border-border-default pt-3">
+                <summary className="cursor-pointer text-body-sm text-text-muted">기술 정보</summary>
+                <div className="mt-2">
+                  <MetaList
+                    items={[
+                      ["실행하는 곳", where(info)],
+                      ["노드 id", <span key="n" className="font-mono break-all">{info.node_id}</span>],
+                      ["실행 id", <span key="r" className="font-mono break-all">{info.run_id}</span>],
+                      ["요청 id", <span key="q" className="font-mono break-all">{info.request_id}</span>],
+                      ["전달됨", info.delivered ? "실행하는 쪽이 받아 갔습니다" : "아직"],
+                    ]}
+                  />
+                </div>
+              </details>
             </Section>
           </aside>
           <div className="flex min-w-0 flex-col gap-5 lg:order-1">
@@ -237,16 +300,17 @@ export default async function ApprovalPage({
                 {fields.length === 0 ? (
                   <>
                     {/* 폼이 없으면 「승인 / 반려」다 (C6 `decision`). **거절도 답이다.** */}
-                    <fieldset className="flex gap-4 text-body">
-                      <legend className="text-body-sm text-text-muted">결정 *</legend>
-                      <label className="flex items-center gap-2">
-                        <input type="radio" name="decision" value="approve" defaultChecked />
-                        승인
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input type="radio" name="decision" value="reject" />
-                        반려
-                      </label>
+                    <fieldset className="flex flex-col gap-1 text-body-sm">
+                      <legend className="mb-1 text-text-muted">결정 *</legend>
+                      <ChoiceButtons
+                        name="decision"
+                        choices={[
+                          { value: "approve", label: "승인" },
+                          { value: "reject", label: "반려" },
+                        ]}
+                        preset="approve"
+                        bad={false}
+                      />
                     </fieldset>
                     <label className="flex flex-col gap-1 text-body-sm">
                       <span className="text-text-muted">메모</span>
@@ -263,10 +327,15 @@ export default async function ApprovalPage({
                   ))
                 )}
                 {/* 답한 사람은 **로그인한 계정**이다 (ADR-0090). 담당자가 있어도 막지 않는다 (ADR-0080). */}
-                <p className="text-body-sm text-text-muted">
-                  답하는 사람: {found.actor}
-                  {(info.assignees ?? []).length > 0 ? ` · 담당: ${(info.assignees ?? []).join(", ")}` : ""}
-                </p>
+                {(info.assignees ?? []).length > 0 ? (
+                  // 담당이 따로 있다 — 누가 답한 것으로 남는지 **보내기 전에** 보인다 (막지는 않는다, ADR-0080).
+                  <p className="rounded-md bg-primary-subtle px-3 py-2 text-body-sm text-text-primary">
+                    담당은 <strong>{(info.assignees ?? []).join(", ")}</strong>입니다 — 지금 답하면 답한 사람은{" "}
+                    <strong>「{found.actor}」 계정</strong>으로 남습니다.
+                  </p>
+                ) : (
+                  <p className="text-body-sm text-text-muted">답하는 사람: {found.actor}</p>
+                )}
                 <div className="flex gap-2">
                   <Button type="submit" variant="primary">
                     답 보내기

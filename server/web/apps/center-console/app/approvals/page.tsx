@@ -7,7 +7,7 @@ import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { AutoFilter } from "@/components/AutoFilter";
 import { loadNodeNames, loadProcessNames, processNamer } from "@/lib/names";
-import { time } from "@/lib/time";
+import { between, fullTime, time, took } from "@/lib/time";
 
 /**
  * CON-04 결재함 (목록).
@@ -127,32 +127,37 @@ export default async function ApprovalsPage({
       minWidth: "18ch",
       cell: (row) => nodeNames.get(`${row.bpm_process_id}@${row.version}#${row.node_id}`) ?? row.node_id,
     },
-    { key: "host", header: "실행하는 곳", width: "12ch", cell: where },
     {
       key: "bpm_process_id",
       header: "프로세스",
       minWidth: "20ch",
       cell: (row) => processNamer(processNames)(row.bpm_process_id, row.version) ?? `${row.bpm_process_id}@${row.version}`,
     },
-    {
-      // **키만** 보인다 (U10) — 값은 상세에서 접힌 채로만.
-      key: "keys",
-      header: "변수 키",
-      minWidth: "16ch",
-      // 앞의 둘과 「외 n개」 — 다 늘어놓으면 칸이 일곱 줄이 됐다. 전부는 상세에 (ADR-0165).
-      cell: (row) => keysLine(Object.keys(row.review ?? {})),
-    },
     // 시각은 한 줄 — 두 줄로 갈리면 줄 높이가 들쭉날쭉했다.
     { key: "created_at", header: "요청 시각", width: "11ch", cell: (row) => <span className="whitespace-nowrap">{time(row.created_at)}</span> },
-    { key: "expires_at", header: "시한", width: "11ch", cell: (row) => <span className="whitespace-nowrap">{time(row.expires_at)}</span> },
-    { key: "assignees", header: "담당", width: "11ch", cell: assigned },
-    { key: "answered_by", header: "답한 사람", width: "18ch", cell: answeredBy },
     {
-      key: "delivered",
-      header: "전달됨",
-      width: "8ch",
-      cell: (row) => (row.delivered ? "받아 감" : "—"),
+      // 오래 묵은 결재가 눈에 띄어야 한다 — 대기면 지금까지, 답했으면 답할 때까지 (CON-04).
+      key: "waited",
+      header: "기다린 시간",
+      width: "11ch",
+      align: "right",
+      cell: (row) => <span className="whitespace-nowrap">{took(between(row.created_at, row.answered_at))}</span>,
     },
+    // 시한은 「언제까지」라 연도까지 (스타일 가이드 §5).
+    { key: "expires_at", header: "시한", width: "16ch", cell: (row) => <span className="whitespace-nowrap">{fullTime(row.expires_at)}</span> },
+    { key: "assignees", header: "담당", width: "11ch", cell: assigned },
+    // 대기인 결재에는 늘 비어 있다 — 그때는 두지 않는다 (CON-04).
+    ...(state === "open"
+      ? []
+      : ([
+          { key: "answered_by", header: "답한 사람", width: "18ch", cell: answeredBy },
+          {
+            key: "delivered",
+            header: "전달됨",
+            width: "8ch",
+            cell: (row) => (row.delivered ? "받아 감" : "—"),
+          },
+        ] as Array<Column<ApprovalInfo>>)),
   ];
 
   return (
@@ -231,12 +236,6 @@ export default async function ApprovalsPage({
       )}
     </Shell>
   );
-}
-
-/** 「변수 키」 한 칸 — 앞의 둘과 「외 n개」 (ADR-0165). */
-function keysLine(keys: string[]): string {
-  if (keys.length === 0) return "—";
-  return keys.length <= 2 ? keys.join(", ") : `${keys.slice(0, 2).join(", ")} 외 ${keys.length - 2}개`;
 }
 
 /**
