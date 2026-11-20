@@ -14,7 +14,7 @@
 | --- | --- | --- |
 | ~~Studio (Windows 데스크톱)~~ | **폐기** — 저작이 콘솔 안으로 옮겼다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md), M11 조각 5) | ~~STU-01 ~ STU-16~~ → CON-20 |
 | [server/docs/screens/center-console.md](../server/docs/screens/center-console.md) | Center 콘솔 (웹) — 관리자 계정으로 승인·배포까지 ([ADR-0090](decisions/0090-center-admin-accounts.md)) | CON-00 ~ CON-18 (CON-07~11 폐기) · CON-20은 아래 파일 |
-| [server/docs/screens/center-console-connections.md](../server/docs/screens/center-console-connections.md) | Center 콘솔 — 일꾼·연결 앱 (위 파일을 나눈 것) | CON-17 · CON-18 |
+| [server/docs/screens/center-console-connections.md](../server/docs/screens/center-console-connections.md) | Center 콘솔 — 일꾼·앱 (위 파일을 나눈 것) | CON-17 · CON-18 |
 | [server/docs/screens/center-console-workspace.md](../server/docs/screens/center-console-workspace.md) | Center 콘솔 — 작업공간 (설계가 콘솔 안으로, [ADR-0143](decisions/0143-design-happens-in-the-console.md)) | CON-20 |
 | [server/docs/screens/service-app-console.md](../server/docs/screens/service-app-console.md) | 서비스 앱 관리 콘솔 (웹, 앱마다) | SVC-00 ~ SVC-03 |
 
@@ -107,7 +107,7 @@
 | CON-00 | 공통 틀 | Center 콘솔 | 모두 | M2 | 프로토타입 |
 | CON-01 | 실행 기록 | Center 콘솔 | 운영자 | M3 | 프로토타입 (이름은 [ADR-0149](decisions/0149-console-menu-follows-the-work.md)) |
 | CON-02 | 프로세스 | Center 콘솔 | 운영자 | M3 | 프로토타입 |
-| CON-03 | 앱 — 없어짐 ([ADR-0149](decisions/0149-console-menu-follows-the-work.md) — Studio 키 목록뿐이었다. 서버 실행기는 CON-12, 이력은 CON-16) | Center 콘솔 | 운영자 | M2 | 폐기 (키 종류 `studio`도 걷었다 — [ADR-0150](decisions/0150-the-designer-key-is-gone.md)) |
+| CON-03 | 앱 — 없어짐 ([ADR-0149](decisions/0149-console-menu-follows-the-work.md) — Studio 키 목록뿐이었다. 서버 실행기는 CON-12) | Center 콘솔 | 운영자 | M2 | 폐기 (키 종류 `studio`도 걷었다 — [ADR-0150](decisions/0150-the-designer-key-is-gone.md)) |
 | CON-04 | 결재함 | Center 콘솔 | 결재자 | M5 | 프로토타입 |
 | CON-05 | 작업 지시 | Center 콘솔 | 운영자 | M5 | 프로토타입 확장 (만들기 추가) |
 | CON-06 | 공통 패키지 | Center 콘솔 | 운영자 | M5 | 프로토타입 |
@@ -117,9 +117,9 @@
 | CON-13 | 조직 | Center 콘솔 | Center 관리자·회사 관리자 | — | 신규 ([ADR-0125](decisions/0125-organization-and-work-placement.md) — 가상 직원 화면은 걷었다) |
 | CON-14 | 관리자 계정 | Center 콘솔 | 관리자 | — | 신규 ([ADR-0090](decisions/0090-center-admin-accounts.md)) |
 | CON-15 | 배포 | Center 콘솔 | 관리자 | — | 신규 (ADM-03을 옮겼다, ADR-0090) |
-| CON-16 | 변경 이력 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0121](decisions/0121-center-console-says-process.md), 이름은 [ADR-0149](decisions/0149-console-menu-follows-the-work.md)) |
+| CON-16 | 변경 이력 — 없어짐 ([ADR-0177](decisions/0177-remove-the-change-history-screen.md) — 배치 결정은 CON-12 상세, 감사 기록은 09-gaps §3-33과 함께) | Center 콘솔 | 운영자 | — | 폐기 |
 | CON-17 | 일꾼 | Center 콘솔 | Center 관리자 | — | 신규 ([ADR-0137](decisions/0137-consumers-are-managed-in-the-console.md)) |
-| CON-18 | 연결 앱 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0138](decisions/0138-console-app-catalog.md) — 보기만) |
+| CON-18 | 앱 | Center 콘솔 | 운영자 | — | 신규 ([ADR-0138](decisions/0138-console-app-catalog.md) — 보기만) |
 | CON-20 | 작업공간 (저작) | Center 콘솔 | 저작하는 사람 | M11 | 신규 ([ADR-0143](decisions/0143-design-happens-in-the-console.md)·[ADR-0147](decisions/0147-workspace-has-three-tabs.md) — STU-01·02·04·05·06·07·08·09·12를 대신한다) |
 | CON-21 | 대시보드 (홈) | Center 콘솔 | 모두 | — | 신규 ([ADR-0151](decisions/0151-console-follows-the-lifecycle.md) — 역할로 가르지 않는다) |
 | SVC-00 | 공통 틀 | 서비스 앱 관리 콘솔 | 서비스 앱 관리자 | M2 | 신규 (`service_kit`) |

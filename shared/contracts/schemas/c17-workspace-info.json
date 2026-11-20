@@ -105,6 +105,11 @@
       "title": "Id",
       "type": "string"
     },
+    "kind": {
+      "default": "bpm_process",
+      "title": "Kind",
+      "type": "string"
+    },
     "libs": {
       "items": {
         "$ref": "#/$defs/InstalledLibInfo"
@@ -127,6 +132,10 @@
       ],
       "default": null
     },
+    "project": {
+      "title": "Project",
+      "type": "string"
+    },
     "revision": {
       "title": "Revision",
       "type": "string"
@@ -148,6 +157,7 @@
     "id",
     "name",
     "version",
+    "project",
     "company",
     "updated_at",
     "updated_by",

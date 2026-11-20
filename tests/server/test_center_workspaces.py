@@ -263,6 +263,18 @@ def test_the_entry_cannot_be_deleted(client: TestClient) -> None:
     assert answer.json()["code"] == "entry_in_use"
 
 
+def test_the_record_keeps_a_file_name_and_the_api_shows_a_path(client: TestClient, workspace_dir: Path) -> None:
+    """기록은 엔진의 형식(파일 이름), 계약은 경로 — 둘이 엇갈리면 엔진이 **첫 정의로 조용히** 돈다."""
+    new_workspace(client)
+    put(client, "finance.invoice", "process/main.bpmn", XML)
+    put(client, "finance.invoice", "process/other.bpmn", XML)
+    info = made(client.patch(f"{API}/workspaces/finance.invoice", json={"entry": "process/other.bpmn"},
+                             headers=ADMIN), 200)
+    assert info["entry"] == "process/other.bpmn"
+    record = json.loads((workspace_dir / "finance.invoice" / "process.json").read_text(encoding="utf-8"))
+    assert record["entry"] == "other.bpmn"
+
+
 def test_the_file_list_says_who_touched_it(client: TestClient) -> None:
     """`updated_by`를 **파일 시스템이 모른다** — 그래서 DB가 말해 준다."""
     new_workspace(client)

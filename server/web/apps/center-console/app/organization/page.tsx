@@ -10,6 +10,7 @@ import { Shell } from "@/components/Shell";
 import { fullTime } from "@/lib/time";
 import { LABEL as RUN_LABEL, time } from "@/app/runs/page";
 import { packageHref } from "@/lib/packages";
+import { loadProcessNames } from "@/lib/names";
 import {
   KIND_LABEL,
   nodeParam,
@@ -109,6 +110,11 @@ export default async function OrganizationPage({ searchParams }: { searchParams:
             : "알 수 없는 오류가 생겼습니다";
     }
   }
+  // 표에는 **프로세스 이름**을 보인다 — id는 말풍선에 (U2). 이름표를 못 받으면 id 그대로다.
+  const names = await loadProcessNames();
+  const byId = new Map([...names].map(([key, name]) => [key.slice(0, key.lastIndexOf("@")), name] as const));
+  const processName = (id: string, version?: string) =>
+    (version ? names.get(`${id}@${version}`) : undefined) ?? byId.get(id) ?? id;
   const selectedKey = wanted ? nodeParam(wanted.kind, wanted.id) : "";
   const isSelected = (kind: OrgKind, id: string) => selectedKey === nodeParam(kind, id);
 
@@ -127,11 +133,15 @@ export default async function OrganizationPage({ searchParams }: { searchParams:
       cell: (row) => {
         const version = row.versions?.[0];
         return version ? (
-          <Link className="font-medium text-text-primary hover:text-primary" href={packageHref({ id: row.bpm_process_id, version, kind: "bpm_process" })}>
-            {row.bpm_process_id}
+          <Link
+            className="font-medium text-text-primary hover:text-primary"
+            href={packageHref({ id: row.bpm_process_id, version, kind: "bpm_process" })}
+            title={row.bpm_process_id}
+          >
+            {processName(row.bpm_process_id, version)}
           </Link>
         ) : (
-          row.bpm_process_id
+          <span title={row.bpm_process_id}>{processName(row.bpm_process_id)}</span>
         );
       },
     },
@@ -154,7 +164,12 @@ export default async function OrganizationPage({ searchParams }: { searchParams:
         </Link>
       ),
     },
-    { key: "bpm_process_id", header: "프로세스", cell: (row) => row.bpm_process_id ?? "—" },
+    {
+      key: "bpm_process_id",
+      header: "프로세스",
+      cell: (row) =>
+        row.bpm_process_id ? <span title={row.bpm_process_id}>{processName(row.bpm_process_id)}</span> : "—",
+    },
     {
       key: "status",
       header: "상태",

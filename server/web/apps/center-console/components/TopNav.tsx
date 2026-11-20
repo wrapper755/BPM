@@ -155,7 +155,8 @@ function Group({
       );
     }
     return (
-      <Link href={only.href} className={shape} aria-current={here ? "true" : undefined}>
+      // 바로 가는 묶음도 그 줄의 설명을 말풍선으로 단다 — 「라이브러리」가 무엇인지 이름만으로는 모른다 (ADR-0176).
+      <Link href={only.href} className={shape} aria-current={here ? "true" : undefined} title={only.note}>
         {group.label}
       </Link>
     );

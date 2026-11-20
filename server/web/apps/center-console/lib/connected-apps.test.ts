@@ -151,7 +151,7 @@ describe("addressView", () => {
   });
 });
 
-describe("연결 앱 목록", () => {
+describe("앱 목록", () => {
   const extensions = [
     { id: "ext-ocr", tier: "external", name: "외부 OCR", version: "1.0.0", status: "ok", definition: { ...DEFINITION, app_group: { id: "ext", name: "외부 서비스" }, keywords: ["영수증"] } },
     { id: "seal", tier: "builtin", name: "인감", version: "1.0.0" },

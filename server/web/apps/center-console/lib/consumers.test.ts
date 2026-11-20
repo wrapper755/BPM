@@ -48,7 +48,7 @@ describe("kindMismatches", () => {
 });
 
 describe("pickTopics", () => {
-  it("체크한 연결 앱과 직접 적은 것을 겹침 없이 합친다", () => {
+  it("체크한 앱과 직접 적은 것을 겹침 없이 합친다", () => {
     expect(pickTopics(["external", "summarize"], "new-app\nexternal\n")).toEqual(["external", "summarize", "new-app"]);
     expect(pickTopics([], "  ")).toEqual([]);
   });

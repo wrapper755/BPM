@@ -34,10 +34,13 @@ export default async function WorkspacePage({ params }: { params: Promise<{ work
     );
   }
 
-  // 업무 자리를 고르는 거리 (C16) — **없어도 화면은 뜬다**(조직이 비어 있을 수 있다).
-  const [departments, staff] = await Promise.all([
+  // 업무 자리를 고르는 거리 (C16)와 **같은 프로젝트의 프로세스**(ADR-0175 — 탐색기 맨 위에서 옮겨 다닌다).
+  // **없어도 화면은 뜬다**(조직이 비어 있을 수 있다).
+  const [departments, staff, project, siblings] = await Promise.all([
     center.departments().catch(() => []),
     center.staffList().catch(() => []),
+    center.project(info.project).catch(() => null),
+    center.projectWorkspaces(info.project).catch(() => []),
   ]);
 
   const opened = firstOpen(files, info.entry);
@@ -65,6 +68,8 @@ export default async function WorkspacePage({ params }: { params: Promise<{ work
         canWrite={found.mode === "admin"}
         departments={departments.map((one) => ({ id: one.id, name: one.name }))}
         staff={staff.map((one) => ({ id: one.id, name: one.name }))}
+        project={{ id: info.project, name: project?.name ?? info.project }}
+        siblings={siblings.map((one) => ({ id: one.id, name: one.name, kind: one.kind }))}
       />
     </Shell>
   );

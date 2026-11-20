@@ -11,7 +11,7 @@ import { TopNav, type NavGroup, type NavItem } from "./TopNav";
 
 /**
  * CON-00 공통 틀 — **위 막대 하나다** ([ADR-0152](../../../../../docs/decisions/0152-console-chrome-is-one-top-bar.md)):
- * 화면 폭 전체의 **밝은 띠**(56)에 마크 + 「BPM」 + 묶음 여섯, 그 아래가 본문이다
+ * 화면 폭 전체의 **밝은 띠**(56)에 마크 + 「BPM」 + 묶음 일곱, 그 아래가 본문이다
  * ([ADR-0161](../../../../../docs/decisions/0161-soft-cards.md) — 짙은 틀을 벗었다. 본문은 가운데 최대 폭 안에 선다).
  * 레일(56)과 펼침 패널(224)은 걷었다 — 묶음이 여섯·줄이 열하나뿐이라 280px를 늘 쥐고도 패널이
  * 거의 비어 있었다.
@@ -23,8 +23,9 @@ import { TopNav, type NavGroup, type NavItem } from "./TopNav";
  */
 
 /**
- * 묶음 여섯 (CON-00 [A]·[M]) — **BPM 생애주기 차례**다: 대시보드 → 저작 → 배포 → 운영 → 연결 → 권한·조직
- * ([ADR-0151](../../../../../docs/decisions/0151-console-follows-the-lifecycle.md)). 가로 막대라 **왼쪽에서
+ * 묶음 일곱 (CON-00 [A]·[M]) — **BPM 생애주기 차례**다: 대시보드 → 저작 → 라이브러리 → 배포 → 운영 → 연결 → 권한·조직
+ * ([ADR-0151](../../../../../docs/decisions/0151-console-follows-the-lifecycle.md), 「라이브러리」는
+ * [ADR-0176](../../../../../docs/decisions/0176-projects-have-shared-packages.md)). 가로 막대라 **왼쪽에서
  * 오른쪽으로 읽힌다**.
  *
  * **줄마다 한 줄 설명(`note`)이 붙는다** — 그 화면에 **무엇이 있는지**를 말한다 (ADR-0152 §2).
@@ -45,12 +46,14 @@ const NAV: Array<{ label: string; items: Array<NavItem & { adminOnly?: boolean }
   },
   {
     // 저작이 콘솔 안으로 들어왔다 (ADR-0143) — 작업공간 하나가 BPM 프로세스 한 벌이다 (C17).
-    // 공통 패키지도 여기다 — 그림을 그릴 때 들여 쓰고 짓는 것이지 배포되는 것이 아니다 (ADR-0169).
+    // 공통 패키지를 **만드는** 자리도 프로젝트 안이다 (ADR-0176).
     label: "저작",
-    items: [
-      { label: "작업공간", href: "/workspaces", note: "그림을 그리고 그 자리에서 돌려 본다" },
-      { label: "공통 패키지", href: "/packages", note: "여러 프로세스가 함께 쓰는 도구·정의 묶음" },
-    ],
+    items: [{ label: "프로젝트", href: "/workspaces", note: "프로세스를 묶고 그림을 그려 그 자리에서 돌려 본다" }],
+  },
+  {
+    // 지어 올린 공통 패키지를 **회사 범위로 보고 고르는** 자리 — 배포되는 것이 아니다 (ADR-0169·0176).
+    label: "라이브러리",
+    items: [{ label: "공통 패키지", href: "/packages", note: "지어 올린 공유 프로세스 — 프로세스가 설치해서 부른다" }],
   },
   {
     // 내보내는 것 — 지은 것을 현장에 올린다. 줄이 하나라 펼치지 않고 바로 간다.
@@ -70,10 +73,10 @@ const NAV: Array<{ label: string; items: Array<NavItem & { adminOnly?: boolean }
     ],
   },
   {
-    // 바깥을 들이는 것 — 연결 앱 카탈로그(CON-18)와 그것을 맡는 일꾼(CON-17)은 한 짝이다.
+    // 바깥을 들이는 것 — 앱 카탈로그(CON-18)와 그것을 맡는 일꾼(CON-17)은 한 짝이다.
     label: "연결",
     items: [
-      { label: "연결 앱", href: "/connected-apps", note: "프로세스가 부르는 바깥 앱 목록" },
+      { label: "앱", href: "/connected-apps", note: "프로세스가 부르는 바깥 앱 목록" },
       { label: "일꾼", href: "/consumers", note: "그 앱들의 일감을 가져가는 쪽" },
     ],
   },
@@ -89,8 +92,6 @@ const NAV: Array<{ label: string; items: Array<NavItem & { adminOnly?: boolean }
         note: "콘솔에 들어오는 계정과 역할",
         adminOnly: true,
       },
-      // 앱의 등록·키·배치 이력 (CON-16) — 운영이 아니라 관리다.
-      { label: "변경 이력", href: "/app-logs", note: "등록·키·배치가 언제 바뀌었나" },
     ],
   },
 ];
@@ -127,7 +128,9 @@ export async function Shell({
   })).filter((group) => group.items.length > 0);
 
   return (
-    <div className="min-h-screen">
+    // `flow-root` — 본문의 `margin-top`(위 막대 높이)이 이 틀 밖으로 새면(여백 겹침) 문서가 막대 높이만큼
+    // 길어져 화면이 굴러가고, 작업공간(CON-20b)의 머리 띠가 막대 밑으로 숨는다.
+    <div className="flow-root min-h-screen">
       {/* [A] 위 막대 — 마크·메뉴·누구인지. **틀은 이것 하나다.** 바탕과 같은 결의 흰 면에 아래 선 하나 (ADR-0161). */}
       {/* 띠는 화면 폭 전체, **안쪽은 본문과 같은 최대 폭·같은 여백**이다 — 마크의 왼쪽 끝이 본문 제목과
           줄이 맞는다 (ADR-0164 — 로고가 화면 끝에, 본문이 가운데에 따로 떠 있었다). 바탕은 칠한 면이다

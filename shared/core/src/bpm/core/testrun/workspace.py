@@ -138,7 +138,9 @@ class BpmProcess:
 
     @property
     def entry_definition(self) -> Definition | None:
-        found = next((d for d in self.definitions if d.path.name == self.entry), None)
+        # 경로째 적힌 기록(`process/main.bpmn`)도 받는다 — 콘솔 Center가 한동안 그렇게 적었다.
+        name = Path(self.entry).name if self.entry else ""
+        found = next((d for d in self.definitions if d.path.name == name), None)
         return found or (self.definitions[0] if self.definitions else None)
 
     def decisions(self) -> dict[str, Decision]:

@@ -35,3 +35,18 @@ export function lastReportNote(
   if (online || !lastSeenAt) return null;
   return `마지막 보고 ${format(lastSeenAt)} 기준`;
 }
+
+/** 배치 결정 사유 코드 → 글 (C2 위반 코드) — CON-12 상세 「최근 배치 결정」. 모르는 값은 **그대로 보인다** (원칙 10). */
+export const DEPLOYMENT_REASON: Record<string, string> = {
+  bad_signature: "서명이 맞지 않음",
+  unknown_key: "모르는 서명 키",
+  revoked_key: "서명 키 철회됨",
+  wrong_kind: "봉투 종류가 다름",
+  expired: "유효 기간 지남",
+  not_yet: "아직 시작 전",
+  wrong_target: "다른 대상용",
+  hash_mismatch: "패키지 내용이 다름",
+  unsigned_package: "승인 서명 없음",
+  unsupported_alg: "모르는 서명 방식",
+  float_in_payload: "봉투에 소수가 들어 있음",
+};

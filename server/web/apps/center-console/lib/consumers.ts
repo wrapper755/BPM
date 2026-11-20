@@ -64,7 +64,7 @@ export function kindMismatches(
     });
 }
 
-/** 「맡을 연결 앱」의 한 줄 — 토픽은 곧 연결 앱 id다 (CON-18, ADR-0138). */
+/** 「맡을 앱」의 한 줄 — 토픽은 곧 앱 id다 (CON-18, ADR-0138). */
 export interface AppChoice {
   id: string;
   name: string;
@@ -76,7 +76,7 @@ export interface AppChoice {
   workers: string[];
 }
 
-/** 맡는 토픽 = 체크한 연결 앱 + 「직접 적기」 — 겹침 없이, 체크한 것 먼저. */
+/** 맡는 토픽 = 체크한 앱 + 「직접 적기」 — 겹침 없이, 체크한 것 먼저. */
 export function pickTopics(checked: Array<FormDataEntryValue>, text: string): string[] {
   return [...new Set([...checked.map(String).filter(Boolean), ...parseTopics(text)])];
 }
@@ -87,7 +87,7 @@ export function splitTopics(topics: string[], choices: AppChoice[]): { checked: 
   return { checked: topics.filter((one) => listed.has(one)), other: topics.filter((one) => !listed.has(one)) };
 }
 
-/** 「맡을 연결 앱」 둘째 줄 — 「외부 정의 · API · 이미 맡은 일꾼 worker」. */
+/** 「맡을 앱」 둘째 줄 — 「외부 정의 · API · 이미 맡은 일꾼 worker」. */
 export function appChoiceLine(one: AppChoice): string {
   const held = one.workers.length ? `이미 맡은 일꾼 ${one.workers.join(", ")}` : "맡은 일꾼 없음";
   return [one.impl, one.kinds, held].join(" · ");

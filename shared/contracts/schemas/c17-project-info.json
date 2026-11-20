@@ -1,0 +1,60 @@
+{
+  "$id": "urn:bpm:contracts:c17-project-info",
+  "additionalProperties": true,
+  "description": "프로젝트 하나. 파일이 없어 **DB가 원본**이다.",
+  "properties": {
+    "company": {
+      "title": "Company",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "processes": {
+      "minimum": 0,
+      "title": "Processes",
+      "type": "integer"
+    },
+    "shared": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Shared",
+      "type": "integer"
+    },
+    "updated_at": {
+      "title": "Updated At",
+      "type": "string"
+    },
+    "updated_by": {
+      "title": "Updated By",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "company",
+    "processes",
+    "updated_at",
+    "updated_by"
+  ],
+  "title": "ProjectInfo",
+  "type": "object"
+}

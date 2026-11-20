@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ConfirmDialog, Dialog, ErrorBanner, Field } from "@bpm/ui";
+import { CenterAddress } from "@/components/CenterAddress";
 import {
   createConsumer,
   deleteConsumer,
@@ -18,7 +19,7 @@ import { TASK_KIND } from "@/lib/summary";
  * **Center가 본다** (한 자리에서만 판정한다). 토큰 원문은 서버 액션의 답으로 **이 창에만** 오고 남기지 않는다.
  */
 const TOPICS_HELP =
-  "서비스 앱 id나 외부 확장 id — 영문 소문자·숫자·.·-. 일꾼이 뜰 때 그 앱을 올리면 연결 앱에 나타납니다.";
+  "서비스 앱 id나 외부 확장 id — 영문 소문자·숫자·.·-. 일꾼이 뜰 때 그 앱을 올리면 앱에 나타납니다.";
 const TOPICS_EFFECT =
   "다음 가져가기부터 반영됩니다. 빠진 토픽의 일감은 이 일꾼이 더 가져가지 않고, 맡을 일꾼이 없어진 외부 확장은 등록이 해제됩니다.";
 const TEXTAREA = "rounded-md border border-border-strong bg-bg-surface p-2 font-mono text-body-sm";
@@ -43,18 +44,18 @@ function KindsField({ defaultValue = [] }: { defaultValue?: string[] }) {
 }
 
 /**
- * 「맡을 연결 앱」 — 토픽은 곧 연결 앱 id다(CON-18). 목록에서 체크하고, 아직 목록에 없는 앱(일꾼이 처음 올릴 것)은
+ * 「맡을 앱」 — 토픽은 곧 앱 id다(CON-18). 목록에서 체크하고, 아직 목록에 없는 앱(일꾼이 처음 올릴 것)은
  * 「직접 적기」에 적는다. 맡는 토픽은 둘을 합친 것이다(`pickTopics`). `choices`가 `null`이면 목록을 못 읽었다.
  */
 function AppsField({ choices, topics = [], help }: { choices: AppChoice[] | null; topics?: string[]; help: string }) {
   const { checked, other } = splitTopics(topics, choices ?? []);
   return (
     <fieldset className="flex flex-col gap-2 text-body-sm">
-      <legend>맡을 연결 앱</legend>
+      <legend>맡을 앱</legend>
       {choices === null ? (
-        <span className="text-text-muted">연결 앱 목록을 읽지 못했습니다 — 직접 적으세요.</span>
+        <span className="text-text-muted">앱 목록을 읽지 못했습니다 — 직접 적으세요.</span>
       ) : choices.length === 0 ? (
-        <span className="text-text-muted">아직 연결 앱이 없습니다 — 맡을 앱 id를 직접 적으세요.</span>
+        <span className="text-text-muted">아직 앱이 없습니다 — 맡을 앱 id를 직접 적으세요.</span>
       ) : (
         <ul className="flex max-h-48 flex-col overflow-y-auto rounded-md border border-border-default">
           {choices.map((one) => (
@@ -81,8 +82,11 @@ function AppsField({ choices, topics = [], help }: { choices: AppChoice[] | null
   );
 }
 
-/** 토큰 창 — 원문 한 줄과 「복사」. 닫으면 다시 볼 수 없다. */
-function TokenView({ token }: { token: string }) {
+/**
+ * 토큰 창 — 원문 한 줄과 「복사」. 닫으면 다시 볼 수 없다.
+ * **설정에 적을 Center 주소도 여기다** — 그것을 적는 사람이 토큰과 함께 적는다 (ADR-0179, 목록 머리에는 두지 않는다).
+ */
+function TokenView({ token, center }: { token: string; center: string }) {
   const [said, setSaid] = useState<string | null>(null);
   async function copy() {
     try {
@@ -106,11 +110,12 @@ function TokenView({ token }: { token: string }) {
       <p className="text-body-sm text-text-secondary">
         이 창을 닫으면 다시 볼 수 없습니다. 일꾼 설정의 Center 토큰에 넣으세요.
       </p>
+      <CenterAddress url={center} who="일꾼" />
     </div>
   );
 }
 
-export function NewConsumer({ apps }: { apps: AppChoice[] | null }) {
+export function NewConsumer({ apps, center }: { apps: AppChoice[] | null; center: string }) {
   const [open, setOpen] = useState(false);
   // 원문은 이 창이 열려 있는 동안만 든다 — 닫으면 버린다.
   const [shown, setShown] = useState<{ name: string; token: string } | null>(null);
@@ -135,7 +140,7 @@ export function NewConsumer({ apps }: { apps: AppChoice[] | null }) {
       <Dialog open={open} title={shown ? `${shown.name} 토큰` : "새 일꾼"} onClose={close}>
         {shown ? (
           <div className="flex flex-col gap-3">
-            <TokenView token={shown.token} />
+            <TokenView token={shown.token} center={center} />
             <div className="flex justify-end">
               <Button variant="primary" onClick={close}>
                 닫기
@@ -178,12 +183,14 @@ export function ConsumerMenu({
   topics,
   kinds,
   apps,
+  center,
 }: {
   consumerId: string;
   name: string;
   topics: string[];
   kinds: string[];
   apps: AppChoice[] | null;
+  center: string;
 }) {
   // 메뉴는 화면에 고정해 띄운다 — 표 상자는 넘치는 것을 자르므로 줄이 적으면 안에 그린 메뉴가 잘린다.
   const [menu, setMenu] = useState<{ top: number; right: number } | null>(null);
@@ -303,7 +310,7 @@ export function ConsumerMenu({
       <Dialog open={token !== null} title={`${name} 토큰`} onClose={closeToken}>
         {token ? (
           <div className="flex flex-col gap-3">
-            <TokenView token={token} />
+            <TokenView token={token} center={center} />
             <div className="flex justify-end">
               <Button variant="primary" onClick={closeToken}>
                 닫기

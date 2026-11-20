@@ -10,8 +10,10 @@
 export interface WorkspaceUpdateRequest {
   description?: string | null;
   entry?: string | null;
+  kind?: string | null;
   name?: string | null;
   place?: Place | null;
+  project?: string | null;
   /**
    * 이 계약의 schema 번호
    */

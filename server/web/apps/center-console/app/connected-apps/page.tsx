@@ -23,10 +23,10 @@ import { AppActions, NewAppButton, type AppContext, type WorkerChoice } from "./
 import { AutoFilter } from "@/components/AutoFilter";
 
 /**
- * CON-18 연결 앱 (목록) — 앱 하나 = 토픽 하나 (ADR-0138, Camunda 커넥터 목록과 같은 결).
+ * CON-18 앱 (목록) — 앱 하나 = 토픽 하나 (ADR-0138, Camunda 커넥터 목록과 같은 결).
  *
  * 외부 정의(C13)와 일꾼 앱(C11)을 한 목록에 두고 앱 묶음(`app_group`)으로 묶는다. 원본이 콘솔인 HTTP 어댑터 앱만
- * Center 관리자가 만들고 고친다(ADR-0141 — 「새 연결 앱...」·줄의 「...」). 나머지는 보기만 한다.
+ * Center 관리자가 만들고 고친다(ADR-0141 — 「새 앱...」·줄의 「...」). 나머지는 보기만 한다.
  * 맡은 일꾼·토픽 상태를 못 받아도 앱 목록은 그린다 — 그 칸만 「—」다.
  */
 
@@ -199,7 +199,7 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
   return (
     <Shell mode={found.mode} actor={found.actor} current="/connected-apps">
       <header className="mb-4 flex flex-wrap items-center gap-2">
-        <h1 className="text-h2 font-bold">연결 앱</h1>
+        <h1 className="text-h2 font-bold">앱</h1>
         <Hint text={SOURCE_NOTE} />
         {manage ? (
           <span className="ml-auto">
@@ -229,14 +229,14 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
             title="연결된 앱이 없습니다."
             hint={
               manage
-                ? "「새 연결 앱...」으로 HTTP 어댑터 앱을 만들거나, 앱을 맡은 일꾼이 뜰 때 올립니다."
+                ? "「새 앱...」으로 HTTP 어댑터 앱을 만들거나, 앱을 맡은 일꾼이 뜰 때 올립니다."
                 : "앱은 그것을 맡은 일꾼이 뜰 때 올립니다."
             }
           />
         ) : rows.length === 0 ? (
           <EmptyState title={`「${query}」에 맞는 앱이 없습니다.`} />
         ) : sections === null ? (
-          table(rows, "연결 앱 목록")
+          table(rows, "앱 목록")
         ) : (
           <div className="flex flex-col gap-2">
             {sections.map((one) => (

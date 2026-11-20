@@ -128,8 +128,9 @@ def test_the_id_a_center_mints_passes_the_contract() -> None:
     RunEvent(schema=1, run_id=made, seq=1, ts=AT, kind="log", data={"level": "info", "message": "x"})
 
 
-def test_building_defaults_to_a_bpm_process() -> None:
-    assert BuildRequest(schema=1).kind == "bpm_process"
+def test_building_without_a_kind_leaves_it_to_the_workspace() -> None:
+    """비우면 작업공간의 종류다 — 프로젝트의 칸이 정한다 (ADR-0176, Center `design_work`)."""
+    assert BuildRequest(schema=1).kind is None
 
 
 def test_the_screen_has_a_word_for_every_state_and_verdict() -> None:

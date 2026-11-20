@@ -238,9 +238,11 @@ def start_build(
         request = BuildRequest.model_validate({"schema": 1, **body})
     except ValidationError as e:
         raise ApiError(422, "input_invalid", "요청이 계약과 맞지 않는다", {"errors": e.errors()}) from e
-    if request.kind not in KNOWN_BUILD_KINDS:
+    # 비우면 **작업공간의 종류**다 — 프로젝트의 어느 칸에 있는지가 정한다 (ADR-0176 §2).
+    kind = request.kind or info.kind
+    if kind not in KNOWN_BUILD_KINDS:
         raise ApiError(422, "input_invalid", f"종류는 {' 또는 '.join(sorted(KNOWN_BUILD_KINDS))}이다")
-    if request.kind == "bpm_process" and not info.entry:
+    if kind == "bpm_process" and not info.entry:
         raise ApiError(422, "no_entry", "진입 정의를 먼저 고르세요")
 
     build_id = _new_id("bld")
@@ -250,7 +252,7 @@ def start_build(
             "INSERT INTO workspace_builds (build_id, workspace_id, revision, kind, state,"
             " package_id, version, reason, requested_by, requested_at, updated_at, dispatched_at)"
             " VALUES (?, ?, ?, ?, 'queued', NULL, NULL, NULL, ?, ?, ?, NULL)",
-            (build_id, workspace_id, info.revision, request.kind, actor, at, at),
+            (build_id, workspace_id, info.revision, kind, actor, at, at),
         )
     _forget_builds(store, workspace_id)
     return _build_info(_build(store, build_id))

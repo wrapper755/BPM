@@ -30,7 +30,7 @@ import { Hint, SOURCE_NOTE, time } from "../page";
 import { AutoFilter } from "@/components/AutoFilter";
 
 /**
- * CON-18 연결 앱 (상세) — 앱 하나의 작업 표와 작업별 일감 집계 (C15 `TopicOperationStatus`, ADR-0138).
+ * CON-18 앱 (상세) — 앱 하나의 작업 표와 작업별 일감 집계 (C15 `TopicOperationStatus`, ADR-0138).
  *
  * 외부 정의(C13)면 정의에서, 일꾼 앱(C11)이면 manifest에서 작업을 읽는다. 「찾기」는 주소 `?q=`에 남고
  * JS 없이 돈다. 집계를 못 읽으면 작업만 그린다 (일감 열은 「—」).
@@ -175,7 +175,7 @@ export default async function ConnectedAppPage({
         title={`연결된 앱이 아닙니다: ${id}`}
         action={
           <Link className="font-medium text-text-primary hover:text-primary" href="/connected-apps">
-            연결 앱 목록으로
+            앱 목록으로
           </Link>
         }
       />,

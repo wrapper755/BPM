@@ -29,6 +29,7 @@ from bpm.center.api import (
     organization,
     package_access,
     packages,
+    projects,
     resources,
     runs,
     server_runner,
@@ -130,6 +131,7 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
     app.include_router(runs.router)
     app.include_router(organization.router)
     app.include_router(workspaces.router)
+    app.include_router(projects.router)
 
     def _own_package(found: Caller, package_id: str, version: str) -> None:
         """회사가 정해진 쪽은 **제 회사의 패키지만** 다룬다 (C16). Center 전체를 보는 쪽은 원래 길이 답한다."""

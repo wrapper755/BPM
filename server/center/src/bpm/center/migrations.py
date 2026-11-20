@@ -474,6 +474,35 @@ MIGRATIONS: tuple[Step, ...] = (
             " WHERE type = 'studio' AND state = 'pending'",
         ),
     ),
+    Step(
+        34,
+        "프로젝트가 작업공간을 묶는다 — 회사는 프로젝트의 속성이다 (C17, ADR-0175). 이미 있는 "
+        "작업공간은 **회사마다 프로젝트 하나**(id = 회사 id, 이름 = 회사 이름)로 옮긴다. 작업공간 "
+        "행의 `company`는 남긴다 — 회사로 거르는 자리(C16)가 그 칸을 보고, 프로젝트의 회사가 바뀌지 "
+        "않으니 갈라지지 않는다",
+        (
+            "CREATE TABLE projects ("
+            " id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, company TEXT NOT NULL,"
+            " created_at TEXT NOT NULL, created_by TEXT NOT NULL,"
+            " updated_at TEXT NOT NULL, updated_by TEXT NOT NULL)",
+            "CREATE INDEX projects_company ON projects (company)",
+            # 회사 id와 프로젝트 id는 같은 규칙이다(C16 `ORG_ID_PATTERN` = C17 작업공간 id) — 그대로 쓴다.
+            "INSERT INTO projects (id, name, description, company, created_at, created_by, updated_at, updated_by)"
+            " SELECT w.company, COALESCE(c.name, w.company), NULL, w.company,"
+            " MIN(w.created_at), 'Center', MAX(w.updated_at), 'Center'"
+            " FROM workspaces w LEFT JOIN companies c ON c.id = w.company GROUP BY w.company, c.name",
+            "ALTER TABLE workspaces ADD COLUMN project TEXT",
+            "UPDATE workspaces SET project = company",
+            "CREATE INDEX workspaces_project ON workspaces (project)",
+        ),
+    ),
+    Step(
+        35,
+        "작업공간에 종류를 둔다 — 업무 프로세스(`bpm_process`)인가 공통 패키지(`process_lib`)인가 "
+        "(C17, ADR-0176). 프로젝트 화면이 이 칸으로 두 칸을 가르고 짓기가 이 종류를 따른다. 이미 "
+        "있는 것은 업무 프로세스다 — 지금까지 종류는 짓는 순간 골랐고 어디에도 남지 않았다",
+        ("ALTER TABLE workspaces ADD COLUMN kind TEXT NOT NULL DEFAULT 'bpm_process'",),
+    ),
 )
 
 

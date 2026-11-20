@@ -12,9 +12,11 @@ export interface WorkspaceInfo {
   description?: string | null;
   entry?: string | null;
   id: string;
+  kind?: string;
   libs?: InstalledLibInfo[];
   name: string;
   place?: Place | null;
+  project: string;
   revision: string;
   updated_at: string;
   updated_by: string;

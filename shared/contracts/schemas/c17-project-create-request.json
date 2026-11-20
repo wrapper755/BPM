@@ -1,0 +1,54 @@
+{
+  "$id": "urn:bpm:contracts:c17-project-create-request",
+  "additionalProperties": true,
+  "description": "`POST /api/v1/projects` — 프로젝트 하나 (ADR-0175).\n\n`company`를 비우면 **부르는 계정의 회사**, Center 관리자면 기본 회사다 (C16). 만든 뒤에는 바뀌지 않는다.",
+  "properties": {
+    "company": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Company"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "schema": {
+      "description": "이 계약의 schema 번호",
+      "title": "Schema",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "name"
+  ],
+  "title": "ProjectCreateRequest",
+  "type": "object"
+}
