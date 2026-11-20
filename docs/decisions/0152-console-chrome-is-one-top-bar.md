@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 일부 대체됨([ADR-0170](0170-menu-notes-become-tooltips.md) — §2 한 줄 설명은 넓은 화면에서 말풍선) |
 | 날짜 | 2026-11-15 |
 | 관련 | 화면 CON-00(틀), `docs/06-screens.md`·`docs/07-style-guide.md`, `design/tokens.json`, [ADR-0145](0145-console-is-workspace-shaped.md)(두 층 틀 — 이 결정이 §1을 대체한다), [ADR-0151](0151-console-follows-the-lifecycle.md)(묶음 여섯과 그 차례 — **그대로 산다**), [ADR-0153](0153-the-console-stands-as-bpm.md)(막대 맨 왼쪽의 이름) |
 

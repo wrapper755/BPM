@@ -10,8 +10,9 @@ import { AppTile, InfoTip } from "@bpm/ui";
  * CON-00 [A]·[M] — **위 막대의 메뉴**다 ([ADR-0152](../../../../../docs/decisions/0152-console-chrome-is-one-top-bar.md)).
  *
  * 묶음 여섯이 **가로로** 서고(생애주기 차례라 왼쪽에서 오른쪽으로 읽힌다) 누르면 그 아래로 펼쳐진다.
- * 펼친 줄은 **이름 + 한 줄 설명**이다 — 설명이 **그 화면에 무엇이 있는지**를 말한다(아이콘 말풍선
- * 한 마디를 대신한다, ADR-0152 §2).
+ * 펼친 줄은 **이름 + 한 줄 설명**이다 — 설명이 **그 화면에 무엇이 있는지**를 말한다(ADR-0152 §2).
+ * 넓은 화면에서는 이름만 서고 설명은 **말풍선**이다 — 좁은 화면의 한 장 메뉴는 말풍선이 뜨지 않아 글로
+ * 둔다 (ADR-0170, U20).
  *
  * **줄이 하나인 묶음은 펼치지 않는다** — 「대시보드」·「배포」는 눌러서 바로 간다(펼쳐 봐야 같은 이름 하나다).
  *
@@ -92,8 +93,8 @@ export function TopNav({ groups, current, who }: { groups: NavGroup[]; current: 
                 onToggle={() => setOpen(open === group.label ? null : group.label)}
               />
               {open === group.label ? (
-                <div className="console-menu absolute top-full left-0 z-50 mt-2 w-72 rounded-xl border border-border-default p-2 shadow-md">
-                  <Rows items={group.items} current={current} onGo={() => setOpen(null)} />
+                <div className="console-menu absolute top-full left-0 z-50 mt-2 w-56 rounded-xl border border-border-default p-2 shadow-md">
+                  <Rows items={group.items} current={current} onGo={() => setOpen(null)} tips />
                 </div>
               ) : null}
             </li>
@@ -167,16 +168,22 @@ function Group({
   );
 }
 
-/** 펼친 줄들 — **이름 + 한 줄 설명**. 고른 줄은 `primary.subtle` 바탕 + 굵게. */
+/**
+ * 펼친 줄들 — **이름 + 한 줄 설명**. 고른 줄은 `primary.subtle` 바탕 + 굵게. `tips`면 설명은 말풍선이고
+ * 보조기기에만 글로 읽힌다 (넓은 화면, ADR-0170).
+ */
 function Rows({
   items,
   current,
   onGo,
+  tips = false,
 }: {
   items: NavItem[];
   current: string;
   onGo: () => void;
+  tips?: boolean;
 }) {
+  const note = tips ? "sr-only" : "block text-caption text-text-muted";
   return (
     <ul className="flex list-none flex-col gap-0.5 p-0">
       {items.map((item) =>
@@ -185,6 +192,7 @@ function Rows({
             <Link
               href={item.href}
               onClick={onGo}
+              title={tips ? item.note : undefined}
               aria-current={current === item.href ? "page" : undefined}
               className={`block rounded-lg px-3 py-2 hover:bg-bg-subtle${
                 current === item.href ? " bg-primary-subtle" : ""
@@ -195,19 +203,19 @@ function Rows({
               >
                 {item.label}
               </span>
-              <span className="block text-caption text-text-muted">{item.note}</span>
+              <span className={note}>{item.note}</span>
             </Link>
           </li>
         ) : (
           <li key={item.label}>
             {/* 아직인 까닭은 그 줄 아래 글로 (U3·U20, ADR-0162). */}
-            <span className="block rounded-lg px-3 py-2 text-text-muted">
+            <span className="block rounded-lg px-3 py-2 text-text-muted" title={tips ? `${item.note} — ${item.later}` : undefined}>
               <span className="flex items-center justify-between text-body-sm">
                 {item.label}
                 <span className="text-caption">아직</span>
               </span>
-              <span className="block text-caption">{item.note}</span>
-              <span className="block text-caption">{item.later}</span>
+              <span className={tips ? "sr-only" : "block text-caption"}>{item.note}</span>
+              <span className={tips ? "sr-only" : "block text-caption"}>{item.later}</span>
             </span>
           </li>
         ),
