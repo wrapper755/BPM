@@ -129,7 +129,7 @@ export function NewConsumer({ apps }: { apps: AppChoice[] | null }) {
   };
   return (
     <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
+      <Button variant="tonal" onClick={() => setOpen(true)}>
         새 일꾼...
       </Button>
       <Dialog open={open} title={shown ? `${shown.name} 토큰` : "새 일꾼"} onClose={close}>

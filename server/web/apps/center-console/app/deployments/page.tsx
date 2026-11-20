@@ -1,10 +1,11 @@
 import Link from "next/link";
-import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import { Autocomplete, Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
 import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
+import { AutoFilter } from "@/components/AutoFilter";
+import { loadProcessNames } from "@/lib/names";
 import { fullTime } from "@/lib/time";
 import { RevokeDeployment } from "./tools";
 
@@ -21,22 +22,34 @@ function stateOf(row: DeploymentInfo, now: number): string {
   return "활성";
 }
 
+/** 「상태」 거르기 — 빈 값은 **살아 있는 것**(철회되지 않은 것)이다. 철회된 것도 행이 남는다 (C5). */
+const STATES = [
+  { value: "", label: "(살아 있는 것)" },
+  { value: "활성", label: "활성" },
+  { value: "예약", label: "예약" },
+  { value: "만료", label: "만료" },
+  { value: "철회됨", label: "철회됨" },
+  { value: "all", label: "(전체)" },
+];
+
 export default async function DeploymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ all?: string; created?: string }>;
+  searchParams: Promise<{ state?: string; process?: string; created?: string }>;
 }) {
   const found = await session();
   if (!found) redirect("/login");
   const asked = await searchParams;
-  const showAll = asked.all === "1";
+  const state = asked.state ?? "";
+  const process = (asked.process ?? "").trim();
 
   let rows: DeploymentInfo[] = [];
   const names = new Map<string, string>();
   let failure: string | null = null;
   try {
+    // 살아 있는 것만 볼 때만 Center가 거른다 — 나머지 상태는 철회된 것까지 받아 여기서 가른다.
     const [deployments, runners] = await Promise.all([
-      center.deployments({ active: showAll ? undefined : true }),
+      center.deployments({ active: state === "" ? true : undefined }),
       center.serverRunners(),
     ]);
     rows = deployments;
@@ -46,6 +59,17 @@ export default async function DeploymentsPage({
   }
 
   const now = Date.now();
+  // 거르기 (CON-15, ADR-0165 — 고르는 대로 든다). 프로세스는 「<id>@<버전>」과 이름의 **일부**로 걸린다.
+  const processNames = await loadProcessNames();
+  const choices = [...new Set(rows.map((row) => row.bpm_process_id))].sort();
+  const needle = process.toLowerCase();
+  rows = rows.filter(
+    (row) =>
+      (state === "" || state === "all" || stateOf(row, now) === state) &&
+      (!needle ||
+        `${row.bpm_process_id}@${row.version}`.toLowerCase().includes(needle) ||
+        (processNames.get(`${row.bpm_process_id}@${row.version}`) ?? "").toLowerCase().includes(needle)),
+  );
   // 「대상」 열은 없다 — 실행 자리가 서버 하나라 줄마다 같은 이름이었다 (ADR-0144). 철회 확인 창이 말한다.
   const target = (row: DeploymentInfo): string => {
     const type = String(row.target.type ?? "");
@@ -55,13 +79,9 @@ export default async function DeploymentsPage({
     return names.get(`${type}:${id}`) ?? id;
   };
 
-  // 「번호」 — 이 목록의 차례이고 **가장 오래된 것이 1**이다(새 배포가 늘어도 앞 번호가 바뀌지 않는다).
-  // 배포 id는 사람이 외워 쓸 일이 없어 말풍선에만 둔다 (U2, CON-15).
-  const number = new Map(
-    [...rows]
-      .sort((one, other) => Date.parse(one.signed_at) - Date.parse(other.signed_at))
-      .map((row, index) => [row.deployment_id, index + 1]),
-  );
+  // 「번호」 — 이 목록의 차례이고 **위에서부터 1**이다(가장 최근 배포가 1). 배포 id는 사람이 외워 쓸 일이
+  // 없어 말풍선에만 둔다 (U2, CON-15).
+  const number = new Map(rows.map((row, index) => [row.deployment_id, index + 1]));
 
   const columns: Array<Column<DeploymentInfo>> = [
     {
@@ -142,20 +162,34 @@ export default async function DeploymentsPage({
     <Shell mode={found.mode} actor={found.actor} current="/deployments">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-h2 font-bold">배포</h1>
-        <div className="flex items-center gap-3">
-          <Link
-            className="text-body-sm text-text-secondary hover:text-primary"
-            href={(showAll ? "/deployments" : "/deployments?all=1") as Route}
-          >
-            {showAll ? "살아 있는 것만" : "철회된 것도 보기"}
+        {found.mode === "admin" ? (
+          <Link href="/deployments/new">
+            <Button variant="tonal">새 배포...</Button>
           </Link>
-          {found.mode === "admin" ? (
-            <Link href="/deployments/new">
-              <Button variant="primary">새 배포...</Button>
-            </Link>
-          ) : null}
-        </div>
+        ) : null}
       </header>
+
+      {/* 「철회된 것도 보기」는 「상태」 칸이 맡는다 (CON-15). */}
+      <AutoFilter>
+        <label className="flex flex-col gap-1 text-body-sm">
+          <span className="text-text-muted">상태</span>
+          <select
+            name="state"
+            defaultValue={state}
+            className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
+          >
+            {STATES.map((one) => (
+              <option key={one.value} value={one.value}>
+                {one.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-body-sm">
+          <span className="text-text-muted">프로세스</span>
+          <Autocomplete name="process" label="프로세스" defaultValue={process} placeholder="(전체)" options={choices} className="w-56" />
+        </label>
+      </AutoFilter>
 
       {asked.created ? (
         <p className="mb-3 text-body text-text-secondary">
@@ -167,7 +201,7 @@ export default async function DeploymentsPage({
         <ErrorBanner message={failure} />
       ) : rows.length === 0 ? (
         <EmptyState
-          title="배포가 없습니다."
+          title={state || process ? "조건에 맞는 배포가 없습니다." : "배포가 없습니다."}
           hint={found.mode === "admin" ? "승인된 프로세스를 「새 배포...」로 배포하세요." : "관리자가 배포하면 여기 보입니다."}
         />
       ) : (
