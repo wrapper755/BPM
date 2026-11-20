@@ -46,6 +46,7 @@ from bpm.center.auth import (
     require_approval_read,
     require_center_admin,
     require_console,
+    require_diagram_read,
     require_package_read,
     require_read,
     require_upload,
@@ -74,6 +75,8 @@ from bpm.contracts.external_task import ConsumerCreateRequest, ConsumerUpdateReq
 log = logging.getLogger(__name__)
 
 API = "/api/v1"
+#: C5 `diagram`의 판 자리 — 작업이 판을 비웠을 때 고를 판 (ADR-0180). 판 문자열(semver)과 겹치지 않는다.
+DEPLOYED_VERSION = "deployed"
 
 
 def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
@@ -400,14 +403,26 @@ def create_app(settings: Settings, *, store: Store | None = None) -> FastAPI:
         )
 
     @app.get(f"{API}/packages/{{package_id}}/{{version}}/diagram")
-    def package_diagram(request: Request, package_id: str, version: str) -> Response:
-        """진입 정의의 BPMN 그대로 (C5 `diagram`·CON-01 「다이어그램」, ADR-0136)."""
-        found = require_package_read(authenticate(request))
+    def package_diagram(request: Request, package_id: str, version: str, path: str | None = None) -> Response:
+        """진입 정의 또는 `path`의 BPMN 그대로 (C5 `diagram`·CON-01 「다이어그램」, ADR-0136·0180).
+
+        판 자리 `deployed`는 **작업이 판을 비웠을 때 고를 판**이다 — 부르는 쪽(회사 시스템)이 그림 사본 없이
+        지금 도는 판의 그림을 받는다. 고른 판은 `X-BPM-Version`에 싣는다.
+        """
+        found = require_diagram_read(authenticate(request))
+        if version == DEPLOYED_VERSION:
+            # `POST /jobs`가 판을 비웠을 때와 **같은 함수·같은 차례**다 (`api.jobs._resolved_version`).
+            live = deployments.server_versions(app.state.store, bpm_process_id=package_id)
+            if not live:
+                raise ApiError(404, "not_deployed", f"{package_id}은 서버 실행기에 배포되지 않았다")
+            version = live[0]
         _own_package(found, package_id, version)
         body = packages.diagram(
-            app.state.store, package_dir=settings.package_dir, package_id=package_id, version=version
+            app.state.store, package_dir=settings.package_dir, package_id=package_id, version=version, path=path
         )
-        return Response(content=body, media_type="application/xml; charset=utf-8")
+        return Response(
+            content=body, media_type="application/xml; charset=utf-8", headers={"X-BPM-Version": version}
+        )
 
     @app.get(f"{API}/packages/{{package_id}}/{{version}}/dependents")
     def package_dependents(request: Request, package_id: str, version: str) -> Any:

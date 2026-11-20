@@ -264,6 +264,19 @@ def require_package_read(found: Caller) -> Caller:
     raise ApiError(403, "forbidden", "패키지 목록·정보는 콘솔 토큰으로만 볼 수 있다")
 
 
+def require_diagram_read(found: Caller) -> Caller:
+    """배포된 그림 읽기 (C5 `diagram`) — 콘솔 토큰에 더해 **연동용·대리 답용 키**도 (ADR-0180).
+
+    부르는 쪽(회사 시스템)이 그림 사본을 두지 않게 하려는 것이다. 그림에는 업무 값이 없다(C5 원칙 6).
+    목록·정보·노드·내려받기는 그대로 `require_package_read`다 — 「무엇이 올라와 있나」는 열지 않는다.
+    """
+    if found.kind in ("admin", "read"):
+        return found
+    if found.key is not None and found.key.type in ON_BEHALF_KEY_TYPES:
+        return found
+    raise ApiError(403, "forbidden", "그림은 콘솔 토큰이나 연동용·대리 답용 키로 읽는다")
+
+
 def require_key_type(found: Caller, wanted: str) -> keys.KeyRecord:
     """그 종류의 Center API 키로 불렀는가 (C4 — 그 종류만 받는다)."""
     if found.key is None:
