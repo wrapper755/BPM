@@ -179,8 +179,9 @@ export const center = {
   deleteProject: (projectId: string) => call<void>(pj(projectId), { method: "DELETE" }),
   projectWorkspaces: (projectId: string) => call<WorkspaceInfo[]>(`${pj(projectId)}/workspaces`),
   /** 옛 작업 폴더 zip — 여럿을 담았으면 **프로세스 여럿**이다. 하나라도 걸리면 아무것도 만들지 않는다. */
-  importIntoProject: (projectId: string, raw: ArrayBuffer) =>
-    call<ProjectImportResult>(`${pj(projectId)}/import`, {
+  /** `kind`는 든 것 모두의 칸이다 — 「프로세스」(`bpm_process`) 또는 「공통 패키지」(`process_lib`, ADR-0176). */
+  importIntoProject: (projectId: string, raw: ArrayBuffer, kind = "bpm_process") =>
+    call<ProjectImportResult>(`${pj(projectId)}/import?kind=${encodeURIComponent(kind)}`, {
       method: "POST",
       body: raw,
       headers: { "Content-Type": "application/octet-stream" },
@@ -507,9 +508,6 @@ export const center = {
    * 사람은 키를 보지 않는다 — 승인 응답에도 원문이 없다. **오는 것은 서버 실행기뿐이다** (ADR-0150).
    */
   enrollments: (type: "server_runner") => call<EnrollmentInfo[]>(`/api/v1/enrollments?type=${type}`),
-  /** 모든 상태의 등록 요청 — CON-16 「변경 이력」이 읽는다 (C5 `state`는 쉼표로 여럿). */
-  enrollmentHistory: () =>
-    call<EnrollmentInfo[]>("/api/v1/enrollments?state=pending,approved,rejected,expired"),
   /** 승인 — 오는 것은 서버 실행기뿐이고 **Center 공용이라 회사를 보내지 않는다** (C16, ADR-0150). */
   approveEnrollment: (id: string, name?: string) =>
     call<EnrollmentDecision>(`/api/v1/enrollments/${encodeURIComponent(id)}/approve`, {

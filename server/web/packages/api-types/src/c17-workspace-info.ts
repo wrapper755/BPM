@@ -12,6 +12,7 @@ export interface WorkspaceInfo {
   description?: string | null;
   entry?: string | null;
   id: string;
+  kind?: string;
   libs?: InstalledLibInfo[];
   name: string;
   place?: Place | null;

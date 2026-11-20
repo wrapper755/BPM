@@ -26,6 +26,7 @@ import { fileLabel, groupFiles, isEditable, opensWith } from "@/lib/workspaces";
 import { isLive } from "@/lib/trials";
 import { building, checking } from "@/lib/checks";
 import { BuildButton, BuildLine } from "./build";
+import { DETAIL_PANEL, FILES_PANEL, Splitter, usePanelWidth } from "./splitter";
 import { CaseEditor } from "./cases";
 import { Checks } from "./checks";
 import { DecisionGrid } from "./decisions";
@@ -111,7 +112,7 @@ export function Workspace({
   /** 속한 프로젝트 (ADR-0175) — 머리 띠의 링크가 CON-20c로 돌아간다. */
   project: { id: string; name: string };
   /** 같은 프로젝트의 프로세스 — 탐색기 맨 위에서 고르면 그리로 간다. */
-  siblings: { id: string; name: string }[];
+  siblings: { id: string; name: string; kind?: string }[];
 }) {
   const [tab, setTab] = useState<Tab>("저작");
   // 「정보」 탭이 고치면 그 자리에서 바뀐다 — 머리 띠의 이름·판과 진입 정의가 함께 따라간다.
@@ -134,6 +135,9 @@ export function Workspace({
   const [showFiles, setShowFiles] = useState(true);
   const [left, setLeft] = useState<(typeof LEFT_TABS)[number]>("파일");
   const [showDetail, setShowDetail] = useState(true);
+  // 폭은 끌어서 바꾼다 — 최소·최대 안에서, 그 브라우저에 기억한다 (CON-20 [E]·[P]).
+  const [filesWidth, setFilesWidth] = usePanelWidth(FILES_PANEL);
+  const [detailWidth, setDetailWidth] = usePanelWidth(DETAIL_PANEL);
   const canvas = useRef<BpmnCanvasHandle>(null);
   const router = useRouter();
   const projectHref = `/workspaces/projects/${encodeURIComponent(project.id)}` as Route;
@@ -364,9 +368,15 @@ export function Workspace({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* [H] 머리 띠 — 지금 자리와 탭, 그리고 그 화면에서만 쓰는 것 (CON-00 [H]와 같은 결). */}
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-default bg-bg-surface px-4 py-3 md:px-5">
-        {/* 위 막대는 **메뉴가 쥐었다** (ADR-0152 §7) — 이 화면은 제 머리 띠에 지금 상태만 말한다. */}
+      <header className="flex flex-col gap-2 border-b border-border-default bg-bg-surface px-4 pt-3 md:px-5">
+        {/* 위 막대는 **메뉴가 쥐었다** (ADR-0152 §7) — 이 화면은 제 머리 띠에 지금 상태만 말한다.
+            **첫 줄은 지금 자리 하나**다 — 다른 화면의 지금 자리 줄과 같은 말로 시작하고, 탭·단추와 한 줄에 서지 않는다. */}
         <p className="text-body-sm text-text-secondary">
+          <span className="text-text-muted">저작 › </span>
+          <Link href="/workspaces" className="hover:underline">
+            프로젝트
+          </Link>
+          <span className="text-text-muted"> › </span>
           <Link href={projectHref} className="hover:underline">
             {project.name}
           </Link>
@@ -376,6 +386,7 @@ export function Workspace({
           {dirty ? <span className="text-caption text-text-muted"> · 저장 안 함</span> : null}
           <span className="text-text-muted"> · v{info.version}</span>
         </p>
+        <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
         <div role="tablist" aria-label="작업공간" className="flex gap-1">
           {TABS.map((one) => (
             <button
@@ -385,15 +396,15 @@ export function Workspace({
               onClick={() => setTab(one)}
               className={
                 tab === one
-                  ? "border-b-2 border-primary px-3 py-1 text-body-sm font-semibold"
-                  : "border-b-2 border-transparent px-3 py-1 text-body-sm text-text-muted hover:text-text-primary"
+                  ? "border-b-2 border-primary px-3 pt-1 pb-2 text-body-sm font-semibold"
+                  : "border-b-2 border-transparent px-3 pt-1 pb-2 text-body-sm text-text-muted hover:text-text-primary"
               }
             >
               {one}
             </button>
           ))}
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 pb-2">
           {canAct ? (
             <Button
               variant="secondary"
@@ -404,7 +415,7 @@ export function Workspace({
               실행 전 검사
             </Button>
           ) : null}
-          {canAct ? <BuildButton workspaceId={info.id} onStarted={setBuild} /> : null}
+          {canAct ? <BuildButton workspaceId={info.id} kind={info.kind ?? "bpm_process"} onStarted={setBuild} /> : null}
           {/* 돌리는 중에는 「시험 실행...」 자리가 「중지」가 된다 (U5) — 단추를 둘 두지 않는다. */}
           {canAct ? (
             trial && isLive(trial.state) ? (
@@ -429,6 +440,7 @@ export function Workspace({
               저장
             </Button>
           ) : null}
+        </div>
         </div>
       </header>
 
@@ -459,7 +471,8 @@ export function Workspace({
         <aside
           aria-label="파일"
           hidden={!showFiles || !wide}
-          className="w-64 shrink-0 overflow-y-auto border-r border-border-default bg-bg-surface p-3"
+          style={{ width: filesWidth }}
+          className="shrink-0 overflow-y-auto border-r border-border-default bg-bg-surface p-3"
         >
           {/* 같은 프로젝트의 프로세스 (ADR-0175) — 고르면 그리로 간다. 저장 안 한 것이 있으면 먼저 묻는다. */}
           {siblings.length > 1 ? (
@@ -477,11 +490,21 @@ export function Workspace({
                 }}
                 className="h-8 rounded-md border border-border-strong bg-bg-surface px-2 text-body-sm text-text-primary"
               >
-                {siblings.map((one) => (
-                  <option key={one.id} value={one.id}>
-                    {one.name}
-                  </option>
-                ))}
+                {/* 두 무리 — 프로젝트 화면의 두 칸과 같다 (ADR-0176). */}
+                {[
+                  { label: "프로세스", rows: siblings.filter((one) => one.kind !== "process_lib") },
+                  { label: "공통 패키지", rows: siblings.filter((one) => one.kind === "process_lib") },
+                ]
+                  .filter((group) => group.rows.length > 0)
+                  .map((group) => (
+                    <optgroup key={group.label} label={group.label}>
+                      {group.rows.map((one) => (
+                        <option key={one.id} value={one.id}>
+                          {one.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
               </select>
             </label>
           ) : null}
@@ -538,6 +561,16 @@ export function Workspace({
             </section>
           ))}
         </aside>
+        {showFiles && wide ? (
+          <Splitter
+            label="탐색기 폭"
+            size={FILES_PANEL}
+            width={filesWidth}
+            side="left"
+            onChange={setFilesWidth}
+            onDone={() => canvas.current?.editor?.resized()}
+          />
+        ) : null}
 
         {/*
           [C] 가운데 — 고른 파일이 정한다 (ADR-0147 §2).
@@ -602,10 +635,21 @@ export function Workspace({
         {showDetail || !wide ? null : (
           <Spine label="속성" onOpen={() => setShowDetail(true)} side="right" />
         )}
+        {showDetail && wide ? (
+          <Splitter
+            label="속성 패널 폭"
+            size={DETAIL_PANEL}
+            width={detailWidth}
+            side="right"
+            onChange={setDetailWidth}
+            onDone={() => canvas.current?.editor?.resized()}
+          />
+        ) : null}
         <aside
           aria-label="속성"
           hidden={!showDetail || !wide}
-          className="w-72 shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-3"
+          style={{ width: detailWidth }}
+          className="shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-3"
         >
           <div className="mb-2 flex items-center">
             <h2 className="text-caption font-semibold text-text-muted">속성</h2>

@@ -1,12 +1,19 @@
 {
   "$id": "urn:bpm:contracts:c17-build-request",
   "additionalProperties": true,
-  "description": "`POST /api/v1/workspaces/{id}/package` — 「배포 후보로 만들기」 (ADR-0143 §2).",
+  "description": "`POST /api/v1/workspaces/{id}/package` — 「배포 후보로 만들기」 (ADR-0143 §2).\n\n`kind`를 비우면 **작업공간의 종류**다 (ADR-0176 — 콘솔은 고르지 않는다).",
   "properties": {
     "kind": {
-      "default": "bpm_process",
-      "title": "Kind",
-      "type": "string"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Kind"
     },
     "schema": {
       "description": "이 계약의 schema 번호",

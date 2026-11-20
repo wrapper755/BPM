@@ -5,12 +5,14 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ActionMenu, Button, ConfirmDialog, DataTable, Dialog, ErrorBanner, type Column } from "@bpm/ui";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import { FilterReset } from "@/components/FilterReset";
-import { deleteWorkspace, moveProcess } from "@/app/actions";
+import { deleteWorkspace, moveProcess, setProcessKind } from "@/app/actions";
 import { fullTime } from "@/lib/time";
 import { filterProcesses } from "@/lib/projects";
+import { NewProcess } from "./tools";
 
 /**
- * CON-20c [F]+[T] — 거르기와 표. **거르는 일이 브라우저에서 일어난다** (CON-02와 같은 결, ADR-0160) —
+ * CON-20c [F]+[T]+[S] — 거르기와 **두 칸**: 업무 「프로세스」와 「공통 패키지」 (ADR-0176). 칸은 작업공간의 `kind`로
+ * 가르고, 거르기 하나가 두 칸을 함께 거른다. **거르는 일이 브라우저에서 일어난다** (CON-02와 같은 결, ADR-0160) —
  * 줄은 서버가 다 보냈고 주소는 `history.replaceState`로만 맞춘다.
  */
 export function ProcessRows({
@@ -44,6 +46,8 @@ export function ProcessRows({
 
   const shown = filterProcesses(rows, text);
   const here = `/workspaces/projects/${encodeURIComponent(projectId)}`;
+  const processes = rows.filter((row) => row.kind !== "process_lib");
+  const shared = rows.filter((row) => row.kind === "process_lib");
 
   const columns: Column<WorkspaceInfo>[] = [
     {
@@ -91,12 +95,12 @@ export function ProcessRows({
       </form>
       <DataTable
         columns={columns}
-        rows={shown}
+        rows={shown.filter((row) => row.kind !== "process_lib")}
         rowKey={(row) => row.id}
         caption="프로세스"
         numbered
         empty={
-          rows.length === 0
+          processes.length === 0
             ? {
                 title: "프로세스가 없습니다.",
                 hint: admin ? "「새 프로세스」로 만들거나 「파일에서 가져오기」로 들이세요." : undefined,
@@ -104,6 +108,32 @@ export function ProcessRows({
             : { title: "조건에 맞는 프로세스가 없습니다.", hint: "거르기를 초기화하세요." }
         }
       />
+
+      {/* [S] 공통 패키지 — **모든 프로젝트에 처음부터 있다** (ADR-0176). 업무 자리 열은 없다 — 공통은 자리에 서지 않는다. */}
+      <section className="mt-8">
+        <header className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-h3 font-semibold">공통 패키지</h2>
+            <p className="text-body-sm text-text-muted">이 프로젝트의 프로세스가 설치해서 부르는 공유 프로세스</p>
+          </div>
+          {admin ? <NewProcess projectId={projectId} shared /> : null}
+        </header>
+        <DataTable
+          columns={columns.filter((column) => column.key !== "place")}
+          rows={shown.filter((row) => row.kind === "process_lib")}
+          rowKey={(row) => row.id}
+          caption="공통 패키지"
+          numbered
+          empty={
+            shared.length === 0
+              ? {
+                  title: "공통 패키지가 없습니다.",
+                  hint: admin ? "여러 프로세스가 함께 부르는 단계는 여기서 만들어 지은 뒤 설치하세요." : undefined,
+                }
+              : { title: "조건에 맞는 공통 패키지가 없습니다.", hint: "거르기를 초기화하세요." }
+          }
+        />
+      </section>
     </>
   );
 }
@@ -130,6 +160,15 @@ function RowMenu({
         label={`${row.name} 동작`}
         disabled={pending}
         items={[
+          // 칸 사이를 옮긴다 — 다음에 지을 종류만 바뀐다. 되돌리기가 같은 메뉴에 있어 묻지 않는다 (ADR-0176).
+          {
+            label: row.kind === "process_lib" ? "프로세스로 옮기기" : "공통 패키지로 옮기기",
+            onSelect: () =>
+              start(async () => {
+                const made = await setProcessKind(row.id, projectId, row.kind === "process_lib" ? "bpm_process" : "process_lib");
+                setError(made.error ?? null);
+              }),
+          },
           ...(targets.length > 0 ? [{ label: "다른 프로젝트로 옮기기...", onSelect: () => setMoving(true) }] : []),
           { label: "삭제...", danger: true, onSelect: () => setDeleting(true) },
         ]}

@@ -17,16 +17,19 @@ import { buildLabel, building } from "@/lib/checks";
  * 않는다 (C2·CON-06·CON-15). 그 말을 창과 끝난 줄에 **둘 다** 적는다.
  *
  * **「내 PC로 내려받기」는 없다** — 짓는 것도 받는 것도 서버 안이라 내려받을 까닭이 없다.
+ *
+ * **종류를 묻지 않는다** — 프로젝트의 어느 칸에 있는지가 정한다 (C17 `kind`, ADR-0176).
  */
 export function BuildButton({
   workspaceId,
+  kind,
   onStarted,
 }: {
   workspaceId: string;
+  kind: string;
   onStarted: (build: BuildInfo) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState("bpm_process");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -66,20 +69,15 @@ export function BuildButton({
       >
         <div className="flex flex-col gap-3">
           {failure ? <ErrorBanner message={failure} /> : null}
-          <label className="flex flex-col gap-1 text-body-sm">
-            무엇을 짓습니까
-            <select
-              value={kind}
-              onChange={(event) => setKind(event.target.value)}
-              className="rounded-md border border-border-default bg-bg-surface px-2 py-1 text-body-sm"
-            >
-              <option value="bpm_process">프로세스</option>
-              <option value="process_lib">공유 프로세스</option>
-            </select>
-            <span className="text-caption text-text-muted">
-              공유 프로세스는 진입이 없습니다 — 다른 프로세스가 불러 쓰는 묶음입니다 (C1).
-            </span>
-          </label>
+          {kind === "process_lib" ? (
+            <p className="text-body-sm">
+              공통 패키지로 짓습니다.{" "}
+              <span className="text-text-muted">진입이 없고, 다른 프로세스가 설치해서 부릅니다.</span>
+            </p>
+          ) : (
+            <p className="text-body-sm">프로세스로 짓습니다.</p>
+          )}
+          <p className="text-caption text-text-muted">종류는 프로젝트의 칸이 정합니다 — 바꾸려면 프로젝트 화면의 「⋯」에서 옮기세요.</p>
         </div>
       </Dialog>
     </>

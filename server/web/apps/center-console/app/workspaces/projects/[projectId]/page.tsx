@@ -8,7 +8,7 @@ import { ProcessRows } from "./table";
 import { ImportProcesses, NewProcess, ProjectMenu } from "./tools";
 
 /**
- * CON-20c 프로젝트 — 그 안의 프로세스 표 ([ADR-0175](../../../../../../../docs/decisions/0175-projects-hold-processes.md)).
+ * CON-20c 프로젝트 — 그 안의 「프로세스」와 「공통 패키지」 두 칸 (ADR-0176) ([ADR-0175](../../../../../../../docs/decisions/0175-projects-hold-processes.md)).
  *
  * 짓기·판·배포는 프로세스마다라 표에 **배포 상태를 적지 않는다**(CON-20a와 같은 까닭). 거르기는
  * 브라우저에서 돈다 — 한 프로젝트의 프로세스는 수십 개다 (ADR-0160과 같은 결).
@@ -71,6 +71,10 @@ export default async function ProjectPage({
         <span>
           <span className="text-text-muted">프로세스 </span>
           {project.processes}
+        </span>
+        <span>
+          <span className="text-text-muted">공통 </span>
+          {project.shared ?? 0}
         </span>
         <span className="font-mono text-text-muted">{project.id}</span>
         {project.description ? <span className="text-text-secondary">{project.description}</span> : null}

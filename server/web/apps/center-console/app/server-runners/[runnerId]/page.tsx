@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { DEPLOYMENT_REASON } from "@/lib/app-logs";
 import { redirect } from "next/navigation";
 import { DataTable, EmptyState, ErrorBanner, InfoTip, Section, StatusBadge, type Column } from "@bpm/ui";
 import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import { CenterError, center, session } from "@/lib/center";
+import { DEPLOYMENT_REASON } from "@/lib/labels";
 import { botLimitRows, elapsed, runnerStatus, serverDeployments } from "@/lib/summary";
 import { Shell } from "@/components/Shell";
 import { fullTime, time } from "@/lib/time";

@@ -455,4 +455,6 @@ def test_workspaces_move_into_one_project_per_company(tmp_path: Path) -> None:
     assert conn.execute("SELECT id, project FROM workspaces ORDER BY id").fetchall() == [
         ("a.one", "default"), ("a.two", "default"), ("b.one", "company2"),
     ]
+    # 35판 — 있던 것은 모두 업무 프로세스다 (ADR-0176).
+    assert {row[0] for row in conn.execute("SELECT kind FROM workspaces")} == {"bpm_process"}
     conn.close()

@@ -15,7 +15,7 @@ export function NewProject({ companies }: { companies: { id: string; name: strin
 
   return (
     <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
+      <Button variant="tonal" onClick={() => setOpen(true)}>
         새 프로젝트...
       </Button>
       <Dialog open={open} title="새 프로젝트" onClose={() => setOpen(false)}>

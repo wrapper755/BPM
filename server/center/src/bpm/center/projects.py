@@ -25,6 +25,7 @@ from bpm.center import workspaces
 from bpm.center.errors import ApiError
 from bpm.center.storage import Store, now_iso
 from bpm.contracts.workspace import (
+    KNOWN_BUILD_KINDS,
     PROCESS_JSON,
     WORKSPACE_ID_PATTERN,
     LibToInstall,
@@ -50,9 +51,12 @@ def row_of(store: Store, project_id: str, *, company: str | None) -> Any:
 def _info(store: Store, row: Any) -> ProjectInfo:
     # 「마지막 손댄 때」는 안의 작업공간까지 본다 — 프로세스를 고친 프로젝트가 카드 앞으로 온다.
     latest = store.row(
-        "SELECT COUNT(*) AS n, MAX(updated_at) AS at FROM workspaces WHERE project = ?", (row["id"],)
+        "SELECT COUNT(*) AS n, SUM(CASE WHEN kind = 'process_lib' THEN 1 ELSE 0 END) AS shared,"
+        " MAX(updated_at) AS at FROM workspaces WHERE project = ?",
+        (row["id"],),
     )
     count = int(latest["n"]) if latest else 0
+    shared = int(latest["shared"] or 0) if latest else 0
     at, by = row["updated_at"], row["updated_by"]
     if latest and latest["at"] and latest["at"] > at:
         newest = store.row(
@@ -64,7 +68,8 @@ def _info(store: Store, row: Any) -> ProjectInfo:
         name=row["name"],
         description=row["description"] or None,
         company=row["company"],
-        processes=count,
+        processes=count - shared,
+        shared=shared,
         updated_at=at,
         updated_by=by,
     )
@@ -188,6 +193,7 @@ def import_zip(
     raw: bytes,
     actor: str,
     company: str | None,
+    kind: str = "bpm_process",
 ) -> ProjectImportResult:
     """옛 작업 폴더 zip → 작업공간 여럿 (ADR-0175 §5).
 
@@ -196,6 +202,8 @@ def import_zip(
     받아 둔 공유 BPM 프로세스는 설치로만 들어온다 (C17 경로 규칙).
     """
     project = row_of(store, project_id, company=company)
+    if kind not in KNOWN_BUILD_KINDS:
+        raise ApiError(422, "input_invalid", f"종류는 {' 또는 '.join(sorted(KNOWN_BUILD_KINDS))}이다")
     if len(raw) > workspaces.MAX_IMPORT_MB * 1024 * 1024:
         raise ApiError(413, "too_large", f"가져올 파일이 {workspaces.MAX_IMPORT_MB} MB를 넘는다")
     folders = _folders(raw)
@@ -242,6 +250,8 @@ def import_zip(
                 "name": str(record.get("name") or wid)[:100],
                 "version": str(record.get("version") or "0.1.0"),
                 "project": project_id,
+                # 든 것 모두가 한 칸이다 — 섞인 zip은 두 번 나눠 들인다 (ADR-0176).
+                "kind": kind,
             },
             actor=actor,
             company=company,

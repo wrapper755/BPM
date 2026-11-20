@@ -4,9 +4,11 @@
 
 /**
  * `POST /api/v1/workspaces/{id}/package` — 「배포 후보로 만들기」 (ADR-0143 §2).
+ *
+ * `kind`를 비우면 **작업공간의 종류**다 (ADR-0176 — 콘솔은 고르지 않는다).
  */
 export interface BuildRequest {
-  kind?: string;
+  kind?: string | null;
   /**
    * 이 계약의 schema 번호
    */

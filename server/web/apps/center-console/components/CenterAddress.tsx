@@ -5,7 +5,7 @@ import { Button } from "@bpm/ui";
 
 /**
  * 「<누가> 설정에 적을 Center 주소」 한 줄과 「복사」 (CON-00) — 주소를 적어 넣을 사람이 보는
- * 화면에만 둔다. 지금 그 화면은 **CON-17 「일꾼」 하나**다 (ADR-0149 §6). https가 아닌
+ * 자리에만 둔다. 지금 그 자리는 **CON-17 「일꾼」의 토큰 창**이다 (ADR-0179 — 목록 머리에서 내렸다). https가 아닌
  * 주소에서는 브라우저가 클립보드를 막으므로 그때는 글자를 골라 복사하라고 말한다.
  */
 export function CenterAddress({ url, who }: { url: string; who: string }) {

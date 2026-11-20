@@ -32,6 +32,12 @@
       "title": "Processes",
       "type": "integer"
     },
+    "shared": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Shared",
+      "type": "integer"
+    },
     "updated_at": {
       "title": "Updated At",
       "type": "string"

@@ -75,7 +75,9 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             >
               <span className="flex items-baseline justify-between gap-2">
                 <span className="text-body-lg font-semibold">{one.name}</span>
-                <span className="whitespace-nowrap text-body-sm text-text-muted">프로세스 {one.processes}</span>
+                <span className="whitespace-nowrap text-body-sm text-text-muted">프로세스 {one.processes}
+                  {one.shared ? ` · 공통 ${one.shared}` : ""}
+                </span>
               </span>
               {one.description ? <span className="text-body-sm text-text-secondary">{one.description}</span> : null}
               <span className="text-caption text-text-muted">{companyName.get(one.company) ?? one.company}</span>

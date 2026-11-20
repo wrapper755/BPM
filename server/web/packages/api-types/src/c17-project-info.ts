@@ -11,6 +11,7 @@ export interface ProjectInfo {
   id: string;
   name: string;
   processes: number;
+  shared?: number;
   updated_at: string;
   updated_by: string;
   [k: string]: unknown;

@@ -36,6 +36,7 @@ from bpm.center.errors import ApiError
 from bpm.center.storage import Store, now_iso
 from bpm.contracts.organization import Place
 from bpm.contracts.workspace import (
+    KNOWN_BUILD_KINDS,
     PROCESS_JSON,
     FileInfo,
     InstalledLibInfo,
@@ -184,8 +185,9 @@ def _info(store: Store, workspace_dir: Path, row: Any) -> WorkspaceInfo:
         description=str(record.get("description") or "") or None,
         project=row["project"] or row["company"],
         company=row["company"],
+        kind=row["kind"] or "bpm_process",
         place=_place_of(record),
-        entry=str(record.get("entry") or "") or None,
+        entry=entry_path(record),
         updated_at=row["updated_at"],
         updated_by=row["updated_by"],
         revision=bundle_revision(files(store, row["id"])),
@@ -272,6 +274,7 @@ def create(
     비우면 기본 회사다.
     """
     request = model_of(WorkspaceCreateRequest, {"schema": 1, **body})
+    _refuse_unknown_kind(request.kind)
     if request.project is not None:
         # 회사는 **프로젝트가 정한다** (ADR-0175 §2) — 남의 회사 프로젝트는 404다(C16).
         from bpm.center import projects  # `projects`가 이 모듈을 쓴다 — 거꾸로는 쓰는 자리에서만 부른다
@@ -307,9 +310,9 @@ def create(
     at = now_iso()
     with store.tx() as cur:
         cur.execute(
-            "INSERT INTO workspaces (id, company, project, created_at, created_by, updated_at, updated_by) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (request.id, owner, project, at, actor, at, actor),
+            "INSERT INTO workspaces (id, company, project, kind, created_at, created_by, updated_at, updated_by) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (request.id, owner, project, request.kind, at, actor, at, actor),
         )
     record: dict[str, Any] = {
         "schema": RECORD_SCHEMA,
@@ -357,11 +360,22 @@ def update(
         record["place"] = request.place.to_json_dict()
     if request.entry is not None:
         _refuse_missing_entry(store, workspace_id, request.entry)
-        record["entry"] = request.entry
+        # 기록에는 **파일 이름만** 적는다 — 엔진(`core.testrun`)의 기록 형식이고 실행기가 그것을 읽는다.
+        record["entry"] = Path(request.entry).name if request.entry else ""
     if request.project is not None and request.project != row["project"]:
         _move(store, workspace_id, project=request.project, row=row, actor=actor, company=company)
+    if request.kind is not None and request.kind != row["kind"]:
+        _refuse_unknown_kind(request.kind)
+        # 칸만 옮긴다 — 다음에 지을 종류다. 이미 지은 패키지는 그대로다 (ADR-0176 §1).
+        with store.tx() as cur:
+            cur.execute("UPDATE workspaces SET kind = ? WHERE id = ?", (request.kind, workspace_id))
     put_file(store, root=root, workspace_id=workspace_id, path=PROCESS_JSON, data=record_bytes(record), actor=actor)
     return get(store, workspace_dir=workspace_dir, workspace_id=workspace_id)
+
+
+def _refuse_unknown_kind(kind: str) -> None:
+    if kind not in KNOWN_BUILD_KINDS:
+        raise ApiError(422, "input_invalid", f"종류는 {' 또는 '.join(sorted(KNOWN_BUILD_KINDS))}이다")
 
 
 def _move(store: Store, workspace_id: str, *, project: str, row: Any, actor: str, company: str | None) -> None:
@@ -469,7 +483,7 @@ def delete_file(
     if path == PROCESS_JSON:
         raise ApiError(409, "entry_in_use", "작업 폴더의 기록은 지울 수 없다")
     record = read_record(root)
-    if str(record.get("entry") or "") == path:
+    if entry_path(record) == path:
         raise ApiError(409, "entry_in_use", f"진입 정의는 지울 수 없다: {path}")
     with store.tx() as cur:
         cur.execute(
@@ -634,6 +648,19 @@ def _refuse_unknown_place(store: Store, place: Place | None, *, company: str) ->
         row = store.row("SELECT company FROM staff WHERE id = ?", (place.staff,))
         if row is None or row["company"] != company:
             raise ApiError(422, "place_unknown", f"그 회사의 직원이 아니다: {place.staff}")
+
+
+def entry_path(record: dict[str, Any]) -> str | None:
+    """기록의 진입 정의 → 계약의 경로 (`process/<이름>.bpmn`, C17 `WorkspaceInfo.entry`).
+
+    **기록은 파일 이름만 적는다** (`core.testrun`의 형식 — Company1·Studio가 남긴 것이 다 그렇다).
+    전에 이 모듈이 경로째 적은 기록도 있어 둘 다 읽는다. 하나로 보이지 않으면 콘솔의 고르기가
+    값을 못 알아보고, 엔진은 이름을 못 찾아 **첫 정의로 조용히** 돌린다.
+    """
+    raw = str(record.get("entry") or "")
+    if not raw:
+        return None
+    return raw if "/" in raw else f"process/{raw}"
 
 
 def _refuse_missing_entry(store: Store, workspace_id: str, entry: str) -> None:

@@ -259,9 +259,9 @@ export function NewAppButton({ groups, workers }: { groups: AppContext["groups"]
   return (
     <>
       <Button variant="tonal" onClick={() => setOpen(true)}>
-        새 연결 앱...
+        새 앱...
       </Button>
-      <Dialog open={open} title="새 연결 앱" width={560} onClose={() => setOpen(false)}>
+      <Dialog open={open} title="새 앱" width={560} onClose={() => setOpen(false)}>
         <form action={action} className="flex flex-col gap-3">
           {result.error ? <ErrorBanner message={result.error} /> : null}
           <AppFieldsForm definition={null} groups={groups} workers={workers} appId={null} />

@@ -496,6 +496,13 @@ MIGRATIONS: tuple[Step, ...] = (
             "CREATE INDEX workspaces_project ON workspaces (project)",
         ),
     ),
+    Step(
+        35,
+        "작업공간에 종류를 둔다 — 업무 프로세스(`bpm_process`)인가 공통 패키지(`process_lib`)인가 "
+        "(C17, ADR-0176). 프로젝트 화면이 이 칸으로 두 칸을 가르고 짓기가 이 종류를 따른다. 이미 "
+        "있는 것은 업무 프로세스다 — 지금까지 종류는 짓는 순간 골랐고 어디에도 남지 않았다",
+        ("ALTER TABLE workspaces ADD COLUMN kind TEXT NOT NULL DEFAULT 'bpm_process'",),
+    ),
 )
 
 

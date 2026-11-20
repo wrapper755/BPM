@@ -69,7 +69,7 @@ export default async function WorkspacePage({ params }: { params: Promise<{ work
         departments={departments.map((one) => ({ id: one.id, name: one.name }))}
         staff={staff.map((one) => ({ id: one.id, name: one.name }))}
         project={{ id: info.project, name: project?.name ?? info.project }}
-        siblings={siblings.map((one) => ({ id: one.id, name: one.name }))}
+        siblings={siblings.map((one) => ({ id: one.id, name: one.name, kind: one.kind }))}
       />
     </Shell>
   );

@@ -13,6 +13,7 @@ export interface WorkspaceCreateRequest {
   company?: string | null;
   description?: string | null;
   id: string;
+  kind?: string;
   name: string;
   place?: Place | null;
   project?: string | null;

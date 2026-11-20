@@ -129,7 +129,7 @@ export default async function PackagesPage() {
       ) : rows.length === 0 ? (
         <EmptyState
           title="올라온 공통 패키지가 없습니다."
-          hint="「저작 › 작업공간」에서 「공유 BPM 프로세스로 짓기」로 만드세요."
+          hint="「저작 › 프로젝트」의 「공통 패키지」 칸에서 만들어 「배포 후보로 만들기」로 지으세요."
         />
       ) : (
         <DataTable

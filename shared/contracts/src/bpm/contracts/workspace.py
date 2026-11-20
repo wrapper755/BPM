@@ -150,8 +150,10 @@ class ProjectInfo(ContractModel):
     name: str
     description: str | None = None
     company: str
-    #: 안의 작업공간 수.
+    #: 안의 **업무 프로세스** 수 (`kind` = `bpm_process`).
     processes: int = Field(ge=0)
+    #: 안의 **공통 패키지** 수 (`kind` = `process_lib`, ADR-0176).
+    shared: int = Field(default=0, ge=0)
     #: 프로젝트 **또는 안의 작업공간**이 마지막으로 바뀐 때 — 카드가 「최근 손댄 것」으로 줄 세운다.
     updated_at: Timestamp
     updated_by: str
@@ -183,6 +185,8 @@ class WorkspaceCreateRequest(SchemaVersioned):
     project: str | None = None
     company: str | None = None
     place: Place | None = None
+    #: 업무 프로세스인가 공통 패키지인가 (ADR-0176) — `KNOWN_BUILD_KINDS`.
+    kind: str = "bpm_process"
 
 
 class WorkspaceUpdateRequest(SchemaVersioned):
@@ -199,6 +203,8 @@ class WorkspaceUpdateRequest(SchemaVersioned):
     entry: str | None = None
     #: 옮길 프로젝트 — **같은 회사만** (422 `company_mismatch`, ADR-0175 §3).
     project: str | None = None
+    #: 프로젝트 안의 칸을 옮긴다 — 다음에 지을 종류다. 이미 지은 패키지는 그대로다 (ADR-0176).
+    kind: str | None = None
 
 
 class InstalledLibInfo(ContractModel):
@@ -229,6 +235,9 @@ class WorkspaceInfo(ContractModel):
     project: str
     #: 프로젝트에서 물려받은 회사 (C16).
     company: str
+    #: 업무 프로세스(`bpm_process`)인가 공통 패키지(`process_lib`)인가 (ADR-0176).
+    #: **DB가 원본**이고 짓기의 기본 종류다.
+    kind: str = "bpm_process"
     #: 업무 자리 (C16 — 회사는 위 칸이다). 매니페스트 `place`로 그대로 간다 (ADR-0127).
     place: Place | None = None
     #: 없으면 아직 고르지 않았다 — 돌리거나 지을 수 없다 (422 `no_entry`).
@@ -463,9 +472,12 @@ class CheckResponse(ContractModel):
 
 
 class BuildRequest(SchemaVersioned):
-    """`POST /api/v1/workspaces/{id}/package` — 「배포 후보로 만들기」 (ADR-0143 §2)."""
+    """`POST /api/v1/workspaces/{id}/package` — 「배포 후보로 만들기」 (ADR-0143 §2).
 
-    kind: str = "bpm_process"  # KNOWN_BUILD_KINDS
+    `kind`를 비우면 **작업공간의 종류**다 (ADR-0176 — 콘솔은 고르지 않는다).
+    """
+
+    kind: str | None = None  # KNOWN_BUILD_KINDS
 
 
 class BuildDispatch(ContractModel):

@@ -75,6 +75,11 @@
       "title": "Id",
       "type": "string"
     },
+    "kind": {
+      "default": "bpm_process",
+      "title": "Kind",
+      "type": "string"
+    },
     "name": {
       "maxLength": 100,
       "minLength": 1,

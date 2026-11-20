@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 수락 · **§4(공유 BPM 프로세스는 따로 프로젝트)는 대체됨** ([ADR-0176](0176-projects-have-shared-packages.md) — 프로젝트마다 「공통 패키지」 칸) |
 | 날짜 | 2026-11-20 |
 | 관련 | 계약 C17(작업공간)·C16(조직), 화면 CON-20, [ADR-0143](0143-design-happens-in-the-console.md)(작업공간 하나 = BPM 프로세스 한 벌 — 그대로 산다), [ADR-0048](0048-installing-shared-packages.md)(공유 BPM 프로세스는 설치해서 부른다), [ADR-0125](0125-organization-and-work-placement.md)(회사 > 부서 > 직원) |
 

@@ -173,7 +173,7 @@ def test_one_zip_of_many_work_folders_makes_many_processes(client: TestClient) -
     files = made(client.get(f"{API}/workspaces/company1.sc02/files", headers=READ), 200)
     assert sorted(one["path"] for one in files) == ["process.json", "process/sc02.bpmn"]
     info = made(client.get(f"{API}/workspaces/company1.sc02", headers=READ), 200)
-    assert (info["version"], info["entry"], info["description"]) == ("0.2.0", "sc02.bpmn", "장면 2")
+    assert (info["version"], info["entry"], info["description"]) == ("0.2.0", "process/sc02.bpmn", "장면 2")
     assert made(client.get(f"{API}/projects/company1", headers=READ), 200)["processes"] == 2
 
 
@@ -224,3 +224,44 @@ def test_a_zip_without_a_work_folder_says_so(client: TestClient) -> None:
     answer = client.post(f"{API}/projects/company1/import", content=out.getvalue(), headers=ADMIN)
     assert answer.status_code == 422
     assert answer.json()["code"] == "no_process"
+
+
+# ─────────────────────────── 공통 패키지 칸 (ADR-0176) ───────────────────────────
+
+
+def test_a_project_counts_processes_and_shared_packages_apart(client: TestClient) -> None:
+    new_project(client)
+    made(client.post(f"{API}/workspaces", json={"id": "a.b", "name": "a", "project": "company1"}, headers=ADMIN))
+    lib = made(client.post(f"{API}/workspaces",
+                           json={"id": "a.lib", "name": "공통", "project": "company1", "kind": "process_lib"},
+                           headers=ADMIN))
+    assert lib["kind"] == "process_lib"
+    info = made(client.get(f"{API}/projects/company1", headers=READ), 200)
+    assert (info["processes"], info["shared"]) == (1, 1)
+
+
+def test_a_workspace_moves_between_the_two_columns(client: TestClient) -> None:
+    new_project(client)
+    made(client.post(f"{API}/workspaces", json={"id": "a.b", "name": "a", "project": "company1"}, headers=ADMIN))
+    moved = made(client.patch(f"{API}/workspaces/a.b", json={"kind": "process_lib"}, headers=ADMIN), 200)
+    assert moved["kind"] == "process_lib"
+    answer = client.patch(f"{API}/workspaces/a.b", json={"kind": "toolpack"}, headers=ADMIN)
+    assert answer.status_code == 422
+
+
+def test_an_import_lands_in_the_column_it_was_asked_for(client: TestClient) -> None:
+    new_project(client)
+    raw = work_folders(("platform/platform.case-plan", record("platform.case-plan")))
+    result = made(client.post(f"{API}/projects/company1/import?kind=process_lib", content=raw, headers=ADMIN))
+    assert [one["kind"] for one in result["workspaces"]] == ["process_lib"]
+    assert made(client.get(f"{API}/projects/company1", headers=READ), 200)["shared"] == 1
+
+
+def test_a_build_without_a_kind_follows_the_workspace(client: TestClient) -> None:
+    """콘솔은 종류를 고르지 않는다 — 공통 칸이면 진입 없이 `process_lib`로 짓는다 (ADR-0176 §2)."""
+    new_project(client)
+    made(client.post(f"{API}/workspaces",
+                     json={"id": "a.lib", "name": "공통", "project": "company1", "kind": "process_lib"},
+                     headers=ADMIN))
+    build = made(client.post(f"{API}/workspaces/a.lib/package", json={}, headers=ADMIN), 202)
+    assert build["kind"] == "process_lib"

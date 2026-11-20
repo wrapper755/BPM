@@ -13,18 +13,23 @@ import {
   type ImportResult,
 } from "@/app/actions";
 
-/** CON-20c 「새 프로세스」 — 회사는 묻지 않는다(프로젝트의 것이다). 만들면 편집기로 간다. */
-export function NewProcess({ projectId }: { projectId: string }) {
+/**
+ * CON-20c 「새 프로세스」 — 회사는 묻지 않는다(프로젝트의 것이다). 만들면 편집기로 간다.
+ * 「새 공통 패키지」도 **같은 창**이고 칸(`kind`)만 다르다 (ADR-0176). 목록 머리의 「새 …」라 둘 다 옅은 단추다 (ADR-0168).
+ */
+export function NewProcess({ projectId, shared = false }: { projectId: string; shared?: boolean }) {
   const [open, setOpen] = useState(false);
   const [result, action, pending] = useActionState<ActionResult, FormData>(createProcess, {});
+  const title = shared ? "새 공통 패키지" : "새 프로세스";
   return (
     <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        새 프로세스...
+      <Button variant="tonal" onClick={() => setOpen(true)}>
+        {title}...
       </Button>
-      <Dialog open={open} title="새 프로세스" onClose={() => setOpen(false)}>
+      <Dialog open={open} title={title} onClose={() => setOpen(false)}>
         <form action={action} className="flex flex-col gap-3">
           <input type="hidden" name="project" value={projectId} />
+          <input type="hidden" name="kind" value={shared ? "process_lib" : "bpm_process"} />
           {result.error ? <ErrorBanner message={result.error} /> : null}
           <Field
             label="id"
@@ -40,7 +45,7 @@ export function NewProcess({ projectId }: { projectId: string }) {
           <label className="flex flex-col gap-1 text-body-sm">
             그림 (선택)
             <input type="file" name="file" accept=".bpmn" className="text-body-sm" />
-            <span className="text-text-muted">밖에서 그린 .bpmn 하나를 넣어 시작합니다. 비우면 빈 프로세스입니다.</span>
+            <span className="text-text-muted">밖에서 그린 .bpmn 하나를 넣어 시작합니다. 비우면 빈 {shared ? "공통 패키지" : "프로세스"}입니다.</span>
           </label>
           <div className="flex justify-end">
             <Button type="submit" variant="primary" disabled={pending}>
@@ -75,7 +80,7 @@ export function ImportProcesses({ projectId }: { projectId: string }) {
       <Dialog open={open} title="파일에서 가져오기" onClose={() => setOpen(false)}>
         {done ? (
           <div className="flex flex-col gap-3 text-body-sm">
-            <p>프로세스 {result.made?.length ?? 0}개를 들였습니다.</p>
+            <p>{result.made?.length ?? 0}개를 들였습니다.</p>
             {libs.length > 0 && installed === null ? (
               <div className="flex flex-col gap-2 rounded-md bg-bg-subtle p-3">
                 <p>공유 프로세스 {libs.length}개를 설치해야 합니다.</p>
@@ -118,6 +123,18 @@ export function ImportProcesses({ projectId }: { projectId: string }) {
                 ))}
               </ul>
             ) : null}
+            <label className="flex flex-col gap-1 text-body-sm">
+              어디로
+              <select
+                name="kind"
+                defaultValue="bpm_process"
+                className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
+              >
+                <option value="bpm_process">프로세스</option>
+                <option value="process_lib">공통 패키지</option>
+              </select>
+              <span className="text-text-muted">든 것 모두가 이 칸으로 갑니다. 섞인 zip은 두 번 나눠 들이세요.</span>
+            </label>
             <label className="flex flex-col gap-1 text-body-sm">
               파일
               <input type="file" name="file" accept=".zip" required className="text-body-sm" />

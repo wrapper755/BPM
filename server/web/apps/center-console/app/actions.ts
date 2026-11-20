@@ -518,7 +518,7 @@ export async function createConsumer(_previous: TokenResult, form: FormData): Pr
   const topics = pickTopics(form.getAll("topics"), String(form.get("topics_text") ?? ""));
   const kinds = parseKinds(form.getAll("kinds"));
   if (!name) return { error: "이름을 넣으세요." };
-  if (topics.length === 0) return { error: "맡을 연결 앱을 고르거나 앱 id를 하나 이상 적으세요." };
+  if (topics.length === 0) return { error: "맡을 앱을 고르거나 앱 id를 하나 이상 적으세요." };
   if (kinds.length === 0) return { error: "종류를 하나 이상 고르세요." };
   try {
     const made = await center.createConsumer({ name, topics, kinds });
@@ -533,7 +533,7 @@ export async function updateConsumer(consumerId: string, form: FormData): Promis
   const topics = pickTopics(form.getAll("topics"), String(form.get("topics_text") ?? ""));
   const kinds = parseKinds(form.getAll("kinds"));
   if (kinds.length === 0) return { error: "종류를 하나 이상 고르세요." };
-  if (topics.length === 0) return { error: "맡을 연결 앱을 고르거나 앱 id를 하나 이상 적으세요." };
+  if (topics.length === 0) return { error: "맡을 앱을 고르거나 앱 id를 하나 이상 적으세요." };
   try {
     await center.updateConsumer(consumerId, { topics, kinds });
   } catch (cause) {
@@ -563,7 +563,7 @@ export async function deleteConsumer(consumerId: string): Promise<ActionResult> 
   return {};
 }
 
-// ─────────────────── 연결 앱 — 콘솔이 원본인 HTTP 어댑터 앱 (CON-18, ADR-0141) ───────────────────
+// ─────────────────── 앱 — 콘솔이 원본인 HTTP 어댑터 앱 (CON-18, ADR-0141) ───────────────────
 
 const appHref = (id: string) => `/connected-apps/${encodeURIComponent(id)}` as Route;
 
@@ -920,12 +920,22 @@ export async function createProcess(_previous: ActionResult, form: FormData): Pr
   const name = String(form.get("name") ?? "").trim();
   const version = String(form.get("version") ?? "").trim() || "0.1.0";
   const description = String(form.get("description") ?? "").trim();
+  // 「새 공통 패키지」도 같은 창이다 — 칸만 다르다 (ADR-0176).
+  const kind = String(form.get("kind") ?? "") || "bpm_process";
   if (!id) return { error: "id를 넣으세요." };
   if (!name) return { error: "이름을 넣으세요." };
   const file = form.get("file");
   const bringing = file instanceof File && file.size > 0 ? file : null;
   try {
-    await center.createWorkspace({ schema: 1, id, name, version, project, ...(description ? { description } : {}) });
+    await center.createWorkspace({
+      schema: 1,
+      id,
+      name,
+      version,
+      project,
+      kind,
+      ...(description ? { description } : {}),
+    });
     // 밖에서 그린 `.bpmn` 하나를 함께 주면 만든 뒤 **바로 넣는다** — 빈 프로세스를 남기고 실패하지 않게.
     if (bringing) await center.importIntoWorkspace(id, await bringing.arrayBuffer(), bringing.name);
     revalidatePath(projectHref(project));
@@ -946,10 +956,11 @@ export interface ImportResult extends ActionResult {
 /** 옛 작업 폴더 zip → 프로세스 여럿. 하나라도 걸리면 **아무것도 만들지 않는다**. */
 export async function importIntoProject(_previous: ImportResult, form: FormData): Promise<ImportResult> {
   const project = String(form.get("project") ?? "");
+  const kind = String(form.get("kind") ?? "") || "bpm_process";
   const file = form.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "zip 파일을 고르세요." };
   try {
-    const result = await center.importIntoProject(project, await file.arrayBuffer());
+    const result = await center.importIntoProject(project, await file.arrayBuffer(), kind);
     revalidatePath(projectHref(project));
     return { made: (result.workspaces ?? []).map((one) => one.id), libs: result.libs_to_install ?? [] };
   } catch (cause) {
@@ -983,6 +994,18 @@ export async function moveProcess(workspaceId: string, from: string, to: string)
     await center.updateWorkspace(workspaceId, { schema: 1, project: to });
     revalidatePath(projectHref(from));
     revalidatePath(projectHref(to));
+    revalidatePath(`/workspaces/${workspaceId}`);
+    return {};
+  } catch (cause) {
+    return { error: message(cause) };
+  }
+}
+
+/** 프로젝트 안의 칸을 옮긴다 — 다음에 지을 종류다. 이미 지은 패키지는 그대로다 (C17 `kind`, ADR-0176). */
+export async function setProcessKind(workspaceId: string, projectId: string, kind: string): Promise<ActionResult> {
+  try {
+    await center.updateWorkspace(workspaceId, { schema: 1, kind });
+    revalidatePath(projectHref(projectId));
     revalidatePath(`/workspaces/${workspaceId}`);
     return {};
   } catch (cause) {

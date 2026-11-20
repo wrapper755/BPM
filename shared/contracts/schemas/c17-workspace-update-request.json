@@ -70,6 +70,18 @@
       "default": null,
       "title": "Entry"
     },
+    "kind": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Kind"
+    },
     "name": {
       "anyOf": [
         {

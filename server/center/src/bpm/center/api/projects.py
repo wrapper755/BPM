@@ -83,5 +83,6 @@ async def import_project(request: Request, project_id: str) -> Any:
         raw=await request.body(),
         actor=found.actor,
         company=company_scope(found),
+        kind=request.query_params.get("kind") or "bpm_process",
     )
     return Utf8JSONResponse(status_code=201, content=result.to_json_dict())

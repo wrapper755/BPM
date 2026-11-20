@@ -72,8 +72,12 @@ export function Info({
     onSaved(made.info);
   };
 
+  // 스크롤은 탭 전체가 쥐고(막대가 화면 끝에 선다) 안은 가운데 최대 폭이다. 넓으면 **두 칸** — 왼쪽 설정,
+  // 오른쪽 받아 둔 공유 프로세스. 한 칸 폭의 폼만 왼쪽에 서면 화면 반이 비어 보였다.
   return (
-    <div className="max-w-2xl overflow-y-auto p-6">
+    <div className="min-h-0 flex-1 overflow-y-auto">
+    <div className="mx-auto grid w-full max-w-[1200px] items-start gap-6 p-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <section className="rounded-lg border border-border-default bg-bg-surface p-5">
       <h2 className="mb-3 text-body font-semibold">작업공간</h2>
       {failure ? <ErrorBanner message={failure} /> : null}
 
@@ -158,8 +162,12 @@ export function Info({
           </div>
         ) : null}
       </div>
+    </section>
 
+    <section className="rounded-lg border border-border-default bg-bg-surface p-5">
       <Libs info={info} canWrite={canWrite} onChanged={onSaved} />
+    </section>
+    </div>
     </div>
   );
 }
@@ -231,7 +239,7 @@ function Libs({
 
   return (
     <>
-      <div className="mt-8 mb-2 flex items-center gap-2">
+      <div className="mb-3 flex items-center gap-2">
         <h2 className="text-body font-semibold">받아 둔 공유 프로세스</h2>
         {canWrite ? (
           <Button size="sm" variant="secondary" className="ml-auto" onClick={() => setOpen(true)}>
