@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { Button, EmptyState, ErrorBanner, InfoTip, StatusBadge, type Column } from "@bpm/ui";
+import { EmptyState, ErrorBanner, InfoTip, StatusBadge, type Column } from "@bpm/ui";
 import type { ExtensionResource } from "@bpm/api-types/c7-extension-resource";
 import type { ServiceAppResource } from "@bpm/api-types/c7-service-app-resource";
 import { CenterError, center, session } from "@/lib/center";
@@ -26,7 +26,8 @@ import { Shell } from "@/components/Shell";
 import { OperationTree } from "./tree";
 import { SOURCE_HINT, SOURCE_LABEL, appGroupsOf, untestableReason } from "@/lib/adapter-editor";
 import { AddOperationButton, AppActions, OperationMenu, type AppContext } from "../editor";
-import { Hint, SOURCE_NOTE, connectedAppHref, time } from "../page";
+import { Hint, SOURCE_NOTE, time } from "../page";
+import { AutoFilter } from "@/components/AutoFilter";
 
 /**
  * CON-18 연결 앱 (상세) — 앱 하나의 작업 표와 작업별 일감 집계 (C15 `TopicOperationStatus`, ADR-0138).
@@ -307,7 +308,8 @@ export default async function ConnectedAppPage({
         </p>
       </header>
 
-      <form className="filter-card flex flex-wrap items-end gap-3" method="get">
+      {/* 고르는 대로 든다 — 「좁히기」가 없다 (ADR-0165). */}
+      <AutoFilter>
         <label className="flex flex-col gap-1 text-body-sm">
           찾기
           <input
@@ -317,16 +319,7 @@ export default async function ConnectedAppPage({
             className="h-9 w-72 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
           />
         </label>
-        <Link
-          href={connectedAppHref(id)}
-          className="ml-auto inline-flex h-9 items-center rounded-md px-3 text-body text-text-secondary hover:bg-bg-subtle"
-        >
-          초기화
-        </Link>
-        <Button type="submit" variant="secondary">
-          좁히기
-        </Button>
-      </form>
+      </AutoFilter>
 
       {counts === null ? <ErrorBanner message="일감 집계를 읽지 못했습니다" /> : null}
       {assignError ? <ErrorBanner message={`앱은 만들었습니다. 다만 일꾼에 맡기지 못했습니다:\n${assignError}`} /> : null}
