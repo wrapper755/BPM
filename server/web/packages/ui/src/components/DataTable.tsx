@@ -1,6 +1,7 @@
 import { isValidElement, type ReactNode } from "react";
 import { cn } from "../cn";
 import { EmptyState } from "./EmptyState";
+import { InfoTip } from "./InfoTip";
 import { Paged } from "./Paged";
 import { PAGE_SIZE, type Paging } from "./paging";
 
@@ -23,6 +24,8 @@ import { PAGE_SIZE, type Paging } from "./paging";
 export interface Column<T> {
   key: string;
   header: string;
+  /** 머리 옆 「?」에 펼 설명 — 셈의 뜻처럼 그 열 전체에 걸린 말 (U20 — 말풍선이 아니라 눌러 편다). */
+  note?: ReactNode;
   /** 칸 내용. 없으면 `row[key]`를 문자열로 보인다. */
   cell?: (row: T) => ReactNode;
   align?: "left" | "right";
@@ -100,7 +103,10 @@ export function DataTable<T>({
         {rest.map((c) =>
           isBlank(value(c, row)) ? null : c.header ? (
             <div key={c.key} className="flex min-w-0 items-baseline justify-between gap-3 text-body-sm">
-              <dt className="shrink-0 text-text-muted">{c.header}</dt>
+              <dt className="flex shrink-0 items-center text-text-muted">
+                {c.header}
+                {c.note ? <InfoTip label={`${c.header} 설명`}>{c.note}</InfoTip> : null}
+              </dt>
               <dd className={cn("m-0 min-w-0 text-right", c.align === "right" && "tabular-nums", c.mono && "font-mono")}>
                 {value(c, row)}
               </dd>
@@ -147,7 +153,14 @@ export function DataTable<T>({
             c.align === "right" ? "text-right" : "text-left",
           )}
         >
-          {c.header}
+          {c.note ? (
+            <span className={cn("inline-flex items-center", c.align === "right" && "justify-end")}>
+              {c.header}
+              <InfoTip label={`${c.header} 설명`}>{c.note}</InfoTip>
+            </span>
+          ) : (
+            c.header
+          )}
         </th>
       ))}
     </tr>

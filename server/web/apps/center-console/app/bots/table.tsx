@@ -7,6 +7,8 @@ import { PackageActions } from "@/components/PackageActions";
 import { STATUS_LABEL, packageHref } from "@/lib/packages";
 import { fullTime } from "@/lib/time";
 import {
+  SAMPLE,
+  SCAN,
   STATUS_FILTERS,
   filterGroups,
   flattenGroups,
@@ -140,15 +142,16 @@ export function ProcessTable({
  * 「확인률」은 C3 요약의 **`confirmations`**(확인만 센 수)로 잰다. 그 칸은 **선택 칸**이라
  * 옛 PC 실행기가 보낸 기록에는 없다 — 그런 실행은 **분모에도 넣지 않는다**(`confirm_sample`).
  * 0으로 세면 「확인이 없었다」와 「세지 않았다」가 같아져 확인률이 조용히 낮아진다.
+ *
+ * 셈의 뜻은 **열 머리의 「?」**에 있다 — 표 아래 각주는 걷었다 (U20, ADR-0162).
  */
-export const CONFIRM_NOTE =
-  "「확인률」은 확인 요청만 셉니다 (결재는 제외) — 그 셈을 보내지 않은 옛 기록은 표본에서 빠집니다.";
+const CONFIRM_NOTE =
+  "확인 요청만 셉니다 (결재는 제외) — 그 셈을 보내지 않은 옛 기록은 표본에서 빠집니다.";
+
+const SAMPLE_NOTE = `끝난 실행만 셉니다 — 도는 중인 실행은 들어가지 않습니다. 프로세스마다 최근 ${SCAN}건을 훑어 버전별로 ${SAMPLE}회까지 셉니다 (그보다 적으면 표본 수가 작게 보입니다).`;
 
 /** 비어 있는 셈 — 「—」 (0으로 보이면 「없었다」로 읽힌다). */
 const NONE = <span className="text-text-muted">—</span>;
-
-/** 승인 단추가 있는 상태 (`PackageActions`의 `asksFor`와 같다 — 철회는 끝이라 단추가 없다). */
-const ACTIONABLE = new Set(["candidate", "approved", "deprecated"]);
 
 /** 확인률 — **분모는 그 칸을 보낸 실행 수**다. 0이면 「—」다. */
 function confirmRate(row: BotRow) {
@@ -240,14 +243,15 @@ function columnsFor(admin: boolean): Array<Column<BotRow>> {
     {
       key: "process",
       header: "프로세스",
-      // 업무 이름이 먼저, id는 그 아래 작게 (화면 문서 CON-02) — 이름이 없으면 id가 제목이다.
+      // 업무 이름만 보이고 id는 말풍선에 (U2 — 화면 문서 CON-02). 이름이 없으면 id가 제목이다.
       cell: (row) => (
-        <span className="flex min-w-0 flex-col">
-          <Link className={`truncate font-medium text-text-primary hover:text-primary ${row.name ? "" : "font-mono"}`} href={href(row)}>
-            {row.name ?? row.id}
-          </Link>
-          {row.name ? <span className="truncate text-caption font-normal text-text-muted">{row.id}</span> : null}
-        </span>
+        <Link
+          className={`block truncate font-medium text-text-primary hover:text-primary ${row.name ? "" : "font-mono"}`}
+          href={href(row)}
+          title={row.name ? row.id : undefined}
+        >
+          {row.name ?? row.id}
+        </Link>
       ),
     },
     {
@@ -282,17 +286,16 @@ function columnsFor(admin: boolean): Array<Column<BotRow>> {
     {
       key: "confirm",
       header: "확인률",
-      width: "8ch",
+      note: CONFIRM_NOTE,
+      width: "10ch",
       align: "right",
-      cell: (row) => (
-        // 셈의 뜻(CONFIRM_NOTE)은 표 아래 화면 글에 있다 (U20, ADR-0162).
-        <span className="tabular-nums">{confirmRate(row)}</span>
-      ),
+      cell: (row) => <span className="tabular-nums">{confirmRate(row)}</span>,
     },
     {
       key: "sample",
       header: "표본",
-      width: "7ch",
+      note: SAMPLE_NOTE,
+      width: "9ch",
       align: "right",
       cell: (row) => (row.sample === 0 ? NONE : <span className="tabular-nums">{row.sample}회</span>),
     },
@@ -308,16 +311,8 @@ function columnsFor(admin: boolean): Array<Column<BotRow>> {
       header: "실행기",
       width: "8ch",
       align: "right",
-      // **건수가 아니라 실행기 수**다. 건수는 그 아래 작게 (U20, ADR-0162 — 말풍선은 휴대폰에서 안 뜬다).
-      cell: (row) =>
-        row.runners === 0 ? (
-          NONE
-        ) : (
-          <span className="flex flex-col items-end tabular-nums">
-            <span>{row.runners}대</span>
-            <span className="whitespace-nowrap text-caption text-text-muted">배포 {row.deployments}건</span>
-          </span>
-        ),
+      // **건수가 아니라 실행기 수**다 — 배포 건수는 CON-15에서 본다 (서버 실행기는 판마다 늘 「배포 1건」이었다).
+      cell: (row) => (row.runners === 0 ? NONE : <span className="tabular-nums">{row.runners}대</span>),
     },
     // 칸은 **함수로 부른다**(요소로 감싸지 않는다) — 값이 없을 때의 「—」가 그대로 나와야 휴대폰 카드가 그 줄을
     // 뺄 수 있다 (ADR-0164 — `DataTable`은 요소 속을 그려 보지 않는다). 둘 다 훅이 없는 그리기 함수다.
@@ -329,16 +324,17 @@ function columnsFor(admin: boolean): Array<Column<BotRow>> {
             header: "",
             width: "3rem",
             align: "right",
-            cell: (row: BotRow) =>
-              ACTIONABLE.has(row.status) ? (
-                <PackageActions
-                  compact
-                  packageId={row.id}
-                  version={row.version}
-                  status={row.status}
-                  place={row.place_line}
-                />
-              ) : null,
+            // 「삭제...」는 상태와 상관없이 있다 — 철회된 판도 「⋯」가 선다 (표 아래 삭제 폼을 걷었다).
+            cell: (row: BotRow) => (
+              <PackageActions
+                compact
+                deletable
+                packageId={row.id}
+                version={row.version}
+                status={row.status}
+                place={row.place_line}
+              />
+            ),
           } as Column<BotRow>,
         ]
       : []),
