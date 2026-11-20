@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ActionMenu, Button, ConfirmDialog, ErrorBanner } from "@bpm/ui";
-import { approvePackage, deprecatePackage, revokePackage, type ActionResult } from "@/app/actions";
+import { approvePackage, deletePackage, deprecatePackage, revokePackage, type ActionResult } from "@/app/actions";
 
 /**
  * 패키지 한 판의 승인 단추 (CON-02 줄·CON-06 상세). **서명은 Center가 한다** (ADR-0090) —
@@ -17,8 +17,10 @@ import { approvePackage, deprecatePackage, revokePackage, type ActionResult } fr
  * | 철회 | 없다 — 되살아나지 않는다 |
  *
  * 모두 확인 창을 거치고 기본은 「취소」다 (U9).
+ *
+ * `deletable`이면 메뉴 맨 아래에 「삭제...」가 붙는다(상태와 상관없다 — CON-02 줄, 표 아래 따로 서던 폼을 걷었다).
  */
-type Ask = "approve" | "revoke" | "deprecate";
+type Ask = "approve" | "revoke" | "deprecate" | "delete";
 
 const ASK: Record<Ask, { label: string; title: string; description: string; confirm: string; danger?: boolean }> = {
   approve: {
@@ -40,15 +42,24 @@ const ASK: Record<Ask, { label: string; title: string; description: string; conf
     description: "새 배포만 막습니다. 이미 배포된 것은 그대로 돕니다. 다시 승인하면 풀립니다.",
     confirm: "지원 종료",
   },
+  delete: {
+    label: "삭제...",
+    title: "지울까요?",
+    // C5 `DELETE /packages` — 참조되면 409 `in_use`라 아무것도 지우지 않는다(막은 쪽은 창 안에 보인다).
+    description: "되돌릴 수 없습니다. 살아 있는 배포나 다른 패키지가 참조하면 지워지지 않습니다.",
+    confirm: "삭제",
+    danger: true,
+  },
 };
 
 const ACTIONS: Record<Ask, (id: string, version: string) => Promise<ActionResult>> = {
   approve: approvePackage,
   revoke: revokePackage,
   deprecate: deprecatePackage,
+  delete: deletePackage,
 };
 
-export function asksFor(status: string): Ask[] {
+export function asksFor(status: string): Array<Exclude<Ask, "delete">> {
   if (status === "candidate") return ["approve"];
   if (status === "approved") return ["revoke", "deprecate"];
   if (status === "deprecated") return ["approve", "revoke"];
@@ -62,6 +73,7 @@ export function PackageActions({
   place,
   onDone,
   compact,
+  deletable,
 }: {
   packageId: string;
   version: string;
@@ -78,12 +90,14 @@ export function PackageActions({
    * 서면 그것이 화면에서 가장 큰 소리였다). 상세 화면은 단추 그대로다(영역에 하나라서다).
    */
   compact?: boolean;
+  /** 「삭제...」도 메뉴에 둔다 (`compact`일 때만 — 상세 화면은 「관리」 영역에 따로 있다). */
+  deletable?: boolean;
 }) {
   const [asking, setAsking] = useState<Ask | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
-  const asks = asksFor(status);
+  const asks: Ask[] = [...asksFor(status), ...(compact && deletable ? (["delete"] as const) : [])];
   if (asks.length === 0) return compact ? null : <span className="text-text-muted">—</span>;
   const shown = asking ? ASK[asking] : null;
 
@@ -110,7 +124,7 @@ export function PackageActions({
         ))}
       </div>
       )}
-      {error ? <ErrorBanner message={error} /> : null}
+      {error && !compact ? <ErrorBanner message={error} /> : null}
       <ConfirmDialog
         open={shown !== null}
         title={`${packageId} ${version} — ${shown?.title ?? ""}`}
@@ -124,8 +138,10 @@ export function PackageActions({
         onConfirm={() =>
           start(async () => {
             const result = await ACTIONS[asking!](packageId, version);
-            setAsking(null);
             setError(result.error ?? null);
+            // 표의 줄에서는 까닭(409 `in_use`의 막은 배포·패키지 등)을 **창 안에** 보인다 — 3rem 칸에는 펼 자리가 없다.
+            if (result.error && compact) return;
+            setAsking(null);
             if (!result.error) {
               router.refresh();
               onDone?.();
@@ -134,9 +150,12 @@ export function PackageActions({
         }
         onCancel={() => {
           setAsking(null);
+          if (compact) setError(null);
           onDone?.();
         }}
-      />
+      >
+        {compact && error ? <ErrorBanner message={error} /> : null}
+      </ConfirmDialog>
     </div>
   );
 }

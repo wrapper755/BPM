@@ -6,12 +6,10 @@ import { Shell } from "@/components/Shell";
 import { namesOf, placeLine, workPlaceLabel } from "@/lib/organization";
 import { ServerRunners } from "@/components/ServerRunners";
 import { Schedules } from "@/components/Schedules";
-import { DeleteVersion } from "./tools";
 // 거르기와 표는 **브라우저 쪽**에 있다 (ADR-0160) — 서버는 줄을 다 보내 두기만 한다.
-import { CONFIRM_NOTE, ProcessTable } from "./table";
+import { ProcessTable } from "./table";
 import {
   NO_RUNS,
-  SAMPLE,
   SCAN,
   bannerRows,
   compareVersions,
@@ -137,19 +135,10 @@ export default async function BotsPage({
             />
           ) : null}
 
+          {/* 셈의 뜻은 열 머리의 「?」에, 삭제는 줄의 「⋯」에 있다 — 표 아래에는 아무것도 두지 않는다. */}
           <ProcessTable rows={rows} admin={admin} query={query} />
-          <p className="text-body-sm text-text-muted">
-            {CONFIRM_NOTE} 셈은 끝난 실행만 셉니다 — 도는 중인 실행은 표본에 들어가지 않습니다.
-            프로세스마다 최근 {SCAN}건을 훑어 버전별로 {SAMPLE}회까지 셉니다 (그보다 적으면 표본 수가
-            작게 보입니다).
-          </p>
-
-          {admin ? (
-            <DeleteVersion rows={rows.map((row) => ({ id: row.id, version: row.version }))} />
-          ) : (
-            <p className="text-body-sm text-text-muted">
-              승인·삭제는 관리자 계정으로 합니다.
-            </p>
+          {admin ? null : (
+            <p className="text-body-sm text-text-muted">승인·삭제는 관리자 계정으로 합니다.</p>
           )}
         </div>
       )}
