@@ -90,9 +90,9 @@ export default async function DashboardPage() {
         />
         <Card
           title="승인 기다리는 후보"
-          // 후보는 배포 화면에 없다 — 승인은 CON-02의 그 판에서 한다.
-          href="/bots?status=candidate"
-          link="후보 보기"
+          // 승인은 배포의 첫 걸음이다 — CON-15 「승인 대기」 탭 (ADR-0181).
+          href="/deployments?tab=pending"
+          link="승인하러 가기"
           value={candidate === null ? null : String(candidate)}
           unit="판"
           note={candidate === null ? packages.error : "승인하면 배포할 수 있습니다"}

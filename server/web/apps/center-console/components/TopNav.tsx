@@ -9,24 +9,41 @@ import { AppTile, InfoTip } from "@bpm/ui";
 /**
  * CON-00 [A]·[M] — **위 막대의 메뉴**다 ([ADR-0152](../../../../../docs/decisions/0152-console-chrome-is-one-top-bar.md)).
  *
- * 묶음 여섯이 **가로로** 서고(생애주기 차례라 왼쪽에서 오른쪽으로 읽힌다) 누르면 그 아래로 펼쳐진다.
+ * 묶음 여덟이 **가로로** 서고(생애주기 차례라 왼쪽에서 오른쪽으로 읽힌다) 누르면 그 아래로 펼쳐진다.
  * 펼친 줄은 **이름 + 한 줄 설명**이다 — 설명이 **그 화면에 무엇이 있는지**를 말한다(ADR-0152 §2).
  * 넓은 화면에서는 이름만 서고 설명은 **말풍선**이다 — 좁은 화면의 한 장 메뉴는 말풍선이 뜨지 않아 글로
  * 둔다 (ADR-0170, U20).
  *
- * **줄이 하나인 묶음은 펼치지 않는다** — 「대시보드」·「배포」는 눌러서 바로 간다(펼쳐 봐야 같은 이름 하나다).
+ * **줄이 하나인 묶음은 펼치지 않는다** — 「대시보드」·「결재함」·「저작」·「라이브러리」는 눌러서 바로 간다(펼쳐 봐야 같은 이름 하나다).
+ * 줄에 `badge`가 있으면 이름 옆에 **건수**가 선다 — 「결재함」의 기다리는 결재 (ADR-0181). 0이면 그리지 않는다.
  *
- * 묶음 여섯은 **글자**이고 지금 자리의 묶음은 `primary` 2px 밑줄 + 굵게다 (ADR-0164 — ADR-0161의 알약을 걷었다).
+ * 묶음은 **글자**이고 지금 자리의 묶음은 `primary` 2px 밑줄 + 굵게다 (ADR-0164 — ADR-0161의 알약을 걷었다).
  *
- * 좁은 화면(1024px 아래)에서는 여섯이 한 줄에 들어가지 않아 **단추 하나로 접고** 누르면 묶음·줄
+ * 좁은 화면(1024px 아래)에서는 여덟이 한 줄에 들어가지 않아 **단추 하나로 접고** 누르면 묶음·줄
  * 전부가 한 장에 펼쳐진다 — 결재함은 휴대폰에서도 답할 수 있어야 한다 (CON-00). 위 막대에서 접힌
  * 「누구인지」(`who`)는 그 장의 맨 아래에 선다.
  */
 
 /** 탐색 한 줄. **아직 없는 화면에는 `href`가 없다** — 끄고 이유(`later`)를 화면 글로 보인다 (U3·U20, ADR-0162). */
 export type NavItem =
-  | { label: string; href: Route; note: string; later?: never }
-  | { label: string; href?: never; note: string; later: string };
+  | { label: string; href: Route; note: string; later?: never; badge?: number | null }
+  | { label: string; href?: never; note: string; later: string; badge?: never };
+
+/**
+ * 건수 배지 — 옅은 `primary` 면에 굵은 숫자 (ADR-0181). 칠한 면은 주 단추 하나뿐이다 (ADR-0157).
+ * **0이나 모르는 값이면 그리지 않는다** — 「0」을 늘 세워 두면 소리가 되고, 못 읽은 것을 0으로 보이면 거짓이다.
+ */
+function Badge({ count, of }: { count?: number | null; of: string }) {
+  if (!count) return null;
+  return (
+    <span
+      className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary-subtle px-1.5 text-caption font-semibold text-text-primary tabular-nums"
+      aria-label={`${of} ${count}건`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
 
 export type NavGroup = { label: string; items: NavItem[] };
 
@@ -81,7 +98,7 @@ export function TopNav({ groups, current, who }: { groups: NavGroup[]; current: 
         <Menu size={20} aria-hidden />
       </button>
 
-      {/* 넓은 화면 — 묶음 여섯이 가로로. */}
+      {/* 넓은 화면 — 묶음 여덟이 가로로. */}
       <nav aria-label="주요 탐색" className="hidden h-full min-w-0 lg:block">
         <ul className="m-0 flex h-full list-none items-stretch gap-1 p-0">
           {groups.map((group) => (
@@ -158,6 +175,7 @@ function Group({
       // 바로 가는 묶음도 그 줄의 설명을 말풍선으로 단다 — 「라이브러리」가 무엇인지 이름만으로는 모른다 (ADR-0176).
       <Link href={only.href} className={shape} aria-current={here ? "true" : undefined} title={only.note}>
         {group.label}
+        <Badge count={only.badge} of="기다리는 것" />
       </Link>
     );
   }
@@ -200,9 +218,10 @@ function Rows({
               }`}
             >
               <span
-                className={`block text-body-sm${current === item.href ? " font-semibold" : ""}`}
+                className={`flex items-center text-body-sm${current === item.href ? " font-semibold" : ""}`}
               >
                 {item.label}
+                <Badge count={item.badge} of="기다리는 것" />
               </span>
               <span className={note}>{item.note}</span>
             </Link>

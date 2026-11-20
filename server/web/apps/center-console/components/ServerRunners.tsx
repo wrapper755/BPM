@@ -12,7 +12,7 @@ import { CancelQueuedJob } from "@/app/server-runners/queue-cancel";
 import { RestartRunner } from "@/app/server-runners/actions-ui";
 
 /**
- * 서버 실행기 목록·승인 대기·대기열 — 「운영 › 서버 실행기」(`/server-runners`, CON-12 「목록」, ADR-0172).
+ * 서버 실행기 목록·승인 대기·대기열 — 「시스템 › 서버 실행기」(`/server-runners`, CON-12 「목록」, ADR-0172).
  *
  * **목록과 상세로 나눈다** — 「실행 중」·「기다리는 실행」·「BPM 프로세스별 상한」은 **실행기 하나의
  * 것**이라 상세(`/server-runners/<id>`)에 있다.

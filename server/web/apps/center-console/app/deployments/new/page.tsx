@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button, ErrorBanner } from "@bpm/ui";
 import type { PackageInfo } from "@bpm/api-types/c5-package-info";
@@ -71,7 +72,11 @@ export default async function NewDeploymentPage({
 
       {approved.length === 0 && !failure ? (
         <p className="text-body text-text-secondary">
-          승인된 프로세스가 없습니다. 「프로세스」에서 먼저 승인하세요.
+          승인된 프로세스가 없습니다.{" "}
+          <Link href="/deployments?tab=pending" className="text-text-primary underline">
+            「승인 대기」
+          </Link>
+          에서 먼저 승인하세요.
         </p>
       ) : null}
 
