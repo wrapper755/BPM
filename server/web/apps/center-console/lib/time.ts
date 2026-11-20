@@ -30,6 +30,17 @@ export function fullTime(value: string | null | undefined): string {
 }
 
 /**
+ * 두 시각 사이(초) — 끝이 없으면 지금까지 (결재함 「기다린 시간」: 대기면 지금까지, 답했으면 답할 때까지).
+ * 시작을 못 읽으면 `null`이다 (「—」로 보인다).
+ */
+export function between(from: string | null | undefined, to?: string | null, now: Date = new Date()): number | null {
+  const start = from ? new Date(from).getTime() : NaN;
+  if (Number.isNaN(start)) return null;
+  const end = to ? new Date(to).getTime() : now.getTime();
+  return Number.isNaN(end) ? null : Math.max(0, (end - start) / 1000);
+}
+
+/**
  * 걸린 시간(초) → 「0.4초」·「1분 20초」·「2시간 5분」·「1일 3시간」.
  *
  * 1분 아래는 소수 한 자리를 남긴다 — 0.1초에 끝나는 노드와 0초가 다르다. 그 위로는 큰 단위로 접는다

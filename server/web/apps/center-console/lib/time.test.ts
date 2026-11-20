@@ -1,6 +1,6 @@
 /** 시각·기간 표기 (`lib/time.ts`) — 스타일 가이드 §5의 규칙을 숫자로 본다. */
 import { describe, expect, it } from "vitest";
-import { fullTime, time, took } from "./time";
+import { between, fullTime, time, took } from "./time";
 
 const now = new Date(2026, 10, 21, 15, 0);
 const local = (y: number, m: number, d: number, h: number, min: number) => new Date(y, m - 1, d, h, min).toISOString();
@@ -37,5 +37,17 @@ describe("took", () => {
   it("모르면 「—」 — 0과 다르다", () => {
     expect(took(null)).toBe("—");
     expect(took(0)).toBe("0초");
+  });
+});
+
+describe("between", () => {
+  it("끝이 없으면 지금까지, 있으면 그때까지", () => {
+    expect(between(local(2026, 11, 21, 14, 0), null, now)).toBe(3600);
+    expect(between(local(2026, 11, 21, 9, 0), local(2026, 11, 21, 9, 1), now)).toBe(60);
+  });
+
+  it("시작을 모르면 null", () => {
+    expect(between(null, null, now)).toBeNull();
+    expect(between("어제", null, now)).toBeNull();
   });
 });
