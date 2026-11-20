@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import { Autocomplete, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
 import type { ApprovalInfo } from "@bpm/api-types/c6-approval-info";
 import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
+import { AutoFilter } from "@/components/AutoFilter";
+import { loadNodeNames, loadProcessNames } from "@/lib/names";
 
 /**
  * CON-04 결재함 (목록).
@@ -85,44 +87,63 @@ export default async function ApprovalsPage({
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
   }
 
+  // id 대신 보일 이름 — BPM 프로세스·단계(노드) (ADR-0165). 못 받으면 id 그대로다.
+  const [processNames, nodeNames, people] = await Promise.all([
+    loadProcessNames(),
+    loadNodeNames(rows.map((row) => [row.bpm_process_id, row.version] as [string, string])),
+    assigneeChoices(),
+  ]);
+
   const columns: Array<Column<ApprovalInfo>> = [
     {
       key: "state",
       header: "상태",
-      width: "12ch",
+      width: "9ch",
       cell: (row) => <StatusBadge group="결재" label={STATE_LABEL[row.state] ?? row.state} />,
     },
     {
+      // 사람이 먼저 읽는 것 — 가장 넓다 (ADR-0165).
       key: "title",
       header: "제목",
       cardTitle: true,
+      minWidth: "26ch",
       cell: (row) => (
         <Link className="font-medium text-text-primary hover:text-primary" href={`/approvals/${encodeURIComponent(row.request_id)}`}>
           {row.title ?? "결재 요청"}
         </Link>
       ),
     },
-    { key: "request_id", header: "요청 id", width: "28ch", mono: true },
-    { key: "host", header: "실행하는 곳", width: "16ch", cell: where },
+    {
+      // 요청 id 대신 **그림의 그 단계 이름** (ADR-0165, U2) — id는 상세에 있다.
+      key: "node",
+      header: "단계",
+      minWidth: "18ch",
+      cell: (row) => nodeNames.get(`${row.bpm_process_id}@${row.version}#${row.node_id}`) ?? row.node_id,
+    },
+    { key: "host", header: "실행하는 곳", width: "12ch", cell: where },
     {
       key: "bpm_process_id",
       header: "프로세스",
-      cell: (row) => `${row.bpm_process_id}@${row.version}`,
+      minWidth: "20ch",
+      cell: (row) => processNames.get(`${row.bpm_process_id}@${row.version}`) ?? `${row.bpm_process_id}@${row.version}`,
     },
     {
       // **키만** 보인다 (U10) — 값은 상세에서 접힌 채로만.
       key: "keys",
       header: "변수 키",
-      cell: (row) => Object.keys(row.review ?? {}).join(", ") || "—",
+      minWidth: "16ch",
+      // 앞의 둘과 「외 n개」 — 다 늘어놓으면 칸이 일곱 줄이 됐다. 전부는 상세에 (ADR-0165).
+      cell: (row) => keysLine(Object.keys(row.review ?? {})),
     },
-    { key: "created_at", header: "요청 시각", width: "14ch", cell: (row) => time(row.created_at) },
-    { key: "expires_at", header: "시한", width: "14ch", cell: (row) => time(row.expires_at) },
-    { key: "assignees", header: "담당", width: "14ch", cell: assigned },
+    // 시각은 한 줄 — 두 줄로 갈리면 줄 높이가 들쭉날쭉했다.
+    { key: "created_at", header: "요청 시각", width: "11ch", cell: (row) => <span className="whitespace-nowrap">{time(row.created_at)}</span> },
+    { key: "expires_at", header: "시한", width: "11ch", cell: (row) => <span className="whitespace-nowrap">{time(row.expires_at)}</span> },
+    { key: "assignees", header: "담당", width: "11ch", cell: assigned },
     { key: "answered_by", header: "답한 사람", width: "18ch", cell: answeredBy },
     {
       key: "delivered",
       header: "전달됨",
-      width: "10ch",
+      width: "8ch",
       cell: (row) => (row.delivered ? "받아 감" : "—"),
     },
   ];
@@ -134,7 +155,8 @@ export default async function ApprovalsPage({
       </header>
 
       {/* 필터는 JS 없이도 돈다 — GET 폼이 주소에 남긴다. */}
-      <form className="filter-card flex flex-wrap items-end gap-3" method="get">
+      {/* 고르는 대로 든다 — 「좁히기」가 없다 (ADR-0165). */}
+      <AutoFilter>
         <label className="flex flex-col gap-1 text-body-sm">
           <span className="text-text-muted">상태</span>
           <select
@@ -166,29 +188,19 @@ export default async function ApprovalsPage({
         </label>
         <label className="flex flex-col gap-1 text-body-sm">
           <span className="text-text-muted">담당</span>
-          <input
-            type="text"
+          {/* 자동 완성 — 결재에 적힌 담당과 조직의 직원 이름이 후보다 (ADR-0165). 모르는 이름도 칠 수 있다. */}
+          <Autocomplete
             name="assignee"
-            list="approval-assignees"
+            label="담당"
             defaultValue={assignee}
             placeholder="(전체)"
-            className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
+            options={[...new Set([...rows.flatMap((row) => row.assignees ?? []), ...people])].sort((a, b) =>
+              a.localeCompare(b, "ko"),
+            )}
+            className="w-56"
           />
-          {/* 외워 치지 않게 지금 보이는 결재의 담당을 후보로 (H6, ADR-0162) — 모르는 이름도 칠 수 있다. */}
-          <datalist id="approval-assignees">
-            {[...new Set(rows.flatMap((row) => row.assignees ?? []))].sort().map((one) => (
-              <option key={one} value={one} />
-            ))}
-          </datalist>
         </label>
-        <Link href="/approvals" className="ml-auto inline-flex h-9 items-center rounded-md px-3 text-body text-text-secondary hover:bg-bg-subtle">
-          초기화
-        </Link>
-        {/* 거르기 단추는 「좁히기」 하나다 (CON-00 [F], ADR-0162 H4). */}
-        <Button type="submit" variant="secondary">
-          좁히기
-        </Button>
-      </form>
+      </AutoFilter>
 
       {failure ? (
         <ErrorBanner message={failure} />
@@ -211,4 +223,22 @@ export default async function ApprovalsPage({
       )}
     </Shell>
   );
+}
+
+/** 「변수 키」 한 칸 — 앞의 둘과 「외 n개」 (ADR-0165). */
+function keysLine(keys: string[]): string {
+  if (keys.length === 0) return "—";
+  return keys.length <= 2 ? keys.join(", ") : `${keys.slice(0, 2).join(", ")} 외 ${keys.length - 2}개`;
+}
+
+/**
+ * 「담당」 자동 완성의 후보 — **모든 결재의 담당**(거른 목록만 보면 고른 뒤 후보가 하나로 준다)과 조직의
+ * 직원 이름. 못 받으면 비어 있다 — 칸은 그대로 칠 수 있다.
+ */
+async function assigneeChoices(): Promise<string[]> {
+  const [all, staff] = await Promise.all([
+    center.approvals().catch(() => []),
+    center.staffList().catch(() => []),
+  ]);
+  return [...all.flatMap((one) => one.assignees ?? []), ...staff.map((one) => one.name)];
 }

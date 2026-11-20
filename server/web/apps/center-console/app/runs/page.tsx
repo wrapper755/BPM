@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button, DataTable, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import { DataTable, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
 import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { sourceLabel } from "@/lib/labels";
 import { namesOf, orgName } from "@/lib/organization";
+import { AutoFilter } from "@/components/AutoFilter";
+import { loadProcessNames } from "@/lib/names";
 
 /**
  * CON-01 로그 (목록).
@@ -82,18 +84,6 @@ export async function loadOrgNames(): Promise<Record<"company" | "department" | 
   }
 }
 
-/**
- * BPM 프로세스 이름표 (C5 `PackageInfo.name`) — 열쇠는 `<id>@<version>`. 실행 기록에는 id만 있다.
- * **못 받아도 목록은 그린다** — 빈 표면 id 그대로 보인다 (U3).
- */
-export async function loadProcessNames(): Promise<Map<string, string>> {
-  try {
-    const found = await center.packages({ kind: "bpm_process" });
-    return new Map(found.flatMap((one) => (one.name ? [[`${one.id}@${one.version}`, one.name] as const] : [])));
-  } catch {
-    return new Map();
-  }
-}
 
 /** 「BPM 프로세스」 칸 — **업무 이름만**, id는 마우스를 올리면. 이름이 없으면 id다 (화면 문서 CON-01). */
 function ProcessName({
@@ -201,7 +191,8 @@ export default async function RunsPage({
         <h1 className="text-h2 font-bold">실행 기록</h1>
       </header>
 
-      <form className="filter-card flex flex-wrap items-end gap-3" method="get">
+      {/* 고르는 대로 든다 — 「좁히기」가 없다 (ADR-0165). */}
+      <AutoFilter>
         <label className="flex flex-col gap-1 text-body-sm">
           상태
           <select
@@ -265,13 +256,7 @@ export default async function RunsPage({
             ))}
           </select>
         </label>
-        <Link href="/runs" className="ml-auto inline-flex h-9 items-center rounded-md px-3 text-body text-text-secondary hover:bg-bg-subtle">
-          초기화
-        </Link>
-        <Button type="submit" variant="secondary">
-          좁히기
-        </Button>
-      </form>
+      </AutoFilter>
       <p className="mb-4 text-body-sm text-text-muted">{NO_RUNNER_NOTE}</p>
 
       {failure ? (

@@ -1,6 +1,7 @@
 import { isValidElement, type ReactNode } from "react";
 import { cn } from "../cn";
 import { EmptyState } from "./EmptyState";
+import { Paged } from "./Paged";
 
 /**
  * 표 (스타일 가이드 §3).
@@ -13,6 +14,9 @@ import { EmptyState } from "./EmptyState";
  *   두 모양을 함께 그리고 CSS로 하나만 보인다 — 서버에서 그리는 화면이 많아 폭을 JS로 재지 않는다.
  *   머리가 빈 열(단추 열 등)은 이름 없이 카드 맨 아래에 선다. **값이 없는 줄(「—」·빈 칸)은 카드에 그리지
  *   않는다** (H8, ADR-0162) — 표는 열이 맞아야 해서 그대로 두지만 카드에서는 「—」 줄이 대여섯이었다.
+ * - **20줄씩 쪽으로 나눈다** (ADR-0165) — 줄은 여기서(서버에서도) 다 그리고, 어느 쪽을 보일지는 `Paged`
+ *   (브라우저)가 고른다. 칸 그리는 함수는 브라우저로 넘길 수 없어서 **그린 줄**을 넘긴다. 받은 줄이 바뀌면
+ *   (거르기) 첫 쪽이다.
  */
 export interface Column<T> {
   key: string;
@@ -25,6 +29,8 @@ export interface Column<T> {
   /** 업무 값 열 (기본 접음, U10). */
   business?: boolean;
   width?: string;
+  /** 표에서 이 열이 줄어들 수 있는 가장 좁은 폭 — 사람이 먼저 읽는 열(제목)에 준다 (ADR-0165). */
+  minWidth?: string;
   /** 좁은 화면의 카드에서 **제목**이 될 열. 없으면 첫 열이다 (상태 배지가 첫 열인 표가 쓴다). */
   cardTitle?: boolean;
 }
@@ -40,6 +46,8 @@ export interface DataTableProps<T> {
   empty?: { title: string; hint?: string; action?: ReactNode };
   caption?: string;
   className?: string;
+  /** 한 쪽의 줄 수 (ADR-0165). `0`이면 나누지 않는다. */
+  pageSize?: number;
 }
 
 export function DataTable<T>({
@@ -51,6 +59,7 @@ export function DataTable<T>({
   empty,
   caption,
   className,
+  pageSize = 20,
 }: DataTableProps<T>) {
   const shown = columns.filter((c) => showBusiness || !c.business);
   const rowHeight = density === "compact" ? "var(--size-row-compact)" : "var(--size-row-default)";
@@ -64,91 +73,85 @@ export function DataTable<T>({
   const value = (c: Column<T>, row: T) =>
     c.cell ? c.cell(row) : String((row as Record<string, unknown>)[c.key] ?? "");
 
-  return (
-    <>
-    <ul className={cn("flex list-none flex-col gap-3 p-0 md:hidden", className)} aria-label={caption}>
-      {rows.map((row, index) => (
-        <li
-          key={rowKey(row, index)}
-          className="border border-border-default bg-bg-surface p-4 shadow-sm"
-          style={{ borderRadius: "var(--radius-lg)" }}
-        >
-          {title ? (
-            <div className={cn("mb-2 min-w-0 font-semibold", title.mono && "font-mono text-body-sm")}>
-              {value(title, row)}
-            </div>
-          ) : null}
-          <dl className="m-0 flex flex-col gap-1.5">
-            {rest.map((c) =>
-              isBlank(value(c, row)) ? null : c.header ? (
-                <div key={c.key} className="flex min-w-0 items-baseline justify-between gap-3 text-body-sm">
-                  <dt className="shrink-0 text-text-muted">{c.header}</dt>
-                  <dd
-                    className={cn(
-                      "m-0 min-w-0 text-right",
-                      c.align === "right" && "tabular-nums",
-                      c.mono && "font-mono",
-                    )}
-                  >
-                    {value(c, row)}
-                  </dd>
-                </div>
-              ) : (
-                <div key={c.key} className="mt-1 flex flex-wrap justify-end gap-2">
-                  {value(c, row)}
-                </div>
-              ),
-            )}
-          </dl>
-        </li>
-      ))}
-    </ul>
-    <div
-      data-table-frame
-      className={cn("hidden overflow-auto border border-border-default bg-bg-surface shadow-sm md:block", className)}
+  const keys = rows.map((row, index) => rowKey(row, index));
+
+  const cards = rows.map((row, index) => (
+    <li
+      key={keys[index]}
+      className="border border-border-default bg-bg-surface p-4 shadow-sm"
       style={{ borderRadius: "var(--radius-lg)" }}
     >
-      <table className="w-full border-collapse text-body">
-        {caption ? <caption className="sr-only">{caption}</caption> : null}
-        <thead className="sticky top-0 z-10 bg-bg-surface">
-          <tr>
-            {shown.map((c) => (
-              <th
-                key={c.key}
-                scope="col"
-                style={{ width: c.width, height: rowHeight }}
-                className={cn(
-                  "border-b border-border-default px-4 text-caption font-semibold text-text-muted",
-                  c.align === "right" ? "text-right" : "text-left",
-                )}
-              >
-                {c.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={rowKey(row, index)} className="transition-colors last:[&>td]:border-b-0 hover:bg-bg-canvas">
-              {shown.map((c) => (
-                <td
-                  key={c.key}
-                  style={{ height: rowHeight }}
-                  className={cn(
-                    "border-b border-border-default px-4",
-                    c.align === "right" && "text-right tabular-nums",
-                    c.mono && "font-mono text-body-sm",
-                  )}
-                >
-                  {value(c, row)}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-    </>
+      {title ? (
+        <div className={cn("mb-2 min-w-0 font-semibold", title.mono && "font-mono text-body-sm")}>
+          {value(title, row)}
+        </div>
+      ) : null}
+      <dl className="m-0 flex flex-col gap-1.5">
+        {rest.map((c) =>
+          isBlank(value(c, row)) ? null : c.header ? (
+            <div key={c.key} className="flex min-w-0 items-baseline justify-between gap-3 text-body-sm">
+              <dt className="shrink-0 text-text-muted">{c.header}</dt>
+              <dd className={cn("m-0 min-w-0 text-right", c.align === "right" && "tabular-nums", c.mono && "font-mono")}>
+                {value(c, row)}
+              </dd>
+            </div>
+          ) : (
+            <div key={c.key} className="mt-1 flex flex-wrap justify-end gap-2">
+              {value(c, row)}
+            </div>
+          ),
+        )}
+      </dl>
+    </li>
+  ));
+
+  const lines = rows.map((row, index) => (
+    <tr key={keys[index]} className="transition-colors last:[&>td]:border-b-0 hover:bg-bg-canvas">
+      {shown.map((c) => (
+        <td
+          key={c.key}
+          style={{ height: rowHeight }}
+          className={cn(
+            "border-b border-border-default px-4",
+            c.align === "right" && "text-right tabular-nums",
+            c.mono && "font-mono text-body-sm",
+          )}
+        >
+          {value(c, row)}
+        </td>
+      ))}
+    </tr>
+  ));
+
+  const head = (
+    <tr>
+      {shown.map((c) => (
+        <th
+          key={c.key}
+          scope="col"
+          style={{ width: c.width, minWidth: c.minWidth, height: rowHeight }}
+          className={cn(
+            "border-b border-border-default px-4 text-caption font-semibold text-text-muted",
+            c.align === "right" ? "text-right" : "text-left",
+          )}
+        >
+          {c.header}
+        </th>
+      ))}
+    </tr>
+  );
+
+  return (
+    <Paged
+      // 받은 줄이 바뀌면(거르기) 첫 쪽부터 — 열쇠로 상태를 새로 연다.
+      key={`${keys.length}:${keys[0] ?? ""}`}
+      size={pageSize}
+      cards={cards}
+      lines={lines}
+      head={head}
+      caption={caption}
+      className={className}
+    />
   );
 }
 

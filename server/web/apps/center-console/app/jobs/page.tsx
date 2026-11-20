@@ -1,13 +1,14 @@
 import { timerRequester } from "@/lib/summary";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import { DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
 import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import type { JobInfo } from "@bpm/api-types/c5-job-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { cancelControl } from "@/lib/jobs";
 import { CancelJob } from "./cancel";
+import { AutoFilter } from "@/components/AutoFilter";
 import {
   STATES,
   STATE_LABEL,
@@ -163,7 +164,8 @@ export default async function JobsPage({
         ) : null}
       </header>
 
-      <form className="filter-card flex flex-wrap items-end gap-3" method="get">
+      {/* 고르는 대로 든다 — 「좁히기」가 없다 (ADR-0165). */}
+      <AutoFilter>
         <fieldset className="flex flex-col gap-1 text-body-sm">
           <legend className="text-text-muted">상태</legend>
           <div className="flex flex-wrap gap-3">
@@ -205,14 +207,7 @@ export default async function JobsPage({
             className="h-9 w-24 border border-border-strong bg-bg-surface px-2 text-body"
           />
         </label>
-        <Link href="/jobs" className="ml-auto inline-flex h-9 items-center rounded-md px-3 text-body text-text-secondary hover:bg-bg-subtle">
-          초기화
-        </Link>
-        {/* 거르기 단추는 「좁히기」 하나다 (CON-00 [F], ADR-0162 H4). */}
-        <Button type="submit" variant="secondary">
-          좁히기
-        </Button>
-      </form>
+      </AutoFilter>
 
       {failure ? (
         <ErrorBanner message={failure} />

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { Button, DataTable, EmptyState, ErrorBanner, InfoTip, StatusBadge, type Column } from "@bpm/ui";
+import { DataTable, EmptyState, ErrorBanner, InfoTip, StatusBadge, type Column } from "@bpm/ui";
 import type { TopicStatus } from "@bpm/api-types/c15-topic-status";
 import { CenterError, center, session } from "@/lib/center";
 import {
@@ -20,6 +20,7 @@ import { Shell } from "@/components/Shell";
 import type { ExtensionResource } from "@bpm/api-types/c7-extension-resource";
 import { SOURCE_HINT, SOURCE_LABEL, appGroupsOf, untestableReason } from "@/lib/adapter-editor";
 import { AppActions, NewAppButton, type AppContext, type WorkerChoice } from "./editor";
+import { AutoFilter } from "@/components/AutoFilter";
 
 /**
  * CON-18 연결 앱 (목록) — 앱 하나 = 토픽 하나 (ADR-0138, Camunda 커넥터 목록과 같은 결).
@@ -207,7 +208,8 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
         ) : null}
       </header>
 
-      <form className="filter-card flex flex-wrap items-end gap-3" method="get">
+      {/* 고르는 대로 든다 — 「좁히기」가 없다 (ADR-0165). */}
+      <AutoFilter>
         <label className="flex flex-col gap-1 text-body-sm">
           찾기
           <input
@@ -217,16 +219,7 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
             className="h-9 w-72 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
           />
         </label>
-        <Link
-          href="/connected-apps"
-          className="ml-auto inline-flex h-9 items-center rounded-md px-3 text-body text-text-secondary hover:bg-bg-subtle"
-        >
-          초기화
-        </Link>
-        <Button type="submit" variant="secondary">
-          좁히기
-        </Button>
-      </form>
+      </AutoFilter>
 
       <div className="mt-4">
         {failure ? (
