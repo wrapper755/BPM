@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DataTable, InfoTip, StatusBadge, type Column } from "@bpm/ui";
+import { FilterReset } from "@/components/FilterReset";
 import { PackageActions } from "@/components/PackageActions";
 import { STATUS_LABEL, packageHref } from "@/lib/packages";
 import { fullTime } from "@/lib/time";
@@ -78,8 +78,7 @@ export function ProcessTable({
         method="get"
         onSubmit={(event) => event.preventDefault()}
       >
-        {/* 「초기화」는 이름 칸 바로 옆의 아이콘 단추다 (ADR-0171). 주소로도 가 닿게 링크로 둔다 — JS가 없으면
-            그냥 `/bots`로 간다 (폼의 `method="get"`과 같은 결). */}
+        {/* 「초기화」는 이름 칸 바로 옆의 아이콘 단추다 (ADR-0171). */}
         <div className="flex flex-col gap-1 text-body-sm">
           <label htmlFor="bots-q">이름</label>
           <span className="flex items-center gap-1">
@@ -91,20 +90,14 @@ export function ProcessTable({
               placeholder="(전체)"
               className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
             />
-            <Link
+            <FilterReset
               href="/bots"
-              aria-label="초기화"
-              title="초기화"
-              onClick={(event) => {
-                event.preventDefault();
+              onClick={() => {
                 setText("");
                 setStatus("all");
                 setSort("trouble");
               }}
-              className="inline-flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-bg-subtle hover:text-text-primary"
-            >
-              <RotateCcw size={16} aria-hidden />
-            </Link>
+            />
           </span>
         </div>
         <label className="flex flex-col gap-1 text-body-sm">

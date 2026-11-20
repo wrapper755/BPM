@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@bpm/ui";
+import { FilterResetContext } from "./FilterReset";
 
 /**
  * 목록의 거르기 칸 (CON-00 [F], [ADR-0165](../../../../../docs/decisions/0165-lists-filter-as-you-go-and-page.md)) —
@@ -13,10 +14,21 @@ import { cn } from "@bpm/ui";
  *
  * 속은 그대로 **GET 폼**이라 JS가 없어도 Enter로 돈다. 빈 칸은 주소에 싣지 않는다. 쪽(`page`)은 싣지 않아
  * 조건이 바뀌면 첫 쪽이다 — 고른 줄 수(`size`)는 남긴다 (ADR-0167). 「조건 지우기」는 **조건이 있을 때만** 보인다.
+ *
+ * 칸 옆에 ↺ `FilterReset`을 두는 목록(ADR-0171 — 작업공간)은 `clear="inline"`이다 — 오른쪽 끝 글자를 두지 않고
+ * ↺가 **칸을 비우고** 다시 묻는다(주소만 바꾸면 `defaultValue`로 그린 칸에 친 글자가 남는다).
  */
 const WAIT_MS = 400;
 
-export function AutoFilter({ className, children }: { className?: string; children: ReactNode }) {
+export function AutoFilter({
+  className,
+  children,
+  clear = "end",
+}: {
+  className?: string;
+  children: ReactNode;
+  clear?: "end" | "inline";
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -39,6 +51,15 @@ export function AutoFilter({ className, children }: { className?: string; childr
 
   const active = [...params.keys()].some((key) => key !== "page" && key !== "size");
 
+  const reset = () => {
+    for (const field of form.current?.elements ?? []) {
+      if (field instanceof HTMLInputElement && !["checkbox", "radio"].includes(field.type)) field.value = "";
+      else if (field instanceof HTMLInputElement) field.checked = false;
+      else if (field instanceof HTMLSelectElement) field.selectedIndex = 0;
+    }
+    go();
+  };
+
   return (
     <form
       ref={form}
@@ -59,14 +80,14 @@ export function AutoFilter({ className, children }: { className?: string; childr
         timer.current = setTimeout(go, WAIT_MS);
       }}
     >
-      {children}
+      <FilterResetContext.Provider value={reset}>{children}</FilterResetContext.Provider>
       <span className="ml-auto flex items-center gap-3 self-center">
         {pending ? (
           <span role="status" className="text-caption text-text-muted">
             읽는 중...
           </span>
         ) : null}
-        {active ? (
+        {active && clear === "end" ? (
           <Link href={pathname as Route} scroll={false} className="text-body-sm text-text-secondary hover:text-primary">
             조건 지우기
           </Link>

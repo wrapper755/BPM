@@ -5,6 +5,8 @@ import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { fullTime } from "@/lib/time";
+import { AutoFilter } from "@/components/AutoFilter";
+import { FilterReset } from "@/components/FilterReset";
 import { NewWorkspace } from "./tools";
 
 /**
@@ -34,24 +36,22 @@ export default async function WorkspacesPage({ searchParams }: { searchParams: P
         {found.mode === "admin" ? <NewWorkspace /> : null}
       </header>
 
-      <form className="filter-card flex flex-wrap items-end gap-3" action="/workspaces">
-        <label className="flex flex-col gap-1 text-body-sm">
-          이름으로 찾기
-          <input
-            name="q"
-            defaultValue={q ?? ""}
-            className="h-9 border border-border-strong bg-bg-surface px-2 text-body"
-          />
-        </label>
-        <div className="ml-auto flex gap-2">
-          <Link href="/workspaces" className="self-end text-body-sm text-text-muted hover:underline">
-            초기화
-          </Link>
-          <button type="submit" className="h-9 bg-primary px-3 text-body-sm font-semibold text-primary-fg">
-            좁히기
-          </button>
+      {/* 치는 대로 든다(ADR-0165), ↺는 칸 바로 옆 (ADR-0171 — CON-02와 같은 결). */}
+      <AutoFilter clear="inline">
+        <div className="flex flex-col gap-1 text-body-sm">
+          <label htmlFor="workspaces-q">이름</label>
+          <span className="flex items-center gap-1">
+            <input
+              id="workspaces-q"
+              name="q"
+              defaultValue={q ?? ""}
+              placeholder="(전체)"
+              className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
+            />
+            <FilterReset href="/workspaces" />
+          </span>
         </div>
-      </form>
+      </AutoFilter>
 
       {failure ? <ErrorBanner message={failure} /> : null}
       {!failure && rows.length === 0 ? (
