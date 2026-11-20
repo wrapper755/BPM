@@ -8,7 +8,7 @@ import { PAGE_SIZE, type Paging } from "./paging";
 /**
  * 표 (스타일 가이드 §3).
  *
- * - 머리는 옅은 회색 면에 13 굵게, 위 막대 아래에 붙어 선다(`Paged`, ADR-0166). 줄 높이는 토큰(`row.default` 36 / `row.compact` 32).
+ * - 머리는 옅은 회색 면에 13 굵게, 위 막대 아래에 붙어 선다(`Paged`, ADR-0166). 줄 높이는 토큰(`row.default` 48 / `row.compact` 40).
  * - 숫자 열은 오른쪽 정렬 + `tabular-nums`, id 열은 mono로 짧게 (툴팁에 전체, U2).
  * - **업무 값 열은 기본으로 접는다** (U10) — `business: true`인 열은 `showBusiness`일 때만 보인다.
  * - 정렬·필터 상태를 주소(URL)에 남기는 일은 화면의 몫이다 (여기서는 다루지 않는다).
@@ -109,7 +109,7 @@ export function DataTable<T>({
   const cards = drawn.map((row, index) => (
     <li
       key={keys[index]}
-      className="border border-border-default bg-bg-surface p-4 shadow-sm"
+      className="border border-border-default bg-bg-surface p-5 shadow-sm"
       style={{ borderRadius: "var(--radius-lg)" }}
     >
       {title ? (
@@ -146,7 +146,7 @@ export function DataTable<T>({
           key={c.key}
           style={{ height: rowHeight }}
           className={cn(
-            "border-b border-border-default px-4",
+            "border-b border-border-default px-5",
             c.align === "right" && "text-right tabular-nums",
             c.mono && "font-mono text-body-sm",
           )}
@@ -167,7 +167,7 @@ export function DataTable<T>({
           className={cn(
             // 본문 칸과 같은 여백·같은 정렬 (ADR-0166). 머리 이름은 접지 않는다 — 두 줄 머리는 열을 읽기 어렵다.
             // 아래 선은 안쪽 그림자다 — 겹친 테두리(`border-collapse`)는 붙어 선 머리를 따라오지 않는다.
-            "shadow-[inset_0_-1px_0_var(--border-default)] px-4 py-2 align-middle text-body-sm font-semibold whitespace-nowrap text-text-secondary",
+            "shadow-[inset_0_-1px_0_var(--border-default)] px-5 py-2 align-middle text-body-sm font-semibold whitespace-nowrap text-text-secondary",
             c.align === "right" ? "text-right" : "text-left",
           )}
         >

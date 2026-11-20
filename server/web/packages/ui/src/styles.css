@@ -9,6 +9,20 @@
    워크스페이스 패키지는 스스로 적어야 한다 (적지 않으면 구성요소의 클래스가 조용히 빠진다). */
 @source "./**/*.{ts,tsx}";
 
+/* 스크롤 막대·입력칸 같은 브라우저 부품도 테마를 따른다 (ADR-0182). 어느 쪽인지는 토큰과 같은 규칙으로 고른다 —
+   `data-theme`이 있으면 그것, 없으면 운영체제 설정. */
+:root {
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+  }
+}
+
 /* 바탕·글자·글꼴은 토큰으로 (스타일 가이드 §2). 색값을 직접 쓰지 않는다. */
 body {
   background-color: var(--bg-canvas);
@@ -67,7 +81,6 @@ th {
   --color-text-muted: var(--text-muted);
   background-color: var(--bg-surface);
   color: var(--text-primary);
-  color-scheme: light;
 }
 
 /* 본문 머리 (CON-00 [H], 스타일 가이드 §4-1) — **바탕 위에 바로** 선다 (ADR-0161 — 흰 띠를 걷었다).
@@ -81,7 +94,7 @@ th {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin: 0 0 var(--space-6);
+  margin: 0 0 var(--space-8);
 }
 .page-main > .page-crumb {
   margin: 0 0 var(--space-1);
@@ -90,7 +103,7 @@ th {
 /* 필터 카드 (CON-00 [F]) — 목록 위 조건을 흰 카드 하나에 담는다. */
 .filter-card {
   margin-bottom: var(--space-6);
-  padding: var(--space-4);
+  padding: var(--space-5);
   background-color: var(--bg-surface);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);

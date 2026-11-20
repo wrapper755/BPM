@@ -7,6 +7,7 @@ import { center, session } from "@/lib/center";
 import type { Mode } from "@/lib/session";
 import { BAR_BUTTON } from "./bar-button";
 import { Refresh } from "./Refresh";
+import { ThemeToggle } from "./ThemeToggle";
 import { TopNav, type NavGroup, type NavItem } from "./TopNav";
 
 /**
@@ -162,7 +163,7 @@ export async function Shell({
           className={
             full
               ? "flex h-full w-full items-center gap-2 px-4 md:gap-3 md:px-5"
-              : "mx-auto flex h-full w-full max-w-[1440px] items-center gap-2 px-4 md:gap-3 md:px-6 lg:px-8"
+              : "mx-auto flex h-full w-full max-w-[1440px] items-center gap-2 px-5 md:gap-3 md:px-8 lg:px-10"
           }
         >
         <TopNav groups={groups} current={current} who={who} />
@@ -179,6 +180,7 @@ export async function Shell({
             </span>
           </span>
           <span aria-hidden className="mx-2 hidden h-5 w-px shrink-0 bg-border-default lg:block" />
+          <ThemeToggle />
           <Refresh />
           <form action={logout} className="shrink-0">
             <Button type="submit" variant="ghost" size="sm" title="로그아웃" aria-label="로그아웃" className={BAR_BUTTON}>
@@ -193,7 +195,7 @@ export async function Shell({
         className={
           full
             ? "flex min-w-0 flex-col"
-            : "page-main mx-auto w-full max-w-[1440px] min-w-0 px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-8"
+            : "page-main mx-auto w-full max-w-[1440px] min-w-0 px-5 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10"
         }
         style={{
           marginTop: "var(--size-topbar-height)",
