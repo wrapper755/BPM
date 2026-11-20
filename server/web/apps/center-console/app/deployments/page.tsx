@@ -55,18 +55,32 @@ export default async function DeploymentsPage({
     return names.get(`${type}:${id}`) ?? id;
   };
 
+  // 「번호」 — 이 목록의 차례이고 **가장 오래된 것이 1**이다(새 배포가 늘어도 앞 번호가 바뀌지 않는다).
+  // 배포 id는 사람이 외워 쓸 일이 없어 말풍선에만 둔다 (U2, CON-15).
+  const number = new Map(
+    [...rows]
+      .sort((one, other) => Date.parse(one.signed_at) - Date.parse(other.signed_at))
+      .map((row, index) => [row.deployment_id, index + 1]),
+  );
+
   const columns: Array<Column<DeploymentInfo>> = [
     {
-      key: "deployment_id",
-      header: "배포 id",
-      width: "16ch",
-      mono: true,
-      cell: (row) => <span id={row.deployment_id}>{row.deployment_id}</span>,
+      key: "number",
+      header: "번호",
+      width: "6ch",
+      align: "right",
+      cell: (row) => (
+        <span id={row.deployment_id} title={row.deployment_id} className="text-text-muted">
+          {number.get(row.deployment_id)}
+        </span>
+      ),
     },
     {
       key: "bot",
       header: "프로세스@버전",
       mono: true,
+      // 휴대폰 카드의 제목 — 첫 열(번호)이 제목이면 카드마다 숫자 하나가 머리에 선다.
+      cardTitle: true,
       cell: (row) => `${row.bpm_process_id}@${row.version}`,
     },
     {
@@ -100,7 +114,8 @@ export default async function DeploymentsPage({
     },
     {
       key: "when",
-      header: "배포한 때",
+      // 화면 이름이 「배포」라 「배포한 때」는 같은 말이 겹쳤다.
+      header: "날짜",
       width: "18ch",
       cell: (row) => fullTime(row.signed_at),
     },
