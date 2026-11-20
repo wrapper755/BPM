@@ -269,7 +269,7 @@ export default async function RunsPage({
             columns={columns}
             rows={rows}
             rowKey={(row) => row.run_id}
-            caption="실행 목록"
+            caption="실행 목록" numbered
             // 「최근 n건」이 500까지라 쪽은 주소에 — 콘솔 서버가 그 쪽만 그린다 (ADR-0167).
             paging={{
               ...readPaging(query),

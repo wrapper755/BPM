@@ -217,7 +217,7 @@ export default async function JobsPage({
           hint={filtered ? "필터를 비워 보세요." : undefined}
         />
       ) : (
-        <DataTable columns={columns} rows={rows} rowKey={(row) => row.job_id} caption="작업 지시 목록" />
+        <DataTable columns={columns} rows={rows} rowKey={(row) => row.job_id} caption="작업 지시 목록" numbered />
       )}
     </Shell>
   );

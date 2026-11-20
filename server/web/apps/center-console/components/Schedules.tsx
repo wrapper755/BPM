@@ -93,7 +93,7 @@ export async function Schedules() {
             columns={columns}
             rows={rows}
             rowKey={(row) => `${row.bpm_process_id}@${row.version}:${row.target_id ?? "*"}:${row.expression}`}
-            caption="타이머 시작 일정"
+            caption="타이머 시작 일정" numbered
           />
           <p className="text-body-sm text-text-muted">
             Center가 차례마다 작업을 만들어 깨웁니다. 놓친 차례는 가장 최근 한 번만 돌리고, 만든 작업은 다음

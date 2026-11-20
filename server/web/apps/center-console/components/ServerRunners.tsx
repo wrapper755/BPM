@@ -201,7 +201,7 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
             columns={columns}
             rows={rows}
             rowKey={(row) => row.server_runner_id}
-            caption="서버 실행기 목록"
+            caption="서버 실행기 목록" numbered
           />
         ) : null}
       </section>
@@ -215,7 +215,7 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
             columns={queueColumns}
             rows={queue}
             rowKey={(row) => row.job_id}
-            caption="Center 대기열"
+            caption="Center 대기열" numbered
           />
         )}
         <p className="text-caption text-text-muted">

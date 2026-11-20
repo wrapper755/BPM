@@ -133,7 +133,7 @@ export default async function ConsumersPage() {
           hint={manage ? "「새 일꾼...」으로 만들고 받은 토큰을 일꾼 설정에 넣으세요." : undefined}
         />
       ) : (
-        <DataTable columns={columns} rows={rows} rowKey={(row) => row.consumer_id} caption="일꾼" />
+        <DataTable columns={columns} rows={rows} rowKey={(row) => row.consumer_id} caption="일꾼" numbered />
       )}
     </Shell>
   );

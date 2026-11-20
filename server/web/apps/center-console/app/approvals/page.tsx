@@ -223,7 +223,7 @@ export default async function ApprovalsPage({
           columns={columns}
           rows={rows}
           rowKey={(row) => row.request_id}
-          caption="결재 목록"
+          caption="결재 목록" numbered
           paging={paging}
         />
       )}

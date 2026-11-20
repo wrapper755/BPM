@@ -122,7 +122,7 @@ export default async function AppLogsPage({
       ) : shown.length === 0 ? (
         <EmptyState title="아직 이력이 없습니다." hint="앱이 등록을 요청하거나 키·배포를 받으면 여기 쌓입니다." />
       ) : (
-        <DataTable columns={columns} rows={shown} rowKey={(row) => `${row.at}-${row.kind}-${row.name}-${row.what}-${row.detail}`} caption="변경 이력" />
+        <DataTable columns={columns} rows={shown} rowKey={(row) => `${row.at}-${row.kind}-${row.name}-${row.what}-${row.detail}`} caption="변경 이력" numbered />
       )}
       <p className="mt-2 text-caption text-text-muted">
         등록 요청·API 키·설치(배치 결정)를 모은 것입니다. 하트비트가 끊긴 때는 남지 않습니다 — 지금 상태는 「운영 › 프로세스」에서 봅니다.
