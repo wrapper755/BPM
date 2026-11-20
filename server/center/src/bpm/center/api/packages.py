@@ -417,23 +417,28 @@ def node_labels(store: Store, *, package_dir: Path, package_id: str, version: st
     return list(found.values())
 
 
-def diagram(store: Store, *, package_dir: Path, package_id: str, version: str) -> bytes:
-    """진입 정의(`entry`)의 BPMN 그대로 (C5 `diagram`, CON-01 — ADR-0136). **바꾸지 않고** 돌려준다.
+def diagram(
+    store: Store, *, package_dir: Path, package_id: str, version: str, path: str | None = None
+) -> bytes:
+    """진입 정의(`entry`) 또는 `path`의 BPMN 그대로 (C5 `diagram`, CON-01 — ADR-0136·0180). **바꾸지 않고** 돌려준다.
 
-    없으면(패키지·`entry`·zip 안 파일) 404다 — 그리는 쪽이 「못 읽었다」고 말한다.
+    `path`는 패키지 안의 `.bpmn` 하나다 — 받아 둔 공유 BPM 프로세스(`libs/…`)도 든다. 매니페스트·`memory/`·DMN은
+    주지 않는다(422). 없으면(패키지·`entry`·zip 안 파일) 404다 — 그리는 쪽이 「못 읽었다」고 말한다.
     """
     row = store.row("SELECT * FROM packages WHERE id = ? AND version = ?", (package_id, version))
     if row is None:
         raise ApiError(404, "not_found", f"{package_id}@{version}이 없다")
-    entry = Manifest.model_validate(loads(row["manifest_json"], {})).entry
-    path = package_dir / row["file_name"]
-    if not entry or not path.exists():
+    if path is not None and (not path.endswith(".bpmn") or path.startswith("/") or ".." in path.split("/")):
+        raise ApiError(422, "bad_path", f"그림은 패키지 안의 `.bpmn`만 준다: {path}")
+    wanted = path or Manifest.model_validate(loads(row["manifest_json"], {})).entry
+    found = package_dir / row["file_name"]
+    if not wanted or not found.exists():
         raise ApiError(404, "not_found", f"{package_id}@{version}에 진입 정의가 없다")
-    with _open_zip(path) as archive:
+    with _open_zip(found) as archive:
         try:
-            return archive.read(entry)
+            return archive.read(wanted)
         except KeyError as e:
-            raise ApiError(404, "not_found", f"{package_id}@{version}에 {entry}가 없다") from e
+            raise ApiError(404, "not_found", f"{package_id}@{version}에 {wanted}가 없다") from e
 
 
 def file_path(store: Store, *, package_dir: Path, package_id: str, version: str) -> tuple[Path, str]:

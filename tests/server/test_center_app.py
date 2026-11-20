@@ -22,6 +22,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import center_admin
 import pytest
 from fastapi.testclient import TestClient
 
@@ -962,6 +963,48 @@ def test_diagram_of_a_shared_process_or_missing_package_is_404(client: TestClien
     for path in ("shared.approval/1.0.0", "없는것/1.0.0"):
         response = client.get(f"/api/v1/packages/{path}/diagram", headers=READ)
         assert response.status_code == 404 and response.json()["code"] == "not_found"
+
+
+def test_diagram_gives_any_bpmn_inside_but_nothing_else(client: TestClient) -> None:
+    """`?path=`로 패키지 안의 `.bpmn` 하나 — 받아 둔 공유 BPM 프로세스(`libs/`)도 든다 (ADR-0180)."""
+    lib = "<definitions id='lib' />"
+    upload_common(client, extra={"libs/shared.approval__approval.bpmn": lib})
+    path = "libs/shared.approval__approval.bpmn"
+    got = client.get(f"/api/v1/packages/invoice-check/1.0.0/diagram?path={path}", headers=READ)
+    assert got.status_code == 200 and got.text == lib
+    assert got.headers["x-bpm-version"] == "1.0.0"
+    for wrong in ("manifest.json", "../x.bpmn"):
+        refused = client.get(f"/api/v1/packages/invoice-check/1.0.0/diagram?path={wrong}", headers=READ)
+        assert refused.status_code == 422 and refused.json()["code"] == "bad_path", wrong
+    missing = client.get("/api/v1/packages/invoice-check/1.0.0/diagram?path=process/없다.bpmn", headers=READ)
+    assert missing.status_code == 404
+
+
+def test_deployed_is_the_version_a_job_would_run(client: TestClient) -> None:
+    """판 자리 `deployed` — 작업이 판을 비웠을 때 고를 판이다. 배포가 없으면 404 `not_deployed`."""
+    upload_common(client, extra={"process/main.bpmn": _NAMED_BPMN})
+    before = client.get("/api/v1/packages/invoice-check/deployed/diagram", headers=READ)
+    assert before.status_code == 404 and before.json()["code"] == "not_deployed"
+    center_admin.approve(client, "invoice-check", "1.0.0")
+    center_admin.deploy(client, target={"type": "server_runner", "id": "*"}, bpm_process_id="invoice-check",
+                        version="1.0.0")
+    got = client.get("/api/v1/packages/invoice-check/deployed/diagram", headers=READ)
+    assert got.status_code == 200, got.text
+    assert (got.text, got.headers["x-bpm-version"]) == (_NAMED_BPMN, "1.0.0")
+
+
+def test_callers_keys_read_the_diagram_and_nothing_more(client: TestClient) -> None:
+    """연동용·대리 답용 키는 **그림 하나만** 읽는다 — 목록·정보는 그대로 막힌다 (ADR-0180).
+
+    회사 시스템이 그림 사본을 두지 않게 하려는 것이다. 서버 실행기 키는 여전히 못 읽는다.
+    """
+    upload_common(client, extra={"process/main.bpmn": _NAMED_BPMN})
+    for kind, allowed in (("integration", True), ("relay", True), ("server_runner", False)):
+        _key_id, raw = issue_key(client, name=f"{kind} 하나", key_type=kind)
+        auth = {"Authorization": f"Bearer {raw}"}
+        got = client.get("/api/v1/packages/invoice-check/1.0.0/diagram", headers=auth)
+        assert (got.status_code == 200) is allowed, (kind, got.text)
+        assert client.get("/api/v1/packages", headers=auth).status_code == 403, kind
 
 
 def test_delete_removes_the_row_and_the_file(client: TestClient, packages_dir: Path) -> None:

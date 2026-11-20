@@ -43,8 +43,8 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 | 인증 없음 | 키가 아직 없는 실행기 | **등록 요청을 보내고 그 답을 묻는 것뿐** (C4·C12 §등록 요청과 승인 — 내려 주는 키는 요청의 공개키로 봉해 있다) |
 | 인증 없음 — **열린 모드** | 개발·시험, 그리고 망에서 막는 운영 ([ADR-0142](../decisions/0142-open-mode.md)) | `BPM_CENTER__OPEN_MODE`가 켜져 있으면 **관리자 토큰과 같다**. 행위자는 `X-BPM-Actor`(없으면 「열린 모드」). **모르는 토큰은 그대로 401이다** — 일꾼 들이기(C15) 한 자리만 예외다 |
 | Center API 키 — 서버 실행기용 | 실행하는 쪽 | **자기에게 배포된** BPM 프로세스 패키지만 내려받기 (공유 BPM 프로세스는 그 안 `libs/`에 들어 있다) |
-| Center API 키 — 연동용 (신규, CON-11) | 외부 시스템 | 작업 만들기(`POST /jobs`)와 자기가 만든 작업 읽기·취소, 메시지 넣기(`POST /messages` — C12 §메시지) |
-| Center API 키 — 대리 답용 (`relay`) | 사람 대신 결재하는 연동 (대화 창구) | **결재 읽기·답뿐**이고 담당인 것만 (C6). 이 표의 엔드포인트는 하나도 부르지 못한다 |
+| Center API 키 — 연동용 (신규, CON-11) | 외부 시스템 | 작업 만들기(`POST /jobs`)와 자기가 만든 작업 읽기·취소, 메시지 넣기(`POST /messages` — C12 §메시지), 배포된 그림 읽기(`GET …/diagram`, ADR-0180) |
+| Center API 키 — 대리 답용 (`relay`) | 사람 대신 결재하는 연동 (대화 창구) | **결재 읽기·답뿐**이고 담당인 것만 (C6). 이 표에서는 **배포된 그림**(`GET …/diagram`, ADR-0180) 하나만 읽는다 |
 
 ### 엔드포인트별 권한
 
@@ -54,7 +54,8 @@ Center 쪽에서 BPM 프로세스가 실행되기까지의 흐름을 정한다.
 
 | 엔드포인트 | 읽기 | 관리자 | 서버 실행기 키 | 연동용 키 |
 | --- | --- | --- | --- | --- |
-| `GET /packages…` (목록·정보·참조·노드 이름·다이어그램) | ✓ | ✓ | — | — |
+| `GET /packages…` (목록·정보·참조·노드 이름) | ✓ | ✓ | — | — |
+| `GET /packages/{id}/{v}/diagram` (그림 — [ADR-0180](../decisions/0180-callers-read-the-deployed-diagram.md)) | ✓ | ✓ | — | ✓ (대리 답용 키도) |
 | `GET /packages/{id}/{v}` (내려받기) | — | ✓ | 자기 배포분만 | — |
 | `POST /packages` | — | ✓ | — | — |
 | `POST /auth/login` | 인증 없음 | | | ||
@@ -121,7 +122,7 @@ AccountInfo 필드: `username`, `role`, `state`(`active` / `disabled`), `created
 | `PUT /packages/{id}/{version}/status` `{status: "deprecated"}` | 지원 종료 표시. 새 배포를 막는다. 서명이 필요 없다 (실행을 허용하는 쪽이 아니라 막는 쪽이라서) | 200 |
 | `GET /packages/{id}/{version}/dependents` | 이 패키지를 `requires`로 쓰는 패키지 | 200 DependentInfo[] |
 | `GET /packages/{id}/{version}/nodes` | 정의 안 노드의 이름 (CON-01이 노드 id 옆에 보인다) | 200 NodeLabel[] |
-| `GET /packages/{id}/{version}/diagram` | 진입 정의(`entry`)의 BPMN XML 그대로 (CON-01 「다이어그램」) | 200 `application/xml` / 404 |
+| `GET /packages/{id}/{version}/diagram?path=` | 진입 정의(`entry`) 또는 `path`의 BPMN XML 그대로 (CON-01 「다이어그램」, 부르는 쪽의 그림). `version`이 `deployed`면 작업이 돌릴 판 | 200 `application/xml` / 404 |
 | `DELETE /packages/{id}/{version}` | 삭제. 배포나 다른 패키지가 참조하면 409 `in_use` | 204 |
 
 지원 종료(`PUT …/status`) 규칙:
@@ -184,6 +185,12 @@ NodeLabel 필드:
 진입 정의(매니페스트 `entry`)의 `.bpmn`을 **바꾸지 않고** 돌려준다(`application/xml; charset=utf-8`). 그림 좌표(BPMNDI)를 읽고 그리는 것은 받는 쪽이다 ([ADR-0136](../decisions/0136-run-detail-shows-the-diagram.md)). 정의에는 업무 값이 없다(원칙 6) — 권한은 패키지 정보와 같다.
 
 - 패키지가 없거나 `entry`가 없거나(`process_lib`) zip에 그 파일이 없으면 404 `not_found`다.
+- **`?path=`** — 패키지 안의 `.bpmn` 하나(`process/…`·`libs/…`, ADR-0048로 받아 둔 공유 BPM 프로세스도 든다). 비우면
+  진입 정의다. `.bpmn`이 아니면 422 `bad_path` — 매니페스트·`memory/`·DMN은 주지 않는다.
+- **판 자리 `deployed`** — `POST /jobs`가 판을 비웠을 때 고르는 판이다(어느 서버 실행기에든 활성 배포된 것). 없으면
+  404 `not_deployed`. 응답 머리 **`X-BPM-Version`**이 실제 판을 말한다(판을 적어 불러도 싣는다).
+- **연동용 키·대리 답용 키도 읽는다** ([ADR-0180](../decisions/0180-callers-read-the-deployed-diagram.md)) — 업무 처리기·회사 사이트가 그림 사본을
+  두지 않는다. 회사가 정해진 키면 제 회사 패키지만이다(남의 것은 404).
 
 ### 삭제 (`DELETE`)
 
@@ -401,6 +408,7 @@ EnrollmentInfo 필드:
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-20 | 1 | **`diagram`을 부르는 쪽에 연다** — `?path=`(패키지 안 `.bpmn`), 판 자리 `deployed`, 응답 머리 `X-BPM-Version`, 연동용·대리 답용 키 읽기. 옛 부름은 그대로 돈다 | [0180](../decisions/0180-callers-read-the-deployed-diagram.md) |
 | 2026-11-15 | 1 | **Studio 키 종류를 걷었다** — 권한표의 「Studio 키」 열과 「Center API 키 — Studio용」 줄, §Studio 등록 요청과 승인(`POST·GET /studio/enroll`), `POST /call-tokens` 줄을 걷었다. 패키지 올리기·목록·정보·내려받기·리소스 읽기는 **콘솔 토큰만**이고(짓는 길은 C17 — 실행기가 지은 zip은 Center가 단추를 누른 계정의 이름으로 등록한다), 외부 작업은 **서버 실행기 키만** 올린다. 등록 요청의 `type`은 `server_runner` 하나다 | [0150](../decisions/0150-the-designer-key-is-gone.md) |
 | 2026-11-12 | 1 | **PC 실행기를 걷었다** — `PackageInfo.run_location`, 배포 대상 `{type: "bot_ui"}`와 그 검사 둘(`run_location` 대조·PC의 `"*"` 금지), §PC 실행기 현황(`GET /bot-uis` 셋·`BotUiInfo`), `POST /call-tokens`의 실행기 쪽, 작업 사유 `bot_ui_shutdown`·`server_location`·`cancelled_on_pc`, `accepted` + PC 대상의 409 `already_started`(`cancel_outcome`은 상태만 본다), 422 `server_runner_not_available`을 걷었다. 등록 요청의 `type`은 `server_runner`·`studio` 둘이다 | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-11-11 | 1 | **열린 모드** — §인증에 「인증 없음 — 열린 모드」(관리자와 같다, 모르는 토큰은 그대로 401), §등록 승인에 받는 자리 승인(회사가 하나뿐일 때). 권한표·모델은 그대로다 | [0142](../decisions/0142-open-mode.md) |
