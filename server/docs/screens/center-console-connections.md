@@ -4,7 +4,7 @@
 
 ## CON-17 일꾼 (신규)
 
-메뉴 「연결 › 일꾼」, 주소 `/consumers` ([ADR-0137](../../../docs/decisions/0137-consumers-are-managed-in-the-console.md)). **일꾼**(C15 — Center에서 외부 작업을 가져가는 프로그램: 서비스 앱·어댑터 일꾼·통합 일꾼)을 만들고, 맡는 토픽을 바꾸고, 토큰을 새로 발급하고, 지운다. 바뀐 것은 일꾼의 **다음 요청부터** 반영된다 — Center를 다시 띄우지 않는다. 목록은 콘솔 계정 모두가 보고, 단추와 「...」는 **Center 관리자**에게만 보인다(회사 관리자·보기 전용에게는 없다 — 일꾼은 Center 공용이다).
+메뉴 「시스템 › 일꾼」([ADR-0181](../../../docs/decisions/0181-menu-puts-approvals-on-top-and-approval-in-deploy.md)), 주소 `/consumers` ([ADR-0137](../../../docs/decisions/0137-consumers-are-managed-in-the-console.md)). **일꾼**(C15 — Center에서 외부 작업을 가져가는 프로그램: 서비스 앱·어댑터 일꾼·통합 일꾼)을 만들고, 맡는 토픽을 바꾸고, 토큰을 새로 발급하고, 지운다. 바뀐 것은 일꾼의 **다음 요청부터** 반영된다 — Center를 다시 띄우지 않는다. 목록은 콘솔 계정 모두가 보고, 단추와 「...」는 **Center 관리자**에게만 보인다(회사 관리자·보기 전용에게는 없다 — 일꾼은 Center 공용이다).
 
 > 상태: **돈다** (`app/consumers`). 재료는 C15 `GET /consumers` 하나다. 일꾼 폴더(`<이름>.consumer.json`)는 첫 설치에 **처음 한 번 들이기만** 하고, 들어온 뒤로는 여기서 고친다.
 
@@ -43,7 +43,7 @@
 
 ## CON-18 앱 (신규)
 
-메뉴 「연결 › 앱」([ADR-0178](../../../docs/decisions/0178-the-app-catalog-is-called-apps.md) — 묶음이 「연결」이라 줄 이름에서 뺐다). BPM 프로세스가 부르는 **바깥 앱 — 앱 하나 = 토픽 하나 —과 그 작업**을 보는 카탈로그다 ([ADR-0138](../../../docs/decisions/0138-console-app-catalog.md), Camunda의 커넥터 목록과 같은 결). 구현은 둘이다: **외부 정의**(C13 `tier: external` — HTTP 어댑터 정의, Center가 서명한다)와 **일꾼 앱**(C11 manifest — 일꾼이 코드로 처리한다. AI·사이트 처리기·모의 앱). 원본이 **콘솔**인 외부 정의는 Center 관리자가 여기서 만들고 고친다(아래 §만들기·고치기, [ADR-0141](../../../docs/decisions/0141-adapter-definitions-are-edited-in-the-console.md)). 원본이 **일꾼**인 것은 **보기만 한다** — 정의·manifest는 맡은 일꾼이 뜰 때 올린다(C15, [ADR-0122](../../../docs/decisions/0122-consumer-folder.md)). 원본이 둘이라는 말은 제목 옆 「?」 툴팁에만 둔다. 일꾼 폴더·키·기여 자원은 여기 없다(ADR-0128).
+메뉴 「시스템 › 앱」([ADR-0178](../../../docs/decisions/0178-the-app-catalog-is-called-apps.md) — 줄 이름은 「앱」 하나다). BPM 프로세스가 부르는 **바깥 앱 — 앱 하나 = 토픽 하나 —과 그 작업**을 보는 카탈로그다 ([ADR-0138](../../../docs/decisions/0138-console-app-catalog.md), Camunda의 커넥터 목록과 같은 결). 구현은 둘이다: **외부 정의**(C13 `tier: external` — HTTP 어댑터 정의, Center가 서명한다)와 **일꾼 앱**(C11 manifest — 일꾼이 코드로 처리한다. AI·사이트 처리기·모의 앱). 원본이 **콘솔**인 외부 정의는 Center 관리자가 여기서 만들고 고친다(아래 §만들기·고치기, [ADR-0141](../../../docs/decisions/0141-adapter-definitions-are-edited-in-the-console.md)). 원본이 **일꾼**인 것은 **보기만 한다** — 정의·manifest는 맡은 일꾼이 뜰 때 올린다(C15, [ADR-0122](../../../docs/decisions/0122-consumer-folder.md)). 원본이 둘이라는 말은 제목 옆 「?」 툴팁에만 둔다. 일꾼 폴더·키·기여 자원은 여기 없다(ADR-0128).
 
 > 상태: **돈다** (`app/connected-apps`, `app/connected-apps/[appId]`).
 

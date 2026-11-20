@@ -74,6 +74,7 @@ export function PackageActions({
   onDone,
   compact,
   deletable,
+  quiet,
 }: {
   packageId: string;
   version: string;
@@ -92,6 +93,11 @@ export function PackageActions({
   compact?: boolean;
   /** 「삭제...」도 메뉴에 둔다 (`compact`일 때만 — 상세 화면은 「관리」 영역에 따로 있다). */
   deletable?: boolean;
+  /**
+   * **줄마다 서는 단추**면 「승인...」을 칠하지 않는다(옅은 `primary` 면) — CON-15 「승인 대기」. 칠한 면은 화면에
+   * 하나뿐이다 (ADR-0157 — 줄이 열이면 칠한 단추도 열이 된다).
+   */
+  quiet?: boolean;
 }) {
   const [asking, setAsking] = useState<Ask | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -116,7 +122,7 @@ export function PackageActions({
             key={one}
             size="sm"
             // 화면에 놓이는 되돌릴 수 없는 동작은 칠하지 않는다 (ADR-0164 — 칠한 위험 단추는 확인 창 안에만).
-            variant={one === "approve" ? "primary" : one === "revoke" ? "danger-quiet" : "secondary"}
+            variant={one === "approve" ? (quiet ? "tonal" : "primary") : one === "revoke" ? "danger-quiet" : "secondary"}
             disabled={pending}
             onClick={() => setAsking(one)}
           >

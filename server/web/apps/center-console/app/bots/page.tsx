@@ -17,7 +17,7 @@ import {
 } from "@/lib/summary";
 
 /**
- * CON-02 BPM 프로세스 — BPM 프로세스·버전별 준비도. **판마다 한 줄**인 표다 ([ADR-0159](../../../../../docs/decisions/0159-con-02-is-a-table-like-the-others.md) —
+ * CON-02 프로세스 현황 — BPM 프로세스·버전별 준비도 (제목은 저작의 「프로세스」와 가른다, ADR-0181). **판마다 한 줄**인 표다 ([ADR-0159](../../../../../docs/decisions/0159-con-02-is-a-table-like-the-others.md) —
  * 콘솔의 목록은 모두 같은 표다). 묶는 일은 **차례를 정하는 동안만** 한다.
  *
  * **Center가 집계를 갖고 있지 않다.** 실행 요약(C3 `RunInfo`)·보고된 준비 상태(C4
@@ -106,7 +106,7 @@ export default async function BotsPage({
   return (
     <Shell mode={found.mode} actor={found.actor} current="/bots">
       <header className="mb-4">
-        <h1 className="text-h2 font-bold">프로세스</h1>
+        <h1 className="text-h2 font-bold">프로세스 현황</h1>
       </header>
 
       {failure ? (
@@ -114,7 +114,7 @@ export default async function BotsPage({
       ) : rows.length === 0 ? (
         <EmptyState
           title="올라온 프로세스가 없습니다."
-          hint="「저작 › 작업공간」에서 「배포 후보로 만들기」로 올리세요."
+          hint="「저작 › 프로젝트」의 프로세스에서 「배포 후보로 만들기」로 올리세요."
         />
       ) : (
         <div className="flex flex-col gap-3">
@@ -141,7 +141,7 @@ export default async function BotsPage({
         </div>
       )}
 
-      {/* 표 아래에 붙은 영역이 없다 — 서버 실행기·대기열은 「운영 › 서버 실행기」, 일정은 작업 지시다 (ADR-0172). */}
+      {/* 표 아래에 붙은 영역이 없다 — 서버 실행기·대기열은 「시스템 › 서버 실행기」, 일정은 작업 지시다 (ADR-0172). */}
     </Shell>
   );
 }
