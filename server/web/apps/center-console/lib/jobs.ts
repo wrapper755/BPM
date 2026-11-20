@@ -62,12 +62,18 @@ export type CancelControl = "cancel" | "stop" | null;
 
 const CANCELLABLE = new Set(["pending", "dispatched", "queued"]);
 
-export function cancelControl(job: Pick<JobInfo, "state" | "cancel_requested">): CancelControl {
+export function cancelControl(
+  job: Pick<JobInfo, "state" | "cancel_requested"> & { run_status?: string | null },
+): CancelControl {
   if (job.cancel_requested) return null;
   if (CANCELLABLE.has(job.state)) return "cancel";
-  if (job.state === "accepted") return "stop";
+  // 「수락」이어도 실행이 이미 끝났으면 멈출 것이 없다 (C3 `run_finished` — 작업 상태는 수락 그대로다).
+  if (job.state === "accepted" && !FINISHED.has(job.run_status ?? "")) return "stop";
   return null;
 }
+
+/** 끝난 실행의 `run_status` (C3) — 「중지...」가 없다. */
+const FINISHED = new Set(["success", "failed", "cancelled"]);
 
 /** 확인 창의 글 (CON-05 — 화면 문서의 문구 그대로). */
 export const STOP_CONFIRM = "도는 실행을 멈춥니다. 한 일은 되돌리지 않습니다 — 이미 보낸 메일·웹훅은 그대로입니다.";

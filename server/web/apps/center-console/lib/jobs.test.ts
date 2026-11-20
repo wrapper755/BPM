@@ -57,4 +57,10 @@ describe("cancelControl", () => {
     expect(cancelControl({ state: "cancelled", cancel_requested: true })).toBeNull();
     expect(cancelControl({ state: "rejected", cancel_requested: false })).toBeNull();
   });
+  it("수락이어도 실행이 끝났으면 「중지」가 없다 — 기다리는 실행은 멈출 수 있다", () => {
+    for (const run_status of ["success", "failed", "cancelled"]) {
+      expect(cancelControl({ state: "accepted", cancel_requested: false, run_status })).toBeNull();
+    }
+    expect(cancelControl({ state: "accepted", cancel_requested: false, run_status: "waiting" })).toBe("stop");
+  });
 });
