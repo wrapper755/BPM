@@ -133,6 +133,8 @@ export default async function RunsPage({
       key: "bpm_process_id",
       header: "프로세스",
       cardTitle: true,
+      // 이름이 되도록 다 보이게 — 결재함의 제목 열과 같은 폭 (ADR-0165).
+      minWidth: "26ch",
       // 실행 id 열은 없다 — 업무 이름이 상세로 가는 링크다 (화면 문서 CON-01).
       cell: (row) => (
         <Link className="font-medium text-text-primary hover:text-primary" href={`/runs/${encodeURIComponent(row.run_id)}`}>
@@ -140,14 +142,36 @@ export default async function RunsPage({
         </Link>
       ),
     },
-    { key: "version", header: "버전", width: "10ch", cell: (row) => row.version ?? "—" },
+    // 판은 「v<판>」, 보조 글자색 — 다른 목록의 「판」과 같다 (CON-02·CON-05·CON-15).
+    {
+      key: "version",
+      header: "판",
+      width: "10ch",
+      cell: (row) => (row.version ? <span className="text-text-secondary tabular-nums">v{row.version}</span> : "—"),
+    },
     // 자리는 Center가 그 실행의 작업에서 붙인다 (C16) — Studio 시험 실행·작업 없는 실행은 「—」.
-    { key: "company", header: "회사", width: "12ch", cell: (row) => orgName(row.company, org.company) },
+    {
+      key: "company",
+      header: "회사",
+      width: "12ch",
+      cell: (row) => (row.company ? <span className="whitespace-nowrap">{orgName(row.company, org.company)}</span> : "—"),
+    },
     { key: "department", header: "부서", width: "12ch", cell: (row) => orgName(row.department, org.department) },
     { key: "staff", header: "직원", width: "12ch", cell: (row) => orgName(row.staff, org.staff) },
     { key: "source", header: "시작 방식", width: "10ch", cell: (row) => sourceLabel(row.source) },
-    { key: "started_at", header: "시작", width: "14ch", cell: (row) => time(row.started_at) },
-    { key: "finished_at", header: "끝", width: "14ch", cell: (row) => time(row.finished_at) },
+    // 시각은 한 줄 (CON-05와 같다). 없으면 글자 「—」 그대로 — 휴대폰 카드가 그 줄을 뺀다.
+    {
+      key: "started_at",
+      header: "시작",
+      width: "12ch",
+      cell: (row) => (row.started_at ? <span className="whitespace-nowrap tabular-nums">{time(row.started_at)}</span> : "—"),
+    },
+    {
+      key: "finished_at",
+      header: "끝",
+      width: "12ch",
+      cell: (row) => (row.finished_at ? <span className="whitespace-nowrap tabular-nums">{time(row.finished_at)}</span> : "—"),
+    },
     {
       key: "duration_s",
       header: "소요",

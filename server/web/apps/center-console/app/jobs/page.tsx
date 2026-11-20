@@ -64,7 +64,8 @@ export default async function JobsPage({
     {
       key: "state",
       header: "상태",
-      width: "16ch",
+      // 상태 표지는 길이가 정해져 있다(대기열·취소됨 — 셋까지) — 그만큼만 쥔다.
+      width: "9ch",
       cell: (row) => {
         const note = stateNote(row);
         return (
@@ -79,6 +80,8 @@ export default async function JobsPage({
       key: "bot",
       header: "프로세스",
       cardTitle: true,
+      // 이름이 되도록 다 보이게 — 결재함의 제목 열과 같은 폭 (ADR-0165).
+      minWidth: "26ch",
       // 업무 이름 — 누르면 그 작업의 상세. 작업 id는 말풍선에 (U2). 이름을 못 찾으면 id가 고정폭으로 선다.
       cell: (row) => {
         const name = nameOf(row);
@@ -123,8 +126,21 @@ export default async function JobsPage({
         );
       },
     },
-    { key: "requested_at", header: "요청 시각", width: "12ch", cell: (row) => time(row.requested_at) },
-    { key: "expires_at", header: "만료", width: "12ch", cell: (row) => time(row.expires_at) },
+    // 시각은 한 줄 — 날짜와 시각이 두 줄로 갈리면 줄 높이가 들쭉날쭉하다 (CON-02 「최근 성공」과 같다).
+    {
+      key: "requested_at",
+      header: "요청 시각",
+      width: "12ch",
+      cell: (row) => <span className="whitespace-nowrap tabular-nums">{time(row.requested_at)}</span>,
+    },
+    {
+      key: "expires_at",
+      header: "만료",
+      width: "12ch",
+      // 없으면 글자 「—」 그대로 — 요소로 감싸면 휴대폰 카드가 그 줄을 빼지 못한다 (ADR-0164).
+      cell: (row) =>
+        row.expires_at ? <span className="whitespace-nowrap tabular-nums">{time(row.expires_at)}</span> : "—",
+    },
     {
       // 실행의 성패는 작업 상태가 아니다 — C3 `run_finished`가 정한다 (C5). 누르면 그 실행 (실행 id는 말풍선).
       key: "run",
@@ -140,7 +156,8 @@ export default async function JobsPage({
         ),
     },
     { key: "state_reason", header: "사유", width: "14ch", cell: reason },
-    { key: "note", header: "메모", cell: (row) => row.note ?? "—" },
+    // 메모도 너무 좁아지면 네 줄이 된다 — 이름 다음으로 폭을 쥔다.
+    { key: "note", header: "메모", minWidth: "22ch", cell: (row) => row.note ?? "—" },
   ];
   if (admin) {
     columns.push({
