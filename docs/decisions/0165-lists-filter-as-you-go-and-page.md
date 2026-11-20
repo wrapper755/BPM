@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 일부 대체됨([ADR-0166](0166-top-bar-header-and-ten-rows.md) — §4의 20줄이 10줄로) |
 | 날짜 | 2026-11-20 |
 | 관련 | 화면 CON-00 [F]·CON-01·CON-04·CON-05·CON-18, [ADR-0160](0160-the-filter-runs-as-you-type.md)(거르기는 치는 대로 — **CON-02만**이라던 것을 이 결정이 넓힌다), [ADR-0162](0162-usability-heuristics-review.md)(U2 — 이름 먼저, id는 뒤), [ADR-0164](0164-neutral-pro.md) |
 
