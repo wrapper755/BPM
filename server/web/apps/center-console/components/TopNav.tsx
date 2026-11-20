@@ -61,11 +61,11 @@ export function TopNav({ groups, current, who }: { groups: NavGroup[]; current: 
       <Link
         href="/dashboard"
         title="첫 화면"
-        className="mr-1 flex shrink-0 items-center gap-2 rounded-md py-1 md:mr-5"
+        className="mr-1 flex shrink-0 items-center gap-2 rounded-md py-1 lg:mr-6"
       >
-        {/* 앱 타일 — `primary` 둥근 정사각에 흰 기호 (ADR-0164). 가로로 긴 마크는 막대에서 연결선이 흐렸다. */}
+        {/* 앱 타일 — `primary` 둥근 정사각에 흰 기호 (ADR-0164). 24에 「BPM」 16이 짝이다 (ADR-0166). */}
         <AppTile />
-        <span className="text-body-lg font-semibold text-text-primary">BPM</span>
+        <span className="text-body-lg leading-none font-semibold tracking-tight text-text-primary">BPM</span>
       </Link>
 
       {/* 좁은 화면 — 단추 하나. 누르면 묶음·줄 전부가 한 장에 뜬다. */}

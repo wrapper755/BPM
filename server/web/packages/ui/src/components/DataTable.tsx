@@ -6,7 +6,7 @@ import { Paged } from "./Paged";
 /**
  * 표 (스타일 가이드 §3).
  *
- * - 머리 고정, 줄 높이는 토큰(`row.default` 36 / `row.compact` 32).
+ * - 머리는 옅은 회색 면에 13 굵게, 위 막대 아래에 붙어 선다(`Paged`, ADR-0166). 줄 높이는 토큰(`row.default` 36 / `row.compact` 32).
  * - 숫자 열은 오른쪽 정렬 + `tabular-nums`, id 열은 mono로 짧게 (툴팁에 전체, U2).
  * - **업무 값 열은 기본으로 접는다** (U10) — `business: true`인 열은 `showBusiness`일 때만 보인다.
  * - 정렬·필터 상태를 주소(URL)에 남기는 일은 화면의 몫이다 (여기서는 다루지 않는다).
@@ -14,7 +14,7 @@ import { Paged } from "./Paged";
  *   두 모양을 함께 그리고 CSS로 하나만 보인다 — 서버에서 그리는 화면이 많아 폭을 JS로 재지 않는다.
  *   머리가 빈 열(단추 열 등)은 이름 없이 카드 맨 아래에 선다. **값이 없는 줄(「—」·빈 칸)은 카드에 그리지
  *   않는다** (H8, ADR-0162) — 표는 열이 맞아야 해서 그대로 두지만 카드에서는 「—」 줄이 대여섯이었다.
- * - **20줄씩 쪽으로 나눈다** (ADR-0165) — 줄은 여기서(서버에서도) 다 그리고, 어느 쪽을 보일지는 `Paged`
+ * - **10줄씩 쪽으로 나눈다** (ADR-0165·0166) — 줄은 여기서(서버에서도) 다 그리고, 어느 쪽을 보일지는 `Paged`
  *   (브라우저)가 고른다. 칸 그리는 함수는 브라우저로 넘길 수 없어서 **그린 줄**을 넘긴다. 받은 줄이 바뀌면
  *   (거르기) 첫 쪽이다.
  */
@@ -59,7 +59,7 @@ export function DataTable<T>({
   empty,
   caption,
   className,
-  pageSize = 20,
+  pageSize = 10,
 }: DataTableProps<T>) {
   const shown = columns.filter((c) => showBusiness || !c.business);
   const rowHeight = density === "compact" ? "var(--size-row-compact)" : "var(--size-row-default)";
@@ -131,7 +131,9 @@ export function DataTable<T>({
           scope="col"
           style={{ width: c.width, minWidth: c.minWidth, height: rowHeight }}
           className={cn(
-            "border-b border-border-default px-4 text-caption font-semibold text-text-muted",
+            // 본문 칸과 같은 여백·같은 정렬 (ADR-0166). 머리 이름은 접지 않는다 — 두 줄 머리는 열을 읽기 어렵다.
+            // 아래 선은 안쪽 그림자다 — 겹친 테두리(`border-collapse`)는 붙어 선 머리를 따라오지 않는다.
+            "shadow-[inset_0_-1px_0_var(--border-default)] px-4 py-2 align-middle text-body-sm font-semibold whitespace-nowrap text-text-secondary",
             c.align === "right" ? "text-right" : "text-left",
           )}
         >

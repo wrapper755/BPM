@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@bpm/ui";
+import { BAR_BUTTON } from "./bar-button";
 
 /**
  * CON-00 위 막대 「새로 고침」 — 지금 화면을 Center에서 다시 읽는다. 브라우저는 다시 그려 달라고만
@@ -21,7 +22,7 @@ export function Refresh() {
       onClick={() => start(() => router.refresh())}
       title="새로 고침"
       aria-label={pending ? "읽는 중" : "새로 고침"}
-      className="px-2 sm:px-4"
+      className={BAR_BUTTON}
     >
       <RefreshCw size={16} aria-hidden className={`sm:hidden${pending ? " animate-spin" : ""}`} />
       <span className="hidden sm:inline">{pending ? "읽는 중..." : "새로 고침"}</span>
