@@ -79,6 +79,7 @@ export default async function JobsPage({
     {
       key: "job_id",
       header: "작업 id",
+      cardTitle: true,
       width: "14ch",
       mono: true,
       cell: (row) => (

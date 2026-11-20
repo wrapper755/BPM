@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
+import { LogOut } from "lucide-react";
 import { Button } from "@bpm/ui";
 import { logout } from "@/app/actions";
 import { openMode, session } from "@/lib/center";
@@ -9,11 +10,12 @@ import { TopNav, type NavGroup, type NavItem } from "./TopNav";
 
 /**
  * CON-00 공통 틀 — **위 막대 하나다** ([ADR-0152](../../../../../docs/decisions/0152-console-chrome-is-one-top-bar.md)):
- * 화면 폭 전체의 짙은 띠(48)에 마크 + 「BPM」 + 묶음 여섯, 그 아래가 본문이다.
+ * 화면 폭 전체의 **밝은 띠**(56)에 마크 + 「BPM」 + 묶음 여섯, 그 아래가 본문이다
+ * ([ADR-0161](../../../../../docs/decisions/0161-soft-cards.md) — 짙은 틀을 벗었다. 본문은 가운데 최대 폭 안에 선다).
  * 레일(56)과 펼침 패널(224)은 걷었다 — 묶음이 여섯·줄이 열하나뿐이라 280px를 늘 쥐고도 패널이
  * 거의 비어 있었다.
  *
- * **지금 자리는 본문 머리 띠로 내려왔다** (§4) — 위 막대를 메뉴가 쥐었고, 상세 화면이 목록으로
+ * **지금 자리는 본문 머리로 내려왔다** (§4) — 위 막대를 메뉴가 쥐었고, 상세 화면이 목록으로
  * 돌아가는 길은 그 줄뿐이라 없앨 수 없다.
  *
  * 아직 없는 화면은 **끄고 이유를 가까이 적는다** (U3).
@@ -113,6 +115,7 @@ export async function Shell({
   const roleLabel = mode === "admin" ? (company ? "회사 관리자" : "관리자") : "보기 전용";
   // 열린 모드는 **켜 둔 것을 잊는 것**이 위험이라 늘 보이는 자리에 둔다 (ADR-0142 §5).
   const open = await openMode();
+  const who = `${actor} · ${roleLabel}${company ? ` · ${company}` : ""}`;
   const groups: NavGroup[] = NAV.map((group) => ({
     ...group,
     items: group.items.filter((item) => !item.adminOnly || centerAdmin),
@@ -120,12 +123,12 @@ export async function Shell({
 
   return (
     <div className="min-h-screen">
-      {/* [A] 위 막대 — 마크·메뉴·누구인지. **틀은 이것 하나다.** */}
+      {/* [A] 위 막대 — 마크·메뉴·누구인지. **틀은 이것 하나다.** 바탕과 같은 결의 흰 면에 아래 선 하나 (ADR-0161). */}
       <header
-        className="chrome fixed inset-x-0 top-0 z-40 flex items-center gap-2 border-b-2 border-chrome-edge px-3 md:gap-3 md:px-5"
+        className="fixed inset-x-0 top-0 z-40 flex items-center gap-2 border-b border-border-default bg-bg-surface/90 px-3 backdrop-blur md:gap-3 md:px-6"
         style={{ height: "var(--size-topbar-height)" }}
       >
-        <TopNav groups={groups} current={current} />
+        <TopNav groups={groups} current={current} who={who} />
         {open ? (
           <span
             title="키·승인 없이 들어옵니다 — 등록 요청이 저절로 승인되고, 일꾼이 스스로 들어오고, 키 없는 호출이 관리자입니다 (BPM_CENTER__OPEN_MODE)"
@@ -145,10 +148,10 @@ export async function Shell({
             <span className="hidden md:inline">열린 모드</span>
           </span>
         ) : null}
-        {/* 좁은 화면에서는 **누구인지를 접는다** — 결재는 휴대폰에서도 할 수 있어야 한다 (CON-00). */}
+        {/* 좁은 화면에서는 **누구인지를 접는다** — 펼친 메뉴의 맨 아래로 간다 (CON-00). */}
         <span
-          className="hidden shrink-0 text-body-sm whitespace-nowrap md:inline"
-          title={`${actor} · ${roleLabel}${company ? ` · ${company}` : ""}`}
+          className="hidden shrink-0 text-body-sm whitespace-nowrap lg:inline"
+          title={who}
         >
           {actor}
           <span className="text-text-muted">
@@ -161,14 +164,19 @@ export async function Shell({
           <Refresh />
         </span>
         <form action={logout} className="shrink-0">
-          <Button type="submit" variant="ghost" size="sm">
-            로그아웃
+          <Button type="submit" variant="ghost" size="sm" title="로그아웃" aria-label="로그아웃" className="px-2 sm:px-4">
+            <LogOut size={16} aria-hidden className="sm:hidden" />
+            <span className="hidden sm:inline">로그아웃</span>
           </Button>
         </form>
       </header>
 
       <main
-        className={full ? "flex min-w-0 flex-col" : "page-main min-w-0 p-6"}
+        className={
+          full
+            ? "flex min-w-0 flex-col"
+            : "page-main mx-auto w-full max-w-[1440px] min-w-0 px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-8"
+        }
         style={{
           marginTop: "var(--size-topbar-height)",
           // 가득 쓰는 화면은 **남는 높이를 다 가진다** — 캔버스가 제 높이를 알아야 그릴 수 있다.

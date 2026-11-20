@@ -95,6 +95,7 @@ export default async function ApprovalsPage({
     {
       key: "title",
       header: "제목",
+      cardTitle: true,
       cell: (row) => (
         <Link className="underline" href={`/approvals/${encodeURIComponent(row.request_id)}`}>
           {row.title ?? "결재 요청"}
