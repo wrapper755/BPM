@@ -43,7 +43,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
 
       {/* 치는 대로 든다(ADR-0165), ↺는 칸 바로 옆 (ADR-0171 — CON-02와 같은 결). */}
       <AutoFilter clear="inline">
-        <div className="flex flex-col gap-1 text-body-sm">
+        <div className="filter-field">
           <label htmlFor="projects-q">이름</label>
           <span className="flex items-center gap-1">
             <input

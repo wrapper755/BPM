@@ -169,7 +169,7 @@ export default async function ApprovalsPage({
       {/* 필터는 JS 없이도 돈다 — GET 폼이 주소에 남긴다. */}
       {/* 고르는 대로 든다 — 「좁히기」가 없다 (ADR-0165). */}
       <AutoFilter>
-        <label className="flex flex-col gap-1 text-body-sm">
+        <label className="filter-field">
           <span className="text-text-muted">상태</span>
           <select
             name="state"
@@ -183,7 +183,7 @@ export default async function ApprovalsPage({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-body-sm">
+        <label className="filter-field">
           <span className="text-text-muted">실행하는 곳</span>
           <select
             name="host"
@@ -198,7 +198,7 @@ export default async function ApprovalsPage({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-body-sm">
+        <label className="filter-field">
           <span className="text-text-muted">담당</span>
           {/* 자동 완성 — 결재에 적힌 담당과 조직의 직원 이름이 후보다 (ADR-0165). 모르는 이름도 칠 수 있다. */}
           <Autocomplete

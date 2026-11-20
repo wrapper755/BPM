@@ -245,7 +245,7 @@ export default async function ServerRunnerPage({
             <p className="text-body-sm text-text-muted">
               {info.last_heartbeat_at
                 ? `오프라인입니다 — 실행 중·기다리는 실행·확장은 마지막 보고 ${time(info.last_heartbeat_at)} 기준입니다.`
-                : "아직 하트비트를 받지 못했습니다 — 실행 중·기다리는 실행은 비어 있습니다."}
+                : "아직 연락을 받지 못했습니다 — 실행 중·기다리는 실행은 비어 있습니다."}
             </p>
           ) : null}
           {info.paused ? (
@@ -282,7 +282,7 @@ export default async function ServerRunnerPage({
                   ? `실행기 ${info.versions.server_runner} · core ${info.versions.core}`
                   : "보고 없음"}
               </dd>
-              <dt className="text-text-muted">마지막 하트비트</dt>
+              <dt className="text-text-muted">마지막 연락</dt>
               <dd>{time(info.last_heartbeat_at)}</dd>
               <dt className="text-text-muted">처음 등록</dt>
               <dd>{time(info.registered_at)}</dd>

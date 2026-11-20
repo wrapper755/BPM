@@ -121,8 +121,8 @@ export function ProcessRows({
         ) : null}
       </div>
 
-      <form className="filter-card mb-4 flex flex-wrap items-end gap-3" method="get" onSubmit={(event) => event.preventDefault()}>
-        <div className="flex flex-col gap-1 text-body-sm">
+      <form className="filter-bar" method="get" onSubmit={(event) => event.preventDefault()}>
+        <div className="filter-field">
           <label htmlFor="processes-q">이름</label>
           <span className="flex items-center gap-1">
             <input

@@ -10,6 +10,7 @@ import { time } from "@/lib/time";
 import {
   SAMPLE,
   SCAN,
+  DEFAULT_STATUS,
   STATUS_FILTERS,
   filterGroups,
   flattenGroups,
@@ -60,7 +61,7 @@ export function ProcessTable({
     }
     const params = new URLSearchParams();
     if (typed.trim()) params.set("q", typed.trim());
-    if (status !== "all") params.set("status", status);
+    if (status !== DEFAULT_STATUS) params.set("status", status);
     if (sort !== "trouble") params.set("sort", sort);
     const search = params.toString();
     window.history.replaceState(null, "", search ? `?${search}` : window.location.pathname);
@@ -74,12 +75,12 @@ export function ProcessTable({
     <>
       {/* [F] 거르기 — 치거나 고르면 **바로** 듣는다. `method="get"`은 JS가 없을 때의 길이다. */}
       <form
-        className="filter-card mb-4 flex flex-wrap items-end gap-3"
+        className="filter-bar"
         method="get"
         onSubmit={(event) => event.preventDefault()}
       >
         {/* 「초기화」는 이름 칸 바로 옆의 아이콘 단추다 (ADR-0171). */}
-        <div className="flex flex-col gap-1 text-body-sm">
+        <div className="filter-field">
           <label htmlFor="bots-q">이름</label>
           <span className="flex items-center gap-1">
             <input
@@ -94,13 +95,13 @@ export function ProcessTable({
               href="/bots"
               onClick={() => {
                 setText("");
-                setStatus("all");
+                setStatus(DEFAULT_STATUS);
                 setSort("trouble");
               }}
             />
           </span>
         </div>
-        <label className="flex flex-col gap-1 text-body-sm">
+        <label className="filter-field">
           상태
           <select
             name="status"
@@ -115,7 +116,7 @@ export function ProcessTable({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-body-sm">
+        <label className="filter-field">
           정렬
           <select
             name="sort"

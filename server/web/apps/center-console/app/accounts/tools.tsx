@@ -98,20 +98,12 @@ export function AccountMenu({
       }
     });
 
-  if (self) {
-    // 자기 줄은 할 일이 하나라 메뉴 없이 단추다 (자기 역할·멈춤은 다른 관리자가 한다).
-    return (
-      <>
-        <Button size="sm" variant="secondary" onClick={() => setAsking("own")}>
-          비밀번호 바꾸기...
-        </Button>
-        <OwnPassword open={asking === "own"} onClose={() => setAsking(null)} />
-      </>
-    );
-  }
-
+  // **자기 줄도 같은 「...」이다** — 표에 단추 글이 서지 않는다(줄 동작은 「⋯」 하나, ADR-0164). 할 일은 하나뿐이다
+  // (자기 역할·멈춤은 다른 관리자가 한다).
   // 회사 관리자의 역할은 여기서 바꾸지 않는다 — 「관리자로 바꾸기」가 Center 관리자를 만들면 안 된다 (C16).
-  const items: Array<{ ask: Ask; label: string }> = [
+  const items: Array<{ ask: Ask; label: string }> = self
+    ? [{ ask: "own", label: "비밀번호 바꾸기..." }]
+    : [
         ...(role === "company_admin"
           ? []
           : [{ ask: "role" as Ask, label: nextRole === "admin" ? "관리자로 바꾸기..." : "보기 전용으로 바꾸기..." }]),
@@ -146,6 +138,8 @@ export function AccountMenu({
         </ul>
       ) : null}
       {error && asking === null ? <ErrorBanner message={error} /> : null}
+
+      <OwnPassword open={asking === "own"} onClose={() => setAsking(null)} />
 
       <ConfirmDialog
         open={asking === "role"}

@@ -596,10 +596,16 @@ describe("CON-02 표 — 판을 묶어 차례를 정하고 줄로 편다", () =>
     expect(sortGroups(groups, "trouble").map((one) => one.id)).toEqual(["b", "a"]);
   });
 
-  it("기본 거르기는 「전체」다 — 철회된 판도 서고, 옛 주소의 `active`도 「전체」로 읽는다 (ADR-0171)", () => {
-    const rows = [version("a", "1.0.0", { status: "revoked" }), version("b", "1.0.0")];
-    expect(filterGroups(rows, { status: statusFilterOf(undefined) })).toHaveLength(2);
-    expect(statusFilterOf("active")).toBe("all");
+  it("기본 거르기는 「철회 빼고」다 — 철회된 판만 숨고 후보·지원 종료는 선다 (ADR-0184)", () => {
+    const rows = [
+      version("a", "1.0.0", { status: "revoked" }),
+      version("b", "1.0.0"),
+      version("c", "1.0.0", { status: "candidate" }),
+      version("d", "1.0.0", { status: "deprecated" }),
+    ];
+    expect(filterGroups(rows, { status: statusFilterOf(undefined) }).map((one) => one.id)).toEqual(["b", "c", "d"]);
+    expect(statusFilterOf("active")).toBe("live");
+    expect(filterGroups(rows, { status: statusFilterOf("all") })).toHaveLength(4);
     expect(filterGroups(rows, { status: "revoked" }).map((one) => one.id)).toEqual(["a"]);
   });
 
