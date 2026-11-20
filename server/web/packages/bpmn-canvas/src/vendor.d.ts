@@ -25,7 +25,7 @@ interface BpmnServices {
     ): import("./types").Shape | undefined;
   };
   canvas: {
-    zoom(level?: number | string): number;
+    zoom(level?: number | string, center?: "auto" | { x: number; y: number }): number;
     viewbox(box?: { x: number; y: number; width: number; height: number }): {
       x: number;
       y: number;
@@ -117,6 +117,12 @@ declare module "bpmn-moddle" {
     fromXML(xml: string): Promise<{ rootElement: import("./types").BusinessObject }>;
     toXML(element: import("./types").BusinessObject): Promise<{ xml: string }>;
   }
+}
+
+declare module "diagram-js-minimap" {
+  /** diagram-js 모듈 — `additionalModules`에 넣는다. 서비스 이름은 `minimap`이다. */
+  const minimapModule: Record<string, unknown>;
+  export default minimapModule;
 }
 
 declare module "bpmn-auto-layout" {

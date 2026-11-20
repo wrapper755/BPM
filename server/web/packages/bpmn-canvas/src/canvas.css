@@ -4,12 +4,108 @@
 @import "bpmn-js/dist/assets/diagram-js.css";
 @import "bpmn-js/dist/assets/bpmn-js.css";
 @import "bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css";
+@import "diagram-js-minimap/assets/diagram-js-minimap.css";
 
-/* 캔버스가 자리를 다 쓰게 한다 — 쓰는 쪽이 높이를 주는 상자 안에 둔다. */
+/* 캔버스가 자리를 다 쓰게 한다 — 쓰는 쪽이 높이를 주는 상자 안에 둔다.
+   **그리는 자리는 양옆 패널과 바탕이 다르다** — 옅은 바탕에 점 격자를 깔아 「여기가 판」임을 말하고,
+   흰 도형이 그 위에 선다. 패널은 흰 면 그대로다. */
 .bpm-canvas {
+  position: relative;
   height: 100%;
   width: 100%;
+  background-color: var(--bg-canvas);
+  background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
+  background-size: var(--space-5) var(--space-5);
+}
+
+.bpm-canvas-host {
+  height: 100%;
+  width: 100%;
+}
+
+/* 둘러보기 도구 띠 — 떠 있는 작은 면 하나. */
+.bpm-canvas-tools {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-0-5);
+  padding: var(--space-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   background-color: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.bpm-canvas-tools-gap {
+  width: 1px;
+  align-self: stretch;
+  margin: 0 var(--space-1);
+  background-color: var(--border-default);
+}
+
+.bpm-canvas-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.bpm-canvas-tool:hover {
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.bpm-canvas-tool[aria-pressed="true"] {
+  background-color: var(--primary-subtle);
+  color: var(--primary);
+}
+
+.bpm-canvas-tool:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.bpm-canvas-tool svg {
+  width: var(--space-4);
+  height: var(--space-4);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 미니맵 — 제 여닫는 단추는 숨기고 도구 띠가 연다(같은 일을 하는 단추가 두 곳에 있지 않게).
+   자리는 오른쪽 위, 모양은 도구 띠와 같은 떠 있는 면이다. */
+.bpm-canvas .djs-minimap .toggle {
+  display: none;
+}
+
+.bpm-canvas .djs-minimap {
+  top: var(--space-3);
+  right: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.bpm-canvas .djs-minimap:not(.open) {
+  display: none;
+}
+
+/* 보고 있는 자리 상자 — 기본은 주황이다. 선택 윤곽(주 색)과 섞이지 않게 글자 색으로 둔다. */
+.bpm-canvas .djs-minimap {
+  --minimap-viewport-border-color: var(--text-secondary);
+  --minimap-background-color: var(--bg-surface);
 }
 
 /* 포커스 테두리는 브라우저 기본이 캔버스 둘레에 뜬다 — 카드 테두리가 영역을 말한다. */

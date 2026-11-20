@@ -6,6 +6,53 @@ import type { NodeState, Shape } from "./types";
  * 그림의 선·채움·글자를 **토큰 변수로** 그린다 (ADR-0101) — 테마를 바꿔도 다시 그리지 않는다.
  * 값을 코드에 적지 않는다 (CLAUDE.md §5): 이름은 `design/tokens.json`에서 온 `tokens.css`의 것이다.
  */
+/**
+ * 캔버스를 둘러보는 손잡이 — 확대·축소·화면에 맞추기·실제 크기 (CON-20b [C]의 도구 띠).
+ * 모델러와 뷰어가 **같은 함수**를 쓴다 — 둘이 따로 적으면 같은 단추가 두 화면에서 다르게 움직인다.
+ */
+export interface CanvasNavigation {
+  zoomIn(): void;
+  zoomOut(): void;
+  /** 그림 전체가 보이게 맞춘다. */
+  fit(): void;
+  /** 100%로 돌리고 그림 가운데로 (열 때의 자리). */
+  actualSize(): void;
+  /** 미니맵을 펴거나 접는다 — 펴졌으면 참. */
+  toggleMinimap(): boolean;
+}
+
+interface Minimap {
+  toggle(open?: boolean): void;
+  isOpen(): boolean;
+}
+
+interface ZoomScroll {
+  stepZoom(delta: number): void;
+}
+
+export function navigationOf(get: <T>(name: string) => T, canvas: () => CanvasApi): CanvasNavigation {
+  // **자리가 없으면 아무것도 하지 않는다** — 0으로 나눈 scale이 `SVGMatrix`에서 죽는다 (`centerAtNormalZoom`).
+  const sized = (): boolean => {
+    const { outer } = canvas().viewbox();
+    return outer.width > 0 && outer.height > 0;
+  };
+  return {
+    zoomIn: () => sized() && get<ZoomScroll>("zoomScroll").stepZoom(1),
+    zoomOut: () => sized() && get<ZoomScroll>("zoomScroll").stepZoom(-1),
+    fit: () => {
+      if (sized()) fitBesidePalette(canvas());
+    },
+    actualSize: () => {
+      centerAtNormalZoom(canvas());
+    },
+    toggleMinimap: () => {
+      const minimap = get<Minimap>("minimap");
+      minimap.toggle();
+      return minimap.isOpen();
+    },
+  };
+}
+
 export const RENDERER = {
   bpmnRenderer: {
     defaultFillColor: "var(--bg-surface, white)",
@@ -31,6 +78,26 @@ type CanvasApi = BpmnServices["canvas"];
  * 자리를 맞추면 bpmn-js가 0으로 나누어 `SVGMatrix`에서 죽고, 화면은 「다이어그램을 읽지
  * 못했습니다」라고 거짓말을 한다. 부르는 쪽은 자리가 생겼을 때 다시 부른다 (`resized()`).
  */
+/** 「화면에 맞추기」의 바깥 여백 (화면 px). */
+const FIT_MARGIN = 24;
+
+/**
+ * 그림 전체를 **팔레트 오른쪽 빈 자리**에 맞춘다 — bpmn-js의 `fit-viewport`는 판 전체에 맞춰 왼쪽 끝이
+ * 팔레트 밑에 깔린다. **100%보다 키우지 않는다** — 작은 그림이 화면을 채울 만큼 커지면 「맞추기」가 아니다.
+ */
+const fitBesidePalette = (canvas: CanvasApi): void => {
+  canvas.zoom(1);
+  const { inner, outer } = canvas.viewbox();
+  if (inner.width <= 0 || inner.height <= 0) return;
+  const room = { width: outer.width - PALETTE_GAP - FIT_MARGIN, height: outer.height - 2 * FIT_MARGIN };
+  if (room.width <= 0 || room.height <= 0) return;
+  const scale = Math.min(1, room.width / inner.width, room.height / inner.height);
+  // 화면 px → 그림 좌표. 그림을 빈 자리 가운데에 둔다.
+  const left = (PALETTE_GAP + (room.width - inner.width * scale) / 2) / scale;
+  const top = (outer.height - inner.height * scale) / 2 / scale;
+  canvas.viewbox({ x: inner.x - left, y: inner.y - top, width: outer.width / scale, height: outer.height / scale });
+};
+
 export const centerAtNormalZoom = (canvas: CanvasApi): boolean => {
   const before = canvas.viewbox();
   if (before.outer.width <= 0 || before.outer.height <= 0) return false;

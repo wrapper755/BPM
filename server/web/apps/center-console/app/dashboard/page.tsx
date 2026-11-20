@@ -12,6 +12,7 @@ import {
   workspaceTip,
 } from "@/lib/dashboard";
 import { Shell } from "@/components/Shell";
+import { duration } from "@/lib/summary";
 import { time } from "@/lib/time";
 
 /**
@@ -61,7 +62,8 @@ export default async function DashboardPage() {
           unit="건 실패"
           note={
             today
-              ? `완료 ${today.done} · 도는 중 ${today.running} · 기다리는 중 ${today.waiting}`
+              ? // 도는 중·기다리는 중은 **오늘 시작한 것만이 아니다** (`runsToday`) — 「지금」이라고 적는다.
+                `완료 ${today.done} · 지금 도는 중 ${today.running} · 지금 기다리는 중 ${today.waiting}`
               : runs.error
           }
         />
@@ -74,9 +76,9 @@ export default async function DashboardPage() {
           note={
             waiting
               ? [
-                  waiting.oldestHours === null
+                  waiting.oldestSeconds === null
                     ? "기다리는 결재가 없습니다"
-                    : `가장 오래 기다린 것 ${waiting.oldestHours}시간`,
+                    : `가장 오래 기다린 것 ${duration(waiting.oldestSeconds)}`,
                   waiting.unassigned > 0
                     ? `담당자 없는 것 ${waiting.unassigned}건 — 콘솔에서만 답할 수 있습니다`
                     : null,
@@ -88,8 +90,9 @@ export default async function DashboardPage() {
         />
         <Card
           title="승인 기다리는 후보"
-          href="/deployments"
-          link="배포 보기"
+          // 후보는 배포 화면에 없다 — 승인은 CON-02의 그 판에서 한다.
+          href="/bots?status=candidate"
+          link="후보 보기"
           value={candidate === null ? null : String(candidate)}
           unit="판"
           note={candidate === null ? packages.error : "승인하면 배포할 수 있습니다"}
@@ -116,9 +119,9 @@ export default async function DashboardPage() {
           unit="건"
           note={
             queue
-              ? queue.oldestMinutes === null
+              ? queue.oldestSeconds === null
                 ? "내려갈 작업이 없습니다"
-                : `가장 오래 기다린 것 ${queue.oldestMinutes}분`
+                : `가장 오래 기다린 것 ${duration(queue.oldestSeconds)}`
               : jobs.error
           }
         />

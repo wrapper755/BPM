@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PanelBottomClose, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button, ErrorBanner } from "@bpm/ui";
 import type { BpmnCanvasHandle, NodeProperties, NodeState, PropertyPatch, TaskSpec } from "@bpm/bpmn-canvas";
 import type { FileInfo } from "@bpm/api-types/c17-file-info";
@@ -26,7 +27,7 @@ import { fileLabel, groupFiles, isEditable, opensWith } from "@/lib/workspaces";
 import { isLive } from "@/lib/trials";
 import { building, checking } from "@/lib/checks";
 import { BuildButton, BuildLine } from "./build";
-import { DETAIL_PANEL, FILES_PANEL, Splitter, usePanelWidth } from "./splitter";
+import { BOTTOM_PANEL, DETAIL_PANEL, FILES_PANEL, Splitter, usePanelWidth } from "./splitter";
 import { CaseEditor } from "./cases";
 import { Checks } from "./checks";
 import { DecisionGrid } from "./decisions";
@@ -138,6 +139,7 @@ export function Workspace({
   // 폭은 끌어서 바꾼다 — 최소·최대 안에서, 그 브라우저에 기억한다 (CON-20 [E]·[P]).
   const [filesWidth, setFilesWidth] = usePanelWidth(FILES_PANEL);
   const [detailWidth, setDetailWidth] = usePanelWidth(DETAIL_PANEL);
+  const [bottomHeight, setBottomHeight] = usePanelWidth(BOTTOM_PANEL);
   const canvas = useRef<BpmnCanvasHandle>(null);
   const router = useRouter();
   const projectHref = `/workspaces/projects/${encodeURIComponent(project.id)}` as Route;
@@ -368,7 +370,8 @@ export function Workspace({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* [H] 머리 띠 — 지금 자리와 탭, 그리고 그 화면에서만 쓰는 것 (CON-00 [H]와 같은 결). */}
-      <header className="flex flex-col gap-2 border-b border-border-default bg-bg-surface px-4 pt-3 md:px-5">
+      {/* 머리 띠는 작업 영역 위에 **떠 있는 면**이다 — 그림자 한 겹으로 아래 패널들과 갈라 선다. */}
+      <header className="relative z-20 flex flex-col gap-2 border-b border-border-default bg-bg-surface px-4 pt-3 shadow-md md:px-5">
         {/* 위 막대는 **메뉴가 쥐었다** (ADR-0152 §7) — 이 화면은 제 머리 띠에 지금 상태만 말한다.
             **첫 줄은 지금 자리 하나**다 — 다른 화면의 지금 자리 줄과 같은 말로 시작하고, 탭·단추와 한 줄에 서지 않는다. */}
         <p className="text-body-sm text-text-secondary">
@@ -394,10 +397,11 @@ export function Workspace({
               role="tab"
               aria-selected={tab === one}
               onClick={() => setTab(one)}
+              // 화면 전체를 바꾸는 탭 — 밑줄 탭이고 패널 안의 고르기(세그먼트)보다 한 단계 크다.
               className={
                 tab === one
-                  ? "border-b-2 border-primary px-3 pt-1 pb-2 text-body-sm font-semibold"
-                  : "border-b-2 border-transparent px-3 pt-1 pb-2 text-body-sm text-text-muted hover:text-text-primary"
+                  ? "border-b-2 border-primary px-3 pt-1 pb-2 text-body font-semibold"
+                  : "border-b-2 border-transparent px-3 pt-1 pb-2 text-body text-text-muted hover:text-text-primary"
               }
             >
               {one}
@@ -474,6 +478,8 @@ export function Workspace({
           style={{ width: filesWidth }}
           className="shrink-0 overflow-y-auto border-r border-border-default bg-bg-surface p-3"
         >
+          {/* 머리 띠 — 패널마다 옅은 띠 하나로 「여기는 다른 영역」임을 말한다 (캔버스는 점 격자 바탕). */}
+          <div className="-mx-3 -mt-3 mb-3 border-b border-border-default bg-bg-subtle p-3">
           {/* 같은 프로젝트의 프로세스 (ADR-0175) — 고르면 그리로 간다. 저장 안 한 것이 있으면 먼저 묻는다. */}
           {siblings.length > 1 ? (
             <label className="mb-3 flex flex-col gap-1 text-caption text-text-muted">
@@ -509,8 +515,13 @@ export function Workspace({
             </label>
           ) : null}
           {/* 탭 둘 — 「파일」과 「리소스」 (ADR-0155). 패널을 넷째로 늘리지 않는다. */}
-          <div className="mb-2 flex items-center">
-            <div role="tablist" aria-label="탐색기" className="flex gap-1">
+          <div className="flex items-center gap-2">
+            {/* 패널 안의 보기 고르기 — 화면 탭(밑줄)과 다른 **세그먼트** 모양이다. */}
+            <div
+              role="tablist"
+              aria-label="탐색기"
+              className="flex flex-1 gap-0.5 rounded-md border border-border-default bg-bg-canvas p-0.5"
+            >
               {LEFT_TABS.map((one) => (
                 <button
                   key={one}
@@ -519,15 +530,16 @@ export function Workspace({
                   onClick={() => setLeft(one)}
                   className={
                     left === one
-                      ? "border-b-2 border-primary px-2 py-1 text-caption font-semibold"
-                      : "border-b-2 border-transparent px-2 py-1 text-caption text-text-muted hover:text-text-primary"
+                      ? "flex-1 rounded-sm bg-bg-surface px-2 py-1 text-caption font-semibold text-text-primary shadow-sm"
+                      : "flex-1 rounded-sm px-2 py-1 text-caption text-text-muted hover:text-text-primary"
                   }
                 >
                   {one}
                 </button>
               ))}
             </div>
-            <Fold label="파일 패널 접기" onClick={() => setShowFiles(false)} />
+            <Fold label="파일 패널 접기" side="left" onClick={() => setShowFiles(false)} />
+          </div>
           </div>
           {left === "리소스" ? (
             <ResourcePanel libs={info.libs ?? []} canWrite={editing} onAdd={addNode} />
@@ -651,9 +663,9 @@ export function Workspace({
           style={{ width: detailWidth }}
           className="shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-3"
         >
-          <div className="mb-2 flex items-center">
-            <h2 className="text-caption font-semibold text-text-muted">속성</h2>
-            <Fold label="속성 패널 접기" onClick={() => setShowDetail(false)} />
+          <div className="-mx-3 -mt-3 mb-3 flex items-center border-b border-border-default bg-bg-subtle px-3 py-2">
+            <h2 className="text-caption font-semibold text-text-secondary">속성</h2>
+            <Fold label="속성 패널 접기" side="right" onClick={() => setShowDetail(false)} />
           </div>
           {picked ? (
             <Properties
@@ -680,9 +692,20 @@ export function Workspace({
         </aside>
         </div>
 
-        {/* [L] 아래 탭 — 접힌다. 「변수」는 그림의 `bpm:process`라 캔버스 쪽에 있다 (STU-01 [L]). */}
+        {/* [L] 아래 탭 — 접힌다. 「변수」는 그림의 `bpm:process`라 캔버스 쪽에 있다 (STU-01 [L]).
+            펴져 있으면 윗경계를 **끌어서 높이를 바꾼다** — 옆 패널과 같은 손잡이를 눕힌 것이다. */}
+        {bottom ? (
+          <Splitter
+            label="아래 탭 높이"
+            size={BOTTOM_PANEL}
+            width={bottomHeight}
+            side="bottom"
+            onChange={setBottomHeight}
+            onDone={() => canvas.current?.editor?.resized()}
+          />
+        ) : null}
         <div className="shrink-0 border-t border-border-default bg-bg-surface">
-          <div role="tablist" aria-label="아래 탭" className="flex gap-1 px-3">
+          <div role="tablist" aria-label="아래 탭" className="flex items-center gap-1 bg-bg-subtle px-3">
             {BOTTOM.map((one) => (
               <button
                 key={one}
@@ -698,10 +721,22 @@ export function Workspace({
                 {one}
               </button>
             ))}
+            {bottom ? (
+              <button
+                onClick={() => setBottom(null)}
+                title="아래 탭 접기"
+                aria-label="아래 탭 접기"
+                className="ml-auto rounded-md p-1 text-text-muted hover:bg-bg-surface hover:text-text-primary"
+              >
+                <PanelBottomClose size={16} aria-hidden="true" />
+              </button>
+            ) : null}
           </div>
+          {bottom ? (
+          <div style={{ height: bottomHeight }} className="overflow-y-auto">
           {bottom === "변수" ? (
             shows === "canvas" ? (
-              <div className="max-h-72 overflow-y-auto border-t border-border-default">
+              <div className="border-t border-border-default">
                 <Variables
                   key={file?.path}
                   canvas={canvas}
@@ -739,6 +774,8 @@ export function Workspace({
               )}
             </div>
           ) : null}
+          </div>
+          ) : null}
         </div>
       </div>
 
@@ -757,16 +794,17 @@ export function Workspace({
   );
 }
 
-/** 패널을 접는 단추 — 글자는 툴팁으로만 둔다 (띠가 좁다). */
-function Fold({ label, onClick }: { label: string; onClick: () => void }) {
+/** 패널을 접는 단추 — 그 패널 쪽으로 닫히는 그림이고 글자는 툴팁으로만 둔다 (띠가 좁다). */
+function Fold({ label, side, onClick }: { label: string; side: "left" | "right"; onClick: () => void }) {
+  const Icon = side === "left" ? PanelLeftClose : PanelRightClose;
   return (
     <button
       onClick={onClick}
       title={label}
       aria-label={label}
-      className="ml-auto rounded-md px-1 text-caption text-text-muted hover:bg-bg-subtle hover:text-text-primary"
+      className="ml-auto rounded-md p-1 text-text-muted hover:bg-bg-surface hover:text-text-primary"
     >
-      ⟨⟩
+      <Icon size={16} aria-hidden="true" />
     </button>
   );
 }
@@ -778,10 +816,11 @@ function Spine({ label, onOpen, side }: { label: string; onOpen: () => void; sid
       onClick={onOpen}
       title={`${label} 패널 펼치기`}
       aria-label={`${label} 패널 펼치기`}
-      className={`w-7 shrink-0 bg-bg-surface text-caption text-text-muted hover:text-text-primary ${
+      className={`flex w-8 shrink-0 flex-col items-center gap-2 bg-bg-subtle pt-2 text-caption text-text-muted hover:text-text-primary ${
         side === "left" ? "border-r" : "border-l"
       } border-border-default`}
     >
+      {side === "left" ? <PanelLeftOpen size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
       <span className="[writing-mode:vertical-rl]">{label}</span>
     </button>
   );

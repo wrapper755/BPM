@@ -113,7 +113,7 @@ ADR-0113) — 답한 하트비트의 `deployments[]`에 덮는 봉투가 없는 
 | `schema`, `status` | `status`는 열린 문자열. 알려진 값: `running`, `paused`, `draining`(재시작을 받아 도는 실행이 끝나기를 기다린다), `error` |
 | `capacity` | `{max, running, test_max?, test_running?}`. `running`은 기다리는 실행을 뺀 수. **시험 자리는 따로 센다** — 운영과 서로 빌려주지 않는다 ([ADR-0146](../decisions/0146-design-work-has-its-own-lane.md), C17). 선택 칸이고 **없으면 0** — 보고하지 않는 실행기는 시험을 받지 않는다. **모델은 있고 보고하는 쪽이 아직 없다** (C17 「초안」) |
 | `running[]` | `{run_id, bpm_process_id, version, node_id, started_at, job_id?}` |
-| `waiting[]` | `{run_id, bpm_process_id, version, waiting_for: "approval" \| "message" \| "timer" \| "delegation" \| "external_task", request_id?, message_name?, correlation?, until?, job_id?, task_id?, since}` |
+| `waiting[]` | `{run_id, bpm_process_id, version, waiting_for: "approval" \| "message" \| "timer" \| "delegation" \| "external_task", request_id?, message_name?, correlation?, until?, job_id?, task_id?, since}`. `since`는 **그 기다림이 처음 시작된 시각**이다 — 재시작이 붙인 `run_resumed(restart)`·`run_waiting` 짝(C3)을 건너 그 첫 `run_waiting`의 `ts`이고, 실행기가 다시 떠 되살려도 바뀌지 않는다 |
 | `job_acks[]` | C4 모양. `result`: `started`, `rejected`, `expired`, `cancelled`, `cancel_refused` |
 | `approval_acks[]`, `deployment_results[]` | C4 모양 |
 | `readiness[]` | 배포된 BPM 프로세스별 준비 상태 (C4 `Readiness`: 확장). 바뀌었을 때만 |

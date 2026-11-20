@@ -22,6 +22,7 @@ import json
 import tempfile
 import zipfile
 from collections.abc import Iterator
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -349,6 +350,35 @@ def test_a_restored_run_is_told_once(
     assert second.restored
     second.tick()
     assert second.restored == []
+
+
+def test_a_restart_keeps_how_long_it_has_waited(
+    center: TestClient, center_store: CenterStore, settings: Settings, key: str, store: Store
+) -> None:
+    """C12 `waiting[].since`는 **기다리기 시작한 시각**이다 — 실행기가 다시 뜬 시각이 아니다.
+
+    되살릴 때 지금을 올리면 모든 기다림이 같은 나이가 되어 CON-12의 「기다린 시간」이 거짓이
+    되고, 「가장 오래 기다린 것에 메시지를 준다」(C12)가 아무거나 고른다.
+    """
+    first = runner_of(settings, key, center, store)
+    ready(center, center_store, first)
+    make_job(center)
+    run_id = until_waiting(first)
+    first.tick()
+    started = next(
+        one.ts for one in RunLog.read(log_path(settings.data_path, run_id)) if one.kind == "run_waiting"
+    )
+    del first
+
+    second = runner_of(settings, key, center, store)
+    second.tick()
+    assert second.workers[run_id].join(WAIT_S), "되살린 스레드가 다시 멈출 때까지"
+    # 재시작이 `run_resumed(restart)`·`run_waiting` 짝을 붙였다 — 그 짝을 건너야 한다.
+    assert [one["reason"] for one in lines(settings, run_id, "run_resumed")] == ["restart"]
+    second.tick()
+    rows = center.get("/api/v1/server-runners", headers=READ).json()
+    waiting = [one for row in rows for one in row["waiting"] if one["run_id"] == run_id]
+    assert waiting and datetime.fromisoformat(waiting[0]["since"]) == datetime.fromisoformat(started)
 
 
 # ─────────────────────────── 기다림이 기록에 남는다 (C3) ───────────────────────────

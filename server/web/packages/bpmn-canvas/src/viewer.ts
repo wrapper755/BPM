@@ -6,15 +6,18 @@
  */
 
 import BpmnNavigatedViewer from "bpmn-js/lib/NavigatedViewer";
+import minimapModule from "diagram-js-minimap";
 
 import { laidOut } from "./auto-layout";
 import { BPM_MODDLE } from "./moddle";
-import { RENDERER, markerNames } from "./shared";
+import { RENDERER, markerNames, navigationOf, type CanvasNavigation } from "./shared";
 import { propertiesOf } from "./read";
 import type { ImportResult, NodeProperties, NodeState } from "./types";
 
 export class CanvasViewer {
   private readonly viewer: BpmnNavigatedViewer;
+  /** 확대·축소·맞추기 — 편집기와 같은 손잡이다 (`navigationOf`). */
+  readonly navigation: CanvasNavigation;
 
   constructor(container: HTMLElement) {
     this.viewer = new BpmnNavigatedViewer({
@@ -22,7 +25,9 @@ export class CanvasViewer {
       ...RENDERER,
       // `bpm:*`를 타입으로 읽는다 — 없으면 우리 요소가 「모르는 것」 경고로 쏟아진다.
       moddleExtensions: { bpm: BPM_MODDLE },
+      additionalModules: [minimapModule],
     });
+    this.navigation = navigationOf((name) => this.viewer.get(name), () => this.viewer.get("canvas"));
   }
 
   destroy(): void {

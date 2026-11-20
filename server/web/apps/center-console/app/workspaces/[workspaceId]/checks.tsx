@@ -32,7 +32,7 @@ export function Checks({
   const { errors } = counts(check?.violations ?? []);
 
   return (
-    <div className="max-h-72 overflow-y-auto border-t border-border-default p-3">
+    <div className="border-t border-border-default p-3">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <span className="text-body-sm">{none ? "아직 검사하지 않았습니다." : summary(check)}</span>
         {check?.cached && check.checked_at ? (

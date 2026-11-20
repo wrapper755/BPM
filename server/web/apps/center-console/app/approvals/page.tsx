@@ -53,8 +53,14 @@ export function answeredBy(row: ApprovalInfo): string {
   return row.answered_via ? `${row.answered_by} · ${row.answered_via}` : row.answered_by;
 }
 
+/**
+ * 결재함은 **기다리는 것부터** 연다 — 답할 것이 답한 것 사이에 묻히지 않게. 「(전체)」는 빈 값이
+ * 아니라 `all`이다: 빈 값이면 쪽을 넘기는 주소에서 빠져 2쪽이 다시 「대기」로 돌아간다.
+ */
+const DEFAULT_STATE = "open";
+
 const STATES = [
-  { value: "", label: "(전체)" },
+  { value: "all", label: "(전체)" },
   { value: "open", label: "대기" },
   { value: "answered", label: "답함" },
   { value: "expired", label: "시간 초과" },
@@ -69,16 +75,18 @@ export default async function ApprovalsPage({
   const found = await session();
   if (!found) redirect("/login");
   const asked = await searchParams;
-  const state = asked.state ?? "";
+  const state = asked.state || DEFAULT_STATE;
   const host = asked.host ?? "";
   const assignee = (asked.assignee ?? "").trim();
+  // 기본값에서 벗어났는가 — 빈 목록의 말과 담당 후보를 다시 물을지가 이것으로 갈린다.
+  const narrowed = state !== "all" || Boolean(host) || Boolean(assignee);
 
   let rows: ApprovalInfo[] = [];
   let hosts: ServerRunnerInfo[] = [];
   let failure: string | null = null;
   try {
     rows = await center.approvals({
-      state: state || undefined,
+      state: state === "all" ? undefined : state,
       host: host || undefined,
       assignee: assignee || undefined,
     });
@@ -96,7 +104,7 @@ export default async function ApprovalsPage({
     // 이름은 **보일 쪽의 것만** 묻는다.
     loadNodeNames(pageRows.map((row) => [row.bpm_process_id, row.version] as [string, string])),
     // 거르지 않았으면 받은 목록이 전부다 — 두 번 받지 않는다 (ADR-0167).
-    assigneeChoices(state || host || assignee ? null : rows),
+    assigneeChoices(narrowed ? null : rows),
   ]);
 
   const columns: Array<Column<ApprovalInfo>> = [
@@ -212,11 +220,11 @@ export default async function ApprovalsPage({
       ) : rows.length === 0 ? (
         <EmptyState
           title={
-            state || host || assignee
-              ? "해당하는 결재 요청이 없습니다."
-              : "기다리는 결재가 없습니다."
+            state === DEFAULT_STATE && !host && !assignee
+              ? "기다리는 결재가 없습니다."
+              : "해당하는 결재 요청이 없습니다."
           }
-          hint={state || host || assignee ? "필터를 「(전체)」로 바꿔 보세요." : undefined}
+          hint={narrowed ? "「상태」를 「(전체)」로 바꾸면 답한 것까지 보입니다." : undefined}
         />
       ) : (
         <DataTable

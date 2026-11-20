@@ -79,11 +79,11 @@ describe("기다리는 결재 (C2)", () => {
       ],
       NOW,
     );
-    expect(found).toEqual({ open: 3, unassigned: 2, oldestHours: 50 });
+    expect(found).toEqual({ open: 3, unassigned: 2, oldestSeconds: 50 * 3600 });
   });
 
   it("아무것도 없으면 기다린 시간은 null이다 (0이 아니다)", () => {
-    expect(waitingApprovals([], NOW)).toEqual({ open: 0, unassigned: 0, oldestHours: null });
+    expect(waitingApprovals([], NOW)).toEqual({ open: 0, unassigned: 0, oldestSeconds: null });
   });
 });
 
@@ -125,6 +125,14 @@ describe("실행기 (C4)", () => {
     expect(runnerHealth(rows)).toEqual({ online: 2, total: 3, warning: 2 });
   });
 
+  it("배포가 덮인 옛 판은 문제로 세지 않는다 — 고칠 것이 없다 (ADR-0158)", () => {
+    const covered = { ...ready(false), version: "0.9.0", blocked: ["deployment_withdrawn"] };
+    expect(runnerHealth([runner({ readiness: [ready(true), covered] })]).warning).toBe(0);
+    // 모르는 코드가 섞이면 그대로 센다 — 조용히 숨기지 않는다.
+    const mixed = { ...covered, blocked: ["deployment_withdrawn", "extension_missing"] };
+    expect(runnerHealth([runner({ readiness: [mixed] })]).warning).toBe(1);
+  });
+
   it("보고가 없으면 문제로 세지 않는다 — 모르는 것을 흠으로 적지 않는다", () => {
     expect(runnerHealth([runner({ readiness: undefined })])).toEqual({
       online: 1,
@@ -142,7 +150,7 @@ describe("작업 대기열 (C5)", () => {
       { state: "accepted", requested_at: hoursAgo(9) },
       { state: "expired", requested_at: hoursAgo(9) },
     ] as JobInfo[];
-    expect(jobQueue(rows, NOW)).toEqual({ waiting: 2, oldestMinutes: 120 });
+    expect(jobQueue(rows, NOW)).toEqual({ waiting: 2, oldestSeconds: 120 * 60 });
   });
 });
 

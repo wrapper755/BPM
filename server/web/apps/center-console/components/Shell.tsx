@@ -139,7 +139,15 @@ export async function Shell({
         className="fixed inset-x-0 top-0 z-40 border-b border-border-default bg-bg-surface"
         style={{ height: "var(--size-topbar-height)" }}
       >
-        <div className="mx-auto flex h-full w-full max-w-[1440px] items-center gap-2 px-4 md:gap-3 md:px-6 lg:px-8">
+        {/* 가득 쓰는 화면(CON-20b)은 본문이 화면 끝까지 가므로 막대도 **폭을 풀고 그 머리 띠와 같은 여백**이다 —
+            넓은 화면에서 마크만 가운데로 들어가 머리 띠의 지금 자리와 왼쪽 끝이 어긋났다. */}
+        <div
+          className={
+            full
+              ? "flex h-full w-full items-center gap-2 px-4 md:gap-3 md:px-5"
+              : "mx-auto flex h-full w-full max-w-[1440px] items-center gap-2 px-4 md:gap-3 md:px-6 lg:px-8"
+          }
+        >
         <TopNav groups={groups} current={current} who={who} />
         {/* 오른쪽은 **한 묶음**이다 — 누구인지와 할 일(아이콘 둘) 사이에 옅은 선 하나 (ADR-0166). 「열린 모드」
             배지는 없다 — 서버의 동작이라 Center가 말한다 (ADR-0173). */}

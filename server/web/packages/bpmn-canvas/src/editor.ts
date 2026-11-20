@@ -12,11 +12,22 @@
  */
 
 import BpmnModeler from "bpmn-js/lib/Modeler";
+import minimapModule from "diagram-js-minimap";
 
 import { laidOut } from "./auto-layout";
 import { BPM_MODDLE } from "./moddle";
 import { TIMER_KINDS, definitionOf, multiInstanceOf, propertiesOf } from "./read";
-import { RENDERER, attributesOf, centerAtNormalZoom, freeSpot, markerNames, spotAt, toType } from "./shared";
+import {
+  RENDERER,
+  attributesOf,
+  centerAtNormalZoom,
+  freeSpot,
+  markerNames,
+  navigationOf,
+  spotAt,
+  toType,
+  type CanvasNavigation,
+} from "./shared";
 import type {
   BusinessObject,
   CanvasStats,
@@ -45,6 +56,8 @@ export class CanvasEditor {
   private changed = false;
   /** 열 때의 자리를 맞췄나 — 담은 자리가 0×0이면 못 맞춘다 (`resized()`가 다시 해 본다). */
   private centered = false;
+  /** 확대·축소·맞추기 — 캔버스 위 도구 띠가 부른다. */
+  readonly navigation: CanvasNavigation;
 
   constructor(container: HTMLElement, handlers: EditorHandlers = {}) {
     this.container = container;
@@ -56,6 +69,8 @@ export class CanvasEditor {
       // 글을 쓰다 누른 것은 그 칸의 것이다). `autoFocus`는 **아무도 쥐지 않은 채** 그림 위로
       // 마우스를 올리면 키를 되돌려 준다 — 쥔 자리가 있으면 빼앗지 않는다.
       canvas: { autoFocus: true },
+      // 미니맵 — 큰 그림에서 지금 어디를 보고 있나. 처음에는 접혀 있고 도구 띠에서 편다.
+      additionalModules: [minimapModule],
       // `bpm:*`를 타입으로 다룬다 — 설명은 C14 모델에서 생성한다 (scripts/gen_moddle.py).
       moddleExtensions: { bpm: BPM_MODDLE },
     });
@@ -68,6 +83,7 @@ export class CanvasEditor {
       handlers.onPicked?.(picked.length === 1 ? (picked[0]?.id ?? "") : "");
     });
     this.registerDelegate();
+    this.navigation = navigationOf((name) => this.modeler.get(name), () => this.modeler.get("canvas"));
   }
 
   /** 「저장 안 한 변경」이 있는가. */

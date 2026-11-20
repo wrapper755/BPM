@@ -5,10 +5,10 @@ import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { ProcessRows } from "./table";
-import { ImportProcesses, NewProcess, ProjectMenu } from "./tools";
+import { ProjectMenu } from "./tools";
 
 /**
- * CON-20c 프로젝트 — 그 안의 「프로세스」와 「공통 패키지」 두 칸 (ADR-0176) ([ADR-0175](../../../../../../../docs/decisions/0175-projects-hold-processes.md)).
+ * CON-20c 프로젝트 — 그 안의 「프로세스」와 「공통 패키지」 두 탭 (ADR-0176) ([ADR-0175](../../../../../../../docs/decisions/0175-projects-hold-processes.md)).
  *
  * 짓기·판·배포는 프로세스마다라 표에 **배포 상태를 적지 않는다**(CON-20a와 같은 까닭). 거르기는
  * 브라우저에서 돈다 — 한 프로젝트의 프로세스는 수십 개다 (ADR-0160과 같은 결).
@@ -18,12 +18,12 @@ export default async function ProjectPage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; tab?: string }>;
 }) {
   const found = await session();
   if (!found) redirect("/login");
   const { projectId } = await params;
-  const { q } = await searchParams;
+  const { q, tab } = await searchParams;
 
   let project: ProjectInfo;
   let rows: WorkspaceInfo[] = [];
@@ -55,32 +55,29 @@ export default async function ProjectPage({
         <h1 className="text-h2 font-bold">{project.name}</h1>
         {admin ? (
           <div className="flex flex-wrap items-center gap-2">
-            <ImportProcesses projectId={project.id} />
-            <NewProcess projectId={project.id} />
             <ProjectMenu project={project} />
           </div>
         ) : null}
       </header>
 
-      {/* [I] 정보 — 한 줄 카드. 회사는 바뀌지 않는다 (ADR-0175 §2). */}
+      {/* [I] 정보 — 한 줄 카드. 회사는 바뀌지 않는다 (ADR-0175 §2). 수는 탭 이름에 있다. */}
       <section className="mb-4 flex flex-wrap gap-x-6 gap-y-1 rounded-lg border border-border-default bg-bg-surface px-4 py-3 text-body-sm">
         <span>
           <span className="text-text-muted">회사 </span>
           {company}
         </span>
-        <span>
-          <span className="text-text-muted">프로세스 </span>
-          {project.processes}
-        </span>
-        <span>
-          <span className="text-text-muted">공통 </span>
-          {project.shared ?? 0}
-        </span>
         <span className="font-mono text-text-muted">{project.id}</span>
         {project.description ? <span className="text-text-secondary">{project.description}</span> : null}
       </section>
 
-      <ProcessRows rows={rows} projectId={project.id} targets={targets} admin={admin} query={q ?? ""} />
+      <ProcessRows
+        rows={rows}
+        projectId={project.id}
+        targets={targets}
+        admin={admin}
+        query={q ?? ""}
+        initialTab={tab === "shared" ? "shared" : "processes"}
+      />
     </Shell>
   );
 }

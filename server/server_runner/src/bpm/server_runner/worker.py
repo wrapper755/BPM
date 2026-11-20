@@ -611,6 +611,25 @@ class Worker:
                 return max(0.0, round(waited, 3))
         return None
 
+    def _waiting_since(self, run: Run) -> str | None:
+        """지금 기다림이 **처음 시작된 시각** (C12 `waiting[].since`). 기다리는 중이 아니면 `None`.
+
+        재시작마다 기록에 `run_resumed(restart)`·`run_waiting` 짝이 하나씩 붙는다 — 되살린 실행이
+        **같은 것을 다시 기다리는** 자리다. 그 짝을 건너 거슬러 올라가 사람이 답해야 하는 그
+        기다림의 첫 줄을 찾는다. 마지막 줄만 보면 **실행기가 다시 뜬 시각**이 되어 모든 기다림이
+        같은 나이가 되고, 「가장 오래 기다린 것에 메시지를 준다」(C12)가 아무거나 고른다.
+
+        `after_s`(`_waited_s`)는 **조각마다**다 — 이어 돈 기록의 합이 겹쳐 세지 않게 그대로 둔다.
+        """
+        found: str | None = None
+        for event in reversed(run.log.events):
+            if event.kind == "run_waiting":
+                found = event.ts
+            elif event.kind == "run_resumed":
+                if found is None or event.data.get("reason") != "restart":
+                    break
+        return found
+
     def _take_stop(self, run: Run) -> bool:
         with self._lock:
             if not self._stopping:
@@ -710,7 +729,8 @@ class Worker:
             # 상한·메시지 찾기가 쓰는 이름과 갈라진다 (C1 — BPM 프로세스의 신원은 패키지 id다).
             "bpm_process_id": self.bot.id,
             "version": run.version,
-            "since": now_iso(),
+            # 기다리기 시작한 그 줄의 시각이다 — 아직 찍기 전(`_emit_waiting`이 이 줄로 찍는다)이면 지금.
+            "since": self._waiting_since(run) or now_iso(),
         }
         pending = next(iter(run.pendings.values()), None)
         if pending is not None:

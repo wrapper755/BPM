@@ -14,6 +14,7 @@ import type { PackageInfo } from "@bpm/api-types/c5-package-info";
 import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
+import { quietlyBlocked } from "./summary";
 
 /** 「오늘」의 폭 (시간) — 하루를 자르지 않고 **지금부터 24시간 전**까지다 (자정에 숫자가 0으로 떨어지지 않는다). */
 export const TODAY_HOURS = 24;
@@ -59,8 +60,8 @@ export interface WaitingApprovals {
   open: number;
   /** 담당자가 적히지 않은 결재 — **API로 답할 수 없다** (ADR-0081: 대리 답을 받지 않는다). */
   unassigned: number;
-  /** 가장 오래 기다린 결재의 시간 (시간 단위, 내림). 없으면 `null`. */
-  oldestHours: number | null;
+  /** 가장 오래 기다린 결재의 나이 (초). 없으면 `null`. 「417시간」이 아니라 「17일 9시간」으로 보이게 화면이 `duration`으로 접는다. */
+  oldestSeconds: number | null;
 }
 
 /** C2 「기다리는 결재」 — 열린 결재만 센다 (`state: open`). */
@@ -70,7 +71,7 @@ export function waitingApprovals(rows: ApprovalInfo[], now: number = Date.now())
   return {
     open: open.length,
     unassigned: open.filter((one) => (one.assignees ?? []).length === 0).length,
-    oldestHours: ages.length > 0 ? Math.floor(Math.max(...ages)) : null,
+    oldestSeconds: ages.length > 0 ? Math.floor(Math.max(...ages) * 3600) : null,
   };
 }
 
@@ -82,7 +83,7 @@ export function candidates(rows: PackageInfo[]): number {
 export interface RunnerHealth {
   online: number;
   total: number;
-  /** 준비에 문제가 있는 실행기 수 — 보고한 `readiness`에 `ok`가 아닌 줄이 있는 것. */
+  /** 준비에 문제가 있는 실행기 수 — 보고한 `readiness`에 **사람이 고칠** 막힘이 있는 것. */
   warning: number;
 }
 
@@ -94,20 +95,27 @@ export interface RunnerHealth {
  * **일시 중지도 문제로 센다** — 사람이 멈춰 둔 것을 잊는 것이 위험이다.
  *
  * **보고가 없으면 문제로 세지 않는다** — 모르는 것을 흠으로 적지 않는다 (배포가 없으면 보고도 없다).
+ *
+ * **배포가 덮인 옛 판은 세지 않는다** — CON-02 띠와 같은 규칙이다(`quietlyBlocked`, ADR-0158).
+ * 판을 올릴 때마다 옛 판이 「배포 철회」로 보고되니, 세면 실행기는 늘 「문제 있음」이고 CON-12에
+ * 가 봐도 고칠 줄이 없다.
  */
 export function runnerHealth(rows: ServerRunnerInfo[]): RunnerHealth {
   return {
     online: rows.filter((one) => one.online).length,
     total: rows.length,
-    warning: rows.filter((one) => one.paused === true || (one.readiness ?? []).some((state) => !state.ready))
-      .length,
+    warning: rows.filter(
+      (one) =>
+        one.paused === true ||
+        (one.readiness ?? []).some((state) => !state.ready && !quietlyBlocked(state.blocked ?? [])),
+    ).length,
   };
 }
 
 export interface JobQueue {
   waiting: number;
-  /** 가장 오래 기다린 작업의 시간 (분 단위, 내림). 없으면 `null`. */
-  oldestMinutes: number | null;
+  /** 가장 오래 기다린 작업의 나이 (초). 없으면 `null`. */
+  oldestSeconds: number | null;
 }
 
 /** C5 「작업 대기열」 — 아직 실행이 되지 않은 작업 (C5 `JobInfo.state`). */
@@ -118,7 +126,7 @@ export function jobQueue(rows: JobInfo[], now: number = Date.now()): JobQueue {
     .filter((one): one is number => one !== null);
   return {
     waiting: waiting.length,
-    oldestMinutes: ages.length > 0 ? Math.floor(Math.max(...ages) * 60) : null,
+    oldestSeconds: ages.length > 0 ? Math.floor(Math.max(...ages) * 3600) : null,
   };
 }
 

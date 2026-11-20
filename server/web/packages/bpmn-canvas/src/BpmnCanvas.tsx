@@ -10,11 +10,12 @@
  * 두 자리를 고쳐야 한다. 속성 패널·시험 실행 화면은 이 손잡이로 부른다 (M11 조각 4c·4e).
  */
 
-import { useEffect, useImperativeHandle, useRef } from "react";
+import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { Ref } from "react";
 
 import { CanvasEditor } from "./editor";
 import { CanvasViewer } from "./viewer";
+import type { CanvasNavigation } from "./shared";
 import type { ImportResult } from "./types";
 
 export interface BpmnCanvasHandle {
@@ -123,5 +124,72 @@ export function BpmnCanvas({
     };
   }, [mode, xml, empty]);
 
-  return <div className={className} ref={host} />;
+  const [minimap, setMinimap] = useState(false);
+  const nav = (): CanvasNavigation | null => editor.current?.navigation ?? viewer.current?.navigation ?? null;
+
+  // 모드가 바뀌면 캔버스를 새로 짓는다 — 미니맵도 접힌 채로 다시 난다.
+  useEffect(() => setMinimap(false), [mode]);
+
+  return (
+    <div className={`bpm-canvas-frame ${className ?? ""}`}>
+      <div className="bpm-canvas-host" ref={host} />
+      {/* 둘러보기 도구 띠 — 왼쪽 아래(팔레트는 왼쪽 위, bpmn.io 표지는 오른쪽 아래다). */}
+      <div className="bpm-canvas-tools" role="toolbar" aria-label="캔버스 보기">
+        <ToolButton label="축소" onClick={() => nav()?.zoomOut()}>
+          <path d="M5 12h14" />
+        </ToolButton>
+        <ToolButton label="확대" onClick={() => nav()?.zoomIn()}>
+          <path d="M5 12h14M12 5v14" />
+        </ToolButton>
+        <span className="bpm-canvas-tools-gap" aria-hidden="true" />
+        <ToolButton label="화면에 맞추기" onClick={() => nav()?.fit()}>
+          <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+        </ToolButton>
+        <ToolButton label="실제 크기로 가운데" onClick={() => nav()?.actualSize()}>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+        </ToolButton>
+        <span className="bpm-canvas-tools-gap" aria-hidden="true" />
+        <ToolButton
+          label={minimap ? "미니맵 접기" : "미니맵 펴기"}
+          pressed={minimap}
+          onClick={() => {
+            const open = nav()?.toggleMinimap();
+            if (open !== undefined) setMinimap(open);
+          }}
+        >
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <rect x="12" y="11" width="6" height="5" />
+        </ToolButton>
+      </div>
+    </div>
+  );
+}
+
+/** 도구 띠의 단추 하나 — 이름은 말풍선과 보조 기술이 읽는다. 그림은 24 칸 안의 선이다. */
+function ToolButton({
+  label,
+  pressed,
+  onClick,
+  children,
+}: {
+  label: string;
+  pressed?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className="bpm-canvas-tool"
+      title={label}
+      aria-label={label}
+      aria-pressed={pressed}
+      onClick={onClick}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        {children}
+      </svg>
+    </button>
+  );
 }
