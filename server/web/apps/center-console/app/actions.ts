@@ -1,6 +1,7 @@
 "use server";
 
 import type { Route } from "next";
+import { safeNext } from "@/lib/next-path";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -60,7 +61,10 @@ export async function login(_previous: ActionResult, form: FormData): Promise<Ac
   try {
     made = await signIn(username, password);
   } catch (cause) {
-    return { error: message(cause) };
+    // 로그인의 4xx는 **Center의 글 그대로**다 — 「아이디나 비밀번호가 맞지 않습니다」·잠금 (CON-00). 사람 말로
+    // 갈음하는 `humanMessage`는 401을 「로그인이 끝났습니다」로 읽어 여기서는 틀린다.
+    const said = cause instanceof CenterError && cause.status < 500 ? cause.body?.message : undefined;
+    return { error: said ?? message(cause) };
   }
   // 쓰기 권한이 곧 **설계 권한**이다 — 첫 화면도 이것으로 갈린다 (ADR-0145 §2).
   // 회사 관리자도 **제 회사 안에서는** 관리자다 — 무엇을 다룰 수 있는지는 Center가 회사로 가른다 (C16).
@@ -82,9 +86,9 @@ export async function login(_previous: ActionResult, form: FormData): Promise<Ac
       expires: new Date(made.expires_at),
     },
   );
-  // 첫 화면은 **대시보드**이고 역할로 가르지 않는다 (ADR-0151 §3 — 전에는 쓰기 권한이 있으면
-  // 작업공간 홈, 없으면 「운영 › 프로세스」로 보냈다).
-  redirect("/dashboard");
+  // 가려던 곳이 있으면 그리로 (U19, ADR-0162 — 휴대폰으로 받은 결재 링크가 로그인 한 번에 사라졌다).
+  // 없으면 첫 화면은 **대시보드**이고 역할로 가르지 않는다 (ADR-0151 §3).
+  redirect((safeNext(form.get("next")) ?? "/dashboard") as Route);
 }
 
 export async function logout(): Promise<void> {

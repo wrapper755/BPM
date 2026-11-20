@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { DataTable, EmptyState, ErrorBanner, type Column } from "@bpm/ui";
+import { DataTable, EmptyState, ErrorBanner, InfoTip, type Column } from "@bpm/ui";
 import type { ConsumerInfo } from "@bpm/api-types/c15-consumer-info";
 import { CENTER_PUBLIC_URL, CenterError, center, session } from "@/lib/center";
 import { KINDS_UNSET, cameFrom, kindMismatches, kindsLabel, type AppChoice } from "@/lib/consumers";
@@ -57,14 +57,17 @@ export default async function ConsumersPage() {
         const unset = !row.kinds || row.kinds.length === 0;
         const mismatches = kindMismatches(row.kinds, row.topic_kinds);
         return (
+          // 까닭은 말풍선이 아니라 눌러 펴는 「?」에 (U20, ADR-0162).
           <span className="flex items-center gap-1">
-            <span className={unset ? "text-text-muted" : undefined} title={unset ? KINDS_UNSET : undefined}>
-              {kindsLabel(row.kinds)}
-            </span>
+            <span className={unset ? "text-text-muted" : undefined}>{kindsLabel(row.kinds)}</span>
+            {unset ? <InfoTip label="종류 미지정 설명">{KINDS_UNSET}</InfoTip> : null}
             {mismatches.length ? (
-              <span className="text-status-warning-fg" title={mismatches.join("\n")} aria-label={mismatches.join(" ")}>
-                ⚠
-              </span>
+              <>
+                <span className="text-status-warning-fg" aria-hidden="true">
+                  ⚠
+                </span>
+                <InfoTip label="종류 어긋남 설명">{mismatches.join("\n")}</InfoTip>
+              </>
             ) : null}
           </span>
         );

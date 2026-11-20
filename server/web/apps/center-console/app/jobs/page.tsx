@@ -2,6 +2,7 @@ import { timerRequester } from "@/lib/summary";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button, DataTable, EmptyState, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { ServerRunnerInfo } from "@bpm/api-types/c12-server-runner-info";
 import type { JobInfo } from "@bpm/api-types/c5-job-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
@@ -50,8 +51,11 @@ export default async function JobsPage({
   const admin = found.mode === "admin";
 
   let rows: JobInfo[] = [];
+  let runners: ServerRunnerInfo[] = [];
   let failure: string | null = null;
   try {
+    // 고르는 칸의 후보 — 못 읽어도 목록은 보인다(빈 칸이 된다).
+    runners = await center.serverRunners().catch(() => []);
     rows = await center.jobs({
       state: states.length > 0 ? states.join(",") : undefined,
       target_id: runner || undefined,
@@ -173,13 +177,22 @@ export default async function JobsPage({
         </fieldset>
         <label className="flex flex-col gap-1 text-body-sm">
           <span className="text-text-muted">실행기</span>
-          <input
-            type="text"
+          {/* 실행기 id(`srv_…`)를 외워 치지 않고 **등록된 것에서 고른다** (H6, ADR-0162). */}
+          <select
             name="runner"
             defaultValue={runner}
-            placeholder="(전체)"
             className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
-          />
+          >
+            <option value="">(전체)</option>
+            {runners.map((one) => (
+              <option key={one.server_runner_id} value={one.server_runner_id}>
+                {one.name}
+              </option>
+            ))}
+            {runner && !runners.some((one) => one.server_runner_id === runner) ? (
+              <option value={runner}>{runner}</option>
+            ) : null}
+          </select>
         </label>
         <label className="flex flex-col gap-1 text-body-sm">
           <span className="text-text-muted">최대</span>
@@ -195,8 +208,9 @@ export default async function JobsPage({
         <Link href="/jobs" className="ml-auto inline-flex h-9 items-center rounded-md px-3 text-body text-text-secondary hover:bg-bg-subtle">
           초기화
         </Link>
+        {/* 거르기 단추는 「좁히기」 하나다 (CON-00 [F], ADR-0162 H4). */}
         <Button type="submit" variant="secondary">
-          보기
+          좁히기
         </Button>
       </form>
 

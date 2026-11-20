@@ -154,16 +154,18 @@ export function DecisionGrid({
             disabled={!canWrite}
           />
         </label>
-        <label className="flex flex-col gap-1 text-caption text-text-muted" title={HITS.find(([h]) => h === table.hit)?.[1]}>
+        {/* 고른 정책의 뜻은 아래 글에 있다 — <option>은 설명을 못 보인다 (U20, ADR-0162). */}
+        <label className="flex flex-col gap-1 text-caption text-text-muted">
           적중 정책
           <select
             className={CELL}
             value={table.hit ?? "UNIQUE"}
             onChange={(e) => change({ ...table, hit: e.target.value })}
+            aria-describedby="dmn-hit-help"
             disabled={!canWrite}
           >
-            {HITS.map(([one, help]) => (
-              <option key={one} value={one} title={help}>
+            {HITS.map(([one]) => (
+              <option key={one} value={one}>
                 {one}
               </option>
             ))}
@@ -176,7 +178,9 @@ export function DecisionGrid({
         ) : null}
       </div>
 
-      <p className="text-caption text-text-muted">{HITS.find(([h]) => h === table.hit)?.[1]}</p>
+      <p id="dmn-hit-help" className="text-caption text-text-muted">
+        {HITS.find(([h]) => h === table.hit)?.[1]}
+      </p>
 
       <table className="w-full border-collapse text-body-sm">
         <thead>
@@ -187,7 +191,7 @@ export function DecisionGrid({
                   className={HEAD}
                   value={one.expression ?? ""}
                   placeholder="식 이름"
-                  title="규칙 태스크가 이 이름으로 값을 넘깁니다 (label이 아닙니다)"
+                  aria-describedby="dmn-name-help"
                   onChange={(e) =>
                     change({
                       ...table,
@@ -266,7 +270,7 @@ export function DecisionGrid({
                   <input
                     className={CELL}
                     value={(row.cells ?? [])[i] ?? ""}
-                    title={CELL_HELP}
+                    aria-describedby="dmn-cell-help"
                     onChange={(e) =>
                       change({
                         ...table,
@@ -286,7 +290,7 @@ export function DecisionGrid({
                   <input
                     className={CELL}
                     value={(row.values ?? [])[i] ?? ""}
-                    title={VALUE_HELP}
+                    aria-describedby="dmn-value-help"
                     onChange={(e) =>
                       change({
                         ...table,
@@ -392,7 +396,13 @@ export function DecisionGrid({
         </div>
       ) : null}
 
-      <p className="text-caption text-text-muted">{CELL_HELP}</p>
+      {/* 칸 설명은 말풍선이 아니라 표 아래 글로 (U20, ADR-0162 — 말풍선은 휴대폰에서 안 뜬다). */}
+      <div className="flex flex-col gap-0.5 text-caption text-text-muted">
+        <p id="dmn-cell-help">{CELL_HELP}</p>
+        <p id="dmn-value-help">{VALUE_HELP}</p>
+        <p id="dmn-name-help">식 이름: 규칙 태스크가 이 이름으로 값을 넘깁니다 (label이 아닙니다).</p>
+        <p id="dmn-type-help">열의 타입: 없으면 값을 맞추지 않습니다 — 그러면 `25 &gt; 20`이 글자 비교가 됩니다.</p>
+      </div>
     </div>
   );
 }
@@ -415,7 +425,7 @@ function ColumnType({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={!canWrite}
-        title="없으면 값을 맞추지 않습니다 — 그러면 `25 > 20`이 글자 비교가 됩니다"
+        aria-describedby="dmn-type-help"
       >
         {TYPES.map((one) => (
           <option key={one || "none"} value={one}>
@@ -424,7 +434,13 @@ function ColumnType({
         ))}
       </select>
       {canWrite && onDrop ? (
-        <button type="button" onClick={onDrop} className="px-1 text-caption text-text-muted" title="이 열 빼기">
+        <button
+          type="button"
+          onClick={onDrop}
+          className="px-1 text-caption text-text-muted"
+          title="이 열 빼기"
+          aria-label="이 열 빼기"
+        >
           ✕
         </button>
       ) : null}

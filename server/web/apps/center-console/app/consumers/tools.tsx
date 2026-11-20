@@ -242,22 +242,23 @@ export function ConsumerMenu({
       </Button>
       {menu ? (
         <ul
-          className="fixed z-20 flex min-w-[200px] flex-col border border-border-default bg-bg-surface py-1 shadow-md"
+          className="fixed z-20 flex min-w-[200px] max-w-[280px] flex-col border border-border-default bg-bg-surface py-1 shadow-md"
           style={{ top: menu.top, right: menu.right }}
         >
           {items.map((item) => (
             <li key={item.ask}>
+              {/* 무엇을 하는지는 말풍선이 아니라 그 줄 아래 글로 (U20, ADR-0162). */}
               <button
                 type="button"
-                title={item.tip}
-                className="w-full px-3 py-2 text-left text-body hover:bg-bg-subtle"
+                className="flex w-full flex-col px-3 py-2 text-left text-body hover:bg-bg-subtle"
                 onClick={() => {
                   setMenu(null);
                   setError(null);
                   setAsking(item.ask);
                 }}
               >
-                {item.label}
+                <span>{item.label}</span>
+                <span className="text-caption text-text-muted">{item.tip}</span>
               </button>
             </li>
           ))}

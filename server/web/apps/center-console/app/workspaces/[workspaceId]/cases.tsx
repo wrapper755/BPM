@@ -215,14 +215,18 @@ export function CaseEditor({
                   disabled={!canWrite}
                 />
               </label>
-              <label className="flex items-center gap-2 text-body-sm" title="사람이 답할 결재를 케이스가 대신 답하지 않습니다">
-                <input
-                  type="checkbox"
-                  checked={one.manual === true}
-                  onChange={(e) => changeCase({ ...one, manual: e.target.checked })}
-                  disabled={!canWrite}
-                />
-                사람이 답한다
+              {/* 칸 설명은 그 아래 글로 (U20, ADR-0162). */}
+              <label className="flex flex-col gap-0.5 text-body-sm">
+                <span className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={one.manual === true}
+                    onChange={(e) => changeCase({ ...one, manual: e.target.checked })}
+                    disabled={!canWrite}
+                  />
+                  사람이 답한다
+                </span>
+                <span className="text-caption text-text-muted">사람이 답할 결재를 케이스가 대신 답하지 않습니다</span>
               </label>
               {canWrite ? (
                 <>

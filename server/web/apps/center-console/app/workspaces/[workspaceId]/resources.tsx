@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { ErrorBanner, Field } from "@bpm/ui";
+import { ErrorBanner, Field, InfoTip } from "@bpm/ui";
 import type { TaskSpec } from "@bpm/bpmn-canvas";
 import type { InstalledLibInfo } from "@bpm/api-types/c17-workspace-info";
 import type { PackageInfo } from "@bpm/api-types/c5-package-info";
@@ -62,6 +62,10 @@ export function ResourcePanel({
         onChange={(event) => setQuery(event.target.value)}
         placeholder="이름이나 id"
       />
+      {/* 쓰는 법은 말풍선이 아니라 화면 글로 (U20, ADR-0162). */}
+      {canWrite ? (
+        <p className="mt-1 text-caption text-text-muted">캔버스로 끌어다 놓거나 「+」를 누르세요.</p>
+      ) : null}
 
       {errors.map((one) => (
         <div key={one} className="mt-2">
@@ -118,7 +122,6 @@ function Line({
         event.dataTransfer.setData(RESOURCE_MIME, JSON.stringify(makes));
         event.dataTransfer.effectAllowed = "copy";
       }}
-      title={row.blocked ?? (makes ? "캔버스로 끌어다 놓거나 「+」를 누르세요" : undefined)}
       className={
         row.blocked
           ? "flex items-center gap-1 rounded-md px-2 py-1 text-text-muted"
@@ -135,12 +138,18 @@ function Line({
           onClick={() => onAdd(makes)}
           aria-label={`${row.label} — 캔버스에 추가`}
           title="캔버스에 추가"
-          className="shrink-0 rounded-md p-1 opacity-0 hover:bg-bg-surface focus-visible:opacity-100 group-hover:opacity-100"
+          className="shrink-0 rounded-md p-1 opacity-0 hover:bg-bg-surface focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
         >
           <Plus size={16} aria-hidden />
         </button>
       ) : null}
-      {row.blocked ? <span className="shrink-0 text-caption">잠김</span> : null}
+      {/* 잠긴 까닭은 눌러 펴는 「?」에 (U20, ADR-0162). */}
+      {row.blocked ? (
+        <span className="inline-flex shrink-0 items-center text-caption">
+          잠김
+          <InfoTip label={`${row.label} 잠긴 까닭`}>{row.blocked}</InfoTip>
+        </span>
+      ) : null}
     </div>
   );
 }

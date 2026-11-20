@@ -1,4 +1,5 @@
 import { BpmMark } from "@bpm/ui";
+import { safeNext } from "@/lib/next-path";
 import { LoginForm } from "./form";
 
 /**
@@ -7,14 +8,16 @@ import { LoginForm } from "./form";
  * **따뜻한 바탕 가운데 카드 하나다** ([ADR-0161](../../../../../../docs/decisions/0161-soft-cards.md) — 화면 폭 띠와
  * 배경 그림을 내렸다). 좁은 화면에서는 여백 16을 두고 카드가 폭 전체를 쓴다.
  *
+ * 가려던 곳(`next`)이 있으면 폼에 실어 로그인 뒤 그리로 간다 (U19, ADR-0162).
+ *
  * 세션 토큰은 **콘솔 서버가 암호화된 httpOnly 쿠키에 담아 들고** 브라우저에 내려가지 않는다.
  */
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ changed?: string }>;
+  searchParams: Promise<{ changed?: string; next?: string }>;
 }) {
-  const { changed } = await searchParams;
+  const { changed, next } = await searchParams;
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 py-10">
       <div className="flex w-full max-w-[400px] flex-col gap-6 rounded-xl border border-border-default bg-bg-surface p-6 shadow-md sm:p-8">
@@ -24,7 +27,10 @@ export default async function LoginPage({
           </span>
           <span className="text-h2 font-bold tracking-wide">BPM</span>
         </h1>
-        <LoginForm note={changed === "1" ? "비밀번호를 바꿨습니다. 새 비밀번호로 들어오세요." : undefined} />
+        <LoginForm
+          note={changed === "1" ? "비밀번호를 바꿨습니다. 새 비밀번호로 들어오세요." : undefined}
+          next={safeNext(next) ?? undefined}
+        />
       </div>
     </main>
   );
