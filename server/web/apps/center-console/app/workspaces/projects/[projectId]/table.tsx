@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ActionMenu, Button, ConfirmDialog, DataTable, Dialog, ErrorBanner, type Column } from "@bpm/ui";
+import { ActionMenu, Button, ConfirmDialog, DataTable, Dialog, ErrorBanner, StatusBadge, type Column } from "@bpm/ui";
+import type { ProcessStatus } from "@bpm/api-types/c17-process-status";
+import type { DeploymentInfo } from "@bpm/api-types/c5-deployment-info";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
 import { FilterReset } from "@/components/FilterReset";
 import { deleteWorkspace, moveProcess, setProcessKind } from "@/app/actions";
 import { time } from "@/lib/time";
 import { filterProcesses } from "@/lib/projects";
+import { checkText, deployStand, deployText, trialStand } from "@/lib/authoring";
 import { ImportProcesses, NewProcess } from "./tools";
 
 /** CON-20c [B] 탭 — 주소에는 `?tab=shared`만 남는다 (기본은 프로세스). */
@@ -20,6 +23,8 @@ export type ProjectTab = "processes" | "shared";
  */
 export function ProcessRows({
   rows,
+  status,
+  deployments,
   projectId,
   targets,
   admin,
@@ -27,6 +32,9 @@ export function ProcessRows({
   initialTab,
 }: {
   rows: WorkspaceInfo[];
+  /** C17 요약과 C5 배포 — 못 읽었으면 `null`이고 그 열들이 「—」다. */
+  status: ProcessStatus[] | null;
+  deployments: DeploymentInfo[] | null;
   projectId: string;
   targets: { id: string; name: string }[];
   admin: boolean;
@@ -58,24 +66,65 @@ export function ProcessRows({
   const processes = rows.filter((row) => row.kind !== "process_lib");
   const shared = rows.filter((row) => row.kind === "process_lib");
 
+  const statusOf = new Map((status ?? []).map((one) => [one.workspace_id, one]));
   const columns: Column<WorkspaceInfo>[] = [
     {
       key: "name",
       header: "이름",
       minWidth: "12rem",
       cell: (row) => (
-        <Link href={`/workspaces/${encodeURIComponent(row.id)}`} className="font-semibold hover:underline">
-          {row.name}
-        </Link>
+        <>
+          <Link href={`/workspaces/${encodeURIComponent(row.id)}`} className="font-semibold hover:underline">
+            {row.name}
+          </Link>
+          <div className="font-mono text-caption text-text-muted">{row.id}</div>
+        </>
       ),
     },
-    { key: "id", header: "id", mono: true },
     { key: "version", header: "판", cell: (row) => `v${row.version}` },
+    // 저작 상태 셋 (ADR-0185) — 셈은 `lib/authoring.ts`. 요약을 못 읽었으면 「—」다.
     {
-      key: "place",
-      header: "업무 자리",
-      cell: (row) =>
-        row.place ? [row.place.company, row.place.department, row.place.staff].filter(Boolean).join(" › ") : "—",
+      key: "deploy",
+      header: "배포",
+      note: "가장 최근에 서명한 살아 있는 배포의 판. 그 판을 지은 그림이 지금 그림과 같은지를 함께 말합니다.",
+      cell: (row) => {
+        if (!status || !deployments) return "—";
+        const stand = deployStand(row.id, statusOf.get(row.id), deployments);
+        return (
+          <span className={stand.kind === "none" ? "whitespace-nowrap text-text-muted" : "whitespace-nowrap"}>
+            {deployText(stand)}
+          </span>
+        );
+      },
+    },
+    {
+      key: "trial",
+      header: "마지막 시험",
+      cell: (row) => {
+        if (!status) return "—";
+        const stand = trialStand(statusOf.get(row.id));
+        if (!stand) return <span className="text-text-muted">—</span>;
+        return (
+          <span className="flex flex-wrap items-center gap-x-2 whitespace-nowrap">
+            <StatusBadge group={stand.group} label={stand.label} />
+            <span className="text-caption text-text-muted">
+              {time(stand.at)}
+              {stand.stale ? " · 고치기 전" : ""}
+            </span>
+          </span>
+        );
+      },
+    },
+    {
+      key: "check",
+      header: "검사",
+      note: "지금 그림의 실행 전 검사 결과만 셉니다 — 고치면 「검사 안 함」으로 돌아갑니다.",
+      cell: (row) => {
+        if (!status) return "—";
+        const text = checkText(statusOf.get(row.id));
+        const muted = text === "검사 안 함" || text === "—";
+        return <span className={muted ? "whitespace-nowrap text-text-muted" : "whitespace-nowrap"}>{text}</span>;
+      },
     },
     // 「누가」는 두지 않는다 — 열린 모드에서는 모두 「열린 모드」라 아무것도 말하지 않는다.
     { key: "updated_at", header: "최근 수정", cell: (row) => <span className="whitespace-nowrap">{time(row.updated_at)}</span> },
@@ -139,9 +188,9 @@ export function ProcessRows({
       </form>
 
       {onShared ? (
-        // 공통 패키지는 업무 자리 열이 없다 — 공통은 자리에 서지 않는다 (ADR-0176).
+        // 공통 패키지도 같은 열이다 — 지어 올리고 시험한다 (ADR-0185).
         <DataTable
-          columns={columns.filter((column) => column.key !== "place")}
+          columns={columns}
           rows={shown.filter((row) => row.kind === "process_lib")}
           rowKey={(row) => row.id}
           caption="공통 패키지"

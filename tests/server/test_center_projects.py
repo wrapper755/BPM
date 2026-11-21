@@ -265,3 +265,57 @@ def test_a_build_without_a_kind_follows_the_workspace(client: TestClient) -> Non
                      headers=ADMIN))
     build = made(client.post(f"{API}/workspaces/a.lib/package", json={}, headers=ADMIN), 202)
     assert build["kind"] == "process_lib"
+
+
+# ─────────────────────────── 저작 상태 요약 (ADR-0185) ───────────────────────────
+
+
+AT = "2026-11-19T10:00:00+09:00"
+
+
+def test_the_status_says_trial_check_and_builds_for_every_process_at_once(client: TestClient, store: Store) -> None:
+    """표 한 장에 한 번 — 검사는 **지금 묶음의 것만**, 시험은 가장 최근 것, 짓기는 다 지은 것만."""
+    new_project(client)
+    for one in ("a.b", "a.c"):
+        made(client.post(f"{API}/workspaces", json={"id": one, "name": one, "project": "company1"}, headers=ADMIN))
+    revision = made(client.get(f"{API}/workspaces/a.b", headers=READ), 200)["revision"]
+    errors = [
+        {"rule": "B1", "message": "x"},
+        {"rule": "B2", "message": "y"},
+        {"rule": "B3", "message": "z", "severity": "warning"},
+    ]
+    with store.tx() as cur:
+        runs = (("test_1", "2026-11-20T10:00:00+09:00", "실패"), ("test_2", "2026-11-21T10:00:00+09:00", "통과"))
+        for run_id, at, verdict in runs:
+            cur.execute(
+                "INSERT INTO test_runs (run_id, workspace_id, revision, mode, state, verdict, requested_by,"
+                " requested_at, updated_at) VALUES (?, 'a.b', 'old', 'autonomous', 'done', ?, 'me', ?, ?)",
+                (run_id, verdict, at, at),
+            )
+        for check_id, rev in (("chk_now", revision), ("chk_old", "old")):
+            cur.execute(
+                "INSERT INTO workspace_checks (check_id, workspace_id, revision, state, violations_json,"
+                " requested_by, requested_at, checked_at) VALUES (?, 'a.b', ?, 'done', ?, 'me', ?, ?)",
+                (check_id, rev, json.dumps(errors if rev == revision else []), AT, AT),
+            )
+        for build_id, state, version in (("bld_1", "done", "0.1.0"), ("bld_2", "failed", None)):
+            cur.execute(
+                "INSERT INTO workspace_builds (build_id, workspace_id, revision, kind, state, package_id, version,"
+                " requested_by, requested_at, updated_at) VALUES (?, 'a.b', 'old', 'bpm_process', ?, ?, ?, 'me',"
+                " ?, ?)",
+                (build_id, state, "a.b" if version else None, version, AT, AT),
+            )
+    rows = {one["workspace_id"]: one for one in made(client.get(f"{API}/projects/company1/status", headers=READ), 200)}
+    assert set(rows) == {"a.b", "a.c"}
+    ab = rows["a.b"]
+    assert ab["revision"] == revision
+    trial = ab["last_trial"]
+    assert (trial["run_id"], trial["verdict"], trial["revision"]) == ("test_2", "통과", "old")
+    assert (ab["check"]["errors"], ab["check"]["warnings"]) == (2, 1)
+    assert [(one["version"], one["revision"]) for one in ab["builds"]] == [("0.1.0", "old")]
+    # 없는 것은 빠진다 (`to_json_dict`).
+    assert (rows["a.c"].get("last_trial"), rows["a.c"].get("check"), rows["a.c"]["builds"]) == (None, None, [])
+
+
+def test_the_status_of_a_project_that_is_not_there_is_a_404(client: TestClient) -> None:
+    assert client.get(f"{API}/projects/nowhere/status", headers=READ).status_code == 404

@@ -165,7 +165,7 @@ export function TrialRuns({
   }
   return (
     <div className="flex min-h-0 flex-1">
-      <ul aria-label="시험 실행" className="w-80 shrink-0 overflow-y-auto border-r border-border-default">
+      <ul aria-label="시험 기록" className="w-80 shrink-0 overflow-y-auto border-r border-border-default">
         {trials.map((one) => (
           <li key={one.run_id}>
             <button

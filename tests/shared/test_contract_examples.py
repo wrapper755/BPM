@@ -31,6 +31,7 @@ from bpm.contracts import (
     FolderKey,
     Manifest,
     MessageRequest,
+    ProcessStatus,
     RunEvent,
     ServerRunnerHeartbeatRequest,
     StaffInfo,
@@ -59,6 +60,7 @@ EXAMPLES: list[tuple[str, int, Any]] = [
     ("C15-external-tasks", 2, ExternalTaskCreate),  # 일감 올리기
     ("C15-external-tasks", 3, FetchResponse),  # 일꾼이 받은 것
     ("C16-organization", 0, StaffInfo),  # 직원 하나 (ADR-0125)
+    ("C17-workspaces", 0, TypeAdapter(list[ProcessStatus])),  # 프로젝트 표의 저작 상태 (ADR-0185)
 ]
 
 

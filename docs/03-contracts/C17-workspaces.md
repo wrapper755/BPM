@@ -100,6 +100,7 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | `PATCH /projects/{id}` | 관리자 | 이름·설명. **회사는 바꾸지 않는다** |
 | `DELETE /projects/{id}` | 관리자 | 지운다. **안에 작업공간이 있으면 409 `not_empty`** — 함께 지우지 않는다 |
 | `GET /projects/{id}/workspaces` | 읽기 | 안의 작업공간 (`WorkspaceInfo[]`, 이름 차례 — 종류는 `kind`로 가른다) |
+| `GET /projects/{id}/status` | 읽기 | 안의 작업공간마다 **저작 상태 요약** (`ProcessStatus[]`, §ProcessStatus) — 프로젝트 표(CON-20c)가 한 번에 받는다 |
 | `POST /projects/{id}/import` | 관리자 | **옛 작업 폴더 zip을 받아 작업공간을 만든다** — 뿌리에 `process.json`이 있으면 하나, 없으면 **`process.json`이 있는 폴더마다 하나**다(Company1 `bpm/company1/` 통째). id·이름·판은 각 `process.json`의 것이다. **`?kind=process_lib`면 모두 공통 패키지로** 만든다(기본 `bpm_process`). 응답은 `ProjectImportResult` |
 
 - **하나라도 못 들이면 아무것도 만들지 않는다** — 같은 id의 작업공간이 있음(409 `exists`, `detail.ids`)·
@@ -113,6 +114,32 @@ Studio의 「다른 이름으로 저장」 단위가 이미 그것이었다(정�
 | --- | --- | --- |
 | `workspaces` | `WorkspaceInfo[]` | 만든 작업공간 |
 | `libs_to_install` | object[] | `{workspace_id, package_id, version}` — 버린 `libs/` 사본이 가리키던 공유 BPM 프로세스 |
+
+### ProcessStatus
+
+프로젝트 표가 줄마다 「배포와 같은가 · 마지막 시험 · 검사」를 말하려고 받는 요약이다 ([ADR-0185](../decisions/0185-project-table-says-where-each-process-stands.md)).
+작업공간마다 시험 실행·검사·짓기를 따로 물으면 호출이 프로세스 수의 세 배가 된다 — **한 번에 준다**.
+배포는 여기 싣지 않는다 — C5 `GET /deployments?active=true`가 말하고, 콘솔이 `builds[]`의 묶음과 맞춰 본다.
+
+| 필드 | 타입 | 뜻 |
+| --- | --- | --- |
+| `workspace_id` | str | 작업공간 id |
+| `revision` | str | **지금 묶음** (`WorkspaceInfo.revision`과 같다) |
+| `last_trial` | object | (없으면 빠진다) 가장 최근 시험 실행 하나 `{run_id, state, verdict, revision, requested_at, updated_at}` — 뜻은 `TrialInfo`와 같고 `revision`은 그 실행이 돌린 묶음이다 |
+| `check` | object | (없으면 빠진다) **지금 묶음의** 검사 결과 `{state, errors, warnings, checked_at}` — `GET …/check`와 같은 규칙이라 낡은 결과를 주지 않는다(묶음이 바뀌면 빠진다). `errors`·`warnings`는 `Violation.severity`로 센 수다 |
+| `builds[]` | object | 다 지은 것(`done`) `{package_id, version, revision, requested_at}` — 최근 것부터. 배포된 판을 **지은 묶음**을 찾는 데 쓴다 |
+
+```json
+[
+  {
+    "workspace_id": "order-intake",
+    "revision": "9f2c1e",
+    "last_trial": {"run_id": "test_20261121_100200_a1b2c3", "state": "done", "verdict": "통과", "revision": "9f2c1e", "requested_at": "2026-11-21T10:02:00+09:00", "updated_at": "2026-11-21T10:02:09+09:00"},
+    "check": {"state": "done", "errors": 2, "warnings": 0, "checked_at": "2026-11-21T10:03:00+09:00"},
+    "builds": [{"package_id": "order-intake", "version": "1.2.0", "revision": "77ab0d", "requested_at": "2026-11-20T15:00:00+09:00"}]
+  }
+]
+```
 
 ## 작업공간
 

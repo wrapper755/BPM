@@ -519,6 +519,56 @@ class BuildInfo(ContractModel):
     requested_at: Timestamp | None = None
 
 
+# ─────────────────────────── 프로젝트 상태 요약 ───────────────────────────
+
+
+class TrialSummary(ContractModel):
+    """가장 최근 시험 실행 하나 — 뜻은 `TrialInfo`와 같고 로그·변수는 싣지 않는다."""
+
+    run_id: str
+    state: str
+    verdict: str | None = None
+    #: 그 실행이 돌린 묶음 — 지금 묶음과 다르면 고치기 전의 것이다.
+    revision: str = ""
+    requested_at: Timestamp | None = None
+    updated_at: Timestamp | None = None
+
+
+class CheckSummary(ContractModel):
+    """**지금 묶음의** 검사 결과를 센 것 (`Violation.severity`로)."""
+
+    state: str  # done | pending | failed
+    errors: int = Field(default=0, ge=0)
+    warnings: int = Field(default=0, ge=0)
+    checked_at: Timestamp | None = None
+
+
+class BuiltPackage(ContractModel):
+    """다 지은 것 하나 — 배포된 판을 **지은 묶음**을 찾는 데 쓴다."""
+
+    package_id: str
+    version: str
+    revision: str
+    requested_at: Timestamp | None = None
+
+
+class ProcessStatus(ContractModel):
+    """`GET /api/v1/projects/{id}/status`의 줄 하나 — 프로젝트 표(CON-20c)의 저작 상태 (ADR-0185).
+
+    작업공간마다 따로 물으면 호출이 프로세스 수의 세 배다 — 한 번에 준다. **배포는 싣지 않는다**
+    (C5 배포 목록이 말하고 콘솔이 `builds`의 묶음과 맞춰 본다).
+    """
+
+    workspace_id: str
+    #: 지금 묶음 (`WorkspaceInfo.revision`).
+    revision: str
+    last_trial: TrialSummary | None = None
+    #: 지금 묶음의 것만 — 묶음이 바뀌면 `None`이다 (`GET …/check`와 같은 규칙).
+    check: CheckSummary | None = None
+    #: 다 지은 것, 최근 것부터.
+    builds: list[BuiltPackage] = Field(default_factory=list)
+
+
 __all__ = [
     "ALLOWED_SUFFIXES",
     "KNOWN_BUILD_KINDS",
@@ -542,21 +592,25 @@ __all__ = [
     "BuildInfo",
     "BuildRequest",
     "BuildResult",
+    "BuiltPackage",
     "CheckDispatch",
     "CheckResponse",
     "CheckResult",
+    "CheckSummary",
     "FileInfo",
     "InstalledLibInfo",
     "LibInstallRequest",
     "TrialCreateRequest",
     "TrialInfo",
     "TrialReport",
+    "TrialSummary",
     "TrialTarget",
     "LibToInstall",
     "ProjectCreateRequest",
     "ProjectImportResult",
     "ProjectInfo",
     "ProjectUpdateRequest",
+    "ProcessStatus",
     "WorkspaceCreateRequest",
     "DecisionInputInfo",
     "DecisionOutputInfo",

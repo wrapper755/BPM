@@ -23,16 +23,21 @@ from typing import Any
 
 from bpm.center import workspaces
 from bpm.center.errors import ApiError
-from bpm.center.storage import Store, now_iso
+from bpm.center.storage import Store, loads, now_iso
+from bpm.contracts import Violation
 from bpm.contracts.workspace import (
     KNOWN_BUILD_KINDS,
     PROCESS_JSON,
     WORKSPACE_ID_PATTERN,
+    BuiltPackage,
+    CheckSummary,
     LibToInstall,
+    ProcessStatus,
     ProjectCreateRequest,
     ProjectImportResult,
     ProjectInfo,
     ProjectUpdateRequest,
+    TrialSummary,
     WorkspaceInfo,
     check_file_path,
 )
@@ -102,6 +107,79 @@ def workspaces_of(
     row_of(store, project_id, company=company)
     out = workspaces.listing(store, workspace_dir=workspace_dir, company=company, project=project_id)
     return sorted(out, key=lambda one: (one.name, one.id))
+
+
+def status_of(
+    store: Store, *, workspace_dir: Path, project_id: str, company: str | None = None
+) -> list[ProcessStatus]:
+    """안의 작업공간마다 저작 상태 요약 — 프로젝트 표가 **한 번에** 받는다 (ADR-0185).
+
+    표 하나에 SQL이 셋이다 — 시험 실행·검사·짓기를 작업공간마다 묻지 않는다. 검사는 **지금 묶음의
+    것만** 싣는다(`design_work.latest_check`와 같은 규칙 — 낡은 결과를 주지 않는다).
+    """
+    rows = workspaces_of(store, workspace_dir=workspace_dir, project_id=project_id, company=company)
+    inside = "SELECT id FROM workspaces WHERE project = ?"
+    trials: dict[str, TrialSummary] = {}
+    for row in store.rows(
+        f"SELECT * FROM test_runs WHERE workspace_id IN ({inside}) ORDER BY requested_at DESC, run_id",  # noqa: S608 — 고정 글
+        (project_id,),
+    ):
+        trials.setdefault(
+            row["workspace_id"],
+            TrialSummary(
+                run_id=row["run_id"],
+                state=row["state"],
+                verdict=row["verdict"],
+                revision=row["revision"],
+                requested_at=row["requested_at"],
+                updated_at=row["updated_at"],
+            ),
+        )
+    checks: dict[tuple[str, str], Any] = {
+        (row["workspace_id"], row["revision"]): row
+        for row in store.rows(
+            f"SELECT * FROM workspace_checks WHERE workspace_id IN ({inside})",  # noqa: S608 — 고정 글
+            (project_id,),
+        )
+    }
+    builds: dict[str, list[BuiltPackage]] = {}
+    for row in store.rows(
+        f"SELECT * FROM workspace_builds WHERE workspace_id IN ({inside}) AND state = 'done'"  # noqa: S608 — 고정 글
+        " ORDER BY requested_at DESC, build_id",
+        (project_id,),
+    ):
+        if row["package_id"] and row["version"]:
+            builds.setdefault(row["workspace_id"], []).append(
+                BuiltPackage(
+                    package_id=row["package_id"],
+                    version=row["version"],
+                    revision=row["revision"],
+                    requested_at=row["requested_at"],
+                )
+            )
+    out: list[ProcessStatus] = []
+    for one in rows:
+        found = checks.get((one.id, one.revision))
+        check = None
+        if found is not None:
+            violations = [Violation.model_validate(v) for v in loads(found["violations_json"], []) or []]
+            errors = sum(1 for v in violations if v.blocks)
+            check = CheckSummary(
+                state=found["state"],
+                errors=errors,
+                warnings=len(violations) - errors,
+                checked_at=found["checked_at"],
+            )
+        out.append(
+            ProcessStatus(
+                workspace_id=one.id,
+                revision=one.revision,
+                last_trial=trials.get(one.id),
+                check=check,
+                builds=builds.get(one.id, []),
+            )
+        )
+    return out
 
 
 # ─────────────────────────── 쓰기 ───────────────────────────

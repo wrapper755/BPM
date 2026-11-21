@@ -58,6 +58,7 @@ export const CONTRACT_MODULES = [
   "c17-decisions-response",
   "c17-file-info",
   "c17-lib-install-request",
+  "c17-process-status",
   "c17-project-create-request",
   "c17-project-import-result",
   "c17-project-info",

@@ -83,7 +83,7 @@
 1. **준비 (저작하는 사람)** — 관리자가 [CON-14](../server/docs/screens/center-console.md#con-14-관리자-계정) 「관리자 계정」에서 계정을 만들어 준다. **저작하는 사람의 키는 없다** — 저작이 콘솔 안에서 일어나므로 로그인 하나뿐이다 ([ADR-0143](decisions/0143-design-happens-in-the-console.md) §4). **서비스 앱 키도 없다** — BPM 프로세스는 바깥 기능을 Center의 외부 작업으로 부르고, 불러도 되는가는 7 「배포」가 정한다 (C15).
 3. **BPM 프로세스 만들기** — 콘솔에서 작업공간 하나를 만든다. **실행 자리는 서버 하나다** ([ADR-0016](decisions/0016-server-first.md)·[ADR-0144](decisions/0144-remove-the-pc-runner.md)). [CON-20a](../server/docs/screens/center-console-workspace.md#con-20a-작업공간-홈), [CON-20b](../server/docs/screens/center-console-workspace.md#con-20b-작업공간) 「정보」 탭
 4. **그리기** — BPMN을 그리고 태스크마다 속성을 채운다. [CON-20b](../server/docs/screens/center-console-workspace.md#con-20b-작업공간) 「설계」 탭
-5. **시험** — 시험 케이스를 만들고 자율 수행으로 돌려 본다. **돌리는 것은 서버 실행기다** (C17). AI 태스크는 학습되어 재생 명세가 생기고, 결정 수행(재생)으로 운영과 같은 방식을 미리 확인한다. [CON-20b](../server/docs/screens/center-console-workspace.md#시험-실행-탭) 「시험 실행」 탭
+5. **시험** — 시험 케이스를 만들고 자율 수행으로 돌려 본다. **돌리는 것은 서버 실행기다** (C17). AI 태스크는 학습되어 재생 명세가 생기고, 결정 수행(재생)으로 운영과 같은 방식을 미리 확인한다. [CON-20b](../server/docs/screens/center-console-workspace.md#시험-기록-탭) 「시험 기록」 탭
 6. **배포 후보로 만들기** — 콘솔이 그 자리에서 패키지를 지어 후보로 올린다. 패키지에는 키가 없다. [CON-20b](../server/docs/screens/center-console-workspace.md#배포-후보로-만들기), [CON-02](../server/docs/screens/center-console.md#con-02-프로세스)
 7. **승인·배포** — 관리자가 콘솔에서 승인하고([CON-02](../server/docs/screens/center-console.md#con-02-프로세스)) 서버 실행기에 배포한다([CON-15](../server/docs/screens/center-console.md#con-15-배포-신규)). 봉투는 Center가 서명한다.
 8. **적용** — 서버 실행기가 하트비트로 배포를 받아 BPM 프로세스를 설치하고 사전 점검(확장 포함)을 한다 ([CON-12](../server/docs/screens/center-console.md#con-12-서버-실행-신규-m7)).

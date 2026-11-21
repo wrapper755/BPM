@@ -42,7 +42,7 @@ import "@bpm/bpmn-canvas/canvas.css";
  * CON-20b 작업공간 — 탭 셋과 그 안의 자리들 ([ADR-0147](../../../../../../docs/decisions/0147-workspace-has-three-tabs.md)).
  *
  * 「저작」는 탐색기 + 가운데 + 상세 패널 + 아래 탭이고, **가운데에 무엇이 뜰지는 고른 파일이
- * 정한다**(그림·결정표·케이스). 「시험 실행」은 돌려 본 것들이다. 「정보」는 아직 비어 있다 —
+ * 정한다**(그림·결정표·케이스). 「시험 기록」은 돌려 본 것들이다(돌리는 단추 「시험 실행...」과 이름을 가른다, ADR-0185). 「정보」는 아직 비어 있다 —
  * **끄고 까닭을 그 자리에 적는다** (U3).
  *
  * **시험 실행의 결과는 탭에 갇히지 않는다** — 로그는 아래 탭 「로그」, 노드 색은 캔버스에 그대로
@@ -62,7 +62,7 @@ interface Opened {
   revision: string;
 }
 
-const TABS = ["저작", "시험 실행", "정보"] as const;
+const TABS = ["저작", "시험 기록", "정보"] as const;
 /** 왼쪽 탐색기의 탭 — 작업 폴더의 파일과 **부를 수 있는 것** (ADR-0155). */
 const LEFT_TABS = ["파일", "리소스"] as const;
 type Tab = (typeof TABS)[number];
@@ -217,7 +217,7 @@ export function Workspace({
 
   // 탭을 열 때 목록을 읽는다 — 늘 읽으면 설계만 하는 동안에도 Center를 두드린다.
   useEffect(() => {
-    if (tab === "시험 실행") void refreshTrials();
+    if (tab === "시험 기록") void refreshTrials();
   }, [tab, refreshTrials]);
 
   /**
@@ -408,6 +408,8 @@ export function Workspace({
             </button>
           ))}
         </div>
+        {/* 생애주기 차례 — 검사 → 시험 → 배포 후보, 사이를 띄우고 오른쪽 끝이 주 단추 「저장」 (ADR-0185).
+            저장은 편집 동작이고 Ctrl+S와 짝이다. 나머지 셋은 저장한 묶음에 하는 일이다. */}
         <div className="ml-auto flex items-center gap-2 pb-2">
           {canAct ? (
             <Button
@@ -419,7 +421,6 @@ export function Workspace({
               실행 전 검사
             </Button>
           ) : null}
-          {canAct ? <BuildButton workspaceId={info.id} kind={info.kind ?? "bpm_process"} onStarted={setBuild} /> : null}
           {/* 돌리는 중에는 「시험 실행...」 자리가 「중지」가 된다 (U5) — 단추를 둘 두지 않는다. */}
           {canAct ? (
             trial && isLive(trial.state) ? (
@@ -433,16 +434,20 @@ export function Workspace({
                 onStarted={(made) => {
                   setTrial(made);
                   setTrials((before) => [made, ...before]);
-                  setTab("시험 실행");
+                  setTab("시험 기록");
                   setBottom("로그");
                 }}
               />
             )
           ) : null}
+          {canAct ? <BuildButton workspaceId={info.id} kind={info.kind ?? "bpm_process"} onStarted={setBuild} /> : null}
           {editing && shows === "canvas" ? (
-            <Button variant="primary" size="sm" onClick={() => void save()} disabled={!dirty || busy}>
-              저장
-            </Button>
+            <>
+              <span aria-hidden className="mx-2 h-5 w-px bg-border-default" />
+              <Button variant="primary" size="sm" onClick={() => void save()} disabled={!dirty || busy}>
+                저장
+              </Button>
+            </>
           ) : null}
         </div>
         </div>
@@ -464,7 +469,7 @@ export function Workspace({
 
       {/*
         탭을 옮겨도 **「저작」는 지우지 않고 숨긴다** — 지우면 캔버스가 함께 사라져 **저장하지 않은
-        그림을 잃는다**. 「시험 실행」을 보고 와서 고치는 것이 이 화면의 쓰임이라 더욱 그렇다.
+        그림을 잃는다**. 「시험 기록」을 보고 와서 고치는 것이 이 화면의 쓰임이라 더욱 그렇다.
       */}
       <div className={tab === "저작" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
         <div className="flex min-h-0 flex-1">
@@ -779,7 +784,7 @@ export function Workspace({
         </div>
       </div>
 
-      {tab === "시험 실행" ? <TrialRuns trials={trials} picked={trial} onPick={setTrial} /> : null}
+      {tab === "시험 기록" ? <TrialRuns trials={trials} picked={trial} onPick={setTrial} /> : null}
       {tab === "정보" ? (
         <Info
           info={info}

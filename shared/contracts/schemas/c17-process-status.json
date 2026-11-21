@@ -1,0 +1,189 @@
+{
+  "$defs": {
+    "BuiltPackage": {
+      "additionalProperties": true,
+      "description": "다 지은 것 하나 — 배포된 판을 **지은 묶음**을 찾는 데 쓴다.",
+      "properties": {
+        "package_id": {
+          "title": "Package Id",
+          "type": "string"
+        },
+        "requested_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requested At"
+        },
+        "revision": {
+          "title": "Revision",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "package_id",
+        "version",
+        "revision"
+      ],
+      "title": "BuiltPackage",
+      "type": "object"
+    },
+    "CheckSummary": {
+      "additionalProperties": true,
+      "description": "**지금 묶음의** 검사 결과를 센 것 (`Violation.severity`로).",
+      "properties": {
+        "checked_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checked At"
+        },
+        "errors": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Errors",
+          "type": "integer"
+        },
+        "state": {
+          "title": "State",
+          "type": "string"
+        },
+        "warnings": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Warnings",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "title": "CheckSummary",
+      "type": "object"
+    },
+    "TrialSummary": {
+      "additionalProperties": true,
+      "description": "가장 최근 시험 실행 하나 — 뜻은 `TrialInfo`와 같고 로그·변수는 싣지 않는다.",
+      "properties": {
+        "requested_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requested At"
+        },
+        "revision": {
+          "default": "",
+          "title": "Revision",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "state": {
+          "title": "State",
+          "type": "string"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updated At"
+        },
+        "verdict": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verdict"
+        }
+      },
+      "required": [
+        "run_id",
+        "state"
+      ],
+      "title": "TrialSummary",
+      "type": "object"
+    }
+  },
+  "$id": "urn:bpm:contracts:c17-process-status",
+  "additionalProperties": true,
+  "description": "`GET /api/v1/projects/{id}/status`의 줄 하나 — 프로젝트 표(CON-20c)의 저작 상태 (ADR-0185).\n\n작업공간마다 따로 물으면 호출이 프로세스 수의 세 배다 — 한 번에 준다. **배포는 싣지 않는다**\n(C5 배포 목록이 말하고 콘솔이 `builds`의 묶음과 맞춰 본다).",
+  "properties": {
+    "builds": {
+      "items": {
+        "$ref": "#/$defs/BuiltPackage"
+      },
+      "title": "Builds",
+      "type": "array"
+    },
+    "check": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CheckSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "last_trial": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TrialSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "revision": {
+      "title": "Revision",
+      "type": "string"
+    },
+    "workspace_id": {
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "workspace_id",
+    "revision"
+  ],
+  "title": "ProcessStatus",
+  "type": "object"
+}

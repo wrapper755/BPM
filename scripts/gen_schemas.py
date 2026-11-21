@@ -105,6 +105,7 @@ from bpm.contracts import (
     PasswordChangeRequest,
     Place,
     PlaceIdentity,
+    ProcessStatus,
     ProjectCreateRequest,
     ProjectImportResult,
     ProjectInfo,
@@ -271,6 +272,7 @@ MODELS: list[tuple[str, Any]] = [
     ("c17-check-response", CheckResponse),
     ("c17-build-request", BuildRequest),
     ("c17-build-info", BuildInfo),
+    ("c17-process-status", ProcessStatus),
 ]
 
 
