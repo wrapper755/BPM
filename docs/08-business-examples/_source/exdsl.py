@@ -144,13 +144,66 @@ def appr(id, name, title, show, fields, description="", manual=False, **p):
     return Node(id, "manual" if manual else "appr", name, dict(task=d))
 
 
-def fld(key, label, type="text", required=False, choices=None, default=None):
+def fld(key, label, type="text", required=False, choices=None, default=None, when=None):
+    """결재 칸 (C6). `when=(칸, [값…])`이면 조건부 칸이다 — 그 칸 값이 목록 안일 때만 있다 (ADR-0188)."""
     f = dict(key=key, label=label, type=type, required=required)
     if choices:
         f["choices"] = choices
     if default is not None:
         f["default"] = default
+    if when is not None:
+        f["when"] = {"field": when[0], "in": list(when[1])}
     return f
+
+
+def _check_when(nid, fields):
+    """조건부 칸 (B12, ADR-0188) — 앞에 오는 choice·bool 칸을 가리키고 값이 그 칸의 것이다."""
+    errs, before = [], {}
+    for fd in fields:
+        w = fd.get("when")
+        if w:
+            t = before.get(w["field"])
+            if t is None:
+                errs.append(f"{nid} 칸 {fd['key']}의 조건이 앞에 오는 칸 {w['field']}을 가리키지 않음 (B12)")
+            elif t["type"] not in ("choice", "bool"):
+                errs.append(f"{nid} 칸 {fd['key']}의 조건 칸 {w['field']}이 choice·bool이 아님 (B12)")
+            else:
+                allowed = t.get("choices", []) if t["type"] == "choice" else [True, False]
+                stray = [v for v in w["in"] if not any(same_value(v, a) for a in allowed)]
+                if not w["in"] or stray:
+                    errs.append(f"{nid} 칸 {fd['key']}의 조건 값 {stray or '(빔)'}이 {w['field']}의 것이 아님 (B12)")
+        before[fd["key"]] = fd
+    return errs
+
+
+def _when_note(fd):
+    """카드에 적는 조건 — `, 결정=보완요청일 때`."""
+    w = fd.get("when")
+    return f", {w['field']}={'/'.join(str(v) for v in w['in'])}일 때" if w else ""
+
+
+def same_value(a, b):
+    """`True`는 `1`이 아니다 — C6 `contracts.approvals.same_value`와 같은 엄격한 같음."""
+    if isinstance(a, bool) or isinstance(b, bool):
+        return isinstance(a, bool) and isinstance(b, bool) and a == b
+    return a == b
+
+
+def field_applies(fields, fd, ans):
+    """조건부 칸이 이 답에서 있나 — C6 `field_applies`와 같은 규칙 (이어진다). 표준 라이브러리만 쓰려고 옮겨 적었다."""
+    by_key = {f["key"]: f for f in fields}
+    seen = set()
+    while fd.get("when"):
+        if fd["key"] in seen:
+            return False
+        seen.add(fd["key"])
+        target = by_key.get(fd["when"]["field"])
+        if target is None or target["key"] not in ans:
+            return False
+        if not any(same_value(ans[target["key"]], v) for v in fd["when"]["in"]):
+            return False
+        fd = target
+    return True
 
 
 def rule(id, name, decision, input, output, loop=None):
@@ -311,6 +364,7 @@ def validate(ex: Example) -> list[str]:
                         errs.append(f"{n.id} 결재 칸 타입 {fd['type']} (C6)")
                     if fd["type"] == "choice" and not fd.get("choices"):
                         errs.append(f"{n.id} choice 칸에 choices 없음")
+                errs.extend(_check_when(n.id, n.props["task"]["fields"]))
                 if not isinstance(n.props["task"]["show"], list):
                     errs.append(f"{n.id} show가 배열이 아님")
             if n.kind == "ai" and n.props["task"]["domain"] in ("web", "desktop"):
@@ -973,7 +1027,7 @@ def node_summary(n: Node) -> str:
         return s
     if k in ("appr", "manual"):
         t = p["task"]
-        fl = ", ".join(f"`{x['key']}`({x['type']}{'*' if x['required'] else ''})" for x in t["fields"])
+        fl = ", ".join(f"`{x['key']}`({x['type']}{'*' if x['required'] else ''}{_when_note(x)})" for x in t["fields"])
         return f"「{t['title']}」 · 보임 {', '.join(t['show'])} · 칸 {fl} · Center 결재함"
     if k == "rule":
         t = p["task"]

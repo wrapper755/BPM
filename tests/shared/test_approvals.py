@@ -161,6 +161,51 @@ def test_required_field_explicit_null_is_reported() -> None:
     assert [x.items[0] for x in validate_answer(f, {"approved": None})] == ["approved"]
 
 
+# ─────────────── 조건부 칸 (ADR-0188) ───────────────
+
+DECISION = {"key": "결정", "label": "결정", "type": "choice", "required": True, "choices": ["승인", "보완요청"]}
+WHAT = {"key": "보완서류", "label": "보완할 서류", "type": "text", "required": True,
+        "when": {"field": "결정", "in": ["보완요청"]}}
+
+
+def test_conditional_field_is_required_only_when_it_applies() -> None:
+    f = form(DECISION, WHAT)
+    assert validate_answer(f, {"결정": "승인"}) == []
+    assert [x.items[0] for x in validate_answer(f, {"결정": "보완요청"})] == ["보완서류"]
+    assert validate_answer(f, {"결정": "보완요청", "보완서류": "통장 사본"}) == []
+
+
+def test_value_of_a_field_that_does_not_apply_is_dropped_not_refused() -> None:
+    """JS 없이 모든 칸이 보이는 폼에서 적고 「승인」해도 걸리지 않는다 — 값은 버리고 변수는 `None`."""
+    f = form(DECISION, WHAT)
+    answer = {"결정": "승인", "보완서류": 3}  # 타입도 보지 않는다
+    assert validate_answer(f, answer) == []
+    assert apply_defaults(f, answer) == {"결정": "승인"}
+    assert answer_variables(f, answer) == {"결정": "승인", "보완서류": None}
+
+
+def test_condition_sees_the_default_of_the_field_it_points_to() -> None:
+    f = form({**DECISION, "default": "보완요청"}, {**WHAT, "default": "서류"})
+    assert apply_defaults(f, {}) == {"결정": "보완요청", "보완서류": "서류"}
+    assert apply_defaults(f, {"결정": "승인"}) == {"결정": "승인"}
+
+
+def test_conditions_chain_and_compare_strictly() -> None:
+    flag = {"key": "ok", "label": "확인", "type": "bool"}
+    note = {"key": "메모", "label": "메모", "type": "text", "required": True, "when": {"field": "ok", "in": [1]}}
+    assert validate_answer(form(flag, note), {"ok": True}) == []  # True는 1이 아니다
+    why = {"key": "사유", "label": "사유", "type": "text", "required": True,
+           "when": {"field": "보완서류", "in": ["통장"]}}
+    f = form(DECISION, WHAT, why)
+    assert validate_answer(f, {"결정": "승인", "보완서류": "통장"}) == []  # 가리키는 칸이 없으니 이 칸도 없다
+    assert [x.items[0] for x in validate_answer(f, {"결정": "보완요청", "보완서류": "통장"})] == ["사유"]
+
+
+def test_condition_travels_by_its_alias() -> None:
+    field = FormField.model_validate(WHAT)
+    assert field.to_json_dict()["when"] == {"field": "결정", "in": ["보완요청"]}
+
+
 def test_bool_and_number_are_not_interchangeable() -> None:
     """`True`가 1로 통하면 「승인 여부」에 숫자가 들어간다."""
     f = form({"key": "approved", "label": "승인", "type": "bool", "required": True})

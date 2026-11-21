@@ -21,6 +21,7 @@ sys.path.insert(0, str(HERE))
 from exdsl import (  # noqa: E402
     Example,
     all_nodes,
+    field_applies,
     helper_call_errors,
     to_bpmn,
     to_card,
@@ -231,16 +232,21 @@ def deep_check(e: Example, by_file: dict, dmns: dict) -> list[str]:
                 if extra_keys:
                     errs.append(f"{e.id}: 케이스 「{c.name}」 {nid}에 칸 {sorted(extra_keys)} 없음")
                 continue
+            all_fields = node.props["task"]["fields"]
             for k, v in ans.items():
                 f = fields.get(k)
                 if not f:
                     errs.append(f"{e.id}: 케이스 「{c.name}」 {nid}에 칸 `{k}` 없음")
                     continue
+                if not field_applies(all_fields, f, ans):
+                    # 엔진은 버린다 (ADR-0188) — 케이스가 적었다면 버려질 값을 기대하는 실수다.
+                    errs.append(f"{e.id}: 케이스 「{c.name}」 {nid}.{k}는 조건이 맞지 않는 칸이다 (값이 버려진다)")
+                    continue
                 ok = {"bool": isinstance(v, bool), "number": isinstance(v, (int, float)) and not isinstance(v, bool),
                       "text": isinstance(v, str), "choice": v in f.get("choices", [])}[f["type"]]
                 if not ok:
                     errs.append(f"{e.id}: 케이스 「{c.name}」 {nid}.{k} 값 {v!r}가 {f['type']}에 맞지 않음")
-            req = {k for k, f in fields.items() if f["required"]} - set(ans)
+            req = {k for k, f in fields.items() if f["required"] and field_applies(all_fields, f, ans)} - set(ans)
             if req and not c.manual:
                 errs.append(f"{e.id}: 케이스 「{c.name}」 {nid} 필수 칸 {sorted(req)} 응답 없음")
         for m in c.messages:

@@ -1,5 +1,26 @@
 {
   "$defs": {
+    "FieldCondition": {
+      "additionalProperties": true,
+      "description": "조건부 칸의 조건 (ADR-0188) — 앞에 오는 `choice`·`bool` 칸 `field`의 값이 `in` 안일 때.\n\n모양이 맞는지(칸이 있는지·앞에 오는지·값이 선택지 안인지)는 C14 B12가 본다. 여기서 막으면\nCenter가 그림의 실수를 `input_invalid` 한 줄로 돌려줘 어디가 틀렸는지 모른다.",
+      "properties": {
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "in": {
+          "items": {},
+          "title": "In",
+          "type": "array"
+        }
+      },
+      "required": [
+        "field",
+        "in"
+      ],
+      "title": "FieldCondition",
+      "type": "object"
+    },
     "Form": {
       "additionalProperties": true,
       "description": "답의 모양. 없으면 「승인 / 반려」 두 단추다.",
@@ -52,6 +73,17 @@
         "type": {
           "title": "Type",
           "type": "string"
+        },
+        "when": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FieldCondition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [

@@ -120,6 +120,17 @@ def request_id_for(run_id: str, node_id: str, node_instance: int) -> str:
     return f"apr_{run_id}_{node_id}_{node_instance}"
 
 
+class FieldCondition(ContractModel):
+    """조건부 칸의 조건 (ADR-0188) — 앞에 오는 `choice`·`bool` 칸 `field`의 값이 `in` 안일 때.
+
+    모양이 맞는지(칸이 있는지·앞에 오는지·값이 선택지 안인지)는 C14 B12가 본다. 여기서 막으면
+    Center가 그림의 실수를 `input_invalid` 한 줄로 돌려줘 어디가 틀렸는지 모른다.
+    """
+
+    field: str
+    in_: list[Any] = Field(alias="in")
+
+
 class FormField(ContractModel):
     """결재 폼의 칸 하나. STU-04 결재 「출력」 표와 같은 모양이다."""
 
@@ -129,6 +140,8 @@ class FormField(ContractModel):
     required: bool = False
     choices: list[Any] | None = None
     default: Any = None
+    #: 조건부 칸 (ADR-0188) — 없으면 늘 있다. 판정은 `field_applies`.
+    when: FieldCondition | None = None
 
 
 class Form(ContractModel):
@@ -248,13 +261,42 @@ def _type_ok(field: FormField, value: Any) -> bool:
     return True  # 모르는 칸 종류는 검사하지 않는다 (열린 문자열)
 
 
+def same_value(a: Any, b: Any) -> bool:
+    """엄격한 같음 — `True`는 `1`이 아니다 (파이썬의 `True == 1`을 막는다)."""
+    if isinstance(a, bool) or isinstance(b, bool):
+        return isinstance(a, bool) and isinstance(b, bool) and a == b
+    return bool(a == b)
+
+
+def field_applies(form: Form, field: FormField, answer: Mapping[str, Any]) -> bool:
+    """이 칸이 이 답에서 **있는가** (C6 조건부 칸, ADR-0188). **판정은 여기 한 자리다.**
+
+    조건은 이어진다 — 가리키는 칸도 조건이 맞지 않으면 이 칸도 맞지 않는다. 가리키는 칸이 없거나
+    고리면 맞지 않는 것으로 본다(B12가 그림에서 막는다).
+    """
+    seen: set[str] = set()
+    current = field
+    while current.when is not None:
+        if current.key in seen:
+            return False
+        seen.add(current.key)
+        target = form.field(current.when.field)
+        if target is None or target.key not in answer:
+            return False
+        if not any(same_value(answer[target.key], one) for one in current.when.in_):
+            return False
+        current = target
+    return True
+
+
 def validate_answer(form: Form | None, answer: Mapping[str, Any]) -> list[Violation]:
     """답이 폼과 맞는지. **Center와 실행하는 쪽이 같은 함수를 쓴다** (C6 「답하기」).
 
     칸마다 위반 하나를 돌려주므로, 422 응답의 `detail.fields`는
     `[v.items[0] for v in violations]`로 만들면 된다 (콘솔이 칸마다 오류를 표시한다).
 
-    모르는 키는 거부하지 않는다 (README 원칙 3).
+    모르는 키는 거부하지 않는다 (README 원칙 3). **조건이 맞지 않는 칸은 보지 않는다** —
+    필수도 타입도 (ADR-0188 — 그 값은 `apply_defaults`가 버린다).
     """
     out: list[Violation] = []
 
@@ -271,6 +313,8 @@ def validate_answer(form: Form | None, answer: Mapping[str, Any]) -> list[Violat
         return out
 
     for field in form.fields:
+        if not field_applies(form, field, answer):
+            continue
         if field.key not in answer:
             if field.required:
                 out.append(_field_violation(field.key, f"「{field.label}」은 필수다"))
@@ -311,11 +355,18 @@ def answer_variables(form: Form | None, answer: Mapping[str, Any]) -> dict[str, 
 
 
 def apply_defaults(form: Form | None, answer: Mapping[str, Any]) -> dict[str, Any]:
-    """답하지 않은 칸을 폼의 `default`로 채운다 (검증 전에 쓴다)."""
+    """답하지 않은 칸을 폼의 `default`로 채우고, **조건이 맞지 않는 칸의 값은 버린다** (검증 전에 쓴다).
+
+    버리는 것은 채운 **뒤**다 — 가리키는 칸의 기본값도 조건에 든다. 거부하지 않고 버리는 까닭은
+    ADR-0188: JS 없이 모든 칸이 보이는 폼이나 결정을 바꾼 사람이 걸리지 않게.
+    """
     if form is None:
         return dict(answer)
     filled = dict(answer)
     for field in form.fields:
         if field.key not in filled and field.default is not None:
             filled[field.key] = field.default
+    for field in form.fields:
+        if field.key in filled and not field_applies(form, field, filled):
+            del filled[field.key]
     return filled

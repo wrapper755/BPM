@@ -29,7 +29,7 @@ from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from bpm.contracts.approvals import Form, FormField, answer_variables
+from bpm.contracts.approvals import Form, FormField, answer_variables, field_applies
 from bpm.contracts.bpmn_ext import (
     Approval,
     BpmnProcess,
@@ -131,10 +131,12 @@ def _as_duration(value: str, *, node_id: str) -> timedelta:
 
 
 def _missing_fields(form: Form | None, answer: Mapping[str, Any]) -> list[str]:
-    """필수 칸이 답에 있나. 폼이 없으면 `decision` 하나를 본다 (C6)."""
+    """필수 칸이 답에 있나. 폼이 없으면 `decision` 하나를 본다 (C6). 조건이 맞지 않는 칸은 필수가 아니다."""
     if form is None or not form.fields:
         return [] if DECISION_KEY in answer else [DECISION_KEY]
-    return [f.key for f in form.fields if f.required and f.key not in answer]
+    return [
+        f.key for f in form.fields if f.required and f.key not in answer and field_applies(form, f, answer)
+    ]
 
 
 def answerer_variables(

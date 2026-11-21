@@ -35,7 +35,7 @@ from bpm.contracts._base import (
     SchemaVersioned,
     Violation,
 )
-from bpm.contracts.approvals import KNOWN_FIELD_TYPES, FormField
+from bpm.contracts.approvals import KNOWN_FIELD_TYPES, FormField, same_value
 from bpm.contracts.manifest import (
     KNOWN_DOMAINS,
     PC_ONLY_DOMAINS,
@@ -1463,6 +1463,40 @@ def _check_b11(
     return out
 
 
+def _check_conditions(node_id: str, fields: list[FormField]) -> list[Violation]:
+    """조건부 칸의 `when` (C6, ADR-0188) — **앞에 오는** `choice`·`bool` 칸을 가리키고 값이 그 칸의 것이다.
+
+    앞에 오는 칸만 받으므로 고리가 생기지 않는다(자기 자신도 앞이 아니다).
+    """
+    out: list[Violation] = []
+    before: dict[str, FormField] = {}
+    for field_ in fields:
+        when = field_.when
+        if when is not None:
+            target = before.get(when.field)
+            where = f"{node_id}의 칸 {field_.key}"
+            if target is None:
+                later = any(f.key == when.field for f in fields)
+                why = "앞에 와야 한다" if later else "그런 칸이 없다"
+                out.append(_error("B12", f"{where}의 조건이 가리키는 칸 {when.field} — {why}"))
+            elif target.type not in ("choice", "bool"):
+                out.append(
+                    _error("B12", f"{where}의 조건이 가리키는 칸 {when.field}은 choice·bool이어야 한다 ({target.type})")
+                )
+            elif not when.in_:
+                out.append(_error("B12", f"{where}의 조건 in이 비었다"))
+            else:
+                allowed = list(target.choices or []) if target.type == "choice" else [True, False]
+                stray = [v for v in when.in_ if not any(same_value(v, a) for a in allowed)]
+                if stray:
+                    out.append(
+                        _error("B12", f"{where}의 조건 값이 {when.field}의 선택지에 없다",
+                               items=[str(v) for v in stray])
+                    )
+        before[field_.key] = field_
+    return out
+
+
 def _check_b12(process: BpmnProcess) -> list[Violation]:
     out: list[Violation] = []
     for node in process.all_nodes():
@@ -1479,6 +1513,7 @@ def _check_b12(process: BpmnProcess) -> list[Violation]:
                     )
                 elif field_.type == "choice" and not field_.choices:
                     out.append(_error("B12", f"{node.id}의 칸 {field_.key}가 choice인데 choices가 없다"))
+            out += _check_conditions(node.id, approval.fields)
         if node.kind == "boundaryEvent":
             host = process.node(node.attached_to or "")
             if host is None:

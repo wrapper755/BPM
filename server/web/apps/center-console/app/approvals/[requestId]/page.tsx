@@ -7,6 +7,8 @@ import { Markdown } from "@/components/Markdown";
 import { Shell } from "@/components/Shell";
 import { answerApproval } from "@/app/actions";
 import { WithdrawApproval } from "../withdraw";
+import { ConditionalFields } from "./conditions";
+import { hasConditions } from "@/lib/form-conditions";
 import { STATE_LABEL, WITHDRAW_LABEL, where } from "../page";
 import { between, fullTime, time, took } from "@/lib/time";
 import { loadNodeNames, loadProcessNames, processNamer } from "@/lib/names";
@@ -322,9 +324,15 @@ export default async function ApprovalPage({
                     </label>
                   </>
                 ) : (
-                  fields.map((field) => (
-                    <Field key={field.key} field={field} bad={bad.has(field.key)} />
-                  ))
+                  <>
+                    {/* 조건부 칸은 감싸개의 `data-field`로 숨긴다 — JS가 없으면 다 보인다 (ADR-0188). */}
+                    {fields.map((field) => (
+                      <div key={field.key} data-field={field.key}>
+                        <Field field={field} bad={bad.has(field.key)} />
+                      </div>
+                    ))}
+                    {hasConditions(fields) ? <ConditionalFields fields={fields} bad={[...bad]} /> : null}
+                  </>
                 )}
                 {/* 답한 사람은 **로그인한 계정**이다 (ADR-0090). 담당자가 있어도 막지 않는다 (ADR-0080). */}
                 {(info.assignees ?? []).length > 0 ? (
