@@ -6,7 +6,7 @@
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 콘솔의 편집기(쓰기, CON-20) → 패키지(C1 `process/*.bpmn`) → 서버 실행기(읽기·실행), Center(검사) |
 | 코드 위치 | `bpm.contracts.bpmn_ext` — 모델·`read_process()`·`validate()`. DMN 읽기·판정은 `bpm.contracts.dmn`. 확장 태스크의 속 내용은 각 확장의 `contracts/` |
-| 관련 ADR | [0008](../decisions/0008-map-driver-hands-boundary.md), [0013](../decisions/0013-api-keys.md), [0016](../decisions/0016-server-first.md), [0018](../decisions/0018-extensions.md), [0026](../decisions/0026-file-paths-and-file-list-task.md), [0110](../decisions/0110-center-keeps-the-schedule.md), [0114](../decisions/0114-remove-ui-automation.md), [0144](../decisions/0144-remove-the-pc-runner.md) |
+| 관련 ADR | [0008](../decisions/0008-map-driver-hands-boundary.md), [0013](../decisions/0013-api-keys.md), [0016](../decisions/0016-server-first.md), [0018](../decisions/0018-extensions.md), [0026](../decisions/0026-file-paths-and-file-list-task.md), [0110](../decisions/0110-center-keeps-the-schedule.md), [0114](../decisions/0114-remove-ui-automation.md), [0144](../decisions/0144-remove-the-pc-runner.md), [0189](../decisions/0189-terminate-end-sweeps-its-scope.md) |
 | 관련 화면 | STU-04 속성 패널(「JSON」 탭이 이 모델로 검증한다), STU-06, STU-07, STU-14 |
 
 
@@ -286,6 +286,7 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 | 오류 경계 | `errorRef` → `bpmn:error errorCode` | 표준 코드: `TASK_FAILED`(AI·확장·서비스 앱 태스크 실패. **서비스 호출이 결과를 모르는 실패**(C15 `outcome_unknown`)도 여기로 온다 — 사람에게 묻는 갈래는 PC 실행기와 함께 걷었다, [ADR-0144](../decisions/0144-remove-the-pc-runner.md)), `SEND_FAILED`(메일·웹훅), `ESCALATED`(확장의 전환 `escalate: confirmation`과 AI 태스크의 확인 트리거 — **늘 이 경계다**), `APPROVAL_WITHDRAWN`·`APPROVAL_EXPIRED`(Center 결재가 답 없이 끝남 — 관리자 회수·만료, C6·[ADR-0038](../decisions/0038-approval-request-channel.md)), `DELEGATION_FAILED`(맡긴 것이 실패·거절됨, [ADR-0082](../decisions/0082-batch-start.md)). 오류 경로에는 `error_code`, `error_message`, `failed_task` 변수가 생긴다 |
 | 조건 시작 | `conditionalEventDefinition` | **schema 1에서 쓰지 않는다** (프로토타입의 폴더 감시). 외부 시스템 메시지나 타이머로 바꾼다 |
 | 보상 경계·보상 던지기 | `compensateEventDefinition` | 아래 「보상」 |
+| 종료 끝 | `endEvent`에 `terminateEventDefinition` | **같은 범위에 남은 가지를 모두 걷고 끝낸다** ([ADR-0189](../decisions/0189-terminate-end-sweeps-its-scope.md)) — 맨 바깥이면 실행이 `success`로 끝나고, 하위 프로세스 안이면 **그 하위 프로세스만** 끝나 바깥 토큰이 다음으로 간다. 걷히는 것은 중단 경계가 걷는 것과 같다 — 결재·확인 요청, 메시지·타이머·신호 기다림, 붙은 경계, 덜 찬 합류, 맡긴 작업(거둔다), 외부 작업(거둔다), 호출이 띄운 안쪽 실행과 그 기다림. 멈춰 있던 노드는 C3 `skipped`로 닫힌다. 호출(`callActivity`)이 부른 그림의 맨 바깥 종료는 **그 안쪽 실행**만 끝낸다(호출 노드는 끝나고 이어 간다) |
 
 ### 보상
 
@@ -415,6 +416,7 @@ B11은 **어림**이다. 식에서 변수를 이름으로 뽑되 문자열 상�
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-21 | 1 | **종료(terminate) 끝**을 적었다 — 같은 범위에 남은 가지를 걷고 끝낸다. 전에는 엔진이 일반 끝으로 돌아 다른 가지가 살아 있으면 실행이 끝나지 않았다. 표준 BPMN 요소라 schema는 그대로다 | [0189](../decisions/0189-terminate-end-sweeps-its-scope.md) |
 | 2026-11-08 | 1 | 「보상」(보상 경계·처리기·던지기)과 **B17** — 엔진·읽기·검사가 돈다. 표준 BPMN 요소라 schema는 그대로다. `association`·`textAnnotation`은 노드로 읽지 않는다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-11-12 | 1 | **PC 실행기를 걷었다** — `bpm:process.run_location`·`bpm:approval.location`·`bpm:call.delegate.bot_ui` 칸을 걷고, B6을 웹·데스크톱 AI 태스크 하나로 좁히고, B12·B13의 `location` 조항을 걷었다. 확인은 **Center 결재함**에서 답한다. 맡기기(`delegate`)는 **남는다** — 대상이 서버 실행기 하나다 (ADR-0082) | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-11-01 | 1 | **가상 직원을 없앴다** — 값 출처 `virtual_worker.id`·`.name`·`.supervisors`를 걷고 `company.*`·`department.*`·`staff.*`를 더했다(C16). B16은 Studio 경고로만 남는다 | [0125](../decisions/0125-organization-and-work-placement.md) |

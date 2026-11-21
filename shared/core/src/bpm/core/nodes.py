@@ -24,6 +24,7 @@ from typing import Any
 from bpm.contracts.approvals import Form, normalize_assignees, request_id_for
 from bpm.contracts.bpmn_ext import (
     COMPENSATE_DEFINITION,
+    TERMINATE_DEFINITION,
     WEBHOOK_BODY_ALL,
     AiTask,
     Call,
@@ -106,6 +107,8 @@ def handle_end(context: Context) -> Outcome:
     """종료 이벤트. 하위 프로세스 안이면 **바깥 토큰을 깨워 그 노드를 지나게 한다.**
 
     보상 종료(`compensateEventDefinition`)면 끝나기 전에 같은 범위의 보상을 다 돈다 (C14 §보상).
+    종료(`terminateEventDefinition`)면 같은 범위에 남은 가지를 모두 걷는다 (C14 §이벤트, ADR-0189) —
+    맨 바깥이면 실행이, 하위 프로세스 안이면 그 하위 프로세스만 끝난다.
     """
     token, run = context.token, context.run
     if COMPENSATE_DEFINITION in context.node.event_definitions:
@@ -115,6 +118,8 @@ def handle_end(context: Context) -> Outcome:
     # 종료 이벤트도 끝났다고 적는다 (C3) — `Consume`은 덜 찬 합류도 쓰니 `_apply`가 대신 적을 수 없다.
     # 바깥 하위 프로세스를 깨우기 **전에** 적어야 줄이 안쪽 → 바깥 차례로 선다.
     context.emit("node_state", state="completed", task_type=task_type(context.node))
+    if TERMINATE_DEFINITION in context.node.event_definitions:
+        context.engine.terminate(context)
     if token.scope:
         parent_id = token.scope[-1]
         key = f"sub:{parent_id}"
