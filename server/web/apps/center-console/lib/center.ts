@@ -33,6 +33,7 @@ import type { RunListing } from "@bpm/api-types/c3-run-listing";
 import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import type { RunEventsResponse } from "@bpm/api-types/c3-run-events-response";
 import type { WorkspaceInfo } from "@bpm/api-types/c17-workspace-info";
+import type { ProcessStatus } from "@bpm/api-types/c17-process-status";
 import type { ProjectInfo } from "@bpm/api-types/c17-project-info";
 import type { ProjectCreateRequest } from "@bpm/api-types/c17-project-create-request";
 import type { ProjectUpdateRequest } from "@bpm/api-types/c17-project-update-request";
@@ -178,6 +179,8 @@ export const center = {
   /** 비어 있을 때만 지운다 (409 `not_empty`). */
   deleteProject: (projectId: string) => call<void>(pj(projectId), { method: "DELETE" }),
   projectWorkspaces: (projectId: string) => call<WorkspaceInfo[]>(`${pj(projectId)}/workspaces`),
+  /** 안의 작업공간마다 저작 상태 — 시험·검사·지은 것을 한 번에 (C17, ADR-0185). */
+  projectStatus: (projectId: string) => call<ProcessStatus[]>(`${pj(projectId)}/status`),
   /** 옛 작업 폴더 zip — 여럿을 담았으면 **프로세스 여럿**이다. 하나라도 걸리면 아무것도 만들지 않는다. */
   /** `kind`는 든 것 모두의 칸이다 — 「프로세스」(`bpm_process`) 또는 「공통 패키지」(`process_lib`, ADR-0176). */
   importIntoProject: (projectId: string, raw: ArrayBuffer, kind = "bpm_process") =>

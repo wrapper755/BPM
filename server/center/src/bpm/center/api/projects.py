@@ -72,6 +72,16 @@ def list_project_workspaces(request: Request, project_id: str) -> Any:
     return [one.to_json_dict() for one in listed]
 
 
+@router.get("/projects/{project_id}/status")
+def project_status(request: Request, project_id: str) -> Any:
+    """안의 작업공간마다 저작 상태 요약 — 시험·검사·짓기를 한 번에 (ADR-0185)."""
+    found = _reader(request)
+    listed = projects.status_of(
+        _store(request), workspace_dir=_dir(request), project_id=project_id, company=company_scope(found)
+    )
+    return [one.to_json_dict() for one in listed]
+
+
 @router.post("/projects/{project_id}/import")
 async def import_project(request: Request, project_id: str) -> Any:
     """옛 작업 폴더 zip — **작업 폴더 여럿을 담았으면 프로세스 여럿**이다 (ADR-0175 §5)."""

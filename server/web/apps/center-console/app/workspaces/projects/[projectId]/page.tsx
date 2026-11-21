@@ -10,8 +10,8 @@ import { ProjectMenu } from "./tools";
 /**
  * CON-20c 프로젝트 — 그 안의 「프로세스」와 「공통 패키지」 두 탭 (ADR-0176) ([ADR-0175](../../../../../../../docs/decisions/0175-projects-hold-processes.md)).
  *
- * 짓기·판·배포는 프로세스마다라 표에 **배포 상태를 적지 않는다**(CON-20a와 같은 까닭). 거르기는
- * 브라우저에서 돈다 — 한 프로젝트의 프로세스는 수십 개다 (ADR-0160과 같은 결).
+ * 표는 프로세스마다 배포·마지막 시험·검사를 말한다 (ADR-0185) — 호출은 **둘**이다(C17 요약, C5 살아 있는 배포).
+ * 작업공간마다 묻지 않는다. 거르기는 브라우저에서 돈다 — 한 프로젝트의 프로세스는 수십 개다 (ADR-0160과 같은 결).
  */
 export default async function ProjectPage({
   params,
@@ -38,9 +38,12 @@ export default async function ProjectPage({
       </Shell>
     );
   }
-  const [companies, all] = await Promise.all([
+  // 요약을 못 읽어도 표는 선다 — 그 세 열이 「—」가 된다.
+  const [companies, all, status, deployments] = await Promise.all([
     center.companies().catch(() => []),
     center.projects().catch(() => []),
+    center.projectStatus(projectId).catch(() => null),
+    center.deployments({ active: true }).catch(() => null),
   ]);
   const company = companies.find((one) => one.id === project.company)?.name ?? project.company;
   // 옮길 곳은 **같은 회사의 다른 프로젝트**뿐이다 (C17 422 `company_mismatch`).
@@ -72,6 +75,8 @@ export default async function ProjectPage({
 
       <ProcessRows
         rows={rows}
+        status={status}
+        deployments={deployments}
         projectId={project.id}
         targets={targets}
         admin={admin}

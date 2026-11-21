@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 일부 대체됨([ADR-0185](0185-project-table-says-where-each-process-stands.md) — 탭 「시험 실행」의 이름이 「시험 기록」) |
 | 날짜 | 2026-11-13 |
 | 관련 | [ADR-0145](0145-console-is-workspace-shaped.md)(§1의 탭 여섯을 대체한다 — 나머지는 그대로 산다), [ADR-0143](0143-design-happens-in-the-console.md)(설계가 콘솔로), [ADR-0109](0109-studio-writes-decision-tables.md)(결정표는 캔버스 밖), 계약 C17, 화면 **CON-20** (`server/docs/screens/center-console-workspace.md`) |
 
