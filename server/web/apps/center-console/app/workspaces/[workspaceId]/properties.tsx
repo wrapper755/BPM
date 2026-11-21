@@ -512,6 +512,7 @@ function ElementBlock({
                   label={`${field.label}${field.required ? " *" : ""}`}
                   code={field.name}
                   help={field.help}
+                  flow={field.name === "input" || field.name === "output"}
                   rows={rows}
                   canWrite={canWrite}
                   onChange={put}

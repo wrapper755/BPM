@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { ArrowLeft, Plus, X } from "lucide-react";
 import { InfoTip } from "@bpm/ui";
 
 import { mapColumns, rowProblems, rowsToMap, type MapRow } from "@/lib/element-values";
@@ -12,12 +12,11 @@ import { mapColumns, rowProblems, rowsToMap, type MapRow } from "@/lib/element-v
  * 넣을 때 가린다(`rowsToMap`). 셈은 `lib/element-values.ts`, vitest가 잰다.
  */
 
-const CELL = "w-full min-w-0 rounded-md border border-border-strong bg-bg-surface px-2 py-1 text-body-sm";
-
 export function MapTable({
   label,
   code,
   help,
+  flow = false,
   rows: given,
   canWrite,
   onChange,
@@ -27,6 +26,8 @@ export function MapTable({
   /** 원문 칸 이름 — 말풍선. */
   code: string;
   help?: string;
+  /** 값이 흐르는 칸(입력·출력) — 두 열 사이에 「←」. */
+  flow?: boolean;
   rows: MapRow[];
   canWrite: boolean;
   onChange: (value: Record<string, string> | undefined) => void;
@@ -49,6 +50,12 @@ export function MapTable({
     onChange(rowsToMap(made));
   };
 
+  // 칸은 테두리 없이 글처럼 놓이고 올리거나 누르면 테두리가 난다 — 테두리는 표 하나다.
+  // ✕는 열을 차지하지 않고 줄 오른쪽 끝에 겹쳐 뜬다 — 좁은 패널에서 이름이 잘리지 않게.
+  const grid = flow ? "grid-cols-[1fr_1rem_1fr]" : "grid-cols-[1fr_1fr]";
+  const cell =
+    "w-full min-w-0 rounded border border-transparent bg-transparent px-1.5 py-1 text-body-sm hover:border-border-default focus:border-primary focus:bg-bg-surface focus:outline-none disabled:hover:border-transparent";
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex min-h-6 items-center gap-1.5">
@@ -61,61 +68,70 @@ export function MapTable({
           </InfoTip>
         ) : null}
       </div>
-      {rows.length ? (
-        <div role="table" aria-label={label} className="flex flex-col gap-1">
-          <div role="row" className="grid grid-cols-[1fr_1fr_2rem] gap-1 text-caption text-text-muted">
-            <span role="columnheader">{columns.left}</span>
-            <span role="columnheader">{columns.right}</span>
-            <span />
-          </div>
-          {rows.map(([name, value], at) => (
-            <div role="row" key={at} className="flex flex-col gap-0.5">
-              <div className="grid grid-cols-[1fr_1fr_2rem] items-center gap-1">
-                <input
-                  aria-label={`${columns.left} ${at + 1}`}
-                  className={CELL}
-                  value={name}
-                  onChange={(e) => put(rows.map((one, i) => (i === at ? [e.target.value, one[1]] : one)))}
-                  disabled={!canWrite}
-                  aria-invalid={problems[at] ? true : undefined}
-                />
-                <input
-                  aria-label={`${columns.right} ${at + 1}`}
-                  className={`${CELL} font-mono`}
-                  value={value}
-                  onChange={(e) => put(rows.map((one, i) => (i === at ? [one[0], e.target.value] : one)))}
-                  disabled={!canWrite}
-                />
-                {canWrite ? (
-                  <button
-                    type="button"
-                    aria-label={`${at + 1}번째 줄 지우기`}
-                    title="줄 지우기"
-                    onClick={() => put(rows.filter((_, i) => i !== at))}
-                    className="inline-flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-bg-subtle hover:text-text-primary"
-                  >
-                    <X size={14} aria-hidden />
-                  </button>
-                ) : (
-                  <span />
-                )}
-              </div>
-              {problems[at] ? <span className="text-caption text-status-warning-fg">{problems[at]}</span> : null}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-caption text-text-muted">비어 있습니다.</p>
-      )}
-      {canWrite ? (
-        <button
-          type="button"
-          onClick={() => setRows([...rows, ["", ""]])}
-          className="inline-flex h-8 items-center gap-1.5 self-start rounded-md px-2 text-body-sm text-text-primary hover:bg-bg-subtle"
+      <div role="table" aria-label={label} className="overflow-hidden rounded-md border border-border-default">
+        <div
+          role="row"
+          className={`grid ${grid} items-center gap-1 border-b border-border-default bg-bg-subtle px-1.5 py-1 text-caption text-text-muted`}
         >
-          <Plus size={16} aria-hidden />줄 더하기
-        </button>
-      ) : null}
+          <span role="columnheader" className="px-1.5">
+            {columns.left}
+          </span>
+          {flow ? <span aria-hidden /> : null}
+          <span role="columnheader" className="px-1.5">
+            {columns.right}
+          </span>
+        </div>
+        {rows.map(([name, value], at) => (
+          <div role="row" key={at} className="group relative border-b border-border-default px-1.5 py-0.5 last:border-b-0">
+            <div className={`grid ${grid} items-center gap-1`}>
+              <input
+                aria-label={`${columns.left} ${at + 1}`}
+                className={cell}
+                value={name}
+                onChange={(e) => put(rows.map((one, i) => (i === at ? [e.target.value, one[1]] : one)))}
+                disabled={!canWrite}
+                aria-invalid={problems[at] ? true : undefined}
+              />
+              {flow ? (
+                <ArrowLeft size={14} aria-hidden className="justify-self-center text-text-muted" />
+              ) : null}
+              <input
+                aria-label={`${columns.right} ${at + 1}`}
+                className={`${cell} font-mono`}
+                value={value}
+                onChange={(e) => put(rows.map((one, i) => (i === at ? [one[0], e.target.value] : one)))}
+                disabled={!canWrite}
+              />
+              {canWrite ? (
+                // 올린 줄·누른 줄에만 — 줄마다 늘 있으면 표에서 가장 큰 소리가 된다.
+                <button
+                  type="button"
+                  aria-label={`${at + 1}번째 줄 지우기`}
+                  title="줄 지우기"
+                  onClick={() => put(rows.filter((_, i) => i !== at))}
+                  className="absolute top-1 right-1 inline-flex size-7 items-center justify-center rounded bg-bg-surface text-text-muted opacity-0 shadow-sm group-focus-within:opacity-100 group-hover:opacity-100 hover:text-text-primary focus:opacity-100"
+                >
+                  <X size={14} aria-hidden />
+                </button>
+              ) : null}
+            </div>
+            {problems[at] ? (
+              <span className="block px-1.5 pb-1 text-caption text-status-warning-fg">{problems[at]}</span>
+            ) : null}
+          </div>
+        ))}
+        {canWrite ? (
+          <button
+            type="button"
+            onClick={() => setRows([...rows, ["", ""]])}
+            className="flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-body-sm text-text-secondary hover:bg-bg-subtle hover:text-text-primary"
+          >
+            <Plus size={14} aria-hidden />줄 더하기
+          </button>
+        ) : rows.length ? null : (
+          <p className="px-3 py-1.5 text-caption text-text-muted">비어 있습니다.</p>
+        )}
+      </div>
     </div>
   );
 }
