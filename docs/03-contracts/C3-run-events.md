@@ -61,6 +61,7 @@
 - **`run_resumed`는 `run_waiting`과 짝이다.** 짝을 못 찾으면(이 판 전에 담긴 실행을 되살릴 때) **보내지 않는다** — `after_s`가 필수 칸이라 0을 넣어야 하는데, 0은 「바로 이어 갔다」라서 「얼마나 기다렸는지 모른다」와 같은 값이 된다 (선택 칸 규칙과 같은 결). **`after_s`는 보내는 쪽이 센다** — 받는 쪽은 두 줄의 시각 차로 다시 세지 않는다.
 - 기다림이 끝났다고 **`run_waiting`을 지우거나 고치지 않는다** (줄은 더하기만 한다) — 「지금 기다리는 중인가」는 C4·C12 하트비트의 `waiting[]`이 말하고, 이 두 줄은 **지나간 기다림**을 남긴다. 받는 쪽은 둘이 **한 배치에 함께 올 것**을 셈해야 한다 (보내기는 하트비트 뒤다) — `run_resumed`를 뒤에 두고도 상태가 「기다리는 중」이면 이어 간 실행이 CON-01에서 영원히 멈춰 보인다.
 - **종료 이벤트도 `completed`를 남긴다** — 토큰이 사라지는 자리지만 노드는 끝났다. 줄은 `started` → `completed` → (마지막 토큰이면) `run_finished` 차례이고, 하위 프로세스의 종료면 그 `completed`가 **바깥 하위 프로세스의 `completed`보다 먼저**다. **아직 덜 찬 합류**(병렬·포함 게이트웨이)는 `started`만 남긴다 — 그 토큰은 기다리다 사라질 뿐이고, 합류는 마지막 토큰이 올 때 `completed`가 된다. 이 판 전에 올라간 기록에는 종료 이벤트의 `completed`가 없으니 받는 쪽은 `run_finished`가 오면 열린 줄을 닫아 보인다 (고쳐 쓰지 않는다).
+- **종료(terminate) 끝이 걷은 노드는 `skipped`다** (C14 §이벤트, [ADR-0189](../decisions/0189-terminate-end-sweeps-its-scope.md)) — 멈춰 있던(`waiting`) 노드만 닫고 `message`에 「종료 이벤트가 걷었다」를 적는다. 줄은 종료 이벤트의 `started` → `completed` → 걷힌 노드의 `skipped`(노드마다 한 줄) → (맨 바깥이면) `run_finished`(`success`), (하위 프로세스 안이면) 바깥 하위 프로세스의 `completed` 차례다. 아직 밟지 않은 자리와 덜 찬 합류는 줄을 남기지 않는다(합류는 위와 같이 `started`만이다).
 - 업무 값 기록은 기본으로 끈다. 실행 설정에서 명시적으로 켠 경우에만 `kind: "data"`(`data.vars`: 이름→값)를 보낸다 (principle 6).
 - **맡기기는 두 실행을 잇는다** ([ADR-0082](../decisions/0082-batch-start.md)) — 맡겨진 실행의 `run_started`에 `source: delegation`과 `parent_run_id`(맡긴 실행)가 있고, Center가 그것을 읽어 `RunInfo.parent_run_id`에 담는다(줄을 다시 읽지 않는다). 그래서 CON-01이 두 실행을 오갈 수 있다. 반대 방향은 작업의 `requested_by: server_bot:<run_id>`다 (C5).
 - **선택 칸은 아는 쪽이 준다** — `job_id`·`queued_s`는 실행기(작업 지시와 대기열을 그쪽만 안다), `case_id`는 시험 실행이다. **모르면 넣지 않는다**: 0·빈 글을 넣으면 「대기 없이 바로 돌았다」와 「모른다」가 같은 값이 되고, 화면이 둘을 가를 수 없다. `queued_s`는 소수 셋째 자리까지이고 **음수를 적지 않는다** (시계가 거꾸로 가면 0).
@@ -153,6 +154,7 @@
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-21 | 1 | **종료(terminate) 끝이 걷은 노드는 `skipped`로 닫힌다** — 값은 원래 있던 것이고 형식은 그대로다 | [0189](../decisions/0189-terminate-end-sweeps-its-scope.md) |
 | 2026-11-21 | 1 | **종료 이벤트가 `node_state: completed`를 남긴다** — 전에는 `started`에서 멈춘 채 `run_finished`가 와서 마지막 노드가 「실행 중」으로 보였다. 덜 찬 합류는 그대로 `started`만이다. 형식은 그대로이고, 지나간 기록은 받는 쪽이 `run_finished`로 닫아 보인다 | — |
 | 2026-11-12 | 1 | **PC 실행기를 걷었다** — `run_started.run_location`과 `RunInfo.run_location`을 걷고, `executor`는 `server_runner`\|`studio` 둘이고, `RunInfo.bot_ui_id` → **`runner_id`**, 실행 목록의 좁히기도 `?runner_id=`다. `source: delegation`·`parent_run_id`는 **남는다** (맡기기, ADR-0082) | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-11-01 | 1 | `GET /runs?virtual_worker=`를 걷었다(가상 직원을 없앴다). `RunInfo`에 `company`·`department`·`staff`(C16 — Center가 읽을 때 채운다, 아직 비어 있다) | [0125](../decisions/0125-organization-and-work-placement.md) |

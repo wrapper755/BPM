@@ -1071,6 +1071,52 @@ class Engine:
         run.children.pop(key, None)
         host.loop = None
 
+    def terminate(self, context: Context) -> None:
+        """종료(terminate) 끝 — **같은 범위**에 남은 가지를 모두 걷는다 (C14 §이벤트, ADR-0189).
+
+        맨 바깥이면 실행의 모든 토큰, 하위 프로세스 안이면 **그 하위 프로세스 안**의 토큰만이다.
+        끝(`success`)이나 바깥 토큰을 깨우는 것은 `handle_end`가 늘 하던 대로 한다.
+        """
+        run, token = context.run, context.token
+        inside = token.scope[-1] if token.scope else None
+        swept = [t for t in run.tokens if t.id != token.id and (inside is None or inside in t.scope)]
+        if swept:
+            run.log.emit(
+                "log", node_id=context.node.id, level="info", message=f"종료 이벤트가 가지 {len(swept)}개를 걷는다"
+            )
+        self._sweep(run, swept, set())
+        gone = {t.id for t in swept}
+        run.tokens = [t for t in run.tokens if t.id not in gone]
+        # 덜 찬 합류도 걷는다 — 남겨 두면 같은 범위에 다시 들어온 토큰이 옛 도착을 센다.
+        for table in (run.arrivals, run.expected):
+            for key in [k for k in table if inside is None or inside in k.rsplit(":", 1)[0].split("/")]:
+                del table[key]
+
+    def _sweep(self, run: Run, tokens: list[Token], closed: set[str]) -> None:
+        """걷히는 토큰들 — 멈춰 있던 노드는 `skipped`로 닫고(C3) 쥔 것을 `_cancel`로 걷는다.
+
+        호출이 띄운 안쪽 실행은 **안쪽 토큰까지** 같은 길로 걷는다 — `_cancel`은 안쪽 실행을
+        버리기만 해서, 그 안에서 맡긴 작업·외부 작업이 거둬지지 않는다. 노드 하나는 한 번만
+        닫는다(함께 도는 반복의 차례 토큰이 주인과 같은 노드에 있다).
+        """
+        alive = {t.id for t in run.tokens}
+        for one in tokens:
+            if one.waiting_for is not None and one.node_id not in closed:
+                closed.add(one.node_id)
+                run.log.emit(
+                    "node_state", node_id=one.node_id, state="skipped",
+                    task_type=task_type(run.node(one.node_id)), message="종료 이벤트가 걷었다",
+                )
+        for one in tokens:
+            if one.id not in alive:
+                continue  # 앞 토큰을 걷으며 함께 사라졌다 (하위 프로세스 안·반복의 차례)
+            child = run.children.get(one.waiting_for or "")
+            if child is not None and not child.finished:
+                self._sweep(child, list(child.tokens), set())
+                child.tokens = []
+            self._cancel(run, one)
+            alive = {t.id for t in run.tokens}
+
     # ── 사람 (결재·확인) ──
 
     def answer(

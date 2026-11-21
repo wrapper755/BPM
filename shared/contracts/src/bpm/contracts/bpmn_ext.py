@@ -91,6 +91,9 @@ TIMER_KINDS = ("timeDate", "timeDuration", "timeCycle")
 #: 보상 이벤트 정의 (C14 §보상, ADR-0135) — 경계에 달면 보상 경계, 던지기·종료에 달면 보상 던지기.
 COMPENSATE_DEFINITION = "compensateEventDefinition"
 
+#: 종료 끝 이벤트 정의 (C14 §이벤트, ADR-0189) — 같은 범위에 남은 것을 모두 걷고 끝낸다.
+TERMINATE_DEFINITION = "terminateEventDefinition"
+
 #: **엔진이 늘 주는 변수.** 선언하지 않아도 식·템플릿에서 쓸 수 있다 (예제가 `일일/{오늘}.md`
 #: 처럼 파일 이름에 쓴다). 늘어나면 C14 문서의 표와 함께 고친다.
 BUILTIN_VARS = frozenset({"오늘", "지금", "run_id"})

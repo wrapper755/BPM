@@ -45,7 +45,7 @@ M6의 셋째 완료 기준 — 「모든 계약 문서 상태가 「구현됨」
 
 ## 3. 계약 쪽 기능 공백
 
-계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18). **보안을 어디까지 조일지는 §3-33으로 미뤘다** — 관문은 다 있고 스위치 하나로 지나간다([ADR-0142](decisions/0142-open-mode.md)). **M11이 C17을 구현하면서 §3-34를 닫았고**(전송 전부 + 화면 탭 셋 + 탐색기의 「리소스」 탭, [ADR-0155](decisions/0155-resources-are-a-tab-in-the-explorer.md)) 그것을 만들다 드러난 **§3-36**(되돌리기를 부르는 자리)도 [ADR-0156](decisions/0156-undo-is-a-shortcut-only.md)으로 닫았다. **Qt를 걷으면서 생긴 §3-35도 닫았다** — 쓰는 앱이 없는 Studio 키 종류를 걷고, 걷다가 드러난 「시험 실행이 서비스 앱을 부를 수 없다」까지 함께 열었다 ([ADR-0150](decisions/0150-the-designer-key-is-gone.md)).
+계약 열둘의 상태는 §1 표에 있다. PC 위임을 닫았고(§3-13) 그 거리가 드러낸 「도는 서버 실행을 멈출 길이 없다」도 [ADR-0063](decisions/0063-stopping-a-running-server-run.md)으로, 「서버 실행기가 확장 태스크를 꽂지 않는다」(§3-14)도 [ADR-0064](decisions/0064-extension-tasks-on-the-server.md)로 닫았다. 일괄 기동이 드러낸 「서버의 병렬 반복」(§3-15)도 [ADR-0087](decisions/0087-parallel-loop-on-the-server.md)로 닫았다. 바깥 요청(NowView R4)이 드러낸 「외부 확장 주소의 입구」(§3-16)도 [ADR-0097](decisions/0097-external-extension-address-from-center.md)로 닫았다. C15(외부 작업, §3-17)도 조각 1~6과 옛 키 칸 걷기로 닫았다. AI 태스크의 거짓 칸을 정리하다(ADR-0105) 드러난 「PC 전환 → 사람 확인」(§3-18)도 [ADR-0106](decisions/0106-pc-escalation-asks-a-person.md)으로 닫았다. 그 길을 닫다 드러난 「어댑터의 결과 모름」(§3-19)도 [ADR-0107](decisions/0107-outcome-unknown-asks-a-person.md)로 닫았다. 다음 거리를 코드와 대조하다 드러난 「타이머 시작을 깨우는 자리」(§3-20)도 [ADR-0110](decisions/0110-center-keeps-the-schedule.md)으로 닫았다. 그 뒤 2026-10-31 대조가 **새로 일곱**(§3-21~27)을 찾았다 — 넷(§3-21~24)은 업무에 닿고, §3-25는 엔진의 흠, §3-26·27은 작은 칸과 「미정」 모음이다. 그중 배포의 끝 둘(§3-22·23)은 [ADR-0113](decisions/0113-field-follows-withdrawn-deployments.md)으로, 엔진의 흠(§3-25)은 [ADR-0189](decisions/0189-terminate-end-sweeps-its-scope.md)로 닫았다. UI 자동화 확장을 걷으며(ADR-0114) 다시 들일 때 정할 것을 §3-28에 모았다. 콘솔에서 HTTP 어댑터 정의를 고치는 길(§3-32)도 [ADR-0141](decisions/0141-adapter-definitions-are-edited-in-the-console.md)로 닫았다(Center·일꾼·CON-18). **보안을 어디까지 조일지는 §3-33으로 미뤘다** — 관문은 다 있고 스위치 하나로 지나간다([ADR-0142](decisions/0142-open-mode.md)). **M11이 C17을 구현하면서 §3-34를 닫았고**(전송 전부 + 화면 탭 셋 + 탐색기의 「리소스」 탭, [ADR-0155](decisions/0155-resources-are-a-tab-in-the-explorer.md)) 그것을 만들다 드러난 **§3-36**(되돌리기를 부르는 자리)도 [ADR-0156](decisions/0156-undo-is-a-shortcut-only.md)으로 닫았다. **Qt를 걷으면서 생긴 §3-35도 닫았다** — 쓰는 앱이 없는 Studio 키 종류를 걷고, 걷다가 드러난 「시험 실행이 서비스 앱을 부를 수 없다」까지 함께 열었다 ([ADR-0150](decisions/0150-the-designer-key-is-gone.md)).
 
 ### 3-36. 웹 편집기에 되돌리기를 부르는 자리가 없었다 — **닫혔다** (2026-11-16)
 
@@ -132,11 +132,9 @@ ADR-0014의 PC 쪽 줄은 함께 걷었다.
 
 **먼저 정할 것.** 그림의 어디서 자원 id를 모으나. 후보는 확장이 선언한 칸(`creates_task_field` — STU-03 「캔버스에 추가」가 자원 id를 넣는 자리, ADR-0045)이다. 그 칸을 읽으면 플랫폼이 확장의 `data`를 해석하지 않고도(C13 §5) 모을 수 있다.
 
-### 3-25. 종료(terminate) 끝 이벤트를 엔진이 일반 끝으로 돈다
+### 3-25. 종료(terminate) 끝 이벤트를 엔진이 일반 끝으로 돈다 — 닫았다
 
-**무엇이 없나.** BX-11(`bx11_bid_collection.bpmn:173`)이 `terminateEventDefinition`을 쓰고 커버리지 표가 「끝 — 종료(terminate) | BX-11」로 센다. 그런데 엔진의 `handle_end`(`core/nodes.py:108-118`)는 그 토큰만 지운다 — **다른 가지의 토큰이 살아 있으면 실행이 끝나지 않는다.** `shared/core`·`shared/contracts`에 `terminat`가 없고(OS 프로세스 끄기뿐) C14 §이벤트에도 이 요소가 없다. 「모르는 노드는 실패」 규칙도 못 잡는다(요소가 `endEvent`라서다). 시험이 없다.
-
-**먼저 정할 것.** 엔진이 짓나(남은 토큰·기다림을 걷고 `success`로 끝낸다 — 경계·위임·외부 작업을 걷는 길은 취소가 이미 갖고 있다), 아니면 C14 schema 1에서 쓰지 않기로 하고 B 검사로 막나. BX-11은 그림에 가지가 하나라 지금도 결과가 같다.
+**닫았다** ([ADR-0189](decisions/0189-terminate-end-sweeps-its-scope.md)). C14 §이벤트에 「종료 끝」 줄을 적었다 — 같은 범위에 남은 가지를 모두 걷고 끝낸다(맨 바깥이면 실행이 `success`, 하위 프로세스 안이면 그 하위 프로세스만). `handle_end`가 `Engine.terminate`를 부르고, 걷는 길은 중단 경계의 `_cancel`이다 — 결재 요청·기다림·경계·덜 찬 합류, 맡긴 작업·외부 작업은 거두고, 호출이 띄운 안쪽 실행은 안쪽 토큰까지 걷는다. 멈춰 있던 노드는 C3 `skipped`로 닫는다(C3 §참고에 차례를 적었다). 맨 바깥 종료면 Center 결재함의 열린 결재가 `run_ended`로 회수된다. 시험: `tests/shared/test_core_terminate.py`(결재·타이머·외부 작업·맡기기·호출 안쪽·하위 프로세스 안). BX-11은 가지가 하나라 그대로 지나간다.
 
 ### 3-26. 싣기만 하고 아무도 읽지 않는 칸 · 읽는데 아무도 싣지 않는 칸
 
@@ -400,7 +398,7 @@ CON-07 상세 「서버 주소」에서 넣고 **정의의 허용 호스트 안�
 
 | 기능 | 예제 | 코드 | 시험 |
 | --- | --- | --- | --- |
-| 종료(terminate) 끝 | BX-11이 쓰지만 엔진이 짓지 않는다 | §3-25 | 없음 |
+| 종료(terminate) 끝 | BX-11 (가지가 하나라 걷을 것이 없다) | `engine.py` `Engine.terminate` (ADR-0189) | `test_core_terminate.py` |
 | `ESCALATED` 오류 경계·PC 전환 확인 (ADR-0106·0112) | 0 — 경계 코드는 `TASK_FAILED`·`SEND_FAILED`·`DELEGATION_FAILED`뿐 | `core/nodes.py:470-543`, `engine.py:1068-1107` | `test_core_extension_tasks.py`·`test_core_ai_task.py` |
 | 서비스 호출 결과 모름 (ADR-0107) | 0 (BX-32는 경계만) | `nodes.py:939-945` | `test_core_service_outcome_unknown.py` |
 | 긴 외부 작업 `WAIT_EXTERNAL_TASK` (ADR-0103) | 0 | `run_state.py:86`, `nodes.py:904-911` | `test_core_service_task.py`·`test_m7_server_rerun.py` |
