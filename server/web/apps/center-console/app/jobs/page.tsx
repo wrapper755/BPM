@@ -19,6 +19,7 @@ import {
   stateNote,
 } from "./labels";
 import { time } from "@/lib/time";
+import { ART } from "@/components/empty-art";
 
 /**
  * CON-05 작업 지시 (목록).
@@ -210,6 +211,7 @@ export default async function JobsPage({
         <ErrorBanner message={failure} />
       ) : rows.length === 0 ? (
         <EmptyState
+          art={filtered ? ART.search : ART.jobs}
           title={filtered ? "해당하는 작업 지시가 없습니다." : "작업 지시가 없습니다. 「새 작업...」으로 만드세요."}
           hint={filtered ? "필터를 비워 보세요." : undefined}
         />

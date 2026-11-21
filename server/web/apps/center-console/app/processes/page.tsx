@@ -15,6 +15,7 @@ import {
   summarize,
   type BotRow,
 } from "@/lib/summary";
+import { ART } from "@/components/empty-art";
 
 /**
  * CON-02 프로세스 현황 — BPM 프로세스·버전별 준비도 (제목은 저작의 「프로세스」와 가른다, ADR-0181). **판마다 한 줄**인 표다 ([ADR-0159](../../../../../docs/decisions/0159-con-02-is-a-table-like-the-others.md) —
@@ -104,7 +105,7 @@ export default async function BotsPage({
   const admin = found.mode === "admin";
 
   return (
-    <Shell mode={found.mode} actor={found.actor} current="/bots">
+    <Shell mode={found.mode} actor={found.actor} current="/processes">
       <header className="mb-4">
         <h1 className="text-h2 font-bold">프로세스 현황</h1>
       </header>
@@ -113,8 +114,9 @@ export default async function BotsPage({
         <ErrorBanner message={failure} />
       ) : rows.length === 0 ? (
         <EmptyState
+          art={ART.runs}
           title="올라온 프로세스가 없습니다."
-          hint="「저작 › 프로젝트」의 프로세스에서 「배포 후보로 만들기」로 올리세요."
+          hint="「프로젝트」의 프로세스에서 「배포 후보로 만들기」로 올리세요."
         />
       ) : (
         <div className="flex flex-col gap-3">

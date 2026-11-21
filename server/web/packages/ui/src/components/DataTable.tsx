@@ -48,7 +48,7 @@ export interface DataTableProps<T> {
   density?: "default" | "compact";
   showBusiness?: boolean;
   /** 줄이 없을 때 — 다음에 할 일을 말한다 (U12). */
-  empty?: { title: string; hint?: string; action?: ReactNode };
+  empty?: { title: string; hint?: string; action?: ReactNode; art?: string };
   caption?: string;
   className?: string;
   /** 한 쪽의 줄 수 (ADR-0165·0167). `0`이면 나누지 않는다. `paging`이 있으면 그쪽이 이긴다. */
@@ -79,7 +79,7 @@ export function DataTable<T>({
   const rowHeight = density === "compact" ? "var(--size-row-compact)" : "var(--size-row-default)";
 
   if (rows.length === 0 && empty) {
-    return <EmptyState title={empty.title} hint={empty.hint} action={empty.action} />;
+    return <EmptyState title={empty.title} hint={empty.hint} action={empty.action} art={empty.art} />;
   }
 
   // 주소로 쪽을 넘기면 그 쪽만 그린다 — 넘친 쪽은 마지막 쪽이다.

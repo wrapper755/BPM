@@ -16,7 +16,7 @@ export default async function AccountsPage() {
   const found = await session();
   if (!found) redirect("/login");
   // **Center 관리자만** (C16 — 회사 관리자는 계정을 다루지 않는다).
-  if (found.mode !== "admin" || found.company) redirect("/bots");
+  if (found.mode !== "admin" || found.company) redirect("/processes");
 
   let rows: AccountInfo[] = [];
   let companies: Array<{ id: string; name: string }> = [];

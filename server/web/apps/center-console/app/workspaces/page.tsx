@@ -8,6 +8,7 @@ import { time } from "@/lib/time";
 import { AutoFilter } from "@/components/AutoFilter";
 import { FilterReset } from "@/components/FilterReset";
 import { NewProject } from "./tools";
+import { ART } from "@/components/empty-art";
 
 /**
  * CON-20a 프로젝트 홈 — **저작하는 사람이 들어오는 자리**다 ([ADR-0175](../../../../docs/decisions/0175-projects-hold-processes.md)).
@@ -61,8 +62,9 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       {failure ? <ErrorBanner message={failure} /> : null}
       {!failure && rows.length === 0 ? (
         <EmptyState
+          art={q ? ART.search : ART.projects}
           title={q ? "조건에 맞는 프로젝트가 없습니다." : "프로젝트가 없습니다."}
-          hint={found.mode === "admin" ? "「새 프로젝트」로 만드세요." : "저작은 관리자 계정이 합니다."}
+          hint={q ? "거르기를 초기화하세요." : found.mode === "admin" ? "「새 프로젝트」로 만드세요." : "저작은 관리자 계정이 합니다."}
         />
       ) : null}
 

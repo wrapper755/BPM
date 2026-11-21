@@ -7,6 +7,7 @@ import { IMPL_LABEL, connectedApps, kindsLabel as appKindsLabel, workersOf } fro
 import { Shell } from "@/components/Shell";
 import { time } from "@/lib/time";
 import { ConsumerMenu, NewConsumer } from "./tools";
+import { ART } from "@/components/empty-art";
 
 /**
  * CON-17 일꾼 (ADR-0137). 「종류」는 Center 관리자가 정하고, 토픽의 작업과 어긋나면 ⚠ (ADR-0139). 일꾼의 원본은 Center DB이고 바꾼 것은 **다음 요청부터** 반영된다 — Center를
@@ -125,6 +126,7 @@ export default async function ConsumersPage() {
         <ErrorBanner message={failure} />
       ) : rows.length === 0 ? (
         <EmptyState
+          art={ART.connect}
           title="등록된 일꾼이 없습니다."
           hint={manage ? "「새 일꾼...」으로 만들고 받은 토큰을 일꾼 설정에 넣으세요." : undefined}
         />

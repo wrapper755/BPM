@@ -6,6 +6,7 @@ import { Button, Dialog, ErrorBanner, StatusBadge } from "@bpm/ui";
 import type { BuildInfo } from "@bpm/api-types/c17-build-info";
 import { startBuild } from "@/app/actions";
 import { buildLabel, building } from "@/lib/checks";
+import { ACTION_ICON } from "@/components/icons";
 
 /**
  * CON-20 「배포 후보로 만들기」 — STU-12(내보내기·올리기)가 하던 일 (C17).
@@ -49,6 +50,7 @@ export function BuildButton({
   return (
     <>
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+        <ACTION_ICON.build size={16} aria-hidden />
         배포 후보로 만들기...
       </Button>
       <Dialog
@@ -102,7 +104,7 @@ export function BuildLine({ build }: { build: BuildInfo }) {
               공통 패키지에서 보기
             </Link>
           ) : (
-            <Link href="/bots" className="text-primary hover:underline">
+            <Link href="/processes" className="text-primary hover:underline">
               프로세스 목록에서 보기
             </Link>
           )}

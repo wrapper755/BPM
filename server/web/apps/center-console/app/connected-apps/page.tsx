@@ -22,6 +22,7 @@ import type { ExtensionResource } from "@bpm/api-types/c7-extension-resource";
 import { SOURCE_HINT, SOURCE_LABEL, appGroupsOf, untestableReason } from "@/lib/adapter-editor";
 import { AppActions, NewAppButton, type AppContext, type WorkerChoice } from "./editor";
 import { AutoFilter } from "@/components/AutoFilter";
+import { ART } from "@/components/empty-art";
 
 /**
  * CON-18 앱 (목록) — 앱 하나 = 토픽 하나 (ADR-0138, Camunda 커넥터 목록과 같은 결).
@@ -221,6 +222,7 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
           <ErrorBanner message={failure} />
         ) : all.length === 0 ? (
           <EmptyState
+            art={ART.connect}
             title="연결된 앱이 없습니다."
             hint={
               manage
@@ -229,7 +231,7 @@ export default async function ConnectedAppsPage({ searchParams }: { searchParams
             }
           />
         ) : rows.length === 0 ? (
-          <EmptyState title={`「${query}」에 맞는 앱이 없습니다.`} />
+          <EmptyState art={ART.search} title={`「${query}」에 맞는 앱이 없습니다.`} />
         ) : sections === null ? (
           table(rows, "앱 목록")
         ) : (

@@ -24,7 +24,7 @@ import { TopNav, type NavGroup, type NavItem } from "./TopNav";
  */
 
 /**
- * 묶음 여덟 (CON-00 [A]·[M]) — **BPM 생애주기 차례**다: 대시보드 → 결재함 → 저작 → 라이브러리 → 배포 → 운영 → 시스템 → 권한·조직
+ * 묶음 여덟 (CON-00 [A]·[M]) — **BPM 생애주기 차례**다: 대시보드 → 결재함 → 프로젝트 → 라이브러리 → 배포 → 운영 → 시스템 → 권한·조직
  * ([ADR-0181](../../../../../docs/decisions/0181-menu-puts-approvals-on-top-and-approval-in-deploy.md) — 차례의 축은
  * [ADR-0151](../../../../../docs/decisions/0151-console-follows-the-lifecycle.md)). 가로 막대라 **왼쪽에서
  * 오른쪽으로 읽힌다**.
@@ -42,59 +42,61 @@ const NAV: Array<{ label: string; items: Array<NavItem & { adminOnly?: boolean }
   {
     // 들어오는 자리 — 실패·막힘·기다림을 한 화면에서 본다 (CON-21). 역할로 가르지 않는다.
     label: "대시보드",
-    items: [{ label: "대시보드", href: "/dashboard", note: "실패·막힘·기다림을 한 화면에서" }],
+    items: [{ label: "대시보드", href: "/dashboard", icon: "dashboard", note: "실패·막힘·기다림을 한 화면에서" }],
   },
   {
     // 건수는 `Shell`이 채운다 — 여기는 자리만.
     label: "결재함",
-    items: [{ label: "결재함", href: "/approvals", note: "사람이 답해야 풀리는 것들" }],
+    items: [{ label: "결재함", href: "/approvals", icon: "approvals", note: "사람이 답해야 풀리는 것들" }],
   },
   {
     // 저작이 콘솔 안으로 들어왔다 (ADR-0143) — 작업공간 하나가 BPM 프로세스 한 벌이다 (C17).
     // 공통 패키지를 **만드는** 자리도 프로젝트 안이다 (ADR-0176).
-    label: "저작",
-    items: [{ label: "프로젝트", href: "/workspaces", note: "프로세스를 묶고 그림을 그려 그 자리에서 돌려 본다" }],
+    // **줄이 하나인 묶음은 묶음 = 줄 = 화면 제목이다** (ADR-0186) — 펼치지 않으니 줄 이름이 보일 자리가 없다.
+    label: "프로젝트",
+    items: [{ label: "프로젝트", href: "/workspaces", icon: "projects", note: "프로세스를 묶고 그림을 그려 그 자리에서 돌려 본다" }],
   },
   {
     // **이미 지어 올린** 공통 패키지를 회사 범위로 보고 고르는 서가 — 만드는 자리가 아니다 (ADR-0176·0181).
     label: "라이브러리",
-    items: [{ label: "공통 패키지", href: "/packages", note: "지어 올린 공유 프로세스 — 프로세스가 설치해서 부른다" }],
+    items: [{ label: "라이브러리", href: "/packages", icon: "library", note: "지어 올린 공유 프로세스 — 프로세스가 설치해서 부른다" }],
   },
   {
     // 후보 → 승인 → 배포가 **한 화면의 탭 둘**이다 (CON-15).
     label: "배포",
     items: [
-      { label: "승인 대기", href: "/deployments?tab=pending", note: "올라온 후보를 승인한다 — 승인해야 배포할 수 있다" },
-      { label: "배포", href: "/deployments", note: "승인된 판을 실행기에 올리고 철회한다" },
+      { label: "승인 대기", href: "/deployments?tab=pending", icon: "candidates", note: "올라온 후보를 승인한다 — 승인해야 배포할 수 있다" },
+      { label: "배포", href: "/deployments", icon: "deployments", note: "승인된 판을 실행기에 올리고 철회한다" },
     ],
   },
   {
     // 지키는 것 — 업무의 지금 모습·지나온 기록·내려갈 작업.
     label: "운영",
     items: [
-      { label: "프로세스 현황", href: "/bots", note: "판마다 준비도·성공률과 도는 곳" },
-      { label: "실행 기록", href: "/runs", note: "지나간 실행을 찾아 무엇이 막혔는지 본다" },
-      { label: "작업 지시", href: "/jobs", note: "언제 돌릴지 시키고 대기열을 본다" },
+      { label: "프로세스 현황", href: "/processes", icon: "processes", note: "판마다 준비도·성공률과 도는 곳" },
+      { label: "실행 기록", href: "/runs", icon: "runs", note: "지나간 실행을 찾아 무엇이 막혔는지 본다" },
+      { label: "작업 지시", href: "/jobs", icon: "jobs", note: "언제 돌릴지 시키고 대기열을 본다" },
     ],
   },
   {
     // 일이 도는 기반 — 실행기(CON-12)와 바깥 앱 카탈로그(CON-18)·그것을 맡는 일꾼(CON-17).
     label: "시스템",
     items: [
-      { label: "서버 실행기", href: "/server-runners", note: "실행이 도는 곳과 Center 대기열" },
-      { label: "앱", href: "/connected-apps", note: "프로세스가 부르는 바깥 앱 목록" },
-      { label: "일꾼", href: "/consumers", note: "그 앱들의 일감을 가져가는 쪽" },
+      { label: "서버 실행기", href: "/server-runners", icon: "runners", note: "실행이 도는 곳과 Center 대기열" },
+      { label: "앱", href: "/connected-apps", icon: "apps", note: "프로세스가 부르는 바깥 앱 목록" },
+      { label: "일꾼", href: "/consumers", icon: "workers", note: "그 앱들의 일감을 가져가는 쪽" },
     ],
   },
   {
     // 사람과 권한 — 업무가 아니라 **누가 무엇을 할 수 있나**다.
     label: "권한·조직",
     items: [
-      { label: "조직", href: "/organization", note: "회사·부서·직원과 업무 자리" },
+      { label: "조직", href: "/organization", icon: "organization", note: "회사·부서·직원과 업무 자리" },
       // 계정을 보는 것도 관리자의 일이다 (C5 `GET /accounts`) — 보기 전용에는 줄이 없다.
       {
         label: "관리자 계정",
         href: "/accounts",
+        icon: "accounts",
         note: "콘솔에 들어오는 계정과 역할",
         adminOnly: true,
       },

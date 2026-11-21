@@ -220,9 +220,19 @@ def test_the_nav_opens_the_page() -> None:
     """탐색의 꺼진 줄이 **주소를 갖는다** — 화면이 생겼으니 「아직 없습니다」가 남아 있으면 거짓말이다."""
     shell = (CONSOLE / "components" / "Shell.tsx").read_text(encoding="utf-8")
     # 줄에 한 줄 설명(`note`)이 붙었다 (ADR-0152) — 이름과 주소가 **한 줄에 같이** 있는지만 본다.
-    assert '{ label: "프로세스 현황", href: "/bots"' in shell
+    assert '{ label: "프로세스 현황", href: "/processes"' in shell
     assert "CON-02는 아직" not in shell
-    assert (CONSOLE / "app" / "bots" / "page.tsx").is_file()
+    assert (CONSOLE / "app" / "processes" / "page.tsx").is_file()
+
+
+def test_the_old_address_still_lands() -> None:
+    """옛 주소 `/bots`(PC 실행기 시절의 이름)는 **새 주소로 넘긴다** — 책갈피·남은 링크가 깨지지 않는다 (ADR-0186)."""
+    config = (CONSOLE / "next.config.ts").read_text(encoding="utf-8")
+    assert '{ source: "/bots", destination: "/processes", permanent: true }' in config
+    assert '{ source: "/bots/:path*", destination: "/processes/:path*", permanent: true }' in config
+    # 화면 쪽에는 옛 주소로 가는 링크가 남지 않는다.
+    for path in (CONSOLE / "app").rglob("*.tsx"):
+        assert '"/bots' not in path.read_text(encoding="utf-8"), path
 
 
 # ─────────────────────────── 패키지에서 오는 칸 (C5) ───────────────────────────
@@ -357,8 +367,8 @@ def test_the_column_counts_runners(client: TestClient) -> None:
     CON-02는 **판마다 한 줄인 표**이고 열은 `table.tsx`가, 재료는 `page.tsx`가 짓는다
     (ADR-0159).
     """
-    page = (CONSOLE / "app" / "bots" / "page.tsx").read_text(encoding="utf-8")
-    table = (CONSOLE / "app" / "bots" / "table.tsx").read_text(encoding="utf-8")
+    page = (CONSOLE / "app" / "processes" / "page.tsx").read_text(encoding="utf-8")
+    table = (CONSOLE / "app" / "processes" / "table.tsx").read_text(encoding="utf-8")
     assert "DataTable" in table, "콘솔의 목록은 모두 같은 표다 (ADR-0159)"
     assert 'header: "실행기"' in table
     assert 'header: "배포"' not in table, "건수로 보이던 칸은 없다 — 건수는 말풍선에"

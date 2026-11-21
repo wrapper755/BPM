@@ -18,7 +18,7 @@ export function DeletePackage({
 }: {
   packageId: string;
   version: string;
-  back?: "/packages" | "/bots";
+  back?: "/packages" | "/processes";
 }) {
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);

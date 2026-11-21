@@ -74,7 +74,7 @@ export default async function PackagePage({
 
 /**
  * 패키지 상세 — `area`가 지금 자리다: `process`는 「운영 › 프로세스 현황」(CON-02), `package`는
- * 「라이브러리 › 공통 패키지」(CON-06). BPM 프로세스는 앞의 것, 나머지는 뒤의 것에만 보인다.
+ * 「라이브러리」(CON-06). BPM 프로세스는 앞의 것, 나머지는 뒤의 것에만 보인다.
  */
 export async function PackageDetail({
   params,
@@ -167,7 +167,7 @@ export async function PackageDetail({
   const missing = info?.missing_resources ?? [];
 
   return (
-    <Shell mode={found.mode} actor={found.actor} current={area === "process" ? "/bots" : "/packages"}>
+    <Shell mode={found.mode} actor={found.actor} current={area === "process" ? "/processes" : "/packages"}>
       {/* 결재함 상세(CON-04)와 같은 모양 — 단추는 제목 오른쪽, 칠한 위험 단추는 확인 창 안에만 (ADR-0164). */}
       <header>
         <h1 className="text-h2 font-bold">
@@ -181,7 +181,7 @@ export async function PackageDetail({
               status={info.status}
               place={placeLine(company, place ?? "—")}
             />
-            <DeletePackage packageId={info.id} version={info.version} back={area === "process" ? "/bots" : "/packages"} />
+            <DeletePackage packageId={info.id} version={info.version} back={area === "process" ? "/processes" : "/packages"} />
           </div>
         ) : null}
       </header>

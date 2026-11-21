@@ -9,6 +9,7 @@ import { namesOf } from "@/lib/organization";
 import { AutoFilter } from "@/components/AutoFilter";
 import { loadProcessNames, processNamer } from "@/lib/names";
 import { time, took } from "@/lib/time";
+import { ART } from "@/components/empty-art";
 
 /**
  * CON-01 로그 (목록).
@@ -223,10 +224,11 @@ export default async function RunsPage({
                 bpm_process_id: query.bpm_process_id,
               },
             }}
-            empty={{
-              title: "조건에 맞는 실행이 없습니다.",
-              hint: "Studio 시험 실행이나 서버 실행기가 보낸 기록이 여기 쌓입니다.",
-            }}
+            empty={
+              query.status || query.bpm_process_id
+                ? { title: "조건에 맞는 실행이 없습니다.", hint: "거르기를 초기화하세요.", art: ART.search }
+                : { title: "실행이 없습니다.", hint: "서버 실행기가 보낸 기록이 여기 쌓입니다.", art: ART.runs }
+            }
           />
           {/* 건수는 페이저가 말한다 — Center가 잘랐을 때만 여기 한 줄 (ADR-0184). */}
           {total > rows.length ? (

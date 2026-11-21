@@ -22,6 +22,7 @@ import {
   type BotRow,
   type GroupSort,
 } from "@/lib/summary";
+import { ART } from "@/components/empty-art";
 
 /**
  * CON-02 [F]+[B] — 거르기와 표. **거르는 일이 브라우저에서 일어난다** ([ADR-0160](../../../../../docs/decisions/0160-the-filter-runs-as-you-type.md)).
@@ -81,10 +82,10 @@ export function ProcessTable({
       >
         {/* 「초기화」는 이름 칸 바로 옆의 아이콘 단추다 (ADR-0171). */}
         <div className="filter-field">
-          <label htmlFor="bots-q">이름</label>
+          <label htmlFor="processes-q">이름</label>
           <span className="flex items-center gap-1">
             <input
-              id="bots-q"
+              id="processes-q"
               name="q"
               value={text}
               onChange={(event) => setText(event.target.value)}
@@ -92,7 +93,7 @@ export function ProcessTable({
               className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
             />
             <FilterReset
-              href="/bots"
+              href="/processes"
               onClick={() => {
                 setText("");
                 setStatus(DEFAULT_STATUS);
@@ -136,7 +137,7 @@ export function ProcessTable({
         rows={shown}
         rowKey={(row) => `${row.id}@${row.version}`}
         caption="프로세스"
-        empty={{ title: "조건에 맞는 프로세스가 없습니다.", hint: "거르기를 초기화하세요." }}
+        empty={{ title: "조건에 맞는 프로세스가 없습니다.", hint: "거르기를 초기화하세요.", art: ART.search }}
       />
     </>
   );

@@ -11,6 +11,7 @@ import { fullTime, time } from "@/lib/time";
 import { namesOf, placeLine, workPlaceLabel } from "@/lib/organization";
 import { PendingTable, type PendingRow } from "./pending";
 import { RevokeDeployment } from "./tools";
+import { ART } from "@/components/empty-art";
 
 /**
  * CON-15 배포 — **후보를 승인하고** 배포를 **만들고 철회하는 한 곳**이다 (ADR-0090·ADR-0181). 탭 둘 —
@@ -302,6 +303,7 @@ export default async function DeploymentsPage({
         <ErrorBanner message={failure} />
       ) : rows.length === 0 ? (
         <EmptyState
+          art={state || process ? ART.search : ART.runs}
           title={state || process ? "조건에 맞는 배포가 없습니다." : "배포가 없습니다."}
           hint={found.mode === "admin" ? "승인된 프로세스를 「새 배포...」로 배포하세요." : "관리자가 배포하면 여기 보입니다."}
         />
