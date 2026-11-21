@@ -10,8 +10,10 @@ import type { ServiceAppResource } from "@bpm/api-types/c7-service-app-resource"
 import { loadWorkspaceResources } from "@/app/actions";
 import { readAnswerFields, readAssignees } from "@/lib/answer-fields";
 import { AnswerFieldsEditor, AssigneesEditor } from "./answer-fields";
+import { MapTable } from "./map-table";
 import { serviceCallHints, type Suggestion } from "@/lib/resources";
 import {
+  mapRows,
   eventFields,
   eventPatch,
   parseBody,
@@ -499,6 +501,22 @@ function ElementBlock({
           if (name === "approval" && field.name === "fields") {
             const answers = readAnswerFields(body.fields);
             if (answers) return <AnswerFieldsEditor key={field.name} fields={answers} canWrite={canWrite} onChange={put} />;
+          }
+          // `이름=값`은 두 열의 표다 — 객체가 아닌 값(반쯤 적은 글)은 글 칸으로 남는다.
+          if (field.kind === "map-text") {
+            const rows = mapRows(body[field.name]);
+            if (rows)
+              return (
+                <MapTable
+                  key={field.name}
+                  label={`${field.label}${field.required ? " *" : ""}`}
+                  code={field.name}
+                  help={field.help}
+                  rows={rows}
+                  canWrite={canWrite}
+                  onChange={put}
+                />
+              );
           }
           if (name === "approval" && field.name === "assignees") {
             const who = readAssignees(body.assignees);

@@ -92,6 +92,41 @@ export function withField(body: Body, field: ElementField, text: string): Body {
   return made;
 }
 
+// ─────────────────────────── `이름=값` 칸 → 두 열의 표 ───────────────────────────
+
+/** 표의 줄 하나 — 이름이 비거나 겹치는 줄도 **고치는 동안은 든다**(넣을 때 가린다). */
+export type MapRow = [name: string, value: string];
+
+/** 본문의 값(객체) → 줄들. 객체가 아니면 `null`(글 칸으로 남는다). */
+export function mapRows(value: unknown): MapRow[] | null {
+  if (value === undefined || value === null) return [];
+  if (typeof value !== "object" || Array.isArray(value)) return null;
+  return Object.entries(value as Record<string, unknown>).map(([name, one]) => [name, String(one ?? "")]);
+}
+
+/** 줄들 → 본문에 넣을 값. 이름이 빈 줄은 버리고 겹치면 뒤의 것이 이긴다. 다 비면 `undefined` — 칸을 뺀다. */
+export function rowsToMap(rows: MapRow[]): Record<string, string> | undefined {
+  const out: Record<string, string> = {};
+  for (const [name, value] of rows) if (name.trim()) out[name.trim()] = value;
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** 줄마다 말할 것 — 겹치는 이름. */
+export function rowProblems(rows: MapRow[]): (string | null)[] {
+  const later = rows.map(([name], at) => rows.slice(at + 1).some(([other]) => other.trim() && other.trim() === name.trim()));
+  return later.map((dup) => (dup ? "같은 이름이 아래에 또 있습니다 — 아래 줄이 이깁니다." : null));
+}
+
+/**
+ * 열 이름 — 칸의 설명이 `` `필드=식` ``으로 시작하면 그 짝이고 나머지 글은 설명으로 남는다.
+ * 짝이 없으면 「이름 | 값」.
+ */
+export function mapColumns(help: string | undefined): { left: string; right: string; rest?: string } {
+  const found = /^`([^=`]+)=([^`]+)`\s*(?:—\s*)?(.*)$/s.exec(help ?? "");
+  if (!found) return { left: "이름", right: "값", rest: help };
+  return { left: found[1]!.trim(), right: found[2]!.trim(), rest: found[3]?.trim() || undefined };
+}
+
 /**
  * 폼이 그리지 않는 칸 — 모델에 없는데 파일에는 있는 것. **보여 준다** — C14는 모르는 칸을
  * 버리지 않으므로(호환 규칙) 화면도 그것이 있다는 것을 숨기면 안 된다.
