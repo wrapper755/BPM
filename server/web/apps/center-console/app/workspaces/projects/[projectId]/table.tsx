@@ -12,6 +12,7 @@ import { time } from "@/lib/time";
 import { filterProcesses } from "@/lib/projects";
 import { checkText, deployStand, deployText, trialStand } from "@/lib/authoring";
 import { ImportProcesses, NewProcess } from "./tools";
+import { ART } from "@/components/empty-art";
 
 /** CON-20c [B] 탭 — 주소에는 `?tab=shared`만 남는다 (기본은 프로세스). */
 export type ProjectTab = "processes" | "shared";
@@ -199,9 +200,10 @@ export function ProcessRows({
             shared.length === 0
               ? {
                   title: "공통 패키지가 없습니다.",
+                  art: ART.projects,
                   hint: admin ? "여러 프로세스가 함께 부르는 단계는 여기서 만들어 지은 뒤 설치하세요." : undefined,
                 }
-              : { title: "조건에 맞는 공통 패키지가 없습니다.", hint: "거르기를 초기화하세요." }
+              : { title: "조건에 맞는 공통 패키지가 없습니다.", hint: "거르기를 초기화하세요.", art: ART.search }
           }
         />
       ) : (
@@ -215,9 +217,10 @@ export function ProcessRows({
             processes.length === 0
               ? {
                   title: "프로세스가 없습니다.",
+                  art: ART.projects,
                   hint: admin ? "「새 프로세스」로 만들거나 「파일에서 가져오기」로 들이세요." : undefined,
                 }
-              : { title: "조건에 맞는 프로세스가 없습니다.", hint: "거르기를 초기화하세요." }
+              : { title: "조건에 맞는 프로세스가 없습니다.", hint: "거르기를 초기화하세요.", art: ART.search }
           }
         />
       )}

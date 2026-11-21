@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { ChevronDown, Menu } from "lucide-react";
 import { AppTile, InfoTip } from "@bpm/ui";
+import { ICON, type IconName } from "./icons";
 
 /**
  * CON-00 [A]·[M] — **위 막대의 메뉴**다 ([ADR-0152](../../../../../docs/decisions/0152-console-chrome-is-one-top-bar.md)).
@@ -14,7 +15,7 @@ import { AppTile, InfoTip } from "@bpm/ui";
  * 넓은 화면에서는 이름만 서고 설명은 **말풍선**이다 — 좁은 화면의 한 장 메뉴는 말풍선이 뜨지 않아 글로
  * 둔다 (ADR-0170, U20).
  *
- * **줄이 하나인 묶음은 펼치지 않는다** — 「대시보드」·「결재함」·「저작」·「라이브러리」는 눌러서 바로 간다(펼쳐 봐야 같은 이름 하나다).
+ * **줄이 하나인 묶음은 펼치지 않는다** — 「대시보드」·「결재함」·「프로젝트」·「라이브러리」는 눌러서 바로 간다 — 묶음 = 줄 = 화면 제목이다 (ADR-0186).
  * 줄에 `badge`가 있으면 이름 옆에 **건수**가 선다 — 「결재함」의 기다리는 결재 (ADR-0181). 0이면 그리지 않는다.
  *
  * 묶음은 **글자**이고 지금 자리의 묶음은 `primary` 2px 밑줄 + 굵게다 (ADR-0164 — ADR-0161의 알약을 걷었다).
@@ -26,8 +27,19 @@ import { AppTile, InfoTip } from "@bpm/ui";
 
 /** 탐색 한 줄. **아직 없는 화면에는 `href`가 없다** — 끄고 이유(`later`)를 화면 글로 보인다 (U3·U20, ADR-0162). */
 export type NavItem =
-  | { label: string; href: Route; note: string; later?: never; badge?: number | null }
-  | { label: string; href?: never; note: string; later: string; badge?: never };
+  | { label: string; href: Route; note: string; later?: never; badge?: number | null; icon?: IconName }
+  | { label: string; href?: never; note: string; later: string; badge?: never; icon?: IconName };
+
+/**
+ * 줄 이름 앞의 아이콘 (16) — **장식**이라 읽지 않고, 색은 `text-muted`이며 고른 줄에서는 글과 같은 색이다
+ * ([ADR-0187](../../../../../docs/decisions/0187-icons-in-menus-and-drawn-empty-states.md)). 모양은 `icons.ts`가 정한다.
+ * 줄은 서버(`Shell`)가 짓고 이 구성요소는 클라이언트라 **이름**으로 받는다 — 구성요소 함수는 그 경계를 넘지 못한다.
+ */
+function RowIcon({ icon, here }: { icon?: IconName; here: boolean }) {
+  if (!icon) return null;
+  const Icon = ICON[icon];
+  return <Icon size={16} aria-hidden className={`mr-2 shrink-0${here ? "" : " text-text-muted"}`} />;
+}
 
 /**
  * 건수 배지 — 옅은 `primary` 면에 굵은 숫자 (ADR-0181). 칠한 면은 주 단추 하나뿐이다 (ADR-0157).
@@ -220,18 +232,21 @@ function Rows({
               <span
                 className={`flex items-center text-body-sm${current === item.href ? " font-semibold" : ""}`}
               >
+                <RowIcon icon={item.icon} here={current === item.href} />
                 {item.label}
                 <Badge count={item.badge} of="기다리는 것" />
               </span>
-              <span className={note}>{item.note}</span>
+              {/* 설명은 이름과 왼쪽 끝을 맞춘다 — 아이콘(16) + 사이(8)만큼 들인다. */}
+              <span className={`${note}${item.icon ? " pl-6" : ""}`}>{item.note}</span>
             </Link>
           </li>
         ) : (
           <li key={item.label}>
             {/* 아직인 까닭은 그 줄 아래 글로 (U3·U20, ADR-0162). */}
             <span className="block rounded-lg px-3 py-2 text-text-muted" title={tips ? `${item.note} — ${item.later}` : undefined}>
-              <span className="flex items-center justify-between text-body-sm">
-                {item.label}
+              <span className="flex items-center text-body-sm">
+                <RowIcon icon={item.icon} here={false} />
+                <span className="flex-1">{item.label}</span>
                 <span className="text-caption">아직</span>
               </span>
               <span className={tips ? "sr-only" : "block text-caption"}>{item.note}</span>

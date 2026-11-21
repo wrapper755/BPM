@@ -8,6 +8,7 @@ import { Shell } from "@/components/Shell";
 import { AutoFilter } from "@/components/AutoFilter";
 import { loadNodeNames, loadProcessNames, processNamer } from "@/lib/names";
 import { between, fullTime, time, took } from "@/lib/time";
+import { ART } from "@/components/empty-art";
 
 /**
  * CON-04 결재함 (목록).
@@ -218,6 +219,7 @@ export default async function ApprovalsPage({
         <ErrorBanner message={failure} />
       ) : rows.length === 0 ? (
         <EmptyState
+          art={state === DEFAULT_STATE && !host && !assignee ? ART.approvals : ART.search}
           title={
             state === DEFAULT_STATE && !host && !assignee
               ? "기다리는 결재가 없습니다."

@@ -37,6 +37,7 @@ import { Variables } from "./variables";
 import { Properties } from "./properties";
 import { RESOURCE_MIME, ResourcePanel } from "./resources";
 import "@bpm/bpmn-canvas/canvas.css";
+import { ACTION_ICON } from "@/components/icons";
 
 /**
  * CON-20b 작업공간 — 탭 셋과 그 안의 자리들 ([ADR-0147](../../../../../../docs/decisions/0147-workspace-has-three-tabs.md)).
@@ -375,7 +376,6 @@ export function Workspace({
         {/* 위 막대는 **메뉴가 쥐었다** (ADR-0152 §7) — 이 화면은 제 머리 띠에 지금 상태만 말한다.
             **첫 줄은 지금 자리 하나**다 — 다른 화면의 지금 자리 줄과 같은 말로 시작하고, 탭·단추와 한 줄에 서지 않는다. */}
         <p className="text-body-sm text-text-secondary">
-          <span className="text-text-muted">저작 › </span>
           <Link href="/workspaces" className="hover:underline">
             프로젝트
           </Link>
@@ -418,6 +418,7 @@ export function Workspace({
               onClick={() => void ask(Boolean(check?.cached))}
               disabled={checkBusy}
             >
+              <ACTION_ICON.check size={16} aria-hidden />
               실행 전 검사
             </Button>
           ) : null}
@@ -425,6 +426,7 @@ export function Workspace({
           {canAct ? (
             trial && isLive(trial.state) ? (
               <Button variant="secondary" size="sm" onClick={() => void stop()} disabled={trialBusy}>
+                <ACTION_ICON.stop size={16} aria-hidden />
                 중지
               </Button>
             ) : (
@@ -445,6 +447,7 @@ export function Workspace({
             <>
               <span aria-hidden className="mx-2 h-5 w-px bg-border-default" />
               <Button variant="primary" size="sm" onClick={() => void save()} disabled={!dirty || busy}>
+                <ACTION_ICON.save size={16} aria-hidden />
                 저장
               </Button>
             </>

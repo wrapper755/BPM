@@ -4,6 +4,7 @@ import type { PackageInfo } from "@bpm/api-types/c5-package-info";
 import { PackageActions } from "@/components/PackageActions";
 import { packageHref } from "@/lib/packages";
 import { time } from "@/lib/time";
+import { ART } from "@/components/empty-art";
 
 /**
  * CON-15 「승인 대기」 탭 — 후보인 판을 **BPM 프로세스와 공통 패키지를 함께** 보인다
@@ -20,8 +21,9 @@ export function PendingTable({ rows, admin }: { rows: PendingRow[]; admin: boole
   if (rows.length === 0) {
     return (
       <EmptyState
+        art={ART.runs}
         title="승인을 기다리는 후보가 없습니다."
-        hint="「저작 › 프로젝트」에서 「배포 후보로 만들기」로 올리면 여기 섭니다."
+        hint="「프로젝트」에서 「배포 후보로 만들기」로 올리면 여기 섭니다."
       />
     );
   }

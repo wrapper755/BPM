@@ -16,6 +16,8 @@ import {
 } from "@/lib/dashboard";
 import { loadProcessNames, processNamer } from "@/lib/names";
 import { Shell } from "@/components/Shell";
+import { ICON } from "@/components/icons";
+import type { LucideIcon } from "lucide-react";
 import { duration } from "@/lib/summary";
 import { between, time, took } from "@/lib/time";
 
@@ -74,6 +76,7 @@ export default async function DashboardPage() {
         <Card
           // 큰 숫자가 **실패 수**다 — 「오늘 실행 0건」이 무엇인지 헷갈리지 않게 (ADR-0183).
           title="최근 24시간 실패"
+          icon={ICON.failed}
           href="/runs?status=failed"
           link="실행 기록 보기"
           value={today ? String(today.failed) : null}
@@ -87,6 +90,7 @@ export default async function DashboardPage() {
         />
         <Card
           title="기다리는 결재"
+          icon={ICON.approvals}
           href="/approvals"
           link="결재함 보기"
           value={waiting ? String(waiting.open) : null}
@@ -108,6 +112,7 @@ export default async function DashboardPage() {
         />
         <Card
           title="승인 기다리는 후보"
+          icon={ICON.candidates}
           // 승인은 배포의 첫 걸음이다 — CON-15 「승인 대기」 탭 (ADR-0181).
           href="/deployments?tab=pending"
           link="승인하러 가기"
@@ -117,6 +122,7 @@ export default async function DashboardPage() {
         />
         <Card
           title="실행기"
+          icon={ICON.runners}
           href="/server-runners"
           link="서버 실행기 보기"
           value={health ? `${health.online} / ${health.total}` : null}
@@ -131,6 +137,7 @@ export default async function DashboardPage() {
         />
         <Card
           title="작업 대기열"
+          icon={ICON.jobs}
           href="/jobs"
           link="작업 지시 보기"
           value={queue ? String(queue.waiting) : null}
@@ -145,6 +152,7 @@ export default async function DashboardPage() {
         />
         <Card
           title="작업공간"
+          icon={ICON.projects}
           href="/workspaces"
           link="작업공간 보기"
           value={spaces ? String(spaces.total) : null}
@@ -162,16 +170,19 @@ export default async function DashboardPage() {
   );
 }
 
-const KIND: Record<TodoKind, { label: string; tone: string; list: Route; listName: string }> = {
+/** 종류 표지 — 아이콘은 카드·메뉴와 **같은 모양**이다 (`icons.ts`, ADR-0187). */
+const KIND: Record<TodoKind, { label: string; icon: LucideIcon; tone: string; list: Route; listName: string }> = {
   failed: {
     label: "실패",
+    icon: ICON.failed,
     tone: "bg-status-failed-bg text-status-failed-fg",
     list: "/runs?status=failed",
     listName: "실패",
   },
-  approval: { label: "결재", tone: "bg-bg-subtle text-text-secondary", list: "/approvals", listName: "결재" },
+  approval: { label: "결재", icon: ICON.approvals, tone: "bg-bg-subtle text-text-secondary", list: "/approvals", listName: "결재" },
   candidate: {
     label: "승인",
+    icon: ICON.candidates,
     tone: "bg-bg-subtle text-text-secondary",
     list: "/deployments?tab=pending",
     listName: "승인",
@@ -221,9 +232,7 @@ function TodoList({
                   href={todoHref(item)}
                   className="flex items-center gap-3 px-4 py-3 text-body hover:bg-bg-subtle"
                 >
-                  <span className={`w-12 shrink-0 rounded-sm px-2 py-0.5 text-center text-caption font-semibold ${KIND[item.kind].tone}`}>
-                    {KIND[item.kind].label}
-                  </span>
+                  <Kind kind={item.kind} />
                   <span className="min-w-0 flex-1 truncate text-text-primary">{what}</span>
                   <span className="shrink-0 whitespace-nowrap text-body-sm tabular-nums text-text-muted">{when}</span>
                 </Link>
@@ -253,9 +262,21 @@ function TodoList({
   );
 }
 
+/** 종류 표지 하나 — 아이콘 16 + 글. 줄마다 폭이 같아 「무엇」 열이 한 줄로 선다. */
+function Kind({ kind }: { kind: TodoKind }) {
+  const { label, icon: Icon, tone } = KIND[kind];
+  return (
+    <span className={`inline-flex w-16 shrink-0 items-center justify-center gap-1 rounded-sm px-2 py-0.5 text-caption font-semibold ${tone}`}>
+      <Icon size={16} aria-hidden className="shrink-0" />
+      {label}
+    </span>
+  );
+}
+
 /** 카드 하나 — **큰 숫자 하나 + 한 줄 + 그 화면으로 가는 링크**다. 쓰기 단추를 두지 않는다. */
 function Card({
   title,
+  icon: Icon,
   href,
   link,
   value,
@@ -263,6 +284,8 @@ function Card({
   note,
 }: {
   title: string;
+  /** 제목 앞 아이콘 (16) — 메뉴 줄과 같은 모양(ADR-0187). 장식이라 읽지 않는다. */
+  icon: LucideIcon;
   href: Route;
   link: string;
   /** `null`이면 **못 셌다** — 「—」와 까닭을 보인다 (0과 다르다). */
@@ -272,7 +295,10 @@ function Card({
 }) {
   return (
     <li className="flex flex-col gap-2 rounded-lg border border-border-default bg-bg-surface p-4">
-      <h2 className="text-body-sm font-semibold text-text-secondary">{title}</h2>
+      <h2 className="flex items-center gap-2 text-body-sm font-semibold text-text-secondary">
+        <Icon size={16} aria-hidden className="shrink-0 text-text-muted" />
+        {title}
+      </h2>
       <p className="flex items-baseline gap-1">
         <strong className="text-h1 font-bold tabular-nums">{value ?? "—"}</strong>
         {value === null ? null : <span className="text-body-sm text-text-muted">{unit}</span>}

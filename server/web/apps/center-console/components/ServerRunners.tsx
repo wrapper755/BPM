@@ -10,6 +10,7 @@ import { queueReason, runnerStatus, serverDeployments } from "@/lib/summary";
 import { fullTime, time } from "@/lib/time";
 import { CancelQueuedJob } from "@/app/server-runners/queue-cancel";
 import { RestartRunner } from "@/app/server-runners/actions-ui";
+import { ART } from "@/components/empty-art";
 
 /**
  * 서버 실행기 목록·승인 대기·대기열 — 「시스템 › 서버 실행기」(`/server-runners`, CON-12 「목록」, ADR-0172).
@@ -202,6 +203,7 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
 
         {rows.length === 0 && !failure ? (
           <EmptyState
+            art={ART.connect}
             title="등록된 서버 실행기가 없습니다."
             hint="Center와 함께 배포된 실행기는 뜨면 스스로 들어옵니다 — 들어오지 않으면 실행기 로그를 보세요."
           />

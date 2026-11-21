@@ -10,6 +10,7 @@ import { AutoFilter } from "@/components/AutoFilter";
 import { FilterReset } from "@/components/FilterReset";
 // 글·주소로 옮기는 일은 `lib/packages.ts`에 있다 — 브라우저 쪽 구성요소도 쓴다.
 import { STATUS_LABEL, nameMatches, packageHref } from "@/lib/packages";
+import { ART } from "@/components/empty-art";
 
 /**
  * CON-06 공통 패키지 (목록).
@@ -124,15 +125,18 @@ export default async function PackagesPage({ searchParams }: { searchParams: Pro
   return (
     <Shell mode={found.mode} actor={found.actor} current="/packages">
       <header className="mb-4">
-        <h1 className="text-h2 font-bold">공통 패키지</h1>
+        <h1 className="text-h2 font-bold">라이브러리</h1>
+        {/* 제목은 메뉴와 같은 말이고(ADR-0186) 「공통 패키지」는 이 서가에 놓인 것의 종류 이름이다. */}
+        <p className="text-body-sm text-text-muted">지어 올린 공통 패키지 — 프로세스가 설치해서 부른다</p>
       </header>
 
       {failure ? (
         <ErrorBanner message={failure} />
       ) : uploaded === 0 ? (
         <EmptyState
+          art={ART.projects}
           title="올라온 공통 패키지가 없습니다."
-          hint="「저작 › 프로젝트」의 「공통 패키지」 칸에서 만들어 「배포 후보로 만들기」로 지으세요."
+          hint="「프로젝트」의 「공통 패키지」 칸에서 만들어 「배포 후보로 만들기」로 지으세요."
         />
       ) : (
         <>
@@ -157,7 +161,7 @@ export default async function PackagesPage({ searchParams }: { searchParams: Pro
             rows={rows}
             rowKey={(row) => `${row.id}@${row.version}`}
             caption="공통 패키지 목록"
-            empty={{ title: "조건에 맞는 공통 패키지가 없습니다.", hint: "거르기를 초기화하세요." }}
+            empty={{ title: "조건에 맞는 공통 패키지가 없습니다.", hint: "거르기를 초기화하세요.", art: ART.search }}
           />
         </>
       )}

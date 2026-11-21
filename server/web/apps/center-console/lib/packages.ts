@@ -16,13 +16,13 @@ export const STATUS_LABEL: Record<string, string> = {
 };
 
 /**
- * 패키지 상세 주소 — **BPM 프로세스는 CON-02 「프로세스 상세」**(`/bots/…`), 나머지는 CON-06(`/packages/…`).
+ * 패키지 상세 주소 — **BPM 프로세스는 CON-02 「프로세스 상세」**(`/processes/…`), 나머지는 CON-06(`/packages/…`).
  * 종류를 모르면 `/packages/…`이고 그 상세가 종류를 읽어 넘긴다.
  *
  * 타입 라우트는 질의·경로가 붙은 주소를 리터럴로 요구한다 — 한 자리에서 만든다.
  */
 export function packageHref(row: { id: string; version: string; kind?: string }): Route {
-  const area = row.kind === "bpm_process" ? "bots" : "packages";
+  const area = row.kind === "bpm_process" ? "processes" : "packages";
   return `/${area}/${encodeURIComponent(row.id)}/${encodeURIComponent(row.version)}` as Route;
 }
 

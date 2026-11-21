@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 일부 대체됨([ADR-0186](0186-one-line-groups-have-one-name.md) — §4 묶음 「라이브러리」와 화면 「공통 패키지」의 이름이 다른 것. 줄이 하나인 묶음은 이름이 하나다) |
 | 날짜 | 2026-11-20 |
 | 관련 | 화면 CON-00 [A]·[M]·CON-02·CON-04·CON-15·CON-21, [ADR-0151](0151-console-follows-the-lifecycle.md)(**묶음 목록을 대체한다** — 생애주기 차례는 그대로), [ADR-0176](0176-projects-have-shared-packages.md)(「라이브러리」 묶음 — 그대로 둔다), [ADR-0172](0172-server-runners-get-their-own-menu-line.md)(서버 실행기 줄의 묶음을 옮긴다), [ADR-0149](0149-console-menu-follows-the-work.md)(줄 이름 = 화면 제목 — 그대로 지킨다), [ADR-0081](0081-answering-on-behalf.md)(결재의 정식 길 — 그대로) |
 

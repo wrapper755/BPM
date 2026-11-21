@@ -7,6 +7,7 @@ import { loadWorkspaceFile, startTrial } from "@/app/actions";
 import { parseCases } from "@/lib/cases";
 import { caseFilePath, caseLabel, elapsed, isLive, modeLabel, stateLabel } from "@/lib/trials";
 import { time } from "@/lib/time";
+import { ACTION_ICON } from "@/components/icons";
 
 /**
  * CON-20 「시험 실행」 — 돌려 보기 창과 목록·상세 (STU-08·STU-09가 하던 일).
@@ -77,6 +78,7 @@ export function StartTrial({
   return (
     <>
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+        <ACTION_ICON.trial size={16} aria-hidden />
         시험 실행...
       </Button>
       <Dialog

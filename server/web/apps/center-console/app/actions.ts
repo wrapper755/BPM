@@ -111,7 +111,7 @@ export async function setRunnerPaused(runnerId: string, paused: boolean): Promis
     return { error: message(cause) };
   }
   revalidatePath("/server-runners", "layout");
-  revalidatePath("/bots");
+  revalidatePath("/processes");
   return {};
 }
 
@@ -127,7 +127,7 @@ export async function restartRunner(runnerId: string): Promise<ActionResult> {
     return { error: message(cause) };
   }
   revalidatePath("/server-runners", "layout");
-  revalidatePath("/bots");
+  revalidatePath("/processes");
   return {};
 }
 
@@ -146,7 +146,7 @@ export async function markRunnerLost(runnerId: string): Promise<ActionResult> {
   }
   // 결재함도 바뀐다 — 회수된 결재가 그 화면에 남아 보이면 안 된다 (C6 `host_lost`).
   revalidatePath("/server-runners", "layout");
-  revalidatePath("/bots");
+  revalidatePath("/processes");
   revalidatePath("/approvals", "layout");
   revalidatePath("/runs", "layout");
   return {};
@@ -318,7 +318,7 @@ export async function cancelJob(jobId: string): Promise<ActionResult> {
   // 서버 작업은 CON-12의 「대기열」에도 같은 줄로 보인다 — 한쪽만 새로 그리면 취소한 작업이
   // 다른 화면에 남는다.
   revalidatePath("/server-runners", "layout");
-  revalidatePath("/bots");
+  revalidatePath("/processes");
   return {};
 }
 
@@ -344,7 +344,7 @@ export async function deletePackage(packageId: string, version: string): Promise
   }
   revalidatePath("/packages", "layout");
   // CON-02도 같은 패키지 표를 읽는다 (BPM 프로세스·버전별 준비도) — 지운 줄이 그대로 남으면 안 된다.
-  revalidatePath("/bots", "layout");
+  revalidatePath("/processes", "layout");
   return {};
 }
 
@@ -379,7 +379,7 @@ export async function decideEnrollment(
     return { error: message(cause) };
   }
   revalidatePath("/server-runners", "layout");
-  revalidatePath("/bots");
+  revalidatePath("/processes");
   return {};
 }
 
@@ -408,7 +408,7 @@ export async function unbindCenterKey(keyId: string): Promise<ActionResult> {
 
 /** 패키지 상태를 바꾸면 그것을 읽는 화면 셋을 함께 새로 그린다 (CON-02·CON-06·배포). */
 function packagesChanged(): void {
-  revalidatePath("/bots", "layout");
+  revalidatePath("/processes", "layout");
   revalidatePath("/packages", "layout");
   revalidatePath("/deployments", "layout");
 }
@@ -489,7 +489,7 @@ export async function createDeployment(form: FormData): Promise<void> {
     }
   }
   revalidatePath("/deployments", "layout");
-  revalidatePath("/bots", "layout");
+  revalidatePath("/processes", "layout");
   redirect(`/deployments?created=${done.length}` as Route);
 }
 
@@ -501,7 +501,7 @@ export async function revokeDeployment(deploymentId: string): Promise<ActionResu
     return { error: message(cause) };
   }
   revalidatePath("/deployments", "layout");
-  revalidatePath("/bots", "layout");
+  revalidatePath("/processes", "layout");
   return {};
 }
 
