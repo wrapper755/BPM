@@ -84,7 +84,9 @@ BPM 프로세스의 결재(UserTask)를 Center 결재함으로 올린다. 결재
 
 **`review`는 원칙 6의 예외다.** 결재자가 판단하려면 업무 값이 필요하기 때문이다. 콘솔에서는 접어서 보인다 (U10). `review`와 `answer`의 **값**은 결재가 끝난 뒤 30일이 지나면 지운다 (`BPM_CENTER__APPROVAL__VALUE_DAYS`). 누가·언제·결과(승인/반려/값 있음)는 남는다.
 
-Form: `fields: [{key, label, type: "bool" | "number" | "text" | "choice", choices?, required, default?}]`. STU-04 결재 「출력」 표와 같은 모양이다.
+Form: `fields: [{key, label, type: "bool" | "number" | "text" | "choice", choices?, required, default?, when?}]`. STU-04 결재 「출력」 표와 같은 모양이다.
+
+**조건부 칸** `when: {field, in: [값…]}` ([ADR-0188](../decisions/0188-conditional-form-fields.md)) — 같은 폼의 **앞에 오는** `choice`·`bool` 칸 `field`의 값이 `in` 안일 때만 그 칸이 **있다**: 그때만 보이고 `required`가 뜻을 가진다. 가리키는 칸도 조건이 맞지 않으면 이 칸도 맞지 않는다(이어진다). 값 비교는 엄격하다 — `true`는 `1`이 아니다. 판정은 `contracts.approvals.field_applies` 한 자리다.
 
 ### ApprovalInfo (콘솔이 읽는 것)
 
@@ -134,9 +136,9 @@ Form: `fields: [{key, label, type: "bool" | "number" | "text" | "choice", choice
 | `if_review_digest` | str | | 답하는 쪽이 **본** 결재의 `review_digest`. 지금 것과 다르면 409 `review_changed` ([ADR-0083](../decisions/0083-review-digest.md)) |
 
 - **내용 고정** ([ADR-0083](../decisions/0083-review-digest.md)) — `review_digest`는 `contracts.approvals.review_digest`가 짓는다: `json.dumps(review, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`를 UTF-8로 SHA-256, 16진 소문자, 앞에 `sha256:`. `review`가 비어도 있다. 연동하는 쪽은 **Center가 준 값을 그대로** 되돌려 보낸다(제 손으로 다시 계산하지 않는다 — 수의 표기가 갈라질 수 있다). 이 칸이 생기기 전의 결재는 남은 `review`로 읽을 때 계산하고, 값도 지워졌으면 없다 — 그때 `if_review_digest`를 실으면 `review_changed`다.
-- **Center가 폼으로 답을 검증한다** (필수·타입·선택지, `contracts.approvals.validate_answer`). 틀리면 422로 콘솔에 바로 보인다. 실행하는 쪽도 같은 함수로 한 번 더 검증한다.
-- **검증 전에 빈 칸을 기본값으로 채운다** (`contracts.approvals.apply_defaults`) — 콘솔 폼이 안 보낸 칸이 「필수인데 비었다」가 되지 않게.
-- **폼의 칸은 모두 변수가 된다** (`contracts.approvals.answer_variables`) — 실행하는 쪽이 답을 변수로 옮길 때 기본값으로, 그것도 없으면 **`None`**으로 채운다.
+- **Center가 폼으로 답을 검증한다** (필수·타입·선택지, `contracts.approvals.validate_answer`). **조건이 맞지 않는 칸은 보지 않는다** — 필수도 타입도. 틀리면 422로 콘솔에 바로 보인다. 실행하는 쪽도 같은 함수로 한 번 더 검증한다.
+- **검증 전에 빈 칸을 기본값으로 채운다** (`contracts.approvals.apply_defaults`) — 콘솔 폼이 안 보낸 칸이 「필수인데 비었다」가 되지 않게. 그다음 **조건이 맞지 않는 칸의 값을 버린다**(거부하지 않는다 — JS 없이 모든 칸이 보이는 폼이 걸리지 않게, ADR-0188). Center가 저장하는 답도 버린 뒤의 것이다.
+- **폼의 칸은 모두 변수가 된다** (`contracts.approvals.answer_variables`) — 실행하는 쪽이 답을 변수로 옮길 때 기본값으로, 그것도 없으면 **`None`**으로 채운다. 조건이 맞지 않아 버린 칸도 `None`이다.
 - **답한 사람은 폼 칸이 아니다** — 그림이 C14 `answered_by_as`·`answered_via_as`를 적었을 때만 `answered_by`·`answered_via`가 그 변수에 들어간다 ([ADR-0096](../decisions/0096-answerer-into-variables.md)). 폼에 「확인자」 칸을 두지 않는다(스스로 적은 이름과 Center가 대조한 이름이 둘이 된다).
   - 빼 두면 BPM 프로세스가 그 칸의 이름을 쓸 수 없고(웹훅 `fields:[…]`·스크립트), 더 나쁘게는 **이름이 식 도우미로 떨어진다** — `기간`·`합계`처럼 겹치는 이름이면 변수가 아니라 **함수**가 잡혀 나간다. 식 쪽에서도 막는다 (호출형 도우미는 이름만으로 잡히지 않는다, [ADR-0025](../decisions/0025-expression-language.md)).
   - **지나지 않은 결재의 칸은 채우지 않는다.** 그 칸은 애초에 없었으므로 그것을 가리키는 식은 그대로 실패해야 한다.
@@ -156,7 +158,9 @@ Form: `fields: [{key, label, type: "bool" | "number" | "text" | "choice", choice
   "title": "세금계산서 발행 승인",
   "form": {"fields": [
     {"key": "approved", "label": "승인", "type": "bool", "required": true},
-    {"key": "memo", "label": "메모", "type": "text", "required": false}]},
+    {"key": "memo", "label": "메모", "type": "text", "required": false},
+    {"key": "reason", "label": "반려 사유", "type": "text", "required": true,
+     "when": {"field": "approved", "in": [false]}}]},
   "review": {"거래처": "주식회사 예시", "금액": 1100000},
   "assignees": ["김재무"],
   "expires_at": "2026-10-02T18:00:00+09:00"
@@ -198,6 +202,7 @@ Form: `fields: [{key, label, type: "bool" | "number" | "text" | "choice", choice
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-21 | 1 | **조건부 칸** `FormField.when?: {field, in}` — 앞의 `choice`·`bool` 칸 값이 목록 안일 때만 보이고 필수다. 맞지 않는 칸의 값은 버린다. 선택 칸이라 옛 폼은 그대로 읽힌다 | [0188](../decisions/0188-conditional-form-fields.md) |
 | 2026-11-12 | 1 | **확인(`confirmation`)도 결재함으로 온다** — `layer`가 둘이 되고 거부 코드는 `confirmation_not_allowed` → **`unknown_layer`**다. `host.type`은 `server_runner` 하나, `withdraw_reason`의 `answered_in_field`를 걷었다(현장 창이 없다). 검토 자료의 표 값은 CON-04가 그린다 | [0144](../decisions/0144-remove-the-pc-runner.md) |
 | 2026-10-30 | 1 | `review`의 **표 값**(`{headers, rows}`)을 정했다 — 확장이 전환할 때 낸 확인의 검토 자료(CMN-01 [R]). 값 타입이 원래 자유라 schema는 그대로다 | [0112](../decisions/0112-escalation-review-from-extensions.md) |
 | 2026-10-28 | 1 | **회수는 다시 열리지 않는다** (형식은 그대로다) — 서버 실행기가 이미 닫은 실행의 회수에 `not_waiting`으로 답하자 Center가 「거절은 되돌림」으로 읽어 취소된 실행의 결재를 `open`으로 되살렸다(답하면 효과 없이 200). 되돌림은 답에만, 끝난 실행의 결재는 되돌리지 않고 답은 409 `not_open`, 하트비트가 남은 것을 쓸어 거둔다 | — |

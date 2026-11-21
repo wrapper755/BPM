@@ -171,6 +171,18 @@
       ]
     },
     {
+      "key": "보완서류",
+      "label": "보완할 서류",
+      "type": "text",
+      "required": true,
+      "when": {
+        "field": "결정",
+        "in": [
+          "보완요청"
+        ]
+      }
+    },
+    {
       "key": "의견",
       "label": "의견",
       "type": "text",
@@ -210,7 +222,7 @@
         <bpm:webhook>{
   "url": "{회신주소}",
   "method": "POST",
-  "body": "fields:[신청번호, 결정, 의견, 거래처코드]",
+  "body": "fields:[신청번호, 결정, 보완서류, 의견, 거래처코드]",
   "timeout_s": 10,
   "store_as": "회신결과"
 }</bpm:webhook>

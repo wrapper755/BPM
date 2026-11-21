@@ -61,6 +61,18 @@ export interface FormField {
   label: string;
   required?: boolean;
   type: string;
+  when?: FieldCondition | null;
+  [k: string]: unknown;
+}
+/**
+ * 조건부 칸의 조건 (ADR-0188) — 앞에 오는 `choice`·`bool` 칸 `field`의 값이 `in` 안일 때.
+ *
+ * 모양이 맞는지(칸이 있는지·앞에 오는지·값이 선택지 안인지)는 C14 B12가 본다. 여기서 막으면
+ * Center가 그림의 실수를 `input_invalid` 한 줄로 돌려줘 어디가 틀렸는지 모른다.
+ */
+export interface FieldCondition {
+  field: string;
+  in: unknown[];
   [k: string]: unknown;
 }
 /**

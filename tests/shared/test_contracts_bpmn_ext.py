@@ -559,6 +559,35 @@ def test_b12_approval_fields_and_boundary_hosts() -> None:
     assert "B12" in codes(bad_host)
 
 
+def _form_with(fields: str) -> str:
+    return wrap(line('<bpmn:userTask id="Ap"><bpmn:extensionElements>'
+                     f'<bpm:approval>{{"title": "t", "fields": [{fields}]}}'
+                     "</bpm:approval></bpmn:extensionElements></bpmn:userTask>"))
+
+
+def _b12(xml: str) -> list[str]:
+    return [v.message for v in validate(read_process(xml)) if v.rule == "B12"]
+
+
+def test_b12_checks_conditional_fields() -> None:
+    """조건부 칸 (ADR-0188) — 앞에 오는 choice·bool 칸을 가리키고 값이 그 칸의 것이다."""
+    decision = '{"key": "d", "label": "결정", "type": "choice", "choices": ["승인", "보완"]}'
+    flag = '{"key": "f", "label": "확인", "type": "bool"}'
+    text = '{"key": "t", "label": "글", "type": "text"}'
+
+    def cond(field: str, values: str) -> str:
+        return f'{{"key": "c", "label": "조건", "type": "text", "when": {{"field": "{field}", "in": {values}}}}}'
+
+    assert _b12(_form_with(f'{decision}, {cond("d", "[\"보완\"]")}')) == []
+    assert _b12(_form_with(f"{flag}, {cond('f', '[false]')}")) == []
+    assert "앞에 와야" in _b12(_form_with(f'{cond("d", "[\"보완\"]")}, {decision}'))[0]
+    assert "없다" in _b12(_form_with(cond("x", "[1]")))[0]
+    assert "choice·bool" in _b12(_form_with(f"{text}, {cond('t', '[\"a\"]')}"))[0]
+    assert "비었다" in _b12(_form_with(f"{decision}, {cond('d', '[]')}"))[0]
+    assert "선택지" in _b12(_form_with(f"{decision}, {cond('d', '[\"반려\"]')}"))[0]
+    assert "선택지" in _b12(_form_with(f"{flag}, {cond('f', '[1]')}"))[0]  # true·false만
+
+
 def test_b13_warns_about_webhook_sending_everything() -> None:
     xml = wrap(line('<bpmn:sendTask id="T"><bpmn:extensionElements>'
                     '<bpm:webhook>{"url": "https://x.example.com/h", "body": "all"}</bpm:webhook>'

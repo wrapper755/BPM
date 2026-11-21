@@ -58,7 +58,7 @@
 | `Task_Sanction` | 제재 목록 점검 | 서비스 앱 태스크 | `compliance`.`screen_sanctions` · 입력 name → 제재 | Gw_Join |
 | `Gw_Join` | 점검 모으기 | 포함 게이트웨이 | — | Task_Summary |
 | `Task_Summary` | 심사 요약 | 스크립트 | `신용 = 신용 if 예상거래액 >= 50000000 else None` … | Approve_Vendor |
-| `Approve_Vendor` | 구매팀장 승인 | 결재 | 「신규 거래처 등록」 · 보임 거래처명, 사업자번호, 서류결과, 신용, 제재, 권고 · 칸 `결정`(choice*), `의견`(text) · Center 결재함 | Gw_Decision |
+| `Approve_Vendor` | 구매팀장 승인 | 결재 | 「신규 거래처 등록」 · 보임 거래처명, 사업자번호, 서류결과, 신용, 제재, 권고 · 칸 `결정`(choice*), `보완서류`(text*, 결정=보완요청일 때), `의견`(text) · Center 결재함 | Gw_Decision |
 | `Gw_Decision` | 결정 | 배타 게이트웨이 | — | Task_Register (`결정 == '승인'`), Task_Reply (기본) |
 | `Task_Register` | ERP 거래처 등록 | 서비스 앱 태스크 | `erp`.`create_vendor` · 입력 name, biz_no → 거래처코드 | Task_Reply |
 | `Task_Reply` | 포털에 결과 회신 | 웹훅 보내기 | POST `{회신주소}` | End |
@@ -72,6 +72,7 @@
 | `신용` | dict? | Task_Credit (5천만 이상일 때만) | 돌지 않으면 없음 → `Task_Summary`에서 None |
 | `제재` | list? | Task_Sanction (해외일 때만) |  |
 | `결정` | string | Approve_Vendor | 승인/반려/보완요청 |
+| `보완서류` | string? | Approve_Vendor (보완요청일 때만) | 다른 결정이면 None — 조건부 칸 |
 
 <details><summary>AI 태스크 목표 전문</summary>
 
@@ -98,7 +99,7 @@
 | 케이스 | 입력 | 기대 결과 | 결재 자동 응답 · 보내는 메시지 |
 | --- | --- | --- | --- |
 | 국내 소액<br><small>서류 확인만 돈다</small> | {"신청번호": "VR-001", "거래처명": "가나상사", "사업자번호": "123-45-67890", "해외": false, "예상거래액": 10000000, "서류": ["samples/vendor/biz.pdf", "samples/vendor/bank.pdf"], "회신주소": {"$test_receiver": "reply"}} | {"권고": "승인"} | `Approve_Vendor`: {"결정": "승인"} |
-| 해외 대액<br><small>세 점검 모두 돈다. 통장 사본 없음</small> | {"신청번호": "VR-002", "거래처명": "Acme Trading", "사업자번호": "999-99-99999", "해외": true, "예상거래액": 300000000, "서류": ["samples/vendor/biz.pdf"], "회신주소": {"$test_receiver": "reply"}} | {"권고": "반려"} | `Approve_Vendor`: {"결정": "보완요청", "의견": "통장 사본 누락"} |
+| 해외 대액<br><small>세 점검 모두 돈다. 통장 사본 없음</small> | {"신청번호": "VR-002", "거래처명": "Acme Trading", "사업자번호": "999-99-99999", "해외": true, "예상거래액": 300000000, "서류": ["samples/vendor/biz.pdf"], "회신주소": {"$test_receiver": "reply"}} | {"권고": "반려"} | `Approve_Vendor`: {"결정": "보완요청", "보완서류": "통장 사본", "의견": "통장 사본 누락"} |
 
 **이 예제로 확인하는 것**
 
@@ -106,12 +107,14 @@
 - 돌지 않은 가지의 변수는 없음 → 스크립트에서 None 처리
 - 서비스 앱 3개(사내 2·외부 1)
 - 선택형 결재 칸(choice)
+- 조건부 결재 칸 — 「보완할 서류」는 결정이 보완요청일 때만 보이고 필수 (C6 `when`)
 
 **주의**
 
 - 세 검토가 각각 만드는 변수 이름을 겹치지 않게 한다 (프로토타입 시나리오 1의 주의).
 - 돌지 않은 가지가 만든다고 가정한 변수를 다음 태스크가 읽으면 「없는 변수」 오류 — 합류 뒤 스크립트에서 기본값을 정한다.
 - `"true"` 조건으로 「항상」 가지를 명시한다 (포함 게이트웨이는 기본 흐름 외에 아무 가지도 안 맞으면 멈춘다).
+- 「(보완 요청일 때)」를 칸 이름에 쓰지 말고 `when`으로 적는다 — 그래야 결재함이 그때만 보이고 Center가 그때만 필수로 본다. 다른 결정에 적힌 값은 버려지고 변수는 None이다 (ADR-0188).
 
 ---
 
