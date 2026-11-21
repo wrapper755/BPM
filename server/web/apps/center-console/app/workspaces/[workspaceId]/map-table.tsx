@@ -54,7 +54,7 @@ export function MapTable({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex min-h-6 items-center gap-1">
-        <span className="text-caption text-text-secondary" title={code}>
+        <span className="text-body-sm font-medium text-text-primary" title={code}>
           {label}
         </span>
         <span className="ml-auto" />

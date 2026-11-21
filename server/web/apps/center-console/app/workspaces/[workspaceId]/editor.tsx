@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PanelBottomClose, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button, Dialog, ErrorBanner } from "@bpm/ui";
-import type { BpmnCanvasHandle, NodeProperties, NodeState, PropertyPatch, TaskSpec } from "@bpm/bpmn-canvas";
+import type { BpmnCanvasHandle, FieldTab, NodeProperties, NodeState, PropertyPatch, TaskSpec } from "@bpm/bpmn-canvas";
 import type { FileInfo } from "@bpm/api-types/c17-file-info";
 import type { BuildInfo } from "@bpm/api-types/c17-build-info";
 import type { CheckResponse } from "@bpm/api-types/c17-check-response";
@@ -126,6 +126,8 @@ export function Workspace({
   const draft = useRef<PropertyPatch | null>(null);
   // 단추를 켜고 끄려면 화면이 알아야 한다 — 패치 자체는 `draft`에 있다.
   const [drafting, setDrafting] = useState(false);
+  // 속성 패널의 탭 — 다른 요소로 가도 남는다(입력·출력을 차례로 잇는 일이 흔하다).
+  const [propertyTab, setPropertyTab] = useState<FieldTab>("basic");
   const [leaving, setLeaving] = useState<{ from: string; to: string } | null>(null);
   const leavingNow = useRef(leaving);
   leavingNow.current = leaving;
@@ -733,6 +735,8 @@ export function Workspace({
               onApply={applyProperties}
               draft={draft}
               onDraft={setDrafting}
+              tab={propertyTab}
+              onTab={setPropertyTab}
             />
           ) : (
             <div className="min-h-0 flex-1 overflow-y-auto p-3">

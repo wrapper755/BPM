@@ -26,7 +26,7 @@ export type { ApprovalAsk, ApprovalField } from "./approvals";
 export { BPM_MODDLE } from "./moddle";
 // C14 모델에서 **생성한** 폼 명세 — 상세 패널이 칸을 손으로 적지 않는다 (scripts/gen_moddle.py).
 export { ELEMENT_FORMS } from "./element-forms";
-export type { ElementField, ElementForm, FieldKind } from "./element-forms";
+export type { ElementField, ElementForm, FieldKind, FieldTab } from "./element-forms";
 export type {
   BusinessObject,
   CanvasStats,

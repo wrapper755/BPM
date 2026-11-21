@@ -47,7 +47,7 @@ export function AnswerFieldsEditor({
   const problems = answerProblems(fields);
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-caption text-text-secondary" title="fields">
+      <span className="text-body-sm font-medium text-text-primary" title="fields">
         답 칸
       </span>
       {fields.length ? (
@@ -391,7 +391,7 @@ function Line({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline gap-1.5">
-        <label htmlFor={id} className="text-caption text-text-secondary" title={code}>
+        <label htmlFor={id} className="text-body-sm font-medium text-text-primary" title={code}>
           {label}
         </label>
         {note ? <span className="ml-auto text-caption text-text-muted">{note}</span> : null}
@@ -521,7 +521,7 @@ export function AssigneesEditor({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline gap-1.5">
-        <label htmlFor={id} className="text-caption text-text-secondary" title="assignees">
+        <label htmlFor={id} className="text-body-sm font-medium text-text-primary" title="assignees">
           담당자
         </label>
       </div>

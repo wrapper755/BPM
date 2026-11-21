@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState, type MutableRefObject, type ReactNode } from "react";
-import { ArrowRight, Check, ChevronRight, Circle, Copy, Diamond, Plus, Square, SquarePlus } from "lucide-react";
+import { ArrowRight, Check, Circle, Copy, Diamond, Plus, Square, SquarePlus } from "lucide-react";
 import { ActionMenu, Button, InfoTip } from "@bpm/ui";
 import { ELEMENT_FORMS, EVENT_KINDS } from "@bpm/bpmn-canvas";
-import type { ElementField, NodeProperties, PropertyPatch } from "@bpm/bpmn-canvas";
+import type { ElementField, FieldTab, NodeProperties, PropertyPatch } from "@bpm/bpmn-canvas";
 import type { ServiceAppResource } from "@bpm/api-types/c7-service-app-resource";
 
 import { loadWorkspaceResources } from "@/app/actions";
@@ -35,6 +35,13 @@ import {
  * 고친 것은 「적용」을 눌러야 그림에 들어간다 — 한 번이 **실행 취소 한 걸음**이다. 적용 안 한 편집은
  * `draft`에 올려 두어 편집기가 다른 요소로 넘어가기 전에 묻게 한다 (U11).
  */
+
+/** 탭 셋 — 하는 일 차례 (CON-20b). 칸이 어느 탭인지는 폼 명세(`field.tab`)가 말한다. */
+const TABS: { id: FieldTab; label: string }[] = [
+  { id: "basic", label: "기본" },
+  { id: "io", label: "입력·출력" },
+  { id: "advanced", label: "고급" },
+];
 
 /** 그 종류의 노드에만 있는 표준 칸. 없는 칸을 보내면 엉뚱한 속성이 생긴다. */
 const isActivity = (type: string) => /Task$/.test(type) || type === "CallActivity" || type === "SubProcess";
@@ -170,6 +177,8 @@ export function Properties({
   onApply,
   draft,
   onDraft,
+  tab,
+  onTab,
 }: {
   node: NodeProperties;
   canWrite: boolean;
@@ -180,6 +189,9 @@ export function Properties({
   draft: MutableRefObject<PropertyPatch | null>;
   /** 적용 안 한 편집이 생기고 없어질 때 — 편집기가 「저장」 단추를 켠다. */
   onDraft?: (changed: boolean) => void;
+  /** 고른 탭 — 편집기가 들고 있어 다른 요소로 가도 남는다. */
+  tab: FieldTab;
+  onTab: (tab: FieldTab) => void;
 }) {
   const start = useMemo(() => formOf(node), [node]);
   const [form, setForm] = useState(start);
@@ -205,41 +217,68 @@ export function Properties({
   const spare = Object.keys(ELEMENT_FORMS)
     .filter((one) => !(one in form.bpm))
     .sort((a, b) => (ELEMENT_FORMS[a]?.label ?? a).localeCompare(ELEMENT_FORMS[b]?.label ?? b, "ko"));
-  const hasBehaviour =
-    node.type === "SequenceFlow" ||
-    node.type === "ScriptTask" ||
-    node.type === "CallActivity" ||
-    isActivity(node.type) ||
-    Boolean(node.gateway) ||
-    Boolean(node.event);
+  // 「입력·출력」은 값이 오가는 칸이 있을 때만 — 빈 탭을 누르게 하지 않는다.
+  const hasIo = Object.keys(form.bpm).some((one) => ELEMENT_FORMS[one]?.fields.some((field) => field.tab === "io"));
+  const tabs = TABS.filter((one) => one.id !== "io" || hasIo);
+  const shown = tabs.some((one) => one.id === tab) ? tab : "basic";
+  // 한 탭에 폼이 둘 이상 들면 폼 이름으로 가른다.
+  const formsIn = (which: FieldTab) =>
+    Object.keys(form.bpm).filter((one) =>
+      ELEMENT_FORMS[one] ? ELEMENT_FORMS[one].fields.some((field) => field.tab === which) : which === "advanced",
+    );
+  const titled = formsIn(shown).length > 1;
+  const blocks = Object.entries(form.bpm).map(([key, body]) => (
+    <ElementBlock
+      key={key}
+      name={key}
+      body={body}
+      tab={shown}
+      titled={titled}
+      canWrite={canWrite}
+      onChange={(made) => set({ bpm: { ...form.bpm, [key]: made } })}
+      onApplyNow={(made) => {
+        // 팝업의 「적용」 — 패널의 다른 편집과 함께 **바로** 그림에 넣는다(실행 취소 한 걸음).
+        const next = { ...form, bpm: { ...form.bpm, [key]: made } };
+        setForm(next);
+        onApply(patchOf(node, next));
+      }}
+    />
+  ));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col text-body-sm">
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <Header id={node.id} type={node.type} name={kind.name} icon={kind.icon} />
+      <Header id={node.id} type={node.type} name={kind.name} icon={kind.icon} />
+      {/* 패널 안의 보기 고르기 — 탐색기의 「파일·리소스」와 같은 **세그먼트**다(화면 탭은 밑줄). */}
+      <div className="border-b border-border-default px-3 pb-2">
+        <div role="tablist" aria-label="속성 탭" className="flex gap-0.5 rounded-md border border-border-default bg-bg-canvas p-0.5">
+          {tabs.map((one) => (
+            <button
+              key={one.id}
+              type="button"
+              role="tab"
+              aria-selected={shown === one.id}
+              onClick={() => onTab(one.id)}
+              className={
+                shown === one.id
+                  ? "flex-1 rounded-sm bg-bg-surface px-2 py-1 text-caption font-semibold text-text-primary shadow-sm"
+                  : "flex-1 rounded-sm px-2 py-1 text-caption text-text-muted hover:text-text-primary"
+              }
+            >
+              {one.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <Group title="일반">
-          <Labelled label="이름">
-            {(id) => (
-              <input id={id} className={INPUT} value={form.name} onChange={(e) => set({ name: e.target.value })} disabled={!canWrite} />
-            )}
-          </Labelled>
-          <Labelled label="설명">
-            {(id) => (
-              <textarea
-                id={id}
-                className={INPUT}
-                rows={2}
-                value={form.documentation}
-                onChange={(e) => set({ documentation: e.target.value })}
-                disabled={!canWrite}
-              />
-            )}
-          </Labelled>
-        </Group>
+      <div role="tabpanel" className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-3">
+        {shown === "basic" ? (
+          <>
+            <Labelled label="이름">
+              {(id) => (
+                <input id={id} className={INPUT} value={form.name} onChange={(e) => set({ name: e.target.value })} disabled={!canWrite} />
+              )}
+            </Labelled>
 
-        {hasBehaviour ? (
-          <Group title="동작">
             {node.type === "SequenceFlow" ? (
               <Labelled label="조건식" help="`${…}` 꼴의 bpm-expr입니다.">
                 {(id) => (
@@ -283,24 +322,6 @@ export function Properties({
               </Labelled>
             ) : null}
 
-            {isActivity(node.type) ? (
-              <Labelled label="반복">
-                {(id) => (
-                  <select
-                    id={id}
-                    className={INPUT}
-                    value={form.multiInstance}
-                    onChange={(e) => set({ multiInstance: e.target.value as NodeProperties["multiInstance"] })}
-                    disabled={!canWrite}
-                  >
-                    <option value="">없음</option>
-                    <option value="sequential">하나씩</option>
-                    <option value="parallel">한꺼번에</option>
-                  </select>
-                )}
-              </Labelled>
-            ) : null}
-
             {node.gateway ? (
               <Labelled label="기본 흐름" help="어느 조건도 맞지 않을 때 가는 길입니다.">
                 {(id) => (
@@ -330,44 +351,95 @@ export function Properties({
                 onChange={(made) => set({ event: { ...form.event, ...made } })}
               />
             ) : null}
-          </Group>
+
+            {blocks}
+          </>
         ) : null}
 
-        {Object.entries(form.bpm).map(([key, body]) => (
-          <ElementBlock
-            key={key}
-            name={key}
-            body={body}
-            canWrite={canWrite}
-            onChange={(made) => set({ bpm: { ...form.bpm, [key]: made } })}
-            onApplyNow={(made) => {
-              // 팝업의 「적용」 — 패널의 다른 편집과 함께 **바로** 그림에 넣는다(실행 취소 한 걸음).
-              const next = { ...form, bpm: { ...form.bpm, [key]: made } };
-              setForm(next);
-              onApply(patchOf(node, next));
-            }}
-            onDrop={() => {
-              const rest = { ...form.bpm };
-              delete rest[key];
-              set({ bpm: rest, dropped: [...form.dropped, key] });
-            }}
-          />
-        ))}
+        {shown === "io" ? blocks : null}
 
-        {canWrite && spare.length ? (
-          <div className="px-3 py-3">
-            <ActionMenu
-              label="설정 더하기"
-              items={spare.map((one) => ({
-                label: ELEMENT_FORMS[one]?.label ?? one,
-                onSelect: () =>
-                  set({ bpm: { ...form.bpm, [one]: {} }, dropped: form.dropped.filter((gone) => gone !== one) }),
-              }))}
-            >
-              <Plus size={16} aria-hidden />
-              설정 더하기
-            </ActionMenu>
-          </div>
+        {shown === "advanced" ? (
+          <>
+            <Labelled label="설명" help="그림에 남는 메모입니다 — 실행에는 쓰이지 않습니다.">
+              {(id) => (
+                <textarea
+                  id={id}
+                  className={INPUT}
+                  rows={2}
+                  value={form.documentation}
+                  onChange={(e) => set({ documentation: e.target.value })}
+                  disabled={!canWrite}
+                />
+              )}
+            </Labelled>
+
+            {isActivity(node.type) ? (
+              <Labelled label="반복">
+                {(id) => (
+                  <select
+                    id={id}
+                    className={INPUT}
+                    value={form.multiInstance}
+                    onChange={(e) => set({ multiInstance: e.target.value as NodeProperties["multiInstance"] })}
+                    disabled={!canWrite}
+                  >
+                    <option value="">없음</option>
+                    <option value="sequential">하나씩</option>
+                    <option value="parallel">한꺼번에</option>
+                  </select>
+                )}
+              </Labelled>
+            ) : null}
+
+            {blocks}
+
+            {/* 붙은 설정과 더하기·빼기 — 대개 한 번 정하고 두는 일이라 「고급」에 둔다. */}
+            <section className="flex flex-col gap-1">
+              <h3 className="text-body-sm font-medium text-text-primary">설정</h3>
+              {Object.keys(form.bpm).length ? (
+                <ul className="m-0 flex list-none flex-col rounded-md border border-border-default p-0">
+                  {Object.keys(form.bpm).map((key) => (
+                    <li key={key} className="flex items-center gap-2 border-b border-border-default py-1 pr-1 pl-3 last:border-b-0">
+                      <span className="flex-1" title={`bpm:${key}`}>
+                        {ELEMENT_FORMS[key]?.label ?? key}
+                      </span>
+                      {canWrite ? (
+                        <ActionMenu
+                          label={`${ELEMENT_FORMS[key]?.label ?? key} 설정 동작`}
+                          items={[
+                            {
+                              label: "설정 빼기",
+                              onSelect: () => {
+                                const rest = { ...form.bpm };
+                                delete rest[key];
+                                set({ bpm: rest, dropped: [...form.dropped, key] });
+                              },
+                            },
+                          ]}
+                        />
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-caption text-text-muted">붙은 설정이 없습니다.</p>
+              )}
+              {canWrite && spare.length ? (
+                <ActionMenu
+                  label="설정 더하기"
+                  className="self-start"
+                  items={spare.map((one) => ({
+                    label: ELEMENT_FORMS[one]?.label ?? one,
+                    onSelect: () =>
+                      set({ bpm: { ...form.bpm, [one]: {} }, dropped: form.dropped.filter((gone) => gone !== one) }),
+                  }))}
+                >
+                  <Plus size={16} aria-hidden />
+                  설정 더하기
+                </ActionMenu>
+              ) : null}
+            </section>
+          </>
         ) : null}
       </div>
 
@@ -420,41 +492,6 @@ function Header({ id, type, name, icon }: { id: string; type: string; name: stri
   );
 }
 
-/** 접는 무리 — 새로 고른 요소는 다 펴진 채다 (기억하지 않는다). */
-function Group({
-  title,
-  note,
-  action,
-  children,
-}: {
-  title: string;
-  /** 제목의 말풍선 (`bpm:aiTask`) — 원문 이름은 화면에 쓰지 않는다. */
-  note?: string;
-  /** 제목 오른쪽 — 그 무리에만 영향을 주는 것 (U14). */
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(true);
-  return (
-    <section className="border-b border-border-default">
-      <div className="flex items-center gap-1 pr-2">
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-          title={note}
-          className="flex min-w-0 flex-1 items-center gap-1 px-3 py-2 text-left hover:bg-bg-subtle"
-        >
-          <ChevronRight size={14} aria-hidden className={`shrink-0 text-text-muted transition-transform ${open ? "rotate-90" : ""}`} />
-          <span className="font-semibold text-text-primary">{title}</span>
-        </button>
-        {action}
-      </div>
-      {open ? <div className="flex flex-col gap-3 px-3 pt-1 pb-3">{children}</div> : null}
-    </section>
-  );
-}
-
 /** 본문에 칸 하나를 넣은 새 본문. `undefined`는 그 칸을 뺀다. */
 function withValue(body: Body, key: string, value: unknown): Body {
   const made = { ...body };
@@ -463,22 +500,28 @@ function withValue(body: Body, key: string, value: unknown): Body {
   return made;
 }
 
-/** `bpm:*` 하나 — 폼은 **생성된 명세**가 정한다. 명세가 없는 요소는 JSON 칸 하나다. */
+/**
+ * `bpm:*` 하나의 **그 탭 칸들** — 폼은 **생성된 명세**가 정하고 칸마다 탭을 싣는다. 명세가 없는 요소는
+ * JSON 칸 하나이고 「고급」에 있다. 그 탭에 칸이 없으면 아무것도 그리지 않는다.
+ */
 function ElementBlock({
   name,
   body,
+  tab,
+  titled,
   canWrite,
   onChange,
   onApplyNow,
-  onDrop,
 }: {
   name: string;
   body: Body;
+  tab: FieldTab;
+  /** 한 탭에 폼이 둘 이상이면 폼 이름을 작은 제목으로. */
+  titled: boolean;
   canWrite: boolean;
   onChange: (body: Body) => void;
   /** 팝업이 고친 본문을 곧바로 그림에 넣는다. */
   onApplyNow: (body: Body) => void;
-  onDrop: () => void;
 }) {
   const form = ELEMENT_FORMS[name];
   const stray = strayKeys(body, form?.fields ?? []);
@@ -496,18 +539,17 @@ function ElementBlock({
         : field === "operation"
           ? { suggestions: hints.operations, warning: hints.operationWarning }
           : {};
+  const fields = form?.fields.filter((field) => field.tab === tab) ?? [];
+  if (form ? !fields.length && !(tab === "advanced" && stray.length) : tab !== "advanced") return null;
   return (
-    <Group
-      title={form?.label ?? name}
-      note={`bpm:${name}`}
-      action={
-        canWrite ? (
-          <ActionMenu label={`${form?.label ?? name} 설정 동작`} items={[{ label: "설정 빼기", onSelect: onDrop }]} />
-        ) : null
-      }
-    >
+    <section className="flex flex-col gap-4">
+      {titled ? (
+        <h3 className="border-b border-border-default pb-1 text-caption font-semibold text-text-secondary" title={`bpm:${name}`}>
+          {form?.label ?? name}
+        </h3>
+      ) : null}
       {form ? (
-        form.fields.map((field) => {
+        fields.map((field) => {
           // 결재의 답 칸·담당자는 **제 편집기**가 있다 — 읽지 못하는 모양이면 JSON 칸으로 남는다.
           const put = (value: unknown) => onChange(withValue(body, field.name, value));
           if (name === "approval" && field.name === "fields") {
@@ -566,10 +608,10 @@ function ElementBlock({
           disabled={!canWrite}
         />
       )}
-      {stray.length ? (
+      {stray.length && tab === "advanced" ? (
         <p className="text-caption text-text-muted">폼이 모르는 칸도 그대로 둡니다: {stray.join(", ")}</p>
       ) : null}
-    </Group>
+    </section>
   );
 }
 
@@ -841,7 +883,7 @@ function Labelled({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex min-h-6 items-center gap-1.5">
-        <label htmlFor={id} className="text-caption text-text-secondary" title={code}>
+        <label htmlFor={id} className="text-body-sm font-medium text-text-primary" title={code}>
           {label}
         </label>
         {help ? (
