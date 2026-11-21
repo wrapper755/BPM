@@ -99,7 +99,8 @@ export async function ServerRunners({ admin }: { admin: boolean }) {
     },
     {
       key: "last_heartbeat_at",
-      header: "마지막 하트비트",
+      // 실행기가 Center에 마지막으로 하트비트를 보낸 때 — 화면 말은 「연락」이다 (용어집 §6).
+      header: "마지막 연락",
       width: "16ch",
       cell: (row) => time(row.last_heartbeat_at),
     },

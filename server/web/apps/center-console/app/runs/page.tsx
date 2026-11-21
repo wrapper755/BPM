@@ -5,7 +5,7 @@ import type { RunInfo } from "@bpm/api-types/c3-run-info";
 import { CenterError, center, session } from "@/lib/center";
 import { Shell } from "@/components/Shell";
 import { sourceLabel } from "@/lib/labels";
-import { namesOf, orgName } from "@/lib/organization";
+import { namesOf } from "@/lib/organization";
 import { AutoFilter } from "@/components/AutoFilter";
 import { loadProcessNames, processNamer } from "@/lib/names";
 import { time, took } from "@/lib/time";
@@ -17,6 +17,7 @@ import { time, took } from "@/lib/time";
  * 목록을 그릴 때 줄을 다시 읽지 않는다.
  *
  * 좁히기는 상태·BPM 프로세스다. **실행기는 열로도 거르기로도 두지 않는다** — 실행 자리가 서버 하나다 (ADR-0144).
+ * **회사·부서·직원도 열로 두지 않는다** — 줄마다 같거나 늘 「—」였다. 상세 「요약」이 말한다 (ADR-0184).
  *
  * 「최근 n건」은 없다 — 쪽으로 나누므로 늘 Center의 최대(`MAX_LIMIT`)를 받아 쪽을 자른다.
  *
@@ -44,7 +45,7 @@ function tally(value: number | null | undefined): string {
 }
 
 /**
- * 회사·부서·직원 이름표 (C16) — 「회사」·「부서」·「직원」 열은 `RunInfo`의 id를 이름으로 보인다.
+ * 회사·부서·직원 이름표 (C16) — 상세 「요약」의 「회사 · 부서 · 직원」 줄이 `RunInfo`의 id를 이름으로 보인다.
  * **못 받아도 목록은 그린다** — 빈 표면 id 그대로 보인다 (U3).
  */
 export async function loadOrgNames(): Promise<Record<"company" | "department" | "staff", Record<string, string>>> {
@@ -104,7 +105,6 @@ export default async function RunsPage({
     failure = cause instanceof CenterError ? cause.message : "알 수 없는 오류가 생겼습니다";
   }
 
-  const org = await loadOrgNames();
   const processNames = await loadProcessNames();
   const processChoices = [
     ...new Map([...processNames].map(([key, name]) => [key.slice(0, key.lastIndexOf("@")), name])),
@@ -138,15 +138,6 @@ export default async function RunsPage({
       width: "10ch",
       cell: (row) => (row.version ? <span className="text-text-secondary tabular-nums">v{row.version}</span> : "—"),
     },
-    // 자리는 Center가 그 실행의 작업에서 붙인다 (C16) — Studio 시험 실행·작업 없는 실행은 「—」.
-    {
-      key: "company",
-      header: "회사",
-      width: "12ch",
-      cell: (row) => (row.company ? <span className="whitespace-nowrap">{orgName(row.company, org.company)}</span> : "—"),
-    },
-    { key: "department", header: "부서", width: "12ch", cell: (row) => orgName(row.department, org.department) },
-    { key: "staff", header: "직원", width: "12ch", cell: (row) => orgName(row.staff, org.staff) },
     { key: "source", header: "시작 방식", width: "10ch", cell: (row) => sourceLabel(row.source) },
     // 시각은 한 줄 (CON-05와 같다). 없으면 글자 「—」 그대로 — 휴대폰 카드가 그 줄을 뺀다.
     {
@@ -155,12 +146,7 @@ export default async function RunsPage({
       width: "12ch",
       cell: (row) => (row.started_at ? <span className="whitespace-nowrap tabular-nums">{time(row.started_at)}</span> : "—"),
     },
-    {
-      key: "finished_at",
-      header: "끝",
-      width: "12ch",
-      cell: (row) => (row.finished_at ? <span className="whitespace-nowrap tabular-nums">{time(row.finished_at)}</span> : "—"),
-    },
+    // 「끝」 열은 없다 — 시작 + 소요가 말하고 끝 시각은 상세 「요약」에 있다 (ADR-0184, 1280px에서 넘쳤다).
     {
       key: "duration_s",
       header: "소요",
@@ -188,7 +174,7 @@ export default async function RunsPage({
 
       {/* 고르는 대로 든다 — 「좁히기」가 없다 (ADR-0165). */}
       <AutoFilter>
-        <label className="flex flex-col gap-1 text-body-sm">
+        <label className="filter-field">
           상태
           <select
             name="status"
@@ -202,7 +188,7 @@ export default async function RunsPage({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-body-sm">
+        <label className="filter-field">
           프로세스
           {/* id를 외워 치지 않게 **치면 후보가 뜬다** — 이름으로 찾고 id가 들어간다 (H6, ADR-0162). */}
           <input
@@ -242,10 +228,9 @@ export default async function RunsPage({
               hint: "Studio 시험 실행이나 서버 실행기가 보낸 기록이 여기 쌓입니다.",
             }}
           />
-          {rows.length > 0 ? (
-            <p className="text-body-sm text-text-muted">
-              {total > rows.length ? `전체 ${total}건 중 최근 ${rows.length}건` : `${total}건`}
-            </p>
+          {/* 건수는 페이저가 말한다 — Center가 잘랐을 때만 여기 한 줄 (ADR-0184). */}
+          {total > rows.length ? (
+            <p className="text-body-sm text-text-muted">{`전체 ${total}건 중 최근 ${rows.length}건`}</p>
           ) : null}
         </div>
       )}

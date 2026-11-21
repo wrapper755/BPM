@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | 수락 |
+| 상태 | 일부 대체됨([ADR-0184](0184-list-filters-are-a-toolbar.md) — §1 「상태」 기본이 「철회 빼고」) |
 | 날짜 | 2026-11-20 |
 | 관련 | CON-02, [ADR-0159](0159-con-02-is-a-table-like-the-others.md)·[ADR-0160](0160-the-filter-runs-as-you-type.md)·[ADR-0168](0168-list-header-buttons-are-tonal.md)(CON-15 「번호」) |
 

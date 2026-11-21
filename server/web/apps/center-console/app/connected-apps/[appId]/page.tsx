@@ -311,7 +311,7 @@ export default async function ConnectedAppPage({
 
       {/* 고르는 대로 든다 — 「좁히기」가 없다 (ADR-0165). */}
       <AutoFilter>
-        <label className="flex flex-col gap-1 text-body-sm">
+        <label className="filter-field">
           찾기
           <input
             name="q"

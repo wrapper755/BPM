@@ -272,7 +272,7 @@ export default async function DeploymentsPage({
 
       {/* 「철회된 것도 보기」는 「상태」 칸이 맡는다 (CON-15). */}
       <AutoFilter>
-        <label className="flex flex-col gap-1 text-body-sm">
+        <label className="filter-field">
           <span className="text-text-muted">상태</span>
           <select
             name="state"
@@ -286,7 +286,7 @@ export default async function DeploymentsPage({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-body-sm">
+        <label className="filter-field">
           <span className="text-text-muted">프로세스</span>
           <Autocomplete name="process" label="프로세스" defaultValue={process} placeholder="(전체)" options={choices} className="w-56" />
         </label>

@@ -6,14 +6,18 @@ import { CenterError, center, session } from "@/lib/center";
 import { compareVersions } from "@/lib/summary";
 import { time } from "@/lib/time";
 import { Shell } from "@/components/Shell";
+import { AutoFilter } from "@/components/AutoFilter";
+import { FilterReset } from "@/components/FilterReset";
 // 글·주소로 옮기는 일은 `lib/packages.ts`에 있다 — 브라우저 쪽 구성요소도 쓴다.
-import { STATUS_LABEL, packageHref } from "@/lib/packages";
+import { STATUS_LABEL, nameMatches, packageHref } from "@/lib/packages";
 
 /**
  * CON-06 공통 패키지 (목록).
  *
  * **BPM 프로세스가 아닌 패키지만** 둔다 — `bpm_process`는 BPM 프로세스라 CON-02의 몫이다. 지금 그런 종류는
  * 공유 BPM 프로세스 하나다 (C5 `kind` — 도구 묶음은 패키지가 아니다, ADR-0050).
+ *
+ * 「이름」 거르기는 작업공간 목록과 같은 결이다 — 주소의 `q`로 서버가 다시 그린다 (ADR-0184).
  */
 
 /** 이 화면이 다루는 종류 (C1 `kind`). 순서가 목록의 묶음 순서다. */
@@ -25,9 +29,12 @@ export const KIND_LABEL: Record<string, string> = {
 };
 
 
-export default async function PackagesPage() {
+export default async function PackagesPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const found = await session();
   if (!found) redirect("/login");
+  const { q } = await searchParams;
+
+  let uploaded = 0;
 
   let rows: PackageInfo[] = [];
   let failure: string | null = null;
@@ -35,8 +42,10 @@ export default async function PackagesPage() {
     // 종류별로 따로 묻지 않고 한 번 읽어 **콘솔에서 가른다** — 목록 하나에 둘을 함께 보인다.
     const all = await center.packages();
     const order = new Map<string, number>(COMMON_KINDS.map((kind, at) => [kind, at]));
-    rows = all
-      .filter((one) => order.has(one.kind))
+    const common = all.filter((one) => order.has(one.kind));
+    uploaded = common.length;
+    rows = common
+      .filter((one) => nameMatches(one, q))
       .sort(
         (a, b) =>
           (order.get(a.kind) ?? 0) - (order.get(b.kind) ?? 0) ||
@@ -120,18 +129,37 @@ export default async function PackagesPage() {
 
       {failure ? (
         <ErrorBanner message={failure} />
-      ) : rows.length === 0 ? (
+      ) : uploaded === 0 ? (
         <EmptyState
           title="올라온 공통 패키지가 없습니다."
           hint="「저작 › 프로젝트」의 「공통 패키지」 칸에서 만들어 「배포 후보로 만들기」로 지으세요."
         />
       ) : (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          rowKey={(row) => `${row.id}@${row.version}`}
-          caption="공통 패키지 목록"
-        />
+        <>
+          {/* 치는 대로 든다(ADR-0165), ↺는 칸 바로 옆 (ADR-0171 — 작업공간 목록과 같은 결). */}
+          <AutoFilter clear="inline">
+            <div className="filter-field">
+              <label htmlFor="packages-q">이름</label>
+              <span className="flex items-center gap-1">
+                <input
+                  id="packages-q"
+                  name="q"
+                  defaultValue={q ?? ""}
+                  placeholder="(전체)"
+                  className="h-9 rounded-md border border-border-strong bg-bg-surface px-2 text-body"
+                />
+                <FilterReset href="/packages" />
+              </span>
+            </div>
+          </AutoFilter>
+          <DataTable
+            columns={columns}
+            rows={rows}
+            rowKey={(row) => `${row.id}@${row.version}`}
+            caption="공통 패키지 목록"
+            empty={{ title: "조건에 맞는 공통 패키지가 없습니다.", hint: "거르기를 초기화하세요." }}
+          />
+        </>
       )}
     </Shell>
   );

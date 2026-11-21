@@ -25,3 +25,12 @@ export function packageHref(row: { id: string; version: string; kind?: string })
   const area = row.kind === "bpm_process" ? "bots" : "packages";
   return `/${area}/${encodeURIComponent(row.id)}/${encodeURIComponent(row.version)}` as Route;
 }
+
+/**
+ * 「이름」 거르기 — id·`name`에 든 글자로, 대소문자를 가리지 않는다 (CON-02 `filterGroups`와 같은 규칙).
+ * 빈 글자면 다 지난다.
+ */
+export function nameMatches(row: { id: string; name?: string | null }, q: string | undefined): boolean {
+  const text = (q ?? "").trim().toLowerCase();
+  return !text || row.id.toLowerCase().includes(text) || (row.name ?? "").toLowerCase().includes(text);
+}

@@ -8,7 +8,7 @@ import { cn } from "@bpm/ui";
 import { FilterResetContext } from "./FilterReset";
 
 /**
- * 목록의 거르기 칸 (CON-00 [F], [ADR-0165](../../../../../docs/decisions/0165-lists-filter-as-you-go-and-page.md)) —
+ * 목록의 거르기 칸 (CON-00 [F], [ADR-0165](../../../../../docs/decisions/0165-lists-filter-as-you-go-and-page.md)) — 표 위 **한 줄 툴바**이고 칸은 `filter-field`다 (ADR-0184).
  * **고르는 대로 든다**. 고르는 칸(선택·체크)은 바뀌는 즉시, 글자 칸은 멈춘 뒤 0.4초에 **주소를 바꿔 서버에 다시
  * 묻는다** — 「좁히기」 단추를 누르는 한 번이 없다. Enter도 든다.
  *
@@ -65,7 +65,7 @@ export function AutoFilter({
       ref={form}
       method="get"
       aria-busy={pending || undefined}
-      className={cn("filter-card flex flex-wrap items-end gap-3", className)}
+      className={cn("filter-bar", className)}
       onSubmit={(event) => {
         event.preventDefault();
         go();
