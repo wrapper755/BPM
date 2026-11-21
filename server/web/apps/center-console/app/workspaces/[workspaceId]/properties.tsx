@@ -8,6 +8,8 @@ import type { ElementField, NodeProperties, PropertyPatch } from "@bpm/bpmn-canv
 import type { ServiceAppResource } from "@bpm/api-types/c7-service-app-resource";
 
 import { loadWorkspaceResources } from "@/app/actions";
+import { readAnswerFields, readAssignees } from "@/lib/answer-fields";
+import { AnswerFieldsEditor, AssigneesEditor } from "./answer-fields";
 import { serviceCallHints, type Suggestion } from "@/lib/resources";
 import {
   eventFields,
@@ -474,7 +476,23 @@ function ElementBlock({
       }
     >
       {form ? (
-        form.fields.map((field) => (
+        form.fields.map((field) => {
+          // 결재의 답 칸·담당자는 **제 편집기**가 있다 — 읽지 못하는 모양이면 JSON 칸으로 남는다.
+          const put = (value: unknown) => {
+            const made = { ...body };
+            if (value === undefined) delete made[field.name];
+            else made[field.name] = value;
+            onChange(made);
+          };
+          if (name === "approval" && field.name === "fields") {
+            const answers = readAnswerFields(body.fields);
+            if (answers) return <AnswerFieldsEditor key={field.name} fields={answers} canWrite={canWrite} onChange={put} />;
+          }
+          if (name === "approval" && field.name === "assignees") {
+            const who = readAssignees(body.assignees);
+            if (who) return <AssigneesEditor key={field.name} value={who} canWrite={canWrite} onChange={put} />;
+          }
+          return (
           <FieldView
             key={field.name}
             field={field}
@@ -483,7 +501,8 @@ function ElementBlock({
             onChange={(text) => onChange(withField(body, field, text))}
             {...extra(field.name)}
           />
-        ))
+          );
+        })
       ) : (
         // 모델에 없는 요소 — 그래도 **고칠 수 있게** 한다 (확장이 더한 것일 수 있다).
         <textarea
