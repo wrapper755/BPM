@@ -4,7 +4,7 @@
 | --- | --- |
 | 상태 | 수락 |
 | 날짜 | 2026-11-21 |
-| 관련 | 계약 C6 `FormField`·C14 `bpm:approval.fields`·B12, CON-04 상세, [ADR-0148](0148-dmn-grid-lives-in-center.md)(브라우저에 둘째 문법을 들이지 않는다), [ADR-0025](0025-expression-language.md)(`bpm-expr`) |
+| 관련 | 계약 C6 `FormField`·C14 `bpm:approval.fields`·B12, CON-04 상세, [ADR-0148](0148-center-reads-and-writes-decision-tables.md)(브라우저에 둘째 문법을 들이지 않는다), [ADR-0025](0025-expression-language.md)(`bpm-expr`) |
 
 ## 배경
 
