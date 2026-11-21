@@ -5,6 +5,10 @@ import {
   eventFields,
   eventPatch,
   fromInput,
+  mapColumns,
+  mapRows,
+  rowProblems,
+  rowsToMap,
   parseBody,
   strayKeys,
   toInput,
@@ -12,7 +16,7 @@ import {
   writeBody,
 } from "./element-values";
 
-const field = (kind: ElementField["kind"], name = "x"): ElementField => ({ name, label: name, kind, required: false });
+const field = (kind: ElementField["kind"], name = "x"): ElementField => ({ name, label: name, tab: "basic", kind, required: false });
 
 describe("본문 읽고 쓰기", () => {
   it("깨진 글은 빈 본문으로 본다 — 반쯤 그린 그림도 열려야 한다", () => {
@@ -109,5 +113,36 @@ describe("이벤트 칸", () => {
     expect(eventPatch(one, { ...eventFields(one), cancelActivity: false })).toEqual({
       cancelActivity: false,
     });
+  });
+});
+
+describe("이름=값 표", () => {
+  it("객체를 줄로, 객체가 아니면 읽지 않는다", () => {
+    expect(mapRows({ a: "${x}", b: 3 })).toEqual([["a", "${x}"], ["b", "3"]]);
+    expect(mapRows(undefined)).toEqual([]);
+    expect(mapRows("a=b")).toBeNull();
+  });
+
+  it("빈 이름은 버리고 겹치면 뒤가 이기고 다 비면 칸을 뺀다", () => {
+    expect(rowsToMap([["a", "1"], ["", "2"], ["a", "3"]])).toEqual({ a: "3" });
+    expect(rowsToMap([["", ""]])).toBeUndefined();
+  });
+
+  it("겹치는 이름은 앞 줄에 말한다", () => {
+    expect(rowProblems([["a", "1"], ["b", "2"], ["a", "3"]])).toEqual([
+      "같은 이름이 아래에 또 있습니다 — 아래 줄이 이깁니다.",
+      null,
+      null,
+    ]);
+  });
+
+  it("열 이름은 설명의 짝이다", () => {
+    expect(mapColumns("`필드=식`")).toEqual({ left: "필드", right: "식", rest: undefined });
+    expect(mapColumns("`이름=타입` — AI가 채워 돌려줄 칸입니다.")).toEqual({
+      left: "이름",
+      right: "타입",
+      rest: "AI가 채워 돌려줄 칸입니다.",
+    });
+    expect(mapColumns(undefined)).toEqual({ left: "이름", right: "값", rest: undefined });
   });
 });
