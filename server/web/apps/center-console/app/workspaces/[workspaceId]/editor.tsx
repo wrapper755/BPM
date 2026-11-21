@@ -124,6 +124,8 @@ export function Workspace({
   const [picked, setPicked] = useState<NodeProperties | null>(null);
   // 상세 패널의 적용 안 한 편집 (U11) — 있으면 다른 요소로 넘어가기 전에 묻는다.
   const draft = useRef<PropertyPatch | null>(null);
+  // 단추를 켜고 끄려면 화면이 알아야 한다 — 패치 자체는 `draft`에 있다.
+  const [drafting, setDrafting] = useState(false);
   const [leaving, setLeaving] = useState<{ from: string; to: string } | null>(null);
   const leavingNow = useRef(leaving);
   leavingNow.current = leaving;
@@ -185,6 +187,13 @@ export function Workspace({
   const save = useCallback(async () => {
     const editor = canvas.current?.editor;
     if (!file || !editor) return;
+    // 적용 안 한 속성 편집은 **먼저 넣고** 저장한다 — 저장을 누른 사람은 고친 것을 남기려는 것이다.
+    // 넣는 것은 「적용」과 같은 길이라 실행 취소 한 걸음이다.
+    if (draft.current && picked) {
+      editor.setProperties(picked.id, draft.current);
+      draft.current = null;
+      setPicked(editor.properties(picked.id));
+    }
     setBusy(true);
     setFailure(null);
     const xml = await editor.saveXML();
@@ -200,7 +209,7 @@ export function Workspace({
     }
     setFile({ ...file, text: xml, revision: made.revision });
     setDirty(false);
-  }, [file, info.id]);
+  }, [file, info.id, picked]);
 
   // Ctrl+S — 저장은 **사람이 누르는 것**이다 (자동 저장이 아니다, CON-20).
   useEffect(() => {
@@ -483,7 +492,7 @@ export function Workspace({
           {editing && shows === "canvas" ? (
             <>
               <span aria-hidden className="mx-2 h-5 w-px bg-border-default" />
-              <Button variant="primary" size="sm" onClick={() => void save()} disabled={!dirty || busy}>
+              <Button variant="primary" size="sm" onClick={() => void save()} disabled={!(dirty || drafting) || busy}>
                 <ACTION_ICON.save size={16} aria-hidden />
                 저장
               </Button>
@@ -723,6 +732,7 @@ export function Workspace({
               }))}
               onApply={applyProperties}
               draft={draft}
+              onDraft={setDrafting}
             />
           ) : (
             <div className="min-h-0 flex-1 overflow-y-auto p-3">

@@ -152,6 +152,7 @@ export function Properties({
   flows,
   onApply,
   draft,
+  onDraft,
 }: {
   node: NodeProperties;
   canWrite: boolean;
@@ -160,6 +161,8 @@ export function Properties({
   onApply: (patch: PropertyPatch) => void;
   /** 적용 안 한 편집 — 있으면 그 패치, 없으면 `null`. 편집기가 다른 요소로 가기 전에 본다 (U11). */
   draft: MutableRefObject<PropertyPatch | null>;
+  /** 적용 안 한 편집이 생기고 없어질 때 — 편집기가 「저장」 단추를 켠다. */
+  onDraft?: (changed: boolean) => void;
 }) {
   const start = useMemo(() => formOf(node), [node]);
   const [form, setForm] = useState(start);
@@ -172,11 +175,13 @@ export function Properties({
   useEffect(() => {
     draft.current = changed ? patchOf(node, form) : null;
   }, [changed, draft, form, node]);
+  useEffect(() => onDraft?.(changed), [changed, onDraft]);
   useEffect(
     () => () => {
       draft.current = null;
+      onDraft?.(false);
     },
-    [draft],
+    [draft, onDraft],
   );
 
   const kind = kindOf(node);
@@ -517,6 +522,9 @@ function FieldView({
   const listId = useId();
   const value = toInput(field, body[field.name]);
   const label = `${field.label}${field.required ? " *" : ""}`;
+  // 비어 있는 필수 칸은 그 자리에서 말한다 — **막지는 않는다**(검사는 쓰기를 막지 않는다, CON-20b).
+  const missing = canWrite && field.required && field.kind !== "bool" && value.trim() === "";
+  const missingLine = missing ? <span className="text-caption text-status-warning-fg">필수 칸이 비어 있습니다.</span> : null;
   if (field.kind === "bool") {
     return (
       <div className="flex items-center gap-2">
@@ -538,14 +546,24 @@ function FieldView({
     return (
       <Labelled label={label} code={field.name} help={field.help}>
         {(id) => (
-          <select id={id} className={INPUT} value={value} onChange={(e) => onChange(e.target.value)} disabled={!canWrite}>
-            <option value="">(없음)</option>
-            {(field.choices ?? []).map((one) => (
-              <option key={one} value={one}>
-                {one}
-              </option>
-            ))}
-          </select>
+          <>
+            <select
+              id={id}
+              className={INPUT}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              disabled={!canWrite}
+              aria-invalid={missing ? true : undefined}
+            >
+              <option value="">(없음)</option>
+              {(field.choices ?? []).map((one) => (
+                <option key={one} value={one}>
+                  {one}
+                </option>
+              ))}
+            </select>
+            {missingLine}
+          </>
         )}
       </Labelled>
     );
@@ -573,6 +591,7 @@ function FieldView({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               disabled={!canWrite}
+              aria-invalid={missing ? true : undefined}
             />
           ) : (
             <input
@@ -583,7 +602,7 @@ function FieldView({
               onChange={(e) => onChange(e.target.value)}
               disabled={!canWrite}
               list={suggestions?.length ? listId : undefined}
-              aria-invalid={warning ? true : undefined}
+              aria-invalid={warning || missing ? true : undefined}
             />
           )}
           {suggestions?.length ? (
@@ -595,6 +614,7 @@ function FieldView({
               ))}
             </datalist>
           ) : null}
+          {missingLine}
           {warning ? <span className="text-caption text-status-warning-fg">{warning}</span> : null}
         </>
       )}
