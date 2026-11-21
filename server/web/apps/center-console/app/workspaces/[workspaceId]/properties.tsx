@@ -11,6 +11,8 @@ import { loadWorkspaceResources } from "@/app/actions";
 import { readAnswerFields, readAssignees } from "@/lib/answer-fields";
 import { AnswerFieldsEditor, AssigneesEditor } from "./answer-fields";
 import { MapTable } from "./map-table";
+import { DelegateEditor, InputsSummary, LimitsEditor, RetryEditor } from "./inner-fields";
+import { readDelegate, readLimits, readParams, readRetry, summarizeInputs } from "@/lib/inner-fields";
 import { serviceCallHints, type Suggestion } from "@/lib/resources";
 import {
   mapRows,
@@ -179,6 +181,7 @@ export function Properties({
   onDraft,
   tab,
   onTab,
+  onOpenVariables,
 }: {
   node: NodeProperties;
   canWrite: boolean;
@@ -192,6 +195,8 @@ export function Properties({
   /** 고른 탭 — 편집기가 들고 있어 다른 요소로 가도 남는다. */
   tab: FieldTab;
   onTab: (tab: FieldTab) => void;
+  /** 아래 탭 「변수」를 편다 — BPM 프로세스 입력을 고치는 자리다. */
+  onOpenVariables?: () => void;
 }) {
   const start = useMemo(() => formOf(node), [node]);
   const [form, setForm] = useState(start);
@@ -235,6 +240,7 @@ export function Properties({
       tab={shown}
       titled={titled}
       canWrite={canWrite}
+      onOpenVariables={onOpenVariables}
       onChange={(made) => set({ bpm: { ...form.bpm, [key]: made } })}
       onApplyNow={(made) => {
         // 팝업의 「적용」 — 패널의 다른 편집과 함께 **바로** 그림에 넣는다(실행 취소 한 걸음).
@@ -512,6 +518,7 @@ function ElementBlock({
   canWrite,
   onChange,
   onApplyNow,
+  onOpenVariables,
 }: {
   name: string;
   body: Body;
@@ -522,6 +529,7 @@ function ElementBlock({
   onChange: (body: Body) => void;
   /** 팝업이 고친 본문을 곧바로 그림에 넣는다. */
   onApplyNow: (body: Body) => void;
+  onOpenVariables?: () => void;
 }) {
   const form = ELEMENT_FORMS[name];
   const stray = strayKeys(body, form?.fields ?? []);
@@ -575,6 +583,43 @@ function ElementBlock({
                   code={field.name}
                   help={field.help}
                   flow={field.name === "input" || field.name === "output"}
+                  rows={rows}
+                  canWrite={canWrite}
+                  onChange={put}
+                  onApplyNow={(made) => onApplyNow(withValue(body, field.name, made))}
+                />
+              );
+          }
+          // 안쪽 모델이 작은 칸 — 패널 안의 칸들이다. 읽지 못하는 모양이면 JSON 칸으로 남는다.
+          if (name === "serviceCall" && field.name === "retry") {
+            const retry = readRetry(body.retry);
+            if (retry) return <RetryEditor key={field.name} value={retry} canWrite={canWrite} onChange={put} />;
+          }
+          if ((name === "aiTask" || name === "defaults") && field.name === "limits") {
+            const limits = readLimits(body.limits);
+            if (limits) return <LimitsEditor key={field.name} value={limits} canWrite={canWrite} onChange={put} />;
+          }
+          if (name === "call" && field.name === "delegate") {
+            const delegate = readDelegate(body.delegate);
+            if (delegate)
+              return (
+                <DelegateEditor key={field.name} value={delegate} help={field.help} canWrite={canWrite} onChange={put} />
+              );
+          }
+          if (name === "process" && field.name === "inputs") {
+            const lines = summarizeInputs(body.inputs);
+            if (lines) return <InputsSummary key={field.name} lines={lines} onOpenVariables={onOpenVariables} />;
+          }
+          // 매개변수는 값이 모두 글일 때만 표다 — 표가 `3`을 `"3"`으로 바꾸면 안 된다.
+          if (name === "aiTask" && field.name === "params") {
+            const rows = readParams(body.params);
+            if (rows)
+              return (
+                <MapTable
+                  key={field.name}
+                  label={field.label}
+                  code={field.name}
+                  help={field.help}
                   rows={rows}
                   canWrite={canWrite}
                   onChange={put}
