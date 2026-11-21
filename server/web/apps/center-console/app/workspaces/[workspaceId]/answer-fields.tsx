@@ -60,8 +60,8 @@ export function AnswerFieldsEditor({
 
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-caption text-text-secondary">
-        답 칸 <span className="font-mono text-text-muted">fields</span>
+      <span className="text-caption text-text-secondary" title="fields">
+        답 칸
       </span>
       {fields.length ? (
         <ul className="m-0 flex list-none flex-col rounded-md border border-border-default p-0">
@@ -238,7 +238,7 @@ function FieldRow({
           }}
           disabled={!canWrite}
         />
-        필수 <span className="font-mono text-caption text-text-muted">required</span>
+        <span title="required">필수</span>
       </label>
       {field.type === "choice" ? (
         <Line id={`${id}-choices`} label="고를 거리" code="choices" note="한 줄에 하나">
@@ -323,10 +323,9 @@ function Line({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline gap-1.5">
-        <label htmlFor={id} className="text-caption text-text-secondary">
+        <label htmlFor={id} className="text-caption text-text-secondary" title={code}>
           {label}
         </label>
-        <span className="font-mono text-caption text-text-muted">{code}</span>
         {note ? <span className="ml-auto text-caption text-text-muted">{note}</span> : null}
       </div>
       {children}
@@ -454,10 +453,9 @@ export function AssigneesEditor({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline gap-1.5">
-        <label htmlFor={id} className="text-caption text-text-secondary">
+        <label htmlFor={id} className="text-caption text-text-secondary" title="assignees">
           담당자
         </label>
-        <span className="font-mono text-caption text-text-muted">assignees</span>
       </div>
       <div className="flex gap-3" role="radiogroup" aria-label="담당자를 적는 길">
         {(

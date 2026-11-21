@@ -65,6 +65,19 @@ const TYPE_NAMES: Record<string, string> = {
   SequenceFlow: "흐름",
 };
 
+/** 이벤트 정의의 화면 이름 — `eventOf`가 남긴 짧은 이름(`Timer`)을 한글로. 모르는 것은 그대로. */
+const EVENT_NAMES: Record<string, string> = {
+  Timer: "타이머",
+  Message: "메시지",
+  Signal: "신호",
+  Error: "오류",
+  Escalation: "전환",
+  Conditional: "조건",
+  Terminate: "종료",
+  Compensate: "보상",
+  Link: "링크",
+};
+
 function kindOf(node: NodeProperties): { name: string; icon: ReactNode } {
   const role = ROLE_FORMS.find((one) => one in node.bpm);
   const name = role ? (ROLE_NAMES[role] ?? ELEMENT_FORMS[role]?.label ?? role) : (TYPE_NAMES[node.type] ?? node.type);
@@ -201,7 +214,7 @@ export function Properties({
   return (
     <div className="flex min-h-0 flex-1 flex-col text-body-sm">
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <Header id={node.id} name={kind.name} icon={kind.icon} />
+        <Header id={node.id} type={node.type} name={kind.name} icon={kind.icon} />
 
         <Group title="일반">
           <Labelled label="이름">
@@ -279,8 +292,8 @@ export function Properties({
                     disabled={!canWrite}
                   >
                     <option value="">없음</option>
-                    <option value="sequential">하나씩 (sequential)</option>
-                    <option value="parallel">한꺼번에 (parallel)</option>
+                    <option value="sequential">하나씩</option>
+                    <option value="parallel">한꺼번에</option>
                   </select>
                 )}
               </Labelled>
@@ -372,20 +385,19 @@ export function Properties({
   );
 }
 
-/** 머리 — 갈래 아이콘 + 한글 종류, 아래 줄에 요소 id와 「id 복사」. */
-function Header({ id, name, icon }: { id: string; name: string; icon: ReactNode }) {
+/** 머리 — 갈래 아이콘 + 한글 종류와 「id 복사」. 요소 id·원문 타입은 **말풍선**이다 (화면에 영어를 쓰지 않는다). */
+function Header({ id, type, name, icon }: { id: string; type: string; name: string; icon: ReactNode }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="flex items-start gap-2 border-b border-border-default px-3 py-3">
-      <span className="mt-0.5 text-text-secondary">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="font-semibold text-text-primary">{name}</p>
-        <p className="font-mono text-caption break-all text-text-muted">{id}</p>
-      </div>
+    <div className="flex items-center gap-2 border-b border-border-default px-3 py-3">
+      <span className="text-text-secondary">{icon}</span>
+      <p className="min-w-0 flex-1 font-semibold text-text-primary" title={`${id} · ${type}`}>
+        {name}
+      </p>
       <button
         type="button"
-        aria-label="요소 id 복사"
-        title="요소 id 복사"
+        aria-label={`요소 id 복사 (${id})`}
+        title={`요소 id 복사 — ${id}`}
         onClick={() => {
           void navigator.clipboard?.writeText(id).then(() => {
             setCopied(true);
@@ -408,7 +420,7 @@ function Group({
   children,
 }: {
   title: string;
-  /** 제목 옆의 옅은 글 (`bpm:aiTask`). */
+  /** 제목의 말풍선 (`bpm:aiTask`) — 원문 이름은 화면에 쓰지 않는다. */
   note?: string;
   /** 제목 오른쪽 — 그 무리에만 영향을 주는 것 (U14). */
   action?: ReactNode;
@@ -422,11 +434,11 @@ function Group({
           type="button"
           aria-expanded={open}
           onClick={() => setOpen(!open)}
+          title={note}
           className="flex min-w-0 flex-1 items-center gap-1 px-3 py-2 text-left hover:bg-bg-subtle"
         >
           <ChevronRight size={14} aria-hidden className={`shrink-0 text-text-muted transition-transform ${open ? "rotate-90" : ""}`} />
           <span className="font-semibold text-text-primary">{title}</span>
-          {note ? <span className="truncate font-mono text-caption text-text-muted">{note}</span> : null}
         </button>
         {action}
       </div>
@@ -554,8 +566,7 @@ function FieldView({
             onChange={(e) => onChange(e.target.checked ? "true" : "false")}
             disabled={!canWrite}
           />
-          {label}
-          <span className="font-mono text-caption text-text-muted">{field.name}</span>
+          <span title={field.name}>{label}</span>
         </label>
         {field.help ? <InfoTip label={`${field.label} 설명`}>{field.help}</InfoTip> : null}
       </div>
@@ -665,7 +676,7 @@ function EventFields({
   return (
     <>
       <dl className="flex flex-col gap-1">
-        <Row label="이벤트 종류" value={kind || "(없음 — 그냥 시작·끝)"} />
+        <Row label="이벤트 종류" value={kind ? (EVENT_NAMES[kind] ?? kind) : "(없음 — 그냥 시작·끝)"} />
         {event.attachedTo ? <Row label="붙은 곳" value={event.attachedTo} /> : null}
       </dl>
 
@@ -680,9 +691,9 @@ function EventFields({
                 onChange={(e) => onChange({ timerKind: e.target.value })}
                 disabled={!canWrite}
               >
-                <option value="timeDate">그 시각에 (timeDate)</option>
-                <option value="timeDuration">그만큼 뒤에 (timeDuration)</option>
-                <option value="timeCycle">되풀이 (timeCycle)</option>
+                <option value="timeDate">그 시각에</option>
+                <option value="timeDuration">그만큼 뒤에</option>
+                <option value="timeCycle">되풀이</option>
               </select>
             )}
           </Labelled>
@@ -754,7 +765,7 @@ function EventFields({
             onChange={(e) => onChange({ cancelActivity: e.target.checked })}
             disabled={!canWrite}
           />
-          받으면 하던 일을 걷는다 (cancelActivity)
+          <span title="cancelActivity">받으면 하던 일을 걷는다</span>
         </label>
       ) : null}
     </>
@@ -781,7 +792,7 @@ function Labelled({
   children,
 }: {
   label: string;
-  /** 원문 칸 이름 — 옅은 고정폭으로 이름 옆에 붙는다. */
+  /** 원문 칸 이름 — 이름의 **말풍선**이다 (화면에 쓰지 않는다). */
   code?: string;
   help?: string;
   children: (id: string) => ReactNode;
@@ -790,10 +801,9 @@ function Labelled({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex min-h-6 items-center gap-1.5">
-        <label htmlFor={id} className="text-caption text-text-secondary">
+        <label htmlFor={id} className="text-caption text-text-secondary" title={code}>
           {label}
         </label>
-        {code ? <span className="truncate font-mono text-caption text-text-muted">{code}</span> : null}
         {help ? (
           <InfoTip label={`${label.replace(/ \*$/, "")} 설명`} className="ml-auto">
             {help}
