@@ -58,6 +58,84 @@ ELEMENT_LABELS: dict[str, str] = {
     "fileList": "파일 목록",
 }
 
+#: 칸의 **화면 이름**과 짧은 설명 — 요소 이름과 같은 까닭으로 여기 둔다(모델에는 한글이 없다).
+#: 폼은 한글 이름 옆에 원문 칸 이름을 옅게 붙인다(CON-20b 상세 패널). 빠진 칸이 있으면 **멈춘다**.
+FIELD_LABELS: dict[tuple[str, str], tuple[str, str | None]] = {
+    ("aiTask", "goal"): ("목표", "AI가 이 태스크에서 이룰 것을 한 문장으로 적습니다."),
+    ("aiTask", "domain"): ("영역", None),
+    ("aiTask", "tools"): ("허용 도구", "쓸 수 있는 도구 이름입니다."),
+    ("aiTask", "params"): ("매개변수", "재생 때 `$param`으로 바뀌는 값입니다."),
+    ("aiTask", "results"): ("결과 필드", "`이름=타입` — AI가 채워 돌려줄 칸입니다."),
+    ("aiTask", "replay"): ("재생", "full: 모델 0회 · plan: 마지막 추출만 모델 · none: 매번 자율."),
+    ("aiTask", "limits"): ("한도", None),
+    ("aiTask", "forbidden_actions"): ("금지 동작", None),
+    ("aiTask", "confirm_triggers"): ("확인할 때", "이 말이 걸리면 사람에게 확인을 받습니다."),
+    ("aiTask", "web"): ("웹 설정", None),
+    ("aiTask", "desktop"): ("데스크톱 설정", None),
+    ("approval", "title"): ("제목", None),
+    ("approval", "description"): ("설명", None),
+    ("approval", "show"): ("보일 값", "결재하는 사람에게 보일 변수입니다."),
+    ("approval", "fields"): ("답 칸", None),
+    ("approval", "expires"): ("기한", "ISO 기간(`P3D`) 또는 변수 이름입니다."),
+    ("approval", "assignees"): ("담당자", None),
+    ("approval", "answered_by_as"): ("답한 사람 변수", "답한 사람을 담을 변수입니다."),
+    ("approval", "answered_via_as"): ("답한 길 변수", "답이 들어온 길을 담을 변수입니다."),
+    ("call", "input"): ("입력", "`호출 대상 변수=식`"),
+    ("call", "output"): ("출력", "`내 변수=호출 대상 변수`"),
+    ("call", "delegate"): ("맡기기", "켜면 따로 실행으로 맡깁니다 (일괄 기동)."),
+    ("dataOutput", "path"): ("경로", None),
+    ("dataOutput", "format"): ("형식", None),
+    ("dataOutput", "template"): ("템플릿", None),
+    ("dataOutput", "variables"): ("변수", None),
+    ("dataOutput", "sheet"): ("시트", None),
+    ("dataOutput", "append"): ("이어 쓰기", None),
+    ("dataOutput", "store_as"): ("경로를 담을 변수", None),
+    ("defaults", "limits"): ("한도", None),
+    ("defaults", "forbidden_actions"): ("금지 동작", None),
+    ("defaults", "confirm_triggers"): ("확인할 때", None),
+    ("defaults", "web"): ("웹 설정", None),
+    ("defaults", "desktop"): ("데스크톱 설정", None),
+    ("email", "to"): ("받는 사람", None),
+    ("email", "cc"): ("참조", None),
+    ("email", "subject"): ("제목", None),
+    ("email", "body"): ("본문", None),
+    ("email", "attachments"): ("첨부", "파일 경로가 든 변수 이름입니다."),
+    ("email", "store_as"): ("결과를 담을 변수", None),
+    ("fileList", "folder"): ("폴더", "`{변수}`를 쓸 수 있습니다. 상대 경로는 출력 폴더 기준입니다."),
+    ("fileList", "pattern"): ("파일 이름 패턴", "glob 한 조각(`*.pdf`) — 경로 구분자는 쓸 수 없습니다."),
+    ("fileList", "recursive"): ("하위 폴더까지", None),
+    ("fileList", "sort"): ("정렬", None),
+    ("fileList", "limit"): ("최대 개수", None),
+    ("fileList", "store_as"): ("목록을 담을 변수", None),
+    ("fileList", "count_as"): ("개수를 담을 변수", None),
+    ("loop", "collection"): ("돌 목록", None),
+    ("loop", "item"): ("항목 변수", None),
+    ("loop", "result"): ("한 번의 결과", "한 번 돈 결과로 쓰는 변수 — 그 태스크의 출력 중 하나입니다."),
+    ("loop", "collect_into"): ("모을 변수", "한 번의 결과를 모은 목록입니다."),
+    ("process", "extensions"): ("확장", None),
+    ("process", "inputs"): ("입력", None),
+    ("process", "outputs"): ("출력", None),
+    ("receive", "correlation"): ("상관 변수", "이 변수의 값이 같은 메시지만 받습니다."),
+    ("receive", "payload"): ("받을 값", "본문에서 변수로 들어오는 이름입니다."),
+    ("rule", "decision"): ("결정", "같은 패키지의 DMN 결정 id입니다."),
+    ("rule", "input"): ("입력", "`DMN 입력 이름=식`"),
+    ("rule", "output"): ("출력", "`변수=DMN 출력 이름`"),
+    ("serviceCall", "app_id"): ("앱", None),
+    ("serviceCall", "operation"): ("작업", None),
+    ("serviceCall", "input"): ("입력", "`필드=식`"),
+    ("serviceCall", "output"): ("출력", "`변수=필드`"),
+    ("serviceCall", "timeout_s"): ("제한 시간(초)", None),
+    ("serviceCall", "retry"): ("다시 시도", None),
+    ("task", "type"): ("태스크 종류", "확장이 기여한 태스크 종류 id입니다."),
+    ("task", "extension"): ("확장", "확장 id입니다."),
+    ("task", "data"): ("데이터", None),
+    ("webhook", "url"): ("주소", None),
+    ("webhook", "method"): ("메서드", None),
+    ("webhook", "body"): ("본문", "`all` · `fields:[…]` · `template:\"…\"`"),
+    ("webhook", "timeout_s"): ("제한 시간(초)", None),
+    ("webhook", "store_as"): ("결과를 담을 변수", None),
+}
+
 #: 모델에 적히지 않은 고를 거리 — 값은 **계약의 상수**에서 온다 (손으로 적지 않는다).
 #: 모델이 `str`이고 허용 집합은 `validate()`가 보기 때문에 JSON Schema에 enum이 없다.
 ELEMENT_CHOICES: dict[tuple[str, str], tuple[str, ...]] = {
@@ -129,6 +207,14 @@ def forms() -> dict[str, object]:
     if missing:
         # 이름 없는 폼이 조용히 생기지 않게 **멈춘다** (생성기가 거짓말을 하지 않는다).
         raise SystemExit(f"화면 이름이 없는 요소: {', '.join(missing)} — ELEMENT_LABELS에 더한다")
+    unnamed = sorted(
+        f"{name}.{field}"
+        for name, model in ELEMENT_MODELS.items()
+        for field in model.model_fields
+        if field != "schema" and (name, field) not in FIELD_LABELS
+    )
+    if unnamed:
+        raise SystemExit(f"화면 이름이 없는 칸: {', '.join(unnamed)} — FIELD_LABELS에 더한다")
     out: dict[str, object] = {}
     for name in sorted(ELEMENT_MODELS):
         schema = ELEMENT_MODELS[name].model_json_schema()
@@ -138,8 +224,10 @@ def forms() -> dict[str, object]:
             # `schema` 칸은 계약 번호라 사람이 고치지 않는다 (C14 — 모델이 채운다).
             if field_name == "schema":
                 continue
+            label, help_text = FIELD_LABELS[(name, field_name)]
             field: dict[str, object] = {
                 "name": field_name,
+                "label": label,
                 "kind": _kind_of(spec),
                 "required": field_name in required,
             }
@@ -147,7 +235,7 @@ def forms() -> dict[str, object]:
             if choices:
                 field["kind"] = "choice"
                 field["choices"] = list(choices)
-            help_text = spec.get("description")
+            help_text = spec.get("description") or help_text
             if help_text:
                 field["help"] = help_text
             fields.append(field)
@@ -169,6 +257,8 @@ def rendered() -> dict[Path, str]:
             "\n"
             "export interface ElementField {\n"
             "  name: string;\n"
+            "  /** 화면 이름 (한글). 원문 칸 이름은 `name`이다. */\n"
+            "  label: string;\n"
             "  kind: FieldKind;\n"
             "  required: boolean;\n"
             "  choices?: string[];\n"
