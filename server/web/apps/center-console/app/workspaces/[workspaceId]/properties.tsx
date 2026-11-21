@@ -340,6 +340,12 @@ export function Properties({
             body={body}
             canWrite={canWrite}
             onChange={(made) => set({ bpm: { ...form.bpm, [key]: made } })}
+            onApplyNow={(made) => {
+              // 팝업의 「적용」 — 패널의 다른 편집과 함께 **바로** 그림에 넣는다(실행 취소 한 걸음).
+              const next = { ...form, bpm: { ...form.bpm, [key]: made } };
+              setForm(next);
+              onApply(patchOf(node, next));
+            }}
             onDrop={() => {
               const rest = { ...form.bpm };
               delete rest[key];
@@ -449,18 +455,29 @@ function Group({
   );
 }
 
+/** 본문에 칸 하나를 넣은 새 본문. `undefined`는 그 칸을 뺀다. */
+function withValue(body: Body, key: string, value: unknown): Body {
+  const made = { ...body };
+  if (value === undefined) delete made[key];
+  else made[key] = value;
+  return made;
+}
+
 /** `bpm:*` 하나 — 폼은 **생성된 명세**가 정한다. 명세가 없는 요소는 JSON 칸 하나다. */
 function ElementBlock({
   name,
   body,
   canWrite,
   onChange,
+  onApplyNow,
   onDrop,
 }: {
   name: string;
   body: Body;
   canWrite: boolean;
   onChange: (body: Body) => void;
+  /** 팝업이 고친 본문을 곧바로 그림에 넣는다. */
+  onApplyNow: (body: Body) => void;
   onDrop: () => void;
 }) {
   const form = ELEMENT_FORMS[name];
@@ -492,15 +509,18 @@ function ElementBlock({
       {form ? (
         form.fields.map((field) => {
           // 결재의 답 칸·담당자는 **제 편집기**가 있다 — 읽지 못하는 모양이면 JSON 칸으로 남는다.
-          const put = (value: unknown) => {
-            const made = { ...body };
-            if (value === undefined) delete made[field.name];
-            else made[field.name] = value;
-            onChange(made);
-          };
+          const put = (value: unknown) => onChange(withValue(body, field.name, value));
           if (name === "approval" && field.name === "fields") {
             const answers = readAnswerFields(body.fields);
-            if (answers) return <AnswerFieldsEditor key={field.name} fields={answers} canWrite={canWrite} onChange={put} />;
+            if (answers)
+              return (
+                <AnswerFieldsEditor
+                  key={field.name}
+                  fields={answers}
+                  canWrite={canWrite}
+                  onApply={(made) => onApplyNow(withValue(body, field.name, made))}
+                />
+              );
           }
           // `이름=값`은 두 열의 표다 — 객체가 아닌 값(반쯤 적은 글)은 글 칸으로 남는다.
           if (field.kind === "map-text") {
@@ -516,6 +536,7 @@ function ElementBlock({
                   rows={rows}
                   canWrite={canWrite}
                   onChange={put}
+                  onApplyNow={(made) => onApplyNow(withValue(body, field.name, made))}
                 />
               );
           }
