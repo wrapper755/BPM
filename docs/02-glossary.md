@@ -115,6 +115,12 @@ Center ─(하트비트 응답: 배포·작업·결재 답)─▶ 서버 실행�
 | 파일 목록 | `file_list` | ServiceTask | 실행 엔진 내장. 폴더를 훑어 파일 경로 목록을 만든다 ([ADR-0026](decisions/0026-file-paths-and-file-list-task.md)) |
 | 스크립트·규칙·메일·웹훅 | — | ScriptTask, BusinessRuleTask(DMN), SendTask, ReceiveTask | 실행 엔진 내장 |
 
+`bpm:*` 설정이 없는 요소는 BPMN 요소의 이름으로 부른다 (콘솔 상세 패널의 머리, CON-20b): 시작 이벤트(StartEvent) ·
+끝 이벤트(EndEvent) · 중간 잡기·던지기 이벤트(IntermediateCatchEvent·IntermediateThrowEvent) · 경계 이벤트(BoundaryEvent) ·
+배타·병렬·포함·이벤트 기반 게이트웨이(Exclusive·Parallel·Inclusive·EventBasedGateway) · 태스크(Task) · 사람 태스크(UserTask) ·
+서비스 태스크(ServiceTask) · 스크립트 태스크(ScriptTask) · 규칙 태스크(BusinessRuleTask) · 보내기 태스크(SendTask) ·
+받기 태스크(ReceiveTask) · 수동 태스크(ManualTask) · 하위 프로세스(SubProcess) · 호출 활동(CallActivity) · 흐름(SequenceFlow).
+
 ## 3. 사람 개입
 
 | 화면 표기 | 코드 | 뜻 |

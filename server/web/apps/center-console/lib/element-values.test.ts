@@ -12,7 +12,7 @@ import {
   writeBody,
 } from "./element-values";
 
-const field = (kind: ElementField["kind"], name = "x"): ElementField => ({ name, kind, required: false });
+const field = (kind: ElementField["kind"], name = "x"): ElementField => ({ name, label: name, kind, required: false });
 
 describe("본문 읽고 쓰기", () => {
   it("깨진 글은 빈 본문으로 본다 — 반쯤 그린 그림도 열려야 한다", () => {

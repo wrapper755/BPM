@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "../cn";
 
@@ -24,11 +24,15 @@ export interface ActionMenuProps {
   label: string;
   disabled?: boolean;
   className?: string;
+  /** 「⋯」 대신 글이 있는 단추로 연다 (상세 패널의 「설정 더하기」). 펼친 목록은 단추의 왼쪽 끝에 맞춘다. */
+  children?: ReactNode;
 }
 
 const WIDTH = 176;
+/** 줄 하나의 높이 (`py-2` + `text-body-sm`) — 펼 자리를 어림한다. */
+const ROW = 36;
 
-export function ActionMenu({ items, label, disabled, className }: ActionMenuProps) {
+export function ActionMenu({ items, label, disabled, className, children }: ActionMenuProps) {
   const [place, setPlace] = useState<{ left: number; top: number } | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const open = place !== null;
@@ -65,13 +69,22 @@ export function ActionMenu({ items, label, disabled, className }: ActionMenuProp
         onClick={(event) => {
           if (open) return setPlace(null);
           const at = event.currentTarget.getBoundingClientRect();
-          // 단추의 오른쪽 끝에 맞춰 펴되 화면 밖으로 나가지 않게 민다.
-          const left = Math.max(8, Math.min(at.right - WIDTH, window.innerWidth - WIDTH - 8));
-          setPlace({ left, top: at.bottom + 4 });
+          // 단추의 오른쪽 끝에 맞춰(글 단추면 왼쪽 끝에) 펴되 화면 밖으로 나가지 않게 민다.
+          const anchor = children ? at.left : at.right - WIDTH;
+          const left = Math.max(8, Math.min(anchor, window.innerWidth - WIDTH - 8));
+          // 아래에 자리가 없으면 위로 편다 — 패널 바닥의 단추에서 열면 목록이 화면 밖으로 잘렸다.
+          const height = items.length * ROW + 8;
+          const below = at.bottom + 4;
+          const top = below + height > window.innerHeight - 8 ? Math.max(8, at.top - 4 - height) : below;
+          setPlace({ left, top });
         }}
-        className="inline-flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-bg-subtle hover:text-text-primary disabled:opacity-50"
+        className={
+          children
+            ? "inline-flex h-8 items-center gap-1.5 rounded-md border border-border-default bg-bg-surface px-3 text-body-sm text-text-primary shadow-sm hover:bg-bg-subtle disabled:opacity-50"
+            : "inline-flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-bg-subtle hover:text-text-primary disabled:opacity-50"
+        }
       >
-        <MoreHorizontal size={18} aria-hidden />
+        {children ?? <MoreHorizontal size={18} aria-hidden />}
       </button>
       {place ? (
         <ul

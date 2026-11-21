@@ -6,6 +6,8 @@ export type FieldKind = "text" | "number" | "bool" | "choice" | "list-text" | "m
 
 export interface ElementField {
   name: string;
+  /** 화면 이름 (한글). 원문 칸 이름은 `name`이다. */
+  label: string;
   kind: FieldKind;
   required: boolean;
   choices?: string[];
@@ -25,11 +27,14 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "goal",
+        "label": "목표",
         "kind": "text",
-        "required": true
+        "required": true,
+        "help": "AI가 이 태스크에서 이룰 것을 한 문장으로 적습니다."
       },
       {
         "name": "domain",
+        "label": "영역",
         "kind": "choice",
         "required": true,
         "choices": [
@@ -42,51 +47,65 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
       },
       {
         "name": "tools",
+        "label": "허용 도구",
         "kind": "list-text",
-        "required": false
+        "required": false,
+        "help": "쓸 수 있는 도구 이름입니다."
       },
       {
         "name": "params",
+        "label": "매개변수",
         "kind": "json",
-        "required": false
+        "required": false,
+        "help": "재생 때 `$param`으로 바뀌는 값입니다."
       },
       {
         "name": "results",
+        "label": "결과 필드",
         "kind": "map-text",
-        "required": false
+        "required": false,
+        "help": "`이름=타입` — AI가 채워 돌려줄 칸입니다."
       },
       {
         "name": "replay",
+        "label": "재생",
         "kind": "choice",
         "required": false,
         "choices": [
           "full",
           "none",
           "plan"
-        ]
+        ],
+        "help": "full: 모델 0회 · plan: 마지막 추출만 모델 · none: 매번 자율."
       },
       {
         "name": "limits",
+        "label": "한도",
         "kind": "json",
         "required": false
       },
       {
         "name": "forbidden_actions",
+        "label": "금지 동작",
         "kind": "list-text",
         "required": false
       },
       {
         "name": "confirm_triggers",
+        "label": "확인할 때",
         "kind": "list-text",
-        "required": false
+        "required": false,
+        "help": "이 말이 걸리면 사람에게 확인을 받습니다."
       },
       {
         "name": "web",
+        "label": "웹 설정",
         "kind": "json",
         "required": false
       },
       {
         "name": "desktop",
+        "label": "데스크톱 설정",
         "kind": "json",
         "required": false
       }
@@ -97,43 +116,55 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "title",
+        "label": "제목",
         "kind": "text",
         "required": true
       },
       {
         "name": "description",
+        "label": "설명",
         "kind": "text",
         "required": false
       },
       {
         "name": "show",
+        "label": "보일 값",
         "kind": "list-text",
-        "required": false
+        "required": false,
+        "help": "결재하는 사람에게 보일 변수입니다."
       },
       {
         "name": "fields",
+        "label": "답 칸",
         "kind": "json",
         "required": false
       },
       {
         "name": "expires",
+        "label": "기한",
         "kind": "text",
-        "required": false
+        "required": false,
+        "help": "ISO 기간(`P3D`) 또는 변수 이름입니다."
       },
       {
         "name": "assignees",
+        "label": "담당자",
         "kind": "json",
         "required": false
       },
       {
         "name": "answered_by_as",
+        "label": "답한 사람 변수",
         "kind": "text",
-        "required": false
+        "required": false,
+        "help": "답한 사람을 담을 변수입니다."
       },
       {
         "name": "answered_via_as",
+        "label": "답한 길 변수",
         "kind": "text",
-        "required": false
+        "required": false,
+        "help": "답이 들어온 길을 담을 변수입니다."
       }
     ]
   },
@@ -142,18 +173,24 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "input",
+        "label": "입력",
         "kind": "map-text",
-        "required": false
+        "required": false,
+        "help": "`호출 대상 변수=식`"
       },
       {
         "name": "output",
+        "label": "출력",
         "kind": "map-text",
-        "required": false
+        "required": false,
+        "help": "`내 변수=호출 대상 변수`"
       },
       {
         "name": "delegate",
+        "label": "맡기기",
         "kind": "json",
-        "required": false
+        "required": false,
+        "help": "켜면 따로 실행으로 맡깁니다 (일괄 기동)."
       }
     ]
   },
@@ -162,36 +199,43 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "path",
+        "label": "경로",
         "kind": "text",
         "required": true
       },
       {
         "name": "format",
+        "label": "형식",
         "kind": "text",
         "required": true
       },
       {
         "name": "template",
+        "label": "템플릿",
         "kind": "text",
         "required": false
       },
       {
         "name": "variables",
+        "label": "변수",
         "kind": "list-text",
         "required": false
       },
       {
         "name": "sheet",
+        "label": "시트",
         "kind": "text",
         "required": false
       },
       {
         "name": "append",
+        "label": "이어 쓰기",
         "kind": "bool",
         "required": false
       },
       {
         "name": "store_as",
+        "label": "경로를 담을 변수",
         "kind": "text",
         "required": false
       }
@@ -202,26 +246,31 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "limits",
+        "label": "한도",
         "kind": "json",
         "required": false
       },
       {
         "name": "forbidden_actions",
+        "label": "금지 동작",
         "kind": "list-text",
         "required": false
       },
       {
         "name": "confirm_triggers",
+        "label": "확인할 때",
         "kind": "list-text",
         "required": false
       },
       {
         "name": "web",
+        "label": "웹 설정",
         "kind": "json",
         "required": false
       },
       {
         "name": "desktop",
+        "label": "데스크톱 설정",
         "kind": "json",
         "required": false
       }
@@ -232,31 +281,38 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "to",
+        "label": "받는 사람",
         "kind": "list-text",
         "required": false
       },
       {
         "name": "cc",
+        "label": "참조",
         "kind": "list-text",
         "required": false
       },
       {
         "name": "subject",
+        "label": "제목",
         "kind": "text",
         "required": false
       },
       {
         "name": "body",
+        "label": "본문",
         "kind": "text",
         "required": false
       },
       {
         "name": "attachments",
+        "label": "첨부",
         "kind": "list-text",
-        "required": false
+        "required": false,
+        "help": "파일 경로가 든 변수 이름입니다."
       },
       {
         "name": "store_as",
+        "label": "결과를 담을 변수",
         "kind": "text",
         "required": false
       }
@@ -267,36 +323,45 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "folder",
+        "label": "폴더",
         "kind": "text",
-        "required": true
+        "required": true,
+        "help": "`{변수}`를 쓸 수 있습니다. 상대 경로는 출력 폴더 기준입니다."
       },
       {
         "name": "pattern",
+        "label": "파일 이름 패턴",
         "kind": "text",
-        "required": false
+        "required": false,
+        "help": "glob 한 조각(`*.pdf`) — 경로 구분자는 쓸 수 없습니다."
       },
       {
         "name": "recursive",
+        "label": "하위 폴더까지",
         "kind": "bool",
         "required": false
       },
       {
         "name": "sort",
+        "label": "정렬",
         "kind": "text",
         "required": false
       },
       {
         "name": "limit",
+        "label": "최대 개수",
         "kind": "number",
         "required": false
       },
       {
         "name": "store_as",
+        "label": "목록을 담을 변수",
         "kind": "text",
         "required": false
       },
       {
         "name": "count_as",
+        "label": "개수를 담을 변수",
         "kind": "text",
         "required": false
       }
@@ -307,23 +372,29 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "collection",
+        "label": "돌 목록",
         "kind": "text",
         "required": true
       },
       {
         "name": "item",
+        "label": "항목 변수",
         "kind": "text",
         "required": true
       },
       {
         "name": "result",
+        "label": "한 번의 결과",
         "kind": "text",
-        "required": false
+        "required": false,
+        "help": "한 번 돈 결과로 쓰는 변수 — 그 태스크의 출력 중 하나입니다."
       },
       {
         "name": "collect_into",
+        "label": "모을 변수",
         "kind": "text",
-        "required": false
+        "required": false,
+        "help": "한 번의 결과를 모은 목록입니다."
       }
     ]
   },
@@ -332,16 +403,19 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "extensions",
+        "label": "확장",
         "kind": "json",
         "required": false
       },
       {
         "name": "inputs",
+        "label": "입력",
         "kind": "json",
         "required": false
       },
       {
         "name": "outputs",
+        "label": "출력",
         "kind": "list-text",
         "required": false
       }
@@ -352,13 +426,17 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "correlation",
+        "label": "상관 변수",
         "kind": "text",
-        "required": false
+        "required": false,
+        "help": "이 변수의 값이 같은 메시지만 받습니다."
       },
       {
         "name": "payload",
+        "label": "받을 값",
         "kind": "list-text",
-        "required": false
+        "required": false,
+        "help": "본문에서 변수로 들어오는 이름입니다."
       }
     ]
   },
@@ -367,18 +445,24 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "decision",
+        "label": "결정",
         "kind": "text",
-        "required": true
+        "required": true,
+        "help": "같은 패키지의 DMN 결정 id입니다."
       },
       {
         "name": "input",
+        "label": "입력",
         "kind": "map-text",
-        "required": false
+        "required": false,
+        "help": "`DMN 입력 이름=식`"
       },
       {
         "name": "output",
+        "label": "출력",
         "kind": "map-text",
-        "required": false
+        "required": false,
+        "help": "`변수=DMN 출력 이름`"
       }
     ]
   },
@@ -387,31 +471,39 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "app_id",
+        "label": "앱",
         "kind": "text",
         "required": true
       },
       {
         "name": "operation",
+        "label": "작업",
         "kind": "text",
         "required": true
       },
       {
         "name": "input",
+        "label": "입력",
         "kind": "map-text",
-        "required": false
+        "required": false,
+        "help": "`필드=식`"
       },
       {
         "name": "output",
+        "label": "출력",
         "kind": "map-text",
-        "required": false
+        "required": false,
+        "help": "`변수=필드`"
       },
       {
         "name": "timeout_s",
+        "label": "제한 시간(초)",
         "kind": "number",
         "required": false
       },
       {
         "name": "retry",
+        "label": "다시 시도",
         "kind": "json",
         "required": false
       }
@@ -422,16 +514,21 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "type",
+        "label": "태스크 종류",
         "kind": "text",
-        "required": true
+        "required": true,
+        "help": "확장이 기여한 태스크 종류 id입니다."
       },
       {
         "name": "extension",
+        "label": "확장",
         "kind": "text",
-        "required": true
+        "required": true,
+        "help": "확장 id입니다."
       },
       {
         "name": "data",
+        "label": "데이터",
         "kind": "json",
         "required": false
       }
@@ -442,26 +539,32 @@ export const ELEMENT_FORMS: Record<string, ElementForm> = {
     "fields": [
       {
         "name": "url",
+        "label": "주소",
         "kind": "text",
         "required": true
       },
       {
         "name": "method",
+        "label": "메서드",
         "kind": "text",
         "required": false
       },
       {
         "name": "body",
+        "label": "본문",
         "kind": "text",
-        "required": false
+        "required": false,
+        "help": "`all` · `fields:[…]` · `template:\"…\"`"
       },
       {
         "name": "timeout_s",
+        "label": "제한 시간(초)",
         "kind": "number",
         "required": false
       },
       {
         "name": "store_as",
+        "label": "결과를 담을 변수",
         "kind": "text",
         "required": false
       }

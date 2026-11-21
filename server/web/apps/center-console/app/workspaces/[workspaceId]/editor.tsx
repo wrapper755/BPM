@@ -6,7 +6,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PanelBottomClose, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
-import { Button, ErrorBanner } from "@bpm/ui";
+import { Button, Dialog, ErrorBanner } from "@bpm/ui";
 import type { BpmnCanvasHandle, NodeProperties, NodeState, PropertyPatch, TaskSpec } from "@bpm/bpmn-canvas";
 import type { FileInfo } from "@bpm/api-types/c17-file-info";
 import type { BuildInfo } from "@bpm/api-types/c17-build-info";
@@ -122,6 +122,13 @@ export function Workspace({
   const [file, setFile] = useState<Opened | null>(opened ? { path: opened, text, revision } : null);
   const [dirty, setDirty] = useState(false);
   const [picked, setPicked] = useState<NodeProperties | null>(null);
+  // 상세 패널의 적용 안 한 편집 (U11) — 있으면 다른 요소로 넘어가기 전에 묻는다.
+  const draft = useRef<PropertyPatch | null>(null);
+  // 단추를 켜고 끄려면 화면이 알아야 한다 — 패치 자체는 `draft`에 있다.
+  const [drafting, setDrafting] = useState(false);
+  const [leaving, setLeaving] = useState<{ from: string; to: string } | null>(null);
+  const leavingNow = useRef(leaving);
+  leavingNow.current = leaving;
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [bottom, setBottom] = useState<Bottom | null>(null);
@@ -180,6 +187,13 @@ export function Workspace({
   const save = useCallback(async () => {
     const editor = canvas.current?.editor;
     if (!file || !editor) return;
+    // 적용 안 한 속성 편집은 **먼저 넣고** 저장한다 — 저장을 누른 사람은 고친 것을 남기려는 것이다.
+    // 넣는 것은 「적용」과 같은 길이라 실행 취소 한 걸음이다.
+    if (draft.current && picked) {
+      editor.setProperties(picked.id, draft.current);
+      draft.current = null;
+      setPicked(editor.properties(picked.id));
+    }
     setBusy(true);
     setFailure(null);
     const xml = await editor.saveXML();
@@ -195,7 +209,7 @@ export function Workspace({
     }
     setFile({ ...file, text: xml, revision: made.revision });
     setDirty(false);
-  }, [file, info.id]);
+  }, [file, info.id, picked]);
 
   // Ctrl+S — 저장은 **사람이 누르는 것**이다 (자동 저장이 아니다, CON-20).
   useEffect(() => {
@@ -346,6 +360,37 @@ export function Workspace({
   );
 
   /**
+   * 캔버스의 고름이 바뀌었다 — 적용 안 한 속성 편집이 있으면 **넘어가지 않고 묻는다** (U11).
+   * 캔버스는 이미 새 것을 골라 두었으므로 「머무르기」는 고름을 앞 요소로 되돌린다.
+   */
+  const pick = useCallback(
+    (id: string) => {
+      if (picked && id === picked.id) return;
+      if (picked && draft.current) {
+        setLeaving({ from: picked.id, to: id });
+        return;
+      }
+      setPicked(id ? (canvas.current?.editor?.properties(id) ?? null) : null);
+    },
+    [picked],
+  );
+
+  const leave = (how: "apply" | "discard" | "stay") => {
+    const now = leavingNow.current;
+    if (!now) return;
+    leavingNow.current = null;
+    setLeaving(null);
+    const editor = canvas.current?.editor;
+    if (how === "stay") {
+      editor?.select(now.from);
+      return;
+    }
+    if (how === "apply" && draft.current) editor?.setProperties(now.from, draft.current);
+    draft.current = null;
+    setPicked(now.to ? (editor?.properties(now.to) ?? null) : null);
+  };
+
+  /**
    * 「리소스」 탭이 고른 것으로 **노드 하나를 만든다** (ADR-0155). 끌어다 놓기와 「+」가
    * **같은 길**이고 다른 것은 자리(`spec.at`)뿐이라 실행 취소도 한 걸음이다.
    *
@@ -361,7 +406,8 @@ export function Workspace({
       setFailure(null);
       const made = editor.createTask(spec);
       // 만든 것을 **골라 둔 채로** 둔다 — 오른쪽 상세 패널에서 입력·출력을 바로 잇는다.
-      setPicked(editor.properties(made.id));
+      // 적용 안 한 편집이 있으면 고름이 바뀌는 자리(`pick`)가 이미 묻고 있다.
+      if (!draft.current) setPicked(editor.properties(made.id));
     },
     [],
   );
@@ -446,7 +492,7 @@ export function Workspace({
           {editing && shows === "canvas" ? (
             <>
               <span aria-hidden className="mx-2 h-5 w-px bg-border-default" />
-              <Button variant="primary" size="sm" onClick={() => void save()} disabled={!dirty || busy}>
+              <Button variant="primary" size="sm" onClick={() => void save()} disabled={!(dirty || drafting) || busy}>
                 <ACTION_ICON.save size={16} aria-hidden />
                 저장
               </Button>
@@ -622,7 +668,7 @@ export function Workspace({
               // 인자를 그대로 쓴다 — 캔버스는 **들인 뒤에 「아니다」라고도 말한다**(연 적밖에 없는
               // 그림이 「저장 안 한 변경」이 되지 않게). 늘 `true`로 적으면 그 말을 못 듣는다.
               onChanged={setDirty}
-              onPicked={(id) => setPicked(id ? (canvas.current?.editor?.properties(id) ?? null) : null)}
+              onPicked={pick}
               onImported={() => canvas.current?.editor?.mark(marks.current)}
               onFailed={(cause) => setFailure(`다이어그램을 읽지 못했습니다 — ${cause.message}`)}
             />
@@ -669,9 +715,9 @@ export function Workspace({
           aria-label="속성"
           hidden={!showDetail || !wide}
           style={{ width: detailWidth }}
-          className="shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-3"
+          className="flex shrink-0 flex-col border-l border-border-default bg-bg-surface"
         >
-          <div className="-mx-3 -mt-3 mb-3 flex items-center border-b border-border-default bg-bg-subtle px-3 py-2">
+          <div className="flex items-center border-b border-border-default bg-bg-subtle px-3 py-2">
             <h2 className="text-caption font-semibold text-text-secondary">속성</h2>
             <Fold label="속성 패널 접기" side="right" onClick={() => setShowDetail(false)} />
           </div>
@@ -685,9 +731,11 @@ export function Workspace({
                 label: one.name || one.to || one.id,
               }))}
               onApply={applyProperties}
+              draft={draft}
+              onDraft={setDrafting}
             />
           ) : (
-            <>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
               <dl className="flex flex-col gap-2 text-body-sm">
                 <Row label="이름" value={info.name} />
                 <Row label="판" value={info.version} />
@@ -695,9 +743,28 @@ export function Workspace({
                 {info.description ? <Row label="설명" value={info.description} /> : null}
               </dl>
               <p className="mt-3 text-caption text-text-muted">요소를 고르면 그 속성이 여기 보입니다.</p>
-            </>
+            </div>
           )}
         </aside>
+        <Dialog
+          open={leaving !== null}
+          title="적용 안 한 속성 편집이 있습니다"
+          description="적용하지 않고 다른 요소로 가면 고친 것이 사라집니다."
+          onClose={() => leave("stay")}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => leave("discard")}>
+                버리기
+              </Button>
+              <Button variant="secondary" onClick={() => leave("apply")}>
+                적용
+              </Button>
+              <Button variant="primary" autoFocus onClick={() => leave("stay")}>
+                머무르기
+              </Button>
+            </>
+          }
+        />
         </div>
 
         {/* [L] 아래 탭 — 접힌다. 「변수」는 그림의 `bpm:process`라 캔버스 쪽에 있다 (STU-01 [L]).
@@ -766,7 +833,7 @@ export function Workspace({
               onCheck={(again) => void ask(again)}
               onPick={(id) => {
                 const found = canvas.current?.editor?.select(id) ?? false;
-                if (found) setPicked(canvas.current?.editor?.properties(id) ?? null);
+                if (found && !draft.current) setPicked(canvas.current?.editor?.properties(id) ?? null);
                 return found;
               }}
             />
