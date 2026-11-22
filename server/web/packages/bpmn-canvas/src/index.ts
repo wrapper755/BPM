@@ -19,7 +19,7 @@ export { CanvasViewer } from "./viewer";
 export { BpmnCanvas } from "./BpmnCanvas";
 export type { BpmnCanvasHandle, BpmnCanvasProps } from "./BpmnCanvas";
 export { layout, laidOut, needsLayout } from "./auto-layout";
-export { propertiesOf, eventOf, gatewayOf, multiInstanceOf, EVENT_KINDS } from "./read";
+export { propertiesOf, eventOf, gatewayOf, multiInstanceOf, adHocOf, EVENT_KINDS } from "./read";
 // 케이스 편집기가 답 폼을 짓는 자리 — **캔버스가 떠 있지 않아도** 읽는다 (DOM이 없다).
 export { readApprovals } from "./approvals";
 export type { ApprovalAsk, ApprovalField } from "./approvals";
@@ -28,6 +28,8 @@ export { BPM_MODDLE } from "./moddle";
 export { ELEMENT_FORMS } from "./element-forms";
 export type { ElementField, ElementForm, FieldKind, FieldTab } from "./element-forms";
 export type {
+  AdHocInfo,
+  AdHocOrdering,
   BusinessObject,
   CanvasStats,
   DelegateSpec,

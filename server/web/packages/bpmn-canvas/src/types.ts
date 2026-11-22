@@ -64,6 +64,12 @@ export interface BusinessObject {
   cancelActivity?: boolean;
   /** 받기 태스크의 메시지. */
   messageRef?: NamedRoot;
+  /** Ad Hoc 하위 프로세스의 표준 칸 (C14 §Ad Hoc) — `Parallel`(기본)·`Sequential`. */
+  ordering?: string;
+  /** 완료 조건이 참일 때 남은 활동 흐름을 걷나 (기본 참). */
+  cancelRemainingInstances?: boolean;
+  /** 완료 조건 (`bpmn:completionCondition`, bpm-expr). */
+  completionCondition?: Expression;
   /** `bpmn:Definitions`의 정의 수준 요소들. */
   rootElements?: BusinessObject[];
   /** 프로세스·하위 프로세스가 담은 흐름 요소들 (글자에서 읽을 때 쓴다 — `approvals.ts`). */
@@ -107,6 +113,17 @@ export interface EventInfo {
   error: string;
 }
 
+/** Ad Hoc 켜는 차례 — 표준 속성 `ordering`의 값 그대로다. */
+export type AdHocOrdering = "Parallel" | "Sequential";
+
+/** Ad Hoc 하위 프로세스의 **표준** 칸 셋 (C14 §Ad Hoc). `bpm:adHoc` 본문은 `bpm`에 따로 있다. */
+export interface AdHocInfo {
+  ordering: AdHocOrdering;
+  cancelRemaining: boolean;
+  /** 완료 조건 식 — 비면 켠 것이 다 끝날 때 끝난다. */
+  completion: string;
+}
+
 /** 속성 패널이 읽는 것 (STU-04). `bpm`은 `{요소 이름: JSON 글}`이다. */
 export interface NodeProperties {
   id: string;
@@ -119,6 +136,8 @@ export interface NodeProperties {
   multiInstance: MultiInstance;
   gateway: GatewayInfo | null;
   event: EventInfo | null;
+  /** Ad Hoc 하위 프로세스일 때만 — 아니면 `null`. */
+  adHoc: AdHocInfo | null;
   bpm: Record<string, string>;
 }
 
@@ -135,6 +154,8 @@ export interface PropertyPatch {
   multiInstance?: MultiInstance;
   default?: string;
   event?: EventPatch;
+  /** Ad Hoc 하위 프로세스의 표준 칸 — 바뀐 것만. */
+  adHoc?: Partial<AdHocInfo>;
   bpm?: Record<string, string | null>;
 }
 

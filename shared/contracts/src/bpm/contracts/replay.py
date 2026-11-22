@@ -34,6 +34,9 @@ class ReplayStep(ContractModel):
     tool: str
     #: `{변수}`가 섞인 인자. 값이 그 시점 변수와 같았으면 이름으로 적혀 있다.
     arguments: dict[str, Any] = Field(default_factory=dict)
+    #: 몇 번째 차례에 부른 것인가 (0부터). **Ad Hoc 하위 프로세스**가 차례를 되밟는 데 쓴다
+    #: (C14 §Ad Hoc, ADR-0190) — 한 차례는 모델에 한 번 물은 것이다. AI 태스크의 걸음은 늘 0이다.
+    turn: int = 0
 
 
 class ReplaySpec(ContractModel):

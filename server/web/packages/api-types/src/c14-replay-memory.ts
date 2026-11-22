@@ -33,5 +33,6 @@ export interface ReplayStep {
     [k: string]: unknown;
   };
   tool: string;
+  turn?: number;
   [k: string]: unknown;
 }

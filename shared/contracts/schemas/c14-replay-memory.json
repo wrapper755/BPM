@@ -54,6 +54,11 @@
         "tool": {
           "title": "Tool",
           "type": "string"
+        },
+        "turn": {
+          "default": 0,
+          "title": "Turn",
+          "type": "integer"
         }
       },
       "required": [

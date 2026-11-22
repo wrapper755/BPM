@@ -7,6 +7,7 @@
 
 import { toName } from "./shared";
 import type {
+  AdHocInfo,
   BusinessObject,
   EventDefinition,
   EventInfo,
@@ -96,6 +97,19 @@ export const eventOf = (bo: BusinessObject): EventInfo | null => {
   return out;
 };
 
+/**
+ * Ad Hoc 하위 프로세스의 표준 칸 (C14 §Ad Hoc) — 엔진과 같은 기본값이다: 차례는 `Parallel`,
+ * 남은 것 걷기는 참(적지 않으면 참이다 — 거짓만 거짓).
+ */
+export const adHocOf = (bo: BusinessObject): AdHocInfo | null => {
+  if (bo.$type !== "bpmn:AdHocSubProcess") return null;
+  return {
+    ordering: bo.ordering === "Sequential" ? "Sequential" : "Parallel",
+    cancelRemaining: bo.cancelRemainingInstances !== false,
+    completion: bo.completionCondition?.body ?? "",
+  };
+};
+
 /** 속성 패널이 읽는 것 한 벌 — `bpm`은 `{요소 이름: JSON 글}`이다. */
 export const propertiesOf = (bo: BusinessObject): NodeProperties => {
   const bpm: Record<string, string> = {};
@@ -126,6 +140,7 @@ export const propertiesOf = (bo: BusinessObject): NodeProperties => {
     multiInstance: multiInstanceOf(bo),
     gateway: gatewayOf(bo),
     event: eventOf(bo),
+    adHoc: adHocOf(bo),
     bpm,
   };
 };

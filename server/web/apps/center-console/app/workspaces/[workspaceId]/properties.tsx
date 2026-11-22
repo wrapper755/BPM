@@ -11,9 +11,11 @@ import { loadWorkspaceResources } from "@/app/actions";
 import { readAnswerFields, readAssignees } from "@/lib/answer-fields";
 import { AnswerFieldsEditor, AssigneesEditor } from "./answer-fields";
 import { MapTable } from "./map-table";
+import { AdHocSection } from "./ad-hoc";
 import { DelegateEditor, InputsSummary, LimitsEditor, RetryEditor } from "./inner-fields";
 import { readDelegate, readLimits, readParams, readRetry, summarizeInputs } from "@/lib/inner-fields";
 import { serviceCallHints, type Suggestion } from "@/lib/resources";
+import { readAi } from "@/lib/ad-hoc";
 import {
   mapRows,
   eventFields,
@@ -46,7 +48,15 @@ const TABS: { id: FieldTab; label: string }[] = [
 ];
 
 /** 그 종류의 노드에만 있는 표준 칸. 없는 칸을 보내면 엉뚱한 속성이 생긴다. */
-const isActivity = (type: string) => /Task$/.test(type) || type === "CallActivity" || type === "SubProcess";
+const isActivity = (type: string) =>
+  /Task$/.test(type) || type === "CallActivity" || type === "SubProcess" || type === "AdHocSubProcess";
+
+/**
+ * `bpm:adHoc`의 고르는 방식 칸 — 「기본」의 Ad Hoc 묶음이 그리므로 생성된 폼은 건너뛴다.
+ * 읽지 못하는 `ai`만은 생성된 JSON 칸으로 남는다 (묶음이 요약하지 못한다).
+ */
+const ownedByAdHoc = (field: string, body: Body): boolean =>
+  field === "activate" || (field === "ai" && (body.ai === undefined || readAi(body.ai) !== null));
 
 const INPUT = "w-full rounded-md border border-border-strong bg-bg-surface px-2 py-1 text-body-sm";
 
@@ -72,6 +82,7 @@ const TYPE_NAMES: Record<string, string> = {
   ReceiveTask: "받기 태스크",
   ManualTask: "수동 태스크",
   SubProcess: "하위 프로세스",
+  AdHocSubProcess: "Ad Hoc 하위 프로세스",
   CallActivity: "호출 활동",
   SequenceFlow: "흐름",
 };
@@ -99,7 +110,7 @@ function kindOf(node: NodeProperties): { name: string; icon: ReactNode } {
         ? Circle
         : /Gateway$/.test(node.type)
           ? Diamond
-          : node.type === "SubProcess" || node.type === "CallActivity"
+          : node.type === "SubProcess" || node.type === "AdHocSubProcess" || node.type === "CallActivity"
             ? SquarePlus
             : Square;
   const Icon = shape;
@@ -140,6 +151,7 @@ interface Form {
   bpm: Record<string, Body>;
   dropped: string[];
   event: EventFieldValues;
+  adHoc: NodeProperties["adHoc"];
 }
 
 function formOf(node: NodeProperties): Form {
@@ -154,6 +166,7 @@ function formOf(node: NodeProperties): Form {
     bpm: Object.fromEntries(Object.entries(node.bpm).map(([key, body]) => [key, parseBody(body)])),
     dropped: [],
     event: eventFields(node.event),
+    adHoc: node.adHoc,
   };
 }
 
@@ -169,6 +182,7 @@ function patchOf(node: NodeProperties, form: Form): PropertyPatch {
   for (const key of form.dropped) bodies[key] = null;
   if (Object.keys(bodies).length) patch.bpm = bodies;
   if (node.event) patch.event = eventPatch(node.event, form.event);
+  if (node.adHoc && form.adHoc) patch.adHoc = form.adHoc;
   return patch;
 }
 
@@ -219,8 +233,9 @@ export function Properties({
   );
 
   const kind = kindOf(node);
+  // `bpm:adHoc`은 Ad Hoc 묶음이 붙인다 — 다른 요소에 붙일 것이 아니다.
   const spare = Object.keys(ELEMENT_FORMS)
-    .filter((one) => !(one in form.bpm))
+    .filter((one) => !(one in form.bpm) && one !== "adHoc")
     .sort((a, b) => (ELEMENT_FORMS[a]?.label ?? a).localeCompare(ELEMENT_FORMS[b]?.label ?? b, "ko"));
   // 「입력·출력」은 값이 오가는 칸이 있을 때만 — 빈 탭을 누르게 하지 않는다.
   const hasIo = Object.keys(form.bpm).some((one) => ELEMENT_FORMS[one]?.fields.some((field) => field.tab === "io"));
@@ -232,6 +247,12 @@ export function Properties({
       ELEMENT_FORMS[one] ? ELEMENT_FORMS[one].fields.some((field) => field.tab === which) : which === "advanced",
     );
   const titled = formsIn(shown).length > 1;
+  /** Ad Hoc 본문을 바꾼다 — 뺐다가 다시 정하면 「뺄 것」에서도 지운다. */
+  const withAdHoc = (made: Body): Form => ({
+    ...form,
+    bpm: { ...form.bpm, adHoc: made },
+    dropped: form.dropped.filter((gone) => gone !== "adHoc"),
+  });
   const blocks = Object.entries(form.bpm).map(([key, body]) => (
     <ElementBlock
       key={key}
@@ -355,6 +376,22 @@ export function Properties({
                 fields={form.event}
                 canWrite={canWrite}
                 onChange={(made) => set({ event: { ...form.event, ...made } })}
+              />
+            ) : null}
+
+            {form.adHoc ? (
+              <AdHocSection
+                info={form.adHoc}
+                body={form.bpm.adHoc}
+                canWrite={canWrite}
+                onInfo={(made) => set({ adHoc: made })}
+                onBody={(made) => setForm(withAdHoc(made))}
+                onApplyNow={(made) => {
+                  // 팝업의 「적용」 — 패널의 다른 편집과 함께 **바로** 그림에 넣는다(실행 취소 한 걸음).
+                  const next = withAdHoc(made);
+                  setForm(next);
+                  onApply(patchOf(node, next));
+                }}
               />
             ) : null}
 
@@ -547,7 +584,8 @@ function ElementBlock({
         : field === "operation"
           ? { suggestions: hints.operations, warning: hints.operationWarning }
           : {};
-  const fields = form?.fields.filter((field) => field.tab === tab) ?? [];
+  const fields =
+    form?.fields.filter((field) => field.tab === tab && !(name === "adHoc" && ownedByAdHoc(field.name, body))) ?? [];
   if (form ? !fields.length && !(tab === "advanced" && stray.length) : tab !== "advanced") return null;
   return (
     <section className="flex flex-col gap-4">

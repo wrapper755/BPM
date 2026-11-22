@@ -9,6 +9,19 @@ export const BPM_MODDLE = {
   },
   "types": [
     {
+      "name": "AdHoc",
+      "superClass": [
+        "Element"
+      ],
+      "properties": [
+        {
+          "name": "value",
+          "type": "String",
+          "isBody": true
+        }
+      ]
+    },
+    {
       "name": "AiTask",
       "superClass": [
         "Element"

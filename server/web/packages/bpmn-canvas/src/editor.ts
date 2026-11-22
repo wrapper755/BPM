@@ -16,6 +16,7 @@ import minimapModule from "diagram-js-minimap";
 
 import { laidOut } from "./auto-layout";
 import { BPM_MODDLE } from "./moddle";
+import { adHocPaletteModule } from "./palette";
 import { TIMER_KINDS, definitionOf, multiInstanceOf, propertiesOf } from "./read";
 import {
   RENDERER,
@@ -70,7 +71,8 @@ export class CanvasEditor {
       // 마우스를 올리면 키를 되돌려 준다 — 쥔 자리가 있으면 빼앗지 않는다.
       canvas: { autoFocus: true },
       // 미니맵 — 큰 그림에서 지금 어디를 보고 있나. 처음에는 접혀 있고 도구 띠에서 편다.
-      additionalModules: [minimapModule],
+      // 팔레트에 「Ad Hoc 하위 프로세스」 한 칸 (ADR-0190 — bpmn-js의 팔레트에는 없다).
+      additionalModules: [minimapModule, adHocPaletteModule],
       // `bpm:*`를 타입으로 다룬다 — 설명은 C14 모델에서 생성한다 (scripts/gen_moddle.py).
       moddleExtensions: { bpm: BPM_MODDLE },
     });
@@ -248,6 +250,16 @@ export class CanvasEditor {
       // 게이트웨이의 기본 흐름 — 흐름 id로 오고 그 흐름을 가리킨다 (빈 글이면 기본 없음).
       const flow = this.modeler.get("elementRegistry").get(patch.default ?? "");
       plain.default = flow ? flow.businessObject : undefined;
+    }
+    if (patch.adHoc && bo.$type === "bpmn:AdHocSubProcess") {
+      // Ad Hoc의 표준 칸 (C14 §Ad Hoc) — 같은 `updateProperties` 한 번에 싣는다.
+      const made = patch.adHoc;
+      if ("ordering" in made) plain.ordering = made.ordering ?? "Parallel";
+      if ("cancelRemaining" in made) plain.cancelRemainingInstances = made.cancelRemaining !== false;
+      if ("completion" in made) {
+        const body = made.completion ?? "";
+        plain.completionCondition = body ? moddle.create("bpmn:FormalExpression", { body }) : undefined;
+      }
     }
     if (Object.keys(plain).length) modeling.updateProperties(element, plain);
     if (patch.event) this.setEvent(element, patch.event);

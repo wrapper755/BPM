@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import UTC, datetime
 from typing import Any
 
@@ -87,7 +88,9 @@ def race(waiting: str, waiting_id: str, *, late: bool = False) -> Any:
 
 def start(process: Any, env: RunEnv | None = None) -> tuple[Engine, Run]:
     engine = Engine()
-    run = engine.start(process, run_id=RUN_ID, log=RunLog(run_id=RUN_ID), now=NOW, env=env or RunEnv())
+    # 시계는 `NOW`에 묶는다 — 진짜 시계로 타이머를 재면 날짜가 지나며 `tick()`이 이르게 된다.
+    env = dataclasses.replace(env or RunEnv(), clock=lambda: NOW)
+    run = engine.start(process, run_id=RUN_ID, log=RunLog(run_id=RUN_ID), now=NOW, env=env)
     return engine, run
 
 

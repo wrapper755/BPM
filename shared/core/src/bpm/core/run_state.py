@@ -179,6 +179,50 @@ class Compensation:
 
 
 @dataclass
+class AdHocActivation:
+    """Ad Hoc 하위 프로세스가 켠 활동 하나 — 그 활동 흐름의 표다 (C14 §Ad Hoc, ADR-0190)."""
+
+    #: 활동 흐름의 표 (`<Ad Hoc id>#<번째>`). 그 흐름의 토큰이 `Token.adhoc`로 들고 다닌다.
+    id: str
+    element: str
+    #: AI 방식에서 그 활동을 켠 도구 호출 — 끝나면 이 id로 결과를 답한다. 식 방식이면 빈 글.
+    call_id: str = ""
+    arguments: dict[str, Any] = field(default_factory=dict)
+    turn: int = 0
+
+
+@dataclass
+class AdHocState:
+    """Ad Hoc 하위 프로세스를 밟고 서 있는 **바깥 토큰**의 상태 (ADR-0190). 스냅샷과 함께 간다."""
+
+    seq: int = 0
+    #: 아직 켜지 않은 차례 (`Sequential`이면 하나씩 꺼낸다).
+    queue: list[AdHocActivation] = field(default_factory=list)
+    #: 켰고 아직 끝나지 않은 것.
+    active: list[AdHocActivation] = field(default_factory=list)
+    #: 완료 조건이 참이 되었거나 모델이 끝을 냈다 — 더 켜지 않고 남은 것을 기다린다.
+    closing: bool = False
+    # ── AI 방식 ──
+    #: 모델과의 대화 (OpenAI 호환 모양). 값이 들어 있다 — 스냅샷에만 담고 실행 기록에는 없다.
+    messages: list[dict[str, Any]] = field(default_factory=list)
+    #: 모델에 물은 횟수 (재생으로 되밟은 차례도 센다 — 차례 번호다).
+    turns: int = 0
+    #: 이번 차례에 켠 것 가운데 끝난 것의 답 — `{call_id, content}`. 다 모이면 다시 묻는다.
+    answered: list[dict[str, Any]] = field(default_factory=list)
+    #: 자율 수행이 배운 걸음 — `{tool, arguments, turn}` (끝날 때 재생 명세로 간다).
+    learned: list[dict[str, Any]] = field(default_factory=list)
+    #: 결정 수행이 되밟을 차례들 (기억에서). `None`이면 되밟지 않는다.
+    replay: list[list[dict[str, Any]]] | None = None
+    #: 되밟을 마지막 답 (`replay: full`).
+    replay_answer: str = ""
+    #: 모델이 끝을 냈다 (`results`를 채웠다). 완료 조건으로 끝나면 거짓 — 결과 칸은 `None`이다.
+    answered_by_model: bool = False
+    model: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+@dataclass
 class Token:
     """실행 중인 자리 하나."""
 
@@ -191,6 +235,14 @@ class Token:
     loop: LoopState | None = None
     #: 보상 던지기에서 처리기들을 도는 중이면 그 상태 (C14 §보상).
     compensation: Compensation | None = None
+    #: Ad Hoc 안의 토큰이면 그 **활동 흐름**의 표 (`AdHocActivation.id`). 갈라진 가지도 같은 표다.
+    adhoc: str | None = None
+    #: Ad Hoc 하위 프로세스를 밟고 서 있는 바깥 토큰이면 그 상태.
+    adhoc_state: AdHocState | None = None
+
+    def sibling(self, node_id: str) -> Token:
+        """같은 범위·같은 활동 흐름의 새 토큰 (갈라짐·경계 길)."""
+        return Token(id=new_token_id(), node_id=node_id, scope=self.scope, adhoc=self.adhoc)
 
     @property
     def waiting(self) -> bool:
@@ -554,6 +606,7 @@ def task_type(node: Node) -> str | None:
         "sendTask": "send",
         "receiveTask": "receive",
         "subProcess": "subprocess",
+        "adHocSubProcess": "ad_hoc",
     }.get(node.kind)
 
 
@@ -585,6 +638,8 @@ __all__ = [
     "ERROR_TASK_FAILED",
     "FAILED_TASK_VAR",
     "MAX_STEPS",
+    "AdHocActivation",
+    "AdHocState",
     "Compensable",
     "Compensation",
     "Consume",

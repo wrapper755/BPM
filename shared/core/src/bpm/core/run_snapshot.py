@@ -36,6 +36,8 @@ from bpm.contracts.replay import ReplaySpec
 from bpm.core.helpers import bind
 from bpm.core.run_log import RunLog
 from bpm.core.run_state import (
+    AdHocActivation,
+    AdHocState,
     Compensable,
     Compensation,
     LoopState,
@@ -91,16 +93,31 @@ def dump_token(token: Token) -> dict[str, Any]:
         out["loop"] = dataclasses.asdict(token.loop)
     if token.compensation is not None:
         out["compensation"] = dataclasses.asdict(token.compensation)
+    if token.adhoc is not None:
+        out["adhoc"] = token.adhoc
+    if token.adhoc_state is not None:
+        out["adhoc_state"] = dataclasses.asdict(token.adhoc_state)
     return out
+
+
+def load_ad_hoc(data: dict[str, Any]) -> AdHocState:
+    """Ad Hoc 상태 (ADR-0190 §7) — 켤 차례·켠 것은 `AdHocActivation`으로 되돌린다."""
+    data = dict(data)
+    queue = [AdHocActivation(**one) for one in data.pop("queue", [])]
+    active = [AdHocActivation(**one) for one in data.pop("active", [])]
+    return AdHocState(queue=queue, active=active, **data)
 
 
 def load_token(data: dict[str, Any]) -> Token:
     loop = data.get("loop")
     compensation = data.get("compensation")
+    ad_hoc = data.get("adhoc_state")
     return Token(
         id=data["id"], node_id=data["node_id"], scope=tuple(data["scope"]),
         waiting_for=data["waiting_for"], loop=LoopState(**loop) if loop else None,
         compensation=Compensation(**compensation) if compensation else None,
+        adhoc=data.get("adhoc"),
+        adhoc_state=load_ad_hoc(ad_hoc) if ad_hoc else None,
     )
 
 
