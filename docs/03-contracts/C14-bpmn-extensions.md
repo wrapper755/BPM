@@ -2,11 +2,11 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | **구현됨** (2026-10-12). 모델·BPMN 읽기·검사 B1~B17, DMN 읽기·판정이 `contracts.bpmn_ext`·`contracts.dmn`에 있고 **쓰는 쪽이 셋**이다 — 엔진이 `bpm:*`를 수행하고(`core.nodes`), 콘솔이 그 모델로 편집·검사하고(CON-20·실행 전 검사), 업무 예제 49개가 이 형식으로 쓰여 시험이 읽고 검사한다. schema 1에서 **쓰지 않기로 적은 것**(조건 시작 이벤트, 경계 타이머 반복)은 범위 결정이고 빠진 구현이 아니다 |
+| 상태 | **구현됨** (2026-10-12). 모델·BPMN 읽기·검사 B1~B18, DMN 읽기·판정이 `contracts.bpmn_ext`·`contracts.dmn`에 있고 **쓰는 쪽이 셋**이다 — 엔진이 `bpm:*`를 수행하고(`core.nodes`), 콘솔이 그 모델로 편집·검사하고(CON-20·실행 전 검사), 업무 예제 49개가 이 형식으로 쓰여 시험이 읽고 검사한다. schema 1에서 **쓰지 않기로 적은 것**(조건 시작 이벤트, 경계 타이머 반복)은 범위 결정이고 빠진 구현이 아니다 |
 | schema | 1 |
 | 보내는 쪽 → 받는 쪽 | 콘솔의 편집기(쓰기, CON-20) → 패키지(C1 `process/*.bpmn`) → 서버 실행기(읽기·실행), Center(검사) |
 | 코드 위치 | `bpm.contracts.bpmn_ext` — 모델·`read_process()`·`validate()`. DMN 읽기·판정은 `bpm.contracts.dmn`. 확장 태스크의 속 내용은 각 확장의 `contracts/` |
-| 관련 ADR | [0008](../decisions/0008-map-driver-hands-boundary.md), [0013](../decisions/0013-api-keys.md), [0016](../decisions/0016-server-first.md), [0018](../decisions/0018-extensions.md), [0026](../decisions/0026-file-paths-and-file-list-task.md), [0110](../decisions/0110-center-keeps-the-schedule.md), [0114](../decisions/0114-remove-ui-automation.md), [0144](../decisions/0144-remove-the-pc-runner.md), [0189](../decisions/0189-terminate-end-sweeps-its-scope.md) |
+| 관련 ADR | [0008](../decisions/0008-map-driver-hands-boundary.md), [0013](../decisions/0013-api-keys.md), [0016](../decisions/0016-server-first.md), [0018](../decisions/0018-extensions.md), [0026](../decisions/0026-file-paths-and-file-list-task.md), [0110](../decisions/0110-center-keeps-the-schedule.md), [0114](../decisions/0114-remove-ui-automation.md), [0144](../decisions/0144-remove-the-pc-runner.md), [0189](../decisions/0189-terminate-end-sweeps-its-scope.md), [0190](../decisions/0190-ad-hoc-subprocess.md) |
 | 관련 화면 | STU-04 속성 패널(「JSON」 탭이 이 모델로 검증한다), STU-06, STU-07, STU-14 |
 
 
@@ -66,6 +66,7 @@ BPMN 2.0 파일 안에 우리 태스크의 속성을 적는 방법을 정한다.
 | 웹훅 보내기 | `sendTask` | `bpm:webhook` | `url`, `method`, `body`(`all`\|`fields:[..]`\|`template:"…"`), `timeout_s`, `store_as?`. URL은 허용 호스트 규칙(C13 §4-3과 같은 해석기)을 따른다. 아래 「보내기」 |
 | 메시지 받기 | `receiveTask` | 표준 `messageRef` + `bpm:receive` | `correlation`(변수 이름 — 이 값이 같은 메시지만 받는다), `payload[]`(메시지 본문에서 변수로 들어오는 이름 — 검사 B11이 출처로 본다. 메시지 시작은 `bpm:process.inputs`로 선언) |
 | 다른 BPM 프로세스 호출 | `callActivity` | 표준 `calledElement` + `bpm:call` | `input`(`{호출 대상 변수: 식}`), `output`(`{내 변수: 호출 대상 변수}`). **적은 것만 오간다.** 둘 다 비면 오가는 변수 없음 (프로토타입의 "비면 전부"는 없앴다). `delegate?`를 적으면 **맡기기**다 (아래) |
+| Ad Hoc 하위 프로세스 | `adHocSubProcess` + 표준 `ordering`·`cancelRemainingInstances`·`completionCondition` | `bpm:adHoc` | `activate`(식 — 켤 활동 id·이름 목록) **또는** `ai`(`goal`, `inputs`(`{이름: 타입}`), `results`, `replay`, `limits`(`max_steps`만), `forbidden_actions[]`), `result`(식 — 활동 흐름이 끝날 때마다), `collect_into`. 아래 「Ad Hoc 하위 프로세스」 |
 
 ### 결재 설명 (`bpm:approval.description`)
 
@@ -288,6 +289,56 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 | 보상 경계·보상 던지기 | `compensateEventDefinition` | 아래 「보상」 |
 | 종료 끝 | `endEvent`에 `terminateEventDefinition` | **같은 범위에 남은 가지를 모두 걷고 끝낸다** ([ADR-0189](../decisions/0189-terminate-end-sweeps-its-scope.md)) — 맨 바깥이면 실행이 `success`로 끝나고, 하위 프로세스 안이면 **그 하위 프로세스만** 끝나 바깥 토큰이 다음으로 간다. 걷히는 것은 중단 경계가 걷는 것과 같다 — 결재·확인 요청, 메시지·타이머·신호 기다림, 붙은 경계, 덜 찬 합류, 맡긴 작업(거둔다), 외부 작업(거둔다), 호출이 띄운 안쪽 실행과 그 기다림. 멈춰 있던 노드는 C3 `skipped`로 닫힌다. 호출(`callActivity`)이 부른 그림의 맨 바깥 종료는 **그 안쪽 실행**만 끝낸다(호출 노드는 끝나고 이어 간다) |
 
+### Ad Hoc 하위 프로세스
+
+> 상태: **구현됨** (읽기·검사 B18·엔진·재생) — `contracts.bpmn_ext`(`AdHoc`·`Node.ordering`…), `core.adhoc`, `tests/shared/test_core_adhoc.py`. 업무 예제는 **FX-27**(식)·**FX-28**(AI)이다 ([ADR-0190](../decisions/0190-ad-hoc-subprocess.md)).
+
+안의 활동을 흐름으로 잇지 않고 **그때그때 골라** 돌리는 하위 프로세스다. 무엇을 켤지는 둘 중 하나가 정한다 — **식**(`activate`)이거나 **AI**(`ai`)다. 둘 다 적거나 둘 다 비우면 B18 오류다.
+
+```xml
+<bpmn:adHocSubProcess id="Sub_Docs" name="모자란 서류 받기" ordering="Parallel" cancelRemainingInstances="true">
+  <bpmn:extensionElements>
+    <bpm:adHoc>{"activate": "모자란서류", "result": "받은서류", "collect_into": "받은서류목록"}</bpm:adHoc>
+  </bpmn:extensionElements>
+  <bpmn:completionCondition>len(받은서류목록) >= 2</bpmn:completionCondition>
+  <bpmn:userTask id="Ask_Id" name="신분증">…</bpmn:userTask>
+  <bpmn:userTask id="Ask_Bank" name="통장 사본">…</bpmn:userTask>
+</bpmn:adHocSubProcess>
+```
+
+| 칸 | 자리 | 뜻 |
+| --- | --- | --- |
+| `ordering` | 표준 속성 | `Parallel`(기본 — 켠 것이 함께 돈다)·`Sequential`(적힌 차례로 하나씩) |
+| `cancelRemainingInstances` | 표준 속성 | 완료 조건이 참일 때 남은 활동 흐름을 걷나 (기본 `true`). 거짓이면 다 끝나기를 기다린다 — 아직 켜지 않은 차례는 켜지 않는다 |
+| `completionCondition` | 표준 자식 요소 | `bpm-expr`. **활동 흐름이 끝날 때마다** 본다. 없으면 켠 것이 다 끝날 때 끝난다 |
+| `activate` | `bpm:adHoc` | 식. 들어갈 때 **한 번** 평가해 활동 **id 또는 이름**의 목록을 받는다(이름은 그 안에서 하나뿐일 때만). 같은 것이 두 번이면 두 번 켠다. **빈 목록이면 곧바로 끝난다** |
+| `ai` | `bpm:adHoc` | 운전사가 안쪽 활동을 도구로 고른다 (아래) |
+| `result`·`collect_into` | `bpm:adHoc` | 활동 흐름이 끝날 때마다 `result` 식을 평가해 `collect_into` 목록에 붙인다. 목록은 들어갈 때 빈 것으로 시작한다. 둘은 함께 적는다(B18) |
+
+- **활동 흐름** — 켠 활동에서 출발한 토큰(안에서 갈라진 가지까지)을 하나로 센다. **나가는 흐름이 없는 노드를 지나면** 그 토큰이 끝나고, 같은 흐름의 토큰이 하나도 남지 않으면 그 활동 흐름이 끝났다. 안쪽에 흐름을 그려도 된다(「확인 → 보완 요청」).
+- 안에는 **시작·끝 이벤트를 두지 않는다**(B18). B9는 Ad Hoc 안의 「들어오는·나가는 흐름 없음」을 보지 않는다.
+- 식이 목록이 아니거나 모르는 활동을 가리키면 그림·식 오류(`adhoc_activate_invalid`·`adhoc_unknown_activity`)다 — 경계로 받지 않는다.
+- 완료 조건이 참이고 `cancelRemainingInstances`가 참이면 남은 것은 **종료 이벤트가 걷는 길로** 걷힌다 ([ADR-0189](../decisions/0189-terminate-end-sweeps-its-scope.md) — 멈춰 있던 노드는 `skipped`, 맡긴 작업·외부 작업은 거둔다).
+- 경계 이벤트를 달 수 있다. 중단 경계가 울리면 안쪽 활동 흐름이 모두 걷힌다(하위 프로세스와 같다).
+- 변수 공간은 하나다 — 안에서 만든 변수는 바깥에도 있다. 다만 **어느 활동이 돌지 그림이 모르므로** B11은 Ad Hoc 안에서 만든 변수를 「어떤 경로로는 없다」로 센다. 뒤에서 읽으려면 앞에서 초기값을 둔다.
+- C3: 하위 프로세스 자신의 `task_type`은 `ad_hoc`이다. 켤 때마다 `log` 한 줄(「활동을 켠다: <id>」)을 남긴다.
+
+**AI 방식** (`ai`). AI 태스크와 같은 운전사다 — 다른 것은 **도구가 그림의 활동**이라는 것뿐이다.
+
+| `ai` 칸 | 뜻 |
+| --- | --- |
+| `goal` | 목표(Markdown). AI 태스크와 같이 **이름으로 가리킨 변수만** 모델에게 간다 |
+| `inputs` | `{이름: 타입}` — 모델이 활동을 켤 때 함께 줄 수 있는 값. 켜기 **전에** 그 변수에 담는다. 모르는 이름·틀린 타입은 업무 실패다 |
+| `results` | `{이름: 타입}` — 모델의 마지막 답. 틀리면 업무 실패. 완료 조건으로 끝나면 `None`이다 |
+| `replay` | `plan`(기본)·`full`·`none` — 아래 |
+| `limits` | `max_steps`(모델에 묻는 횟수, 기본 8)만. **`timeout_s`는 받지 않는다** — 안쪽 결재가 며칠 걸린다. 시간은 경계 타이머로 건다 |
+| `forbidden_actions` | AI 태스크와 같다 (지시문이다) |
+
+- **도구**는 **들어오는 흐름이 없는 활동**이다(시작점). 도구 이름은 노드 id, 설명은 노드 이름이다. 허용하지 않은 도구를 부르면 실행 오류다(AI 태스크와 같다).
+- **한 차례**는 모델에 한 번 묻는 것이다. 모델이 도구를 부르면 그 활동들을 켜고(`Sequential`이면 하나씩), **그 차례에 켠 것이 다 끝나면** 결과를 모아 다시 묻는다. 도구 결과는 `{"활동": id, "보이는 값": {목표에 이름이 나오는 변수}}`다. 모델이 도구 없이 JSON을 내면 끝이다 — 남은 활동 흐름은 `cancelRemainingInstances`대로 한다.
+- 실행 기록은 AI 태스크와 같다 — `agent`(`step`·`action`·`tool`)와 `llm_usage`만, 값은 없다.
+- **재생**(결정 수행): 자율 수행이 차례마다 켠 활동과 인자를 재생 명세로 적는다 — 걸음(`ReplayStep`)의 `turn`이 몇 번째 차례인가다(0부터. AI 태스크의 걸음은 늘 0이다). `plan`은 차례를 모델 없이 되밟고 **`results`가 있을 때만** 마지막 값 추출을 한 번 묻는다. `full`은 답도 기억에서 쓴다(모델을 부르지 않는다). `none`은 늘 모델이다. 기억에 적힌 활동이 그림에 없으면 **업무 실패**다 — 몰래 자율로 넘어가지 않는다. 재생한 하위 프로세스는 `node_state: replayed`를 남긴다.
+
 ### 보상
 
 > 상태: **구현됨** (엔진·읽기·검사 B17) — `contracts.bpmn_ext`(`compensation_handler`·`associations`), `core.engine`(`compensate`), `tests/shared/test_core_compensation.py`. 업무 예제는 **FX-26**(세 종류 일꾼과 보상 — RPA 실패 → 오류 경계 → 보상 종료)이고 그림 생성기(`exdsl.py`)가 `bnd(…, "compensate", handler=…)`·`undo(…)`·`end(kind="compensate")`로 쓴다 ([ADR-0135](../decisions/0135-agentic-automation-and-unified-consumer.md) §4). B11은 처리기가 그 활동의 변수를 본다고 센다.
@@ -381,6 +432,7 @@ DMN 파일은 패키지 안에 그대로 들어가고, 결정 하나(`dmn:decisi
 | B14 | 병렬 분기와 합류의 가지 수가 맞다 (오류 경계의 대체 흐름을 병렬 합류에 바로 이으면 합류가 영원히 기다린다). 규칙 태스크의 `input`·`output`이 DMN 입력·출력 이름과 맞다. 호출의 `output`이 호출 대상의 `outputs`에 있다 — **맡기기(`delegate`)는 패키지 안에서 찾지 않고** 그 BPM 프로세스가 선언한 `outputs`와 맞춰 본다(알 때만). 자기 자신을 맡기지 않는 것은 C1 R12가 본다. 타이머로 시작하는 BPM 프로세스에 기본값 없는 필수 입력이 없다 | 오류 |
 | B15 | 식·스크립트가 `bpm-expr` 문법 안에 있고, **도우미 함수 호출의 인자 모양**(인자 수·키워드 이름)이 그 도우미와 맞다 (`세기(전체, '주제')`는 `세기`가 인자 하나만 받으므로 오류) | 오류 |
 | B17 | **보상** — 보상 처리기(`isForCompensation`)가 흐름을 받거나 낸다, 보상 경계가 흐름을 낸다, 보상 경계의 연관이 하나가 아니다, 연관의 대상이 보상 처리기가 아니다, 던지기의 `activityRef`가 같은 범위의 보상 경계 달린 활동이 아니다 (ADR-0135) | 오류 (어느 경계에도 이어지지 않은 처리기는 경고) |
+| B18 | **Ad Hoc 하위 프로세스** — `bpm:adHoc`에 `activate`·`ai` 중 **하나만** 있다, `result`·`collect_into`는 함께 있고 `collect_into`가 변수 이름 규칙에 맞다, 안에 시작·끝 이벤트가 없다, 활동이 하나 이상 있다, `ordering`이 `Parallel`·`Sequential`이다, `ai.inputs`·`ai.results`의 타입이 B8과 같다, `ai.replay`가 아는 값이고 `ai.limits.timeout_s`가 없다, AI 방식이면 들어오는 흐름이 없는 활동(도구)이 하나 이상 있다 ([ADR-0190](../decisions/0190-ad-hoc-subprocess.md)) | 오류 |
 | B16 | **결재 없는 일괄 기동** — 반복이 붙은 맡기기 호출에 ① 그 `collection`을 `show`하는 결재를 지나지 않고 닿는 경로가 있거나 ② 그 결재와 반복 사이에 `collection`을 만드는 노드가 있다 (만드는 것은 플랫폼이 아는 것만 센다 — 확장 태스크가 만드는 변수는 모른다). **막는 자리는 없다** — 사람 없이 도는 일괄도 올바른 그림이라 경고로만 알린다 ([ADR-0082](../decisions/0082-batch-start.md)·[ADR-0125](../decisions/0125-organization-and-work-placement.md) §6) | 경고 |
 
 `validate()`는 오류와 경고를 **함께** 돌려준다 (`Violation.severity`). 「실행 전 검사」는 오류만으로 실행을 막고(`blocking()`), 경고는 보여 주고 사람이 판단한다.
@@ -416,6 +468,7 @@ B11은 **어림**이다. 식에서 변수를 이름으로 뽑되 문자열 상�
 
 | 날짜 | schema | 바뀐 것 | ADR |
 | --- | --- | --- | --- |
+| 2026-11-22 | 1 | **Ad Hoc 하위 프로세스**(`adHocSubProcess` + `bpm:adHoc` — 식 `activate` 또는 AI `ai`)와 **B18**. 재생 명세의 걸음에 `turn`(선택, 기본 0)을 더했다. 표준 BPMN 요소와 선택 칸이라 **옛 그림·옛 명세는 그대로 읽힌다** | [0190](../decisions/0190-ad-hoc-subprocess.md) |
 | 2026-11-21 | 1 | **종료(terminate) 끝**을 적었다 — 같은 범위에 남은 가지를 걷고 끝낸다. 전에는 엔진이 일반 끝으로 돌아 다른 가지가 살아 있으면 실행이 끝나지 않았다. 표준 BPMN 요소라 schema는 그대로다 | [0189](../decisions/0189-terminate-end-sweeps-its-scope.md) |
 | 2026-11-08 | 1 | 「보상」(보상 경계·처리기·던지기)과 **B17** — 엔진·읽기·검사가 돈다. 표준 BPMN 요소라 schema는 그대로다. `association`·`textAnnotation`은 노드로 읽지 않는다 | [0135](../decisions/0135-agentic-automation-and-unified-consumer.md) |
 | 2026-11-12 | 1 | **PC 실행기를 걷었다** — `bpm:process.run_location`·`bpm:approval.location`·`bpm:call.delegate.bot_ui` 칸을 걷고, B6을 웹·데스크톱 AI 태스크 하나로 좁히고, B12·B13의 `location` 조항을 걷었다. 확인은 **Center 결재함**에서 답한다. 맡기기(`delegate`)는 **남는다** — 대상이 서버 실행기 하나다 (ADR-0082) | [0144](../decisions/0144-remove-the-pc-runner.md) |

@@ -113,13 +113,14 @@ Center ─(하트비트 응답: 배포·작업·결재 답)─▶ 서버 실행�
 | 서비스 앱 태스크 | `service_task` | ServiceTask | 서비스 앱. 앱 + 작업 + 입력·출력 매핑 (C15 외부 작업으로 부른다 — 키는 없다) |
 | 결재 | `approval` | UserTask | 사람 (Center 또는 현장 PC) |
 | 파일 목록 | `file_list` | ServiceTask | 실행 엔진 내장. 폴더를 훑어 파일 경로 목록을 만든다 ([ADR-0026](decisions/0026-file-paths-and-file-list-task.md)) |
+| Ad Hoc 하위 프로세스 | `ad_hoc` | AdHocSubProcess | 안의 활동을 흐름으로 잇지 않고 그때그때 골라 돌린다. 고르는 쪽은 **식**(`activate` — 켤 활동 목록) 또는 **AI**(`ai` — 활동이 도구가 된다). 켠 활동에서 출발한 토큰들이 **활동 흐름** 하나다 ([ADR-0190](decisions/0190-ad-hoc-subprocess.md)) |
 | 스크립트·규칙·메일·웹훅 | — | ScriptTask, BusinessRuleTask(DMN), SendTask, ReceiveTask | 실행 엔진 내장 |
 
 `bpm:*` 설정이 없는 요소는 BPMN 요소의 이름으로 부른다 (콘솔 상세 패널의 머리, CON-20b): 시작 이벤트(StartEvent) ·
 끝 이벤트(EndEvent) · 중간 잡기·던지기 이벤트(IntermediateCatchEvent·IntermediateThrowEvent) · 경계 이벤트(BoundaryEvent) ·
 배타·병렬·포함·이벤트 기반 게이트웨이(Exclusive·Parallel·Inclusive·EventBasedGateway) · 태스크(Task) · 사람 태스크(UserTask) ·
 서비스 태스크(ServiceTask) · 스크립트 태스크(ScriptTask) · 규칙 태스크(BusinessRuleTask) · 보내기 태스크(SendTask) ·
-받기 태스크(ReceiveTask) · 수동 태스크(ManualTask) · 하위 프로세스(SubProcess) · 호출 활동(CallActivity) · 흐름(SequenceFlow).
+받기 태스크(ReceiveTask) · 수동 태스크(ManualTask) · 하위 프로세스(SubProcess) · Ad Hoc 하위 프로세스(AdHocSubProcess) · 호출 활동(CallActivity) · 흐름(SequenceFlow).
 
 ## 3. 사람 개입
 

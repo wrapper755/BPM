@@ -41,6 +41,8 @@ from bpm.contracts.bpmn_ext import (
     duration_hours,
 )
 from bpm.contracts.organization import PlaceIdentity, place_values
+from bpm.core import adhoc
+from bpm.core.agent import goal_names
 from bpm.core.delegation import (
     DelegationCall,
     DelegationError,
@@ -51,7 +53,7 @@ from bpm.core.delegation import (
 from bpm.core.expr import ExprError, evaluate
 from bpm.core.files import FileTaskError, PathDenied, Workspace, write_output
 from bpm.core.helpers import bind
-from bpm.core.nodes import DEFAULT_HANDLERS, goal_names, service_attempts, service_call_of
+from bpm.core.nodes import DEFAULT_HANDLERS, service_attempts, service_call_of
 from bpm.core.run_log import RunLog, summarize
 from bpm.core.run_state import (
     BUILTIN_NOW,
@@ -552,11 +554,13 @@ class Engine:
             targets = self._default_targets(run, token, node)
         if not targets:
             run.tokens.remove(token)  # 끝났다 (종료 이벤트·갈 곳 없음)
+            if token.adhoc is not None:
+                return self._ad_hoc_flow_ended(run, token)
             return self._settle(run)
 
         token.node_id = targets[0]
         for extra in targets[1:]:
-            run.tokens.append(Token(id=new_token_id(), node_id=extra, scope=token.scope))
+            run.tokens.append(token.sibling(extra))
         if len(targets) > 1:
             # 갈라진 가지는 **맨 앞부터** 번갈아 민다. 첫 가지가 원래 토큰을 이어 쓰므로,
             # 그대로 두면 「방금 민 것」으로 보여 둘째 가지가 먼저 달린다 (신호가 어긋난다).
@@ -644,6 +648,8 @@ class Engine:
     def _default_targets(self, run: Run, token: Token, node: Node) -> list[str]:
         """나가는 흐름을 그대로 따른다. 여럿이면 갈라진다 (병렬 분기)."""
         flows = run.outgoing(node.id, token.scope)
+        if not flows and token.adhoc is not None:
+            return []  # Ad Hoc 안 — 나가는 흐름이 없으면 그 활동 흐름의 끝이다 (C14 §Ad Hoc)
         if not flows:
             raise EngineError(
                 "나가는 흐름이 없다 (종료 이벤트로 끝내야 한다)", node_id=node.id, code="no_outgoing"
@@ -794,7 +800,7 @@ class Engine:
             )
         token.node_id = flows[0].target
         for extra in flows[1:]:
-            run.tokens.append(Token(id=new_token_id(), node_id=extra.target, scope=token.scope))
+            run.tokens.append(token.sibling(extra.target))
         return run.state
 
     def _fail_together(self, context: Context) -> Context:
@@ -1028,14 +1034,14 @@ class Engine:
         if not waiting.interrupting:
             # 비중단 — 호스트는 그대로 기다리고, 가지 하나가 따로 간다.
             for flow in flows:
-                run.tokens.append(Token(id=new_token_id(), node_id=flow.target, scope=host.scope))
+                run.tokens.append(host.sibling(flow.target))
             return run.state
 
         # 중단 — 호스트가 기다리던 것을 걷어 내고 경계 길로 보낸다.
         self._cancel(run, host)
         host.node_id = flows[0].target
         for extra in flows[1:]:
-            run.tokens.append(Token(id=new_token_id(), node_id=extra.target, scope=host.scope))
+            run.tokens.append(host.sibling(extra.target))
         return run.state
 
     def _cancel(self, run: Run, host: Token) -> None:
@@ -1047,6 +1053,7 @@ class Engine:
         """
         key = host.waiting_for
         host.waiting_for = None
+        host.adhoc_state = None  # Ad Hoc이 끊기면 그 상태도 버린다 (안쪽 토큰은 `sub:` 열쇠로 걷힌다)
         self.disarm(run, host.id)
         if key is None:
             host.loop = None
@@ -1062,8 +1069,9 @@ class Engine:
         if dropped is not None and dropped.kind == WAIT_EXTERNAL_TASK and dropped.task_id:
             _withdraw_external(run, dropped)
         if key.startswith("sub:"):
-            inside = key[len("sub:") :]
-            run.tokens = [t for t in run.tokens if inside not in t.scope]
+            # 안쪽이 쥔 것(결재 요청·기다림·맡긴 작업)까지 **종료 이벤트와 같은 길로** 걷는다 (ADR-0189).
+            # 토큰만 지우면 안쪽 결재가 `pendings`에 남아 답을 기다리는 것처럼 보인다.
+            self.sweep_inside(run, key[len("sub:") :], message="하위 프로세스가 끊기며 걷었다")
         if key.startswith("loop:"):
             for one in [t for t in run.tokens if t.loop is not None and t.loop.host == host.id]:
                 self._cancel(run, one)
@@ -1092,7 +1100,52 @@ class Engine:
             for key in [k for k in table if inside is None or inside in k.rsplit(":", 1)[0].split("/")]:
                 del table[key]
 
-    def _sweep(self, run: Run, tokens: list[Token], closed: set[str]) -> None:
+    def sweep_inside(self, run: Run, inside: str, *, message: str) -> None:
+        """그 하위 프로세스 **안**의 토큰을 모두 걷는다 — 종료 이벤트가 걷는 길과 같다 (ADR-0189).
+
+        Ad Hoc이 완료 조건으로 남은 활동 흐름을 걷을 때 쓴다 (ADR-0190 §4).
+        """
+        swept = [t for t in run.tokens if inside in t.scope]
+        self._sweep(run, swept, set(), message=message)
+        gone = {t.id for t in swept}
+        run.tokens = [t for t in run.tokens if t.id not in gone]
+        for table in (run.arrivals, run.expected):
+            for key in [k for k in table if inside in k.rsplit(":", 1)[0].split("/")]:
+                del table[key]
+
+    def _ad_hoc_flow_ended(self, run: Run, token: Token) -> State:
+        """Ad Hoc 안의 토큰 하나가 끝났다 — 같은 활동 흐름이 다 끝났으면 Ad Hoc에 알린다.
+
+        실패는 **Ad Hoc 노드의 것**이다 (그 경계가 받는다) — 끝난 안쪽 노드의 것이 아니다.
+        """
+        if any(t.adhoc == token.adhoc and t.scope == token.scope for t in run.tokens) or not token.scope:
+            return self._settle(run)
+        holder = run.node(token.scope[-1])
+        key = adhoc.sub_key(holder.id)
+        host = next((t for t in run.tokens if t.waiting_for == key and t.scope == token.scope[:-1]), None)
+        if host is None or token.adhoc is None:
+            return self._settle(run)
+        try:
+            if adhoc.flow_ended(self, run, host, holder, token.adhoc):
+                adhoc.finish(run, host, holder)
+                host.waiting_for = None
+                self.disarm(run, host.id)
+                self.pass_through(run, host)
+        except ExprError as e:
+            return self._ad_hoc_failed(run, host, holder, EngineError(e.reason, node_id=holder.id, code="expr_error"))
+        except EngineError as e:
+            return self._ad_hoc_failed(run, host, holder, e)
+        return self._settle(run)
+
+    def _ad_hoc_failed(self, run: Run, host: Token, holder: Node, error: EngineError) -> State:
+        """Ad Hoc이 실패했다 — 안쪽을 걷고 바깥 토큰을 Ad Hoc 노드에서 실패시킨다 (경계가 받는다)."""
+        self.sweep_inside(run, holder.id, message="Ad Hoc이 실패하며 걷었다")
+        self._cancel(run, host)
+        return self._handle_failure(Context(engine=self, run=run, token=host, node=holder), error)
+
+    def _sweep(
+        self, run: Run, tokens: list[Token], closed: set[str], *, message: str = "종료 이벤트가 걷었다"
+    ) -> None:
         """걷히는 토큰들 — 멈춰 있던 노드는 `skipped`로 닫고(C3) 쥔 것을 `_cancel`로 걷는다.
 
         호출이 띄운 안쪽 실행은 **안쪽 토큰까지** 같은 길로 걷는다 — `_cancel`은 안쪽 실행을
@@ -1105,14 +1158,14 @@ class Engine:
                 closed.add(one.node_id)
                 run.log.emit(
                     "node_state", node_id=one.node_id, state="skipped",
-                    task_type=task_type(run.node(one.node_id)), message="종료 이벤트가 걷었다",
+                    task_type=task_type(run.node(one.node_id)), message=message,
                 )
         for one in tokens:
             if one.id not in alive:
                 continue  # 앞 토큰을 걷으며 함께 사라졌다 (하위 프로세스 안·반복의 차례)
             child = run.children.get(one.waiting_for or "")
             if child is not None and not child.finished:
-                self._sweep(child, list(child.tokens), set())
+                self._sweep(child, list(child.tokens), set(), message=message)
                 child.tokens = []
             self._cancel(run, one)
             alive = {t.id for t in run.tokens}

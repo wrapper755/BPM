@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpm="urn:chaeksas:bpmn:1"
+  id="Defs_fx27_adhoc_documents" targetNamespace="urn:chaeksas:examples" exporter="bpm-examples" exporterVersion="1">
+  <bpmn:process id="Proc_fx27_adhoc_documents" name="모자란 서류만 받기 (Ad Hoc — 식)" isExecutable="true">
+    <bpmn:extensionElements>
+      <bpm:process>{
+  "extensions": [],
+  "outputs": [],
+  "inputs": [
+    {
+      "name": "신청자",
+      "type": "string",
+      "required": true,
+      "description": ""
+    },
+    {
+      "name": "제출서류",
+      "type": "list",
+      "required": true,
+      "description": "이미 낸 서류 이름 목록"
+    }
+  ]
+}</bpm:process>
+    </bpmn:extensionElements>
+    <bpmn:startEvent id="Start" name="시작">
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:scriptTask id="Task_Missing" name="모자란 서류 보기" scriptFormat="bpm-expr">
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_02</bpmn:outgoing>
+      <bpmn:script>모자란 = [x for x in ['신분증', '통장 사본', '재직 증명'] if x not in 제출서류]</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:adHocSubProcess id="Sub_Docs" name="모자란 서류 받기" ordering="Parallel" cancelRemainingInstances="true">
+      <bpmn:extensionElements>
+        <bpm:adHoc>{
+  "activate": "모자란",
+  "result": "받은것",
+  "collect_into": "받은목록"
+}</bpm:adHoc>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_02</bpmn:incoming>
+      <bpmn:outgoing>Flow_03</bpmn:outgoing>
+      <bpmn:scriptTask id="Get_Id" name="신분증" scriptFormat="bpm-expr">
+        <bpmn:script>받은것 = '신분증'</bpmn:script>
+      </bpmn:scriptTask>
+      <bpmn:scriptTask id="Get_Bank" name="통장 사본" scriptFormat="bpm-expr">
+        <bpmn:script>받은것 = '통장 사본'</bpmn:script>
+      </bpmn:scriptTask>
+      <bpmn:userTask id="Check_Work" name="재직 증명">
+        <bpmn:extensionElements>
+          <bpm:approval>{
+  "title": "재직 증명 확인",
+  "description": "",
+  "show": [
+    "신청자"
+  ],
+  "fields": [
+    {
+      "key": "확인",
+      "label": "받았다",
+      "type": "bool",
+      "required": true
+    }
+  ]
+}</bpm:approval>
+        </bpmn:extensionElements>
+        <bpmn:outgoing>Flow_Sub_Docs_01</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:scriptTask id="Get_Work" name="재직 증명 기록" scriptFormat="bpm-expr">
+        <bpmn:incoming>Flow_Sub_Docs_01</bpmn:incoming>
+        <bpmn:script>받은것 = '재직 증명' if 확인 else '재직 증명 없음'</bpmn:script>
+      </bpmn:scriptTask>
+      <bpmn:sequenceFlow id="Flow_Sub_Docs_01" sourceRef="Check_Work" targetRef="Get_Work" />
+    </bpmn:adHocSubProcess>
+    <bpmn:scriptTask id="Task_Count" name="받은 건수" scriptFormat="bpm-expr">
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
+      <bpmn:script>건수 = len(받은목록)</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:endEvent id="End" name="끝">
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="Start" targetRef="Task_Missing" />
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_Missing" targetRef="Sub_Docs" />
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Sub_Docs" targetRef="Task_Count" />
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_Count" targetRef="End" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_1">
+    <bpmndi:BPMNPlane id="Plane_1" bpmnElement="Proc_fx27_adhoc_documents">
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start"><dc:Bounds x="160" y="282" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="140" y="322" width="76" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Missing_di" bpmnElement="Task_Missing"><dc:Bounds x="266" y="260" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_Docs_di" bpmnElement="Sub_Docs" isExpanded="true"><dc:Bounds x="436" y="80" width="330" height="440" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Get_Id_di" bpmnElement="Get_Id"><dc:Bounds x="466" y="110" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Get_Bank_di" bpmnElement="Get_Bank"><dc:Bounds x="466" y="260" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Check_Work_di" bpmnElement="Check_Work"><dc:Bounds x="466" y="410" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Get_Work_di" bpmnElement="Get_Work"><dc:Bounds x="636" y="410" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Count_di" bpmnElement="Task_Count"><dc:Bounds x="836" y="260" width="100" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_di" bpmnElement="End"><dc:Bounds x="1006" y="282" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="986" y="322" width="76" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_01_di" bpmnElement="Flow_01"><di:waypoint x="196" y="300" /><di:waypoint x="266" y="300" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02_di" bpmnElement="Flow_02"><di:waypoint x="366" y="300" /><di:waypoint x="436" y="300" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03_di" bpmnElement="Flow_03"><di:waypoint x="766" y="300" /><di:waypoint x="836" y="300" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_04_di" bpmnElement="Flow_04"><di:waypoint x="936" y="300" /><di:waypoint x="1006" y="300" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Docs_01_di" bpmnElement="Flow_Sub_Docs_01"><di:waypoint x="566" y="450" /><di:waypoint x="636" y="450" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

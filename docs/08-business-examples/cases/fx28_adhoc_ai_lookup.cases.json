@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "process": "Proc_fx28_adhoc_ai_lookup",
+  "cases": [
+    {
+      "name": "배송 문의",
+      "description": "시험 모델은 도구를 부르지 않고 답만 낸다 — 이 케이스는 Ad Hoc이 **모델의 끝 답으로** 닫히는 길을 본다. 활동을 고르는 차례·재생은 엔진 시험(`tests/shared/test_core_adhoc.py`)이 짜 둔 모델로 본다",
+      "inputs": {
+        "문의": "주문한 브레이크패드가 언제 오나요?"
+      },
+      "expected": {
+        "문의답변": "주문하신 상품은 배송 중입니다."
+      },
+      "approvals": {},
+      "manual": false
+    }
+  ]
+}

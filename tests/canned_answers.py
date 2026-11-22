@@ -61,7 +61,7 @@ def canned(wanted: dict[str, str], given: dict[str, Any]) -> dict[str, Any] | No
     """`(받을 필드, 함께 온 값)` → 짜 둔 답 (없으면 `None` — 스텁이 타입으로 때운다)."""
     key = tuple(sorted(wanted))
 
-    # ── 재무·기능 예제 (BX-01·02·05·07·30·37, FX-01·06·08·09) ──
+    # ── 재무·기능 예제 (BX-01·02·05·07·30·37, FX-01·06·08·09·28) ──
     if key == ("발주목록",):  # BX-01 발주 대장
         return {"발주목록": LEDGER}
     if key == ("청구",):  # BX-01 청구서 한 장 (반복) — 파일 이름의 번호로 건을 가른다
@@ -110,6 +110,8 @@ def canned(wanted: dict[str, str], given: dict[str, Any]) -> dict[str, Any] | No
         return {"결과": {"점수": 점수, "사유": "표준 범위" if 점수 < 4 else "배상 범위가 무제한이다"}}
     if key == ("견적",):  # FX-06
         return {"견적": {"공급사": "한빛상사", "합계": 1320000}}
+    if key == ("문의답변",):  # FX-28 Ad Hoc의 AI — 스텁은 도구를 부르지 않고 끝 답만 낸다
+        return {"문의답변": "주문하신 상품은 배송 중입니다."}
     if key == ("판정",):  # FX-09 신청 한 건 (반복)
         신청 = given.get("신청") or {}
         승인 = bool(신청.get("영수증")) and int(신청.get("금액", 0)) <= 50000

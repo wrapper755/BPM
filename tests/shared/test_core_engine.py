@@ -721,13 +721,14 @@ DUMMY_OWNER = PlaceIdentity(
 
 
 def test_no_example_breaks_the_engine_in_an_unexpected_way(tmp_path: Path) -> None:
-    """예제 **49개**를 모두 돌려 본다 (선언한 입력에는 자리 값을 넣는다).
+    """예제 **51개**를 모두 돌려 본다 (선언한 입력에는 자리 값을 넣는다).
 
     중요한 것은 「멈추는 이유가 우리가 아는 것인가」다 — 모르는 이유로 터지면 엔진 쪽 구멍이다.
     **이 수가 조각마다 올라가는 눈금이다** (조각 2: 끝 3·대기 1 → 3b: 끝 11·대기 2 →
     3c: 끝 19·대기 6 → 3d: 끝 20·대기 9 → 3f: 끝 23·대기 9 → M7 조각 29~31: 끝 26·대기 9 →
     일괄 기동(ADR-0082): 끝 27·대기 10 → UI 자동화를 걷으며 예제 일곱이 빠짐(ADR-0114): 끝 25·대기 10 →
-    세 종류 일꾼과 보상(ADR-0135): 끝 26·대기 10 — 합치면 49개 중 **36개**가 사람이나 끝까지 간다).
+    세 종류 일꾼과 보상(ADR-0135): 끝 26·대기 10 → Ad Hoc 하위 프로세스(ADR-0190): 끝 27·대기 11 —
+    합치면 51개 중 **38개**가 사람이나 끝까지 간다).
 
     남은 13개는 **자리 값 탓**이다 — 선언만 보고 넣는 `"시험값"`으로는 점 표기·반복·기간이 성립하지
     않는다. 진짜 입력은 Studio 시험 실행의
@@ -770,7 +771,7 @@ def test_no_example_breaks_the_engine_in_an_unexpected_way(tmp_path: Path) -> No
             reasons[run.error.code] = reasons.get(run.error.code, 0) + 1
             assert run.error.code in known, f"{path.name}: {run.error}"
 
-    assert len(done) + len(waiting) + sum(reasons.values()) == 49
+    assert len(done) + len(waiting) + sum(reasons.values()) == 51
     # 끝까지 가는 것·사람을 기다리는 것 — **다음 조각이 이 목록을 늘린다. 늘면 여기를 고쳐 적는다.**
     assert done == [
         "bx02_morning_fx_report.bpmn",  # API AI 태스크 + 통화마다 범위 점검 (3f)
@@ -799,6 +800,7 @@ def test_no_example_breaks_the_engine_in_an_unexpected_way(tmp_path: Path) -> No
         "fx23_replay_modes.bpmn",  # 재생 모드 plan·full·none (M7 조각 31)
         "fx25_batch_item.bpmn",  # 일괄 기동의 한 건 — 결과를 outputs로 (ADR-0082)
         "fx26_hybrid_compensation.bpmn",  # 일꾼 종류 셋 + 보상 경계·처리기 (ADR-0135)
+        "fx28_adhoc_ai_lookup.bpmn",  # Ad Hoc — AI가 끝 답으로 닫는다 (ADR-0190)
     ], done
     assert waiting == [
         "bx05_month_end_close.bpmn",  # 받기 태스크 3개 + 비중단 타이머 경계
@@ -811,6 +813,7 @@ def test_no_example_breaks_the_engine_in_an_unexpected_way(tmp_path: Path) -> No
         "fx14_timers.bpmn",  # 중간 받기 타이머 + 타이머 경계
         "fx19_manual_task_pc.bpmn",
         "fx24_batch_intake.bpmn",  # 접수 BPM 프로세스 — 일괄 결재를 기다린다 (ADR-0079·0082)
+        "fx27_adhoc_documents.bpmn",  # Ad Hoc — 식이 켠 재직 증명 결재를 기다린다 (ADR-0190)
     ], waiting
 
 

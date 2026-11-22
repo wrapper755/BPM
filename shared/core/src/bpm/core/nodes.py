@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -45,7 +45,8 @@ from bpm.contracts.bpmn_ext import (
 from bpm.contracts.dmn import DmnError
 from bpm.contracts.events import missing_keys
 from bpm.contracts.manifest import PC_ONLY_DOMAINS
-from bpm.core.agent import AgentError, check_results, finish_from, run_agent
+from bpm.core.adhoc import handle_ad_hoc
+from bpm.core.agent import AgentError, check_results, finish_from, goal_names, run_agent
 from bpm.core.agent import Outcome as AgentOutcome
 from bpm.core.delegation import DelegationCall, DelegationError, DelegationUnsupported
 from bpm.core.expr import Scope, evaluate, fill, run_script, truthy
@@ -115,6 +116,10 @@ def handle_end(context: Context) -> Outcome:
         detour = context.engine.compensate(context)
         if detour is not None:
             return detour
+    if token.adhoc is not None:
+        # Ad Hoc 안에는 끝 이벤트를 두지 않는다 (B18). 있어도 그 활동 흐름의 끝일 뿐이다 —
+        # 하위 프로세스 전체를 깨우지 않는다 (`_move`가 활동 흐름의 끝으로 받는다).
+        return Go([])
     # 종료 이벤트도 끝났다고 적는다 (C3) — `Consume`은 덜 찬 합류도 쓰니 `_apply`가 대신 적을 수 없다.
     # 바깥 하위 프로세스를 깨우기 **전에** 적어야 줄이 안쪽 → 바깥 차례로 선다.
     context.emit("node_state", state="completed", task_type=task_type(context.node))
@@ -549,15 +554,6 @@ def _extension_context(run: Run, spec: ExtensionTask) -> Any:
     if callable(maker):
         return maker(spec.extension)
     return None
-
-
-def goal_names(goal: str, names: Iterable[str]) -> list[str]:
-    """`names` 가운데 목표 글에 **들어 있는** 이름 (C14 §AI 태스크가 보는 값).
-
-    엔진이 모델에게 줄 변수를 고르는 규칙이고, Studio의 목표 미리보기(STU-04)도 이것을 부른다 —
-    둘이 다르면 미리보기가 거짓말을 한다. 낱말 경계를 보지 않는다(`기간`은 「기간별」에도 걸린다).
-    """
-    return [name for name in names if name and name in goal]
 
 
 def _seen_by(context: Context, spec: AiTask) -> dict[str, Any]:
@@ -1094,6 +1090,7 @@ DEFAULT_HANDLERS: dict[str, Handler] = {
     "parallelGateway": handle_parallel,
     "inclusiveGateway": handle_inclusive,
     "subProcess": handle_subprocess,
+    "adHocSubProcess": handle_ad_hoc,
     "userTask": handle_approval,
     "manualTask": handle_approval,
     "businessRuleTask": handle_rule,

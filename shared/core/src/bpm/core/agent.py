@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import json
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -105,6 +105,16 @@ class Outcome:
     #: 모델을 쓰지 않고 되밟았나 (C3 `node_state: replayed`). **재생은 아직 없다** —
     #: 무엇을 재사용할지(도구 차례만 / 마지막 답까지)가 열려 있다 (조각 3c의 남은 일).
     replayed: bool = False
+
+
+def goal_names(goal: str, names: Iterable[str]) -> list[str]:
+    """`names` 가운데 목표 글에 **들어 있는** 이름 (C14 §AI 태스크가 보는 값).
+
+    엔진이 모델에게 줄 변수를 고르는 규칙이고, 목표 미리보기도 이것을 부른다 — 둘이 다르면
+    미리보기가 거짓말을 한다. 낱말 경계를 보지 않는다(`기간`은 「기간별」에도 걸린다).
+    **AI 태스크와 Ad Hoc의 AI(ADR-0190)가 같은 규칙**이라 여기 하나만 둔다.
+    """
+    return [name for name in names if name and name in goal]
 
 
 def tool_specs(spec: AiTask, tools: Mapping[str, Tool]) -> list[ToolSpec]:
@@ -366,6 +376,7 @@ __all__ = [
     "check_results",
     "finish_from",
     "finished",
+    "goal_names",
     "opening_messages",
     "run_agent",
     "tool_names",

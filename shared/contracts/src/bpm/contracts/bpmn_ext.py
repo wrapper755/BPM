@@ -82,8 +82,16 @@ WEBHOOK_BODY_ALL = "all"
 #: 경계 이벤트를 붙일 수 있는 것 (B12).
 BOUNDARY_HOSTS = frozenset(
     {"serviceTask", "userTask", "manualTask", "scriptTask", "businessRuleTask", "sendTask", "receiveTask",
-     "callActivity", "subProcess"}
+     "callActivity", "subProcess", "adHocSubProcess"}
 )
+
+#: 하위 프로세스 둘 — 안쪽이 따로 범위다. Ad Hoc은 안의 활동을 골라 켠다 (C14 §Ad Hoc, ADR-0190).
+SUBPROCESS_KINDS = frozenset({"subProcess", "adHocSubProcess"})
+ADHOC_KIND = "adHocSubProcess"
+
+#: Ad Hoc 하위 프로세스의 `ordering` (표준 BPMN). 기본은 `Parallel`이다.
+ADHOC_ORDERINGS = frozenset({"Parallel", "Sequential"})
+ADHOC_PARALLEL = "Parallel"
 
 #: 타이머를 적는 법 (C14 §이벤트). 시작은 `timeCycle`, 경계·중간은 `timeDuration`.
 TIMER_KINDS = ("timeDate", "timeDuration", "timeCycle")
@@ -213,6 +221,36 @@ class AiTask(ContractModel):
     confirm_triggers: list[str] = Field(default_factory=list)
     web: WebEnv | None = None
     desktop: DesktopEnv | None = None
+
+
+class AdHocAi(ContractModel):
+    """`bpm:adHoc.ai` — 운전사가 Ad Hoc 안의 활동을 **도구로** 고른다 (C14 §Ad Hoc, ADR-0190).
+
+    AI 태스크와 같은 칸을 같은 뜻으로 쓴다. 다른 것은 도구가 그림의 활동이라는 것과
+    `inputs`(켤 때 모델이 함께 줄 수 있는 값)다. **`limits.timeout_s`는 받지 않는다** (B18).
+    """
+
+    goal: str
+    inputs: dict[str, str] = Field(default_factory=dict)  # {이름: 타입}
+    results: dict[str, str] = Field(default_factory=dict)  # {이름: 타입}
+    replay: str = REPLAY_DEFAULT
+    limits: Limits | None = None
+    forbidden_actions: list[str] = Field(default_factory=list)
+
+
+class AdHoc(ContractModel):
+    """`bpm:adHoc` — 무엇을 켤지 (`activate` 식 **또는** `ai`) 와 끝날 때마다 모을 것 (ADR-0190).
+
+    `ordering`·`cancelRemainingInstances`·`completionCondition`은 표준 BPMN이라 여기 없다
+    (C14 기본 규칙 3) — `Node.ordering`·`cancel_remaining`·`completion_condition`이다.
+    """
+
+    #: 식 — 켤 활동 **id 또는 이름**의 목록. 들어갈 때 한 번 평가한다.
+    activate: str | None = None
+    ai: AdHocAi | None = None
+    #: 활동 흐름이 끝날 때마다 평가해 `collect_into`에 붙일 식 (Camunda `outputElement`).
+    result: str | None = None
+    collect_into: str | None = None
 
 
 class ExtensionTask(ContractModel):
@@ -372,6 +410,7 @@ ELEMENT_MODELS: dict[str, type[ContractModel]] = {
     "loop": Loop,
     "dataOutput": DataOutput,
     "fileList": FileList,
+    "adHoc": AdHoc,
 }
 
 
@@ -440,12 +479,20 @@ class Node:
     is_for_compensation: bool = False
     #: 보상 던지기의 `compensateEventDefinition activityRef` — 비면 같은 범위 전부를 되돌린다.
     activity_ref: str | None = None
+    #: Ad Hoc 하위 프로세스의 표준 칸 (C14 §Ad Hoc, ADR-0190). 다른 노드에서는 쓰지 않는다.
+    ordering: str = ADHOC_PARALLEL
+    cancel_remaining: bool = True
+    completion_condition: str | None = None
     #: 하위 프로세스의 안쪽 (범위가 따로다).
     children: list[Node] = field(default_factory=list)
     child_flows: list[Flow] = field(default_factory=list)
 
     def prop(self, name: str) -> Any:
         return self.props.get(name)
+
+    @property
+    def is_ad_hoc(self) -> bool:
+        return self.kind == ADHOC_KIND
 
 
 @dataclass
@@ -612,7 +659,8 @@ def _read_flows(scope: ElementTree.Element) -> list[Flow]:
 #: 연관·주석도 노드가 아니다 — 연관은 `BpmnProcess.associations`로 따로 읽는다 (C14 §보상).
 _NOT_NODES = frozenset(
     {"sequenceFlow", "extensionElements", "dataObject", "documentation", "laneSet", "incoming", "outgoing",
-     "association", "textAnnotation"}
+     "association", "textAnnotation", "completionCondition", "multiInstanceLoopCharacteristics",
+     "standardLoopCharacteristics"}
 )
 
 
@@ -648,6 +696,8 @@ def _read_nodes(scope: ElementTree.Element) -> list[Node]:
             elif child.tag == f"{_BPMN}{COMPENSATE_DEFINITION}":
                 activity_ref = child.get("activityRef")
         script_el = el.find(f"{_BPMN}script")
+        # Ad Hoc의 완료 조건은 **그 요소 바로 아래**다 — 반복의 `completionCondition`(반복 표시 안)과 다르다.
+        completion_el = el.find(f"{_BPMN}completionCondition") if kind == ADHOC_KIND else None
         node = Node(
             id=el.get("id", ""),
             kind=kind,
@@ -668,8 +718,11 @@ def _read_nodes(scope: ElementTree.Element) -> list[Node]:
             data_outputs=_data_output_refs(el),
             is_for_compensation=el.get("isForCompensation") == "true",
             activity_ref=activity_ref,
+            ordering=el.get("ordering", ADHOC_PARALLEL),
+            cancel_remaining=el.get("cancelRemainingInstances", "true") != "false",
+            completion_condition=(_text(completion_el) or None) if completion_el is not None else None,
         )
-        if kind == "subProcess":
+        if kind in SUBPROCESS_KINDS:
             node.children = _read_nodes(el)
             node.child_flows = _read_flows(el)
             _mark_defaults(el, node.child_flows)
@@ -987,6 +1040,12 @@ def produced_vars(node: Node) -> set[str]:
             out.add(loop.result)
     if node.script:
         out |= script_vars(node.script)[1]
+    ad_hoc: AdHoc | None = node.prop("adHoc")
+    if ad_hoc is not None:
+        if ad_hoc.collect_into:
+            out.add(ad_hoc.collect_into)
+        if ad_hoc.ai is not None:
+            out |= set(ad_hoc.ai.inputs) | set(ad_hoc.ai.results)
     # 오류 경계를 지나면 오류 정보가 생긴다 (C14 「이벤트」).
     if node.kind == "boundaryEvent" and "errorEventDefinition" in node.event_definitions:
         out |= {"error_code", "error_message", "failed_task"}
@@ -1056,6 +1115,10 @@ def read_vars(node: Node, flows: Sequence[Flow]) -> set[str]:
         out.add(loop.collection)
     if node.script:
         out |= script_vars(node.script)[0]
+    ad_hoc: AdHoc | None = node.prop("adHoc")
+    if ad_hoc is not None and ad_hoc.activate:
+        # `result`·완료 조건은 **안쪽 활동이 끝난 뒤**에 평가된다 — 들어가는 자리에서 읽는 것이 아니다.
+        out |= expression_vars(ad_hoc.activate)
     return out
 
 
@@ -1152,7 +1215,8 @@ def available_vars(
     produced = {n.id: made(n) for n in nodes}
     declared = {i.name for i in process.info.inputs}
     #: 하위 프로세스 → 그 안의 노드 (안에서 만든 변수를 **바깥으로 내보내려고**).
-    inside = {n.id: list(n.children) for n in nodes if n.children}
+    #: **Ad Hoc은 내보내지 않는다** — 어느 활동이 돌지 그림이 모른다 (C14 §Ad Hoc, ADR-0190).
+    inside = {n.id: list(n.children) for n in nodes if n.children and not n.is_ad_hoc}
     universe = set(declared)
     for names in produced.values():
         universe |= names
@@ -1425,7 +1489,10 @@ def _check_b8(process: BpmnProcess) -> list[Violation]:
 
 def _check_b9_b10(process: BpmnProcess) -> list[Violation]:
     out: list[Violation] = []
-    for _scope, scope_nodes, scope_flows in process.scopes():
+    for scope, scope_nodes, scope_flows in process.scopes():
+        holder = process.node(scope) if scope != "main" else None
+        if holder is not None and holder.is_ad_hoc:
+            continue  # Ad Hoc 안의 활동은 흐름 없이 켜진다 — B18이 본다 (ADR-0190)
         for node in scope_nodes:
             if node.is_for_compensation or (COMPENSATE_DEFINITION in node.event_definitions and node.attached_to):
                 continue  # 보상 처리기·보상 경계에는 흐름이 없다 — B17이 본다
@@ -1690,6 +1757,7 @@ def validate(
         *_check_b14(process, dmn_decisions, called_processes, delegated_outputs),
         *_check_b16(process),
         *_check_b17(process),
+        *_check_b18(process),
     ]
 
 
@@ -1770,6 +1838,68 @@ def _check_b17(process: BpmnProcess) -> list[Violation]:
     for handler in (n for n in process.all_nodes() if n.is_for_compensation):
         if not any(t == handler.id for _s, t in process.associations):
             out.append(_warn("B17", f"{handler.id}: 어느 보상 경계에도 이어지지 않은 보상 처리기다"))
+    return out
+
+
+#: Ad Hoc 안에서 켤 수 없는 것 — 흐름 밖의 노드 (C14 §Ad Hoc).
+_NOT_ACTIVITIES = frozenset({"boundaryEvent", "dataObjectReference", "dataObject"})
+
+
+def ad_hoc_activities(node: Node) -> list[Node]:
+    """Ad Hoc 안에서 **켤 수 있는** 것 — 경계 이벤트·데이터 객체·보상 처리기를 뺀 노드."""
+    return [c for c in node.children if c.kind not in _NOT_ACTIVITIES and not c.is_for_compensation]
+
+
+def ad_hoc_tools(node: Node) -> list[Node]:
+    """AI 방식의 도구 — 켤 수 있는 것 가운데 **들어오는 흐름이 없는** 것 (활동 흐름의 시작점)."""
+    targets = {f.target for f in node.child_flows}
+    return [c for c in ad_hoc_activities(node) if c.id not in targets]
+
+
+def _check_b18(process: BpmnProcess) -> list[Violation]:
+    """B18 — Ad Hoc 하위 프로세스 (C14 §Ad Hoc, [ADR-0190](../decisions/0190-ad-hoc-subprocess.md))."""
+    out: list[Violation] = []
+    for node in process.all_nodes():
+        if not node.is_ad_hoc:
+            continue
+        spec: AdHoc | None = node.prop("adHoc")
+        if spec is None or (spec.activate is None) == (spec.ai is None):
+            if "adHoc" not in node.bad_props:
+                out.append(
+                    _error("B18", f"{node.id}: bpm:adHoc에 activate(식)·ai 중 하나만 적는다", code="adhoc_chooser")
+                )
+        if node.ordering not in ADHOC_ORDERINGS:
+            out.append(_error("B18", f"{node.id}의 ordering을 모른다: {node.ordering}", items=sorted(ADHOC_ORDERINGS)))
+        events = [c.id for c in node.children if c.kind in ("startEvent", "endEvent")]
+        if events:
+            out.append(_error("B18", f"{node.id} 안에 시작·끝 이벤트를 두지 않는다", items=events))
+        if not ad_hoc_activities(node):
+            out.append(_error("B18", f"{node.id} 안에 켤 활동이 없다"))
+        if spec is None:
+            continue
+        if (spec.result is None) != (spec.collect_into is None):
+            out.append(_error("B18", f"{node.id}: result와 collect_into는 함께 적는다"))
+        if spec.collect_into is not None and not is_var_name(spec.collect_into):
+            out.append(_error("B18", f"{node.id}의 collect_into가 변수 이름 규칙에 맞지 않는다: {spec.collect_into}"))
+        ai = spec.ai
+        if ai is None:
+            continue
+        for label, table in (("입력", ai.inputs), ("결과", ai.results)):
+            for name, kind in table.items():
+                if not is_var_name(name):
+                    out.append(_error("B18", f"{node.id}의 {label} {name}이 변수 이름 규칙에 맞지 않는다"))
+                if kind not in VALUE_TYPES:
+                    out.append(
+                        _error("B18", f"{node.id}의 {label} {name} 타입을 모른다: {kind}", items=sorted(VALUE_TYPES))
+                    )
+        if ai.replay not in REPLAY_MODES:
+            out.append(_error("B18", f"{node.id}의 replay를 모른다: {ai.replay}", items=sorted(REPLAY_MODES)))
+        if ai.limits is not None and ai.limits.timeout_s:
+            out.append(
+                _error("B18", f"{node.id}: Ad Hoc의 AI에는 timeout_s를 쓰지 않는다 (시간은 경계 타이머로 건다)")
+            )
+        if not ad_hoc_tools(node):
+            out.append(_error("B18", f"{node.id}: 들어오는 흐름이 없는 활동(AI가 고를 도구)이 없다"))
     return out
 
 

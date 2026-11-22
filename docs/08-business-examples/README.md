@@ -127,17 +127,19 @@ python docs/08-business-examples/_source/build.py --check  # CI: 정의와 생�
 | [FX-24](feature-examples.md#fx-24-일괄-기동--접수-bpm-프로세스) | 일괄 기동 — 접수 BPM 프로세스 | 작업 지시 | — | **일괄 기동** — Call Activity 반복 + 위임 (`bpm:loop` + `bpm:call.delegate`); 서버 BPM 프로세스에 위임; **병렬 반복** — 건을 한 번에 맡기고 함께 기다린다 (`isSequential=false`, ADR-0087) |
 | [FX-25](feature-examples.md#fx-25-일괄-기동의-한-건) | 일괄 기동의 한 건 | 작업 지시 | — | 위임으로 시작하는 서버 BPM 프로세스; `outputs` 선언 — 맡긴 쪽이 받을 것 |
 | [FX-26](feature-examples.md#fx-26-세-종류-일꾼과-보상) | 세 종류 일꾼과 보상 | 수동 실행 | order-desk | **보상** — 보상 경계 + 연관 + 보상 처리기(`isForCompensation`), 보상 종료 이벤트 (C14 §보상); **일꾼 종류** — 같은 토픽의 `ai`·`api`·`rpa` 작업 (C11 `kind`, CON-01 「종류」 열); 오류 경계 → 보상 종료 (오류 경계는 「어디로」, 보상은 「무엇을 되돌릴지」) |
+| [FX-27](feature-examples.md#fx-27-모자란-서류만-받기-ad-hoc--식) | 모자란 서류만 받기 (Ad Hoc — 식) | 수동 실행 | — | **Ad Hoc 하위 프로세스 — 식** (`bpm:adHoc.activate`, C14 §Ad Hoc); 활동을 **이름으로** 고른다 (그 안에서 이름이 하나뿐일 때); 안쪽 흐름 — 결재 → 기록이 **활동 흐름 하나** |
+| [FX-28](feature-examples.md#fx-28-필요한-조회만-하는-문의-답변-ad-hoc--ai) | 필요한 조회만 하는 문의 답변 (Ad Hoc — AI) | 수동 실행 | — | **Ad Hoc 하위 프로세스 — AI** (`bpm:adHoc.ai`, C14 §Ad Hoc) — 안쪽 활동이 곧 도구; 한 차례에 켠 것이 **다** 끝나야 다시 묻는다; 재생 — 차례(`turn`)를 모델 없이 되밟는다 (`replay: plan`) |
 
 ## BPMN 요소 커버리지
 
 | 요소 | 예제 |
 | --- | --- |
-| 시작 — 없음(작업 지시·호출) | BX-06, BX-11, BX-12, BX-24, BX-37, FX-01, FX-02, FX-03, FX-03b, FX-06, FX-07, FX-08, FX-09, FX-11, FX-13, FX-14, FX-17, FX-18, FX-19, FX-20, FX-21, FX-22, FX-23, FX-24, FX-25, FX-26 |
+| 시작 — 없음(작업 지시·호출) | BX-06, BX-11, BX-12, BX-24, BX-37, FX-01, FX-02, FX-03, FX-03b, FX-06, FX-07, FX-08, FX-09, FX-11, FX-13, FX-14, FX-17, FX-18, FX-19, FX-20, FX-21, FX-22, FX-23, FX-24, FX-25, FX-26, FX-27, FX-28 |
 | 시작 — 타이머 | BX-01, BX-02, BX-05, BX-07, BX-08, BX-16, BX-23, BX-35, FX-04, FX-12 |
 | 시작 — 메시지 | BX-03, BX-10, BX-13, BX-15, BX-20, BX-21, BX-22, BX-30, BX-31, BX-32, BX-33, BX-34, FX-10 |
 | 끝 — 종료(terminate) | BX-11 |
 | 끝·중간 던지기 — 보상 | FX-26 |
-| 스크립트 | BX-01, BX-02, BX-03, BX-05, BX-06, BX-07, BX-08, BX-10, BX-11, BX-13, BX-15, BX-16, BX-21, BX-22, BX-23, BX-24, BX-30, BX-37, BX-35, FX-02, FX-03, FX-03b, FX-07, FX-08, FX-09, FX-10, FX-11, FX-12, FX-13, FX-14, FX-17, FX-18, FX-19, FX-21, FX-22, FX-24, FX-25, FX-26 |
+| 스크립트 | BX-01, BX-02, BX-03, BX-05, BX-06, BX-07, BX-08, BX-10, BX-11, BX-13, BX-15, BX-16, BX-21, BX-22, BX-23, BX-24, BX-30, BX-37, BX-35, FX-02, FX-03, FX-03b, FX-07, FX-08, FX-09, FX-10, FX-11, FX-12, FX-13, FX-14, FX-17, FX-18, FX-19, FX-21, FX-22, FX-24, FX-25, FX-26, FX-27, FX-28 |
 | AI 태스크 — llm | BX-05, BX-07, BX-08, BX-11, BX-13, BX-15, BX-20, BX-23, BX-30, BX-37, BX-31, BX-32, BX-34, BX-35, FX-09, FX-10, FX-23 |
 | AI 태스크 — api | BX-02, FX-01, FX-08, FX-10 |
 | AI 태스크 — doc | BX-01, BX-07, BX-10, BX-30, FX-06 |
@@ -145,7 +147,7 @@ python docs/08-business-examples/_source/build.py --check  # CI: 정의와 생�
 | AI 태스크 — desktop | **없음** |
 | 서비스 앱 태스크 | BX-06, BX-08, BX-10, BX-13, BX-15, BX-16, BX-20, BX-21, BX-22, BX-23, BX-24, BX-31, BX-32, BX-33, BX-34, BX-35, FX-10, FX-18, FX-20, FX-26 |
 | 규칙 (DMN) | BX-06, BX-07, BX-08, BX-12, BX-23, BX-33, FX-02, FX-21 |
-| 결재 (userTask) | BX-01, BX-02, BX-03, BX-05, BX-07, BX-08, BX-10, BX-11, BX-15, BX-16, BX-20, BX-21, BX-30, BX-31, BX-32, BX-33, BX-34, FX-04, FX-08, FX-14, FX-24 |
+| 결재 (userTask) | BX-01, BX-02, BX-03, BX-05, BX-07, BX-08, BX-10, BX-11, BX-15, BX-16, BX-20, BX-21, BX-30, BX-31, BX-32, BX-33, BX-34, FX-04, FX-08, FX-14, FX-24, FX-27, FX-28 |
 | 수동 확인 (manualTask) | BX-16, FX-19 |
 | 메일 보내기 | BX-01, BX-02, BX-05, BX-06, BX-11, BX-13, BX-16, BX-20, BX-22, BX-31, BX-33, BX-34, BX-35, FX-07 |
 | 웹훅 보내기 | BX-03, BX-10, BX-21, BX-30, FX-10, FX-17 |
@@ -154,6 +156,9 @@ python docs/08-business-examples/_source/build.py --check  # CI: 정의와 생�
 | 맡기기 (`bpm:call.delegate`) | FX-24 |
 | 일괄 기동 (반복 맡기기) | FX-24 |
 | 하위 프로세스 | BX-20, BX-22 |
+| Ad Hoc 하위 프로세스 — 식 (`activate`) | FX-27 |
+| Ad Hoc 하위 프로세스 — AI (`ai`) | FX-28 |
+| Ad Hoc 하위 프로세스 — 완료 조건 | **없음** |
 | 배타 게이트웨이 | BX-01, BX-02, BX-03, BX-05, BX-06, BX-07, BX-08, BX-10, BX-11, BX-13, BX-15, BX-16, BX-21, BX-22, BX-30, BX-37, BX-31, BX-32, BX-33, FX-03b, FX-04, FX-10, FX-13, FX-21, FX-24, FX-25 |
 | 포함 게이트웨이 | BX-10 |
 | 병렬 게이트웨이 | BX-05, BX-20, BX-22, BX-30, FX-11, FX-13 |
@@ -203,6 +208,6 @@ python docs/08-business-examples/_source/build.py --check  # CI: 정의와 생�
 
 | 마일스톤 | 처음 통과해야 하는 예제 | 다시 통과 |
 | --- | --- | --- |
-| M3 | BX-01, BX-02, BX-03, BX-05, BX-07, BX-11, BX-12, BX-30, BX-37, FX-01, FX-02, FX-03, FX-03b, FX-04, FX-06, FX-07, FX-08, FX-09, FX-11, FX-12, FX-13, FX-14, FX-17, FX-19, FX-21, FX-22, FX-23, FX-24, FX-25 |  |
+| M3 | BX-01, BX-02, BX-03, BX-05, BX-07, BX-11, BX-12, BX-30, BX-37, FX-01, FX-02, FX-03, FX-03b, FX-04, FX-06, FX-07, FX-08, FX-09, FX-11, FX-12, FX-13, FX-14, FX-17, FX-19, FX-21, FX-22, FX-23, FX-24, FX-25, FX-27, FX-28 |  |
 | M5 | BX-06, BX-08, BX-10, BX-13, BX-15, BX-16, BX-20, BX-21, BX-22, BX-23, BX-24, BX-31, BX-32, BX-33, BX-34, BX-35, FX-10, FX-18, FX-20, FX-26 | PC 예제: Center 배포 → PC 실행기 |
 | M7 | — | 서버 예제 전부: 서버 실행기 |

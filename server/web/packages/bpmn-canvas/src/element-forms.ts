@@ -27,6 +27,43 @@ export interface ElementForm {
 
 /** `bpm:*` 요소 이름 → 그 폼. 모델에 칸을 더하면 여기 저절로 생긴다. */
 export const ELEMENT_FORMS: Record<string, ElementForm> = {
+  "adHoc": {
+    "label": "Ad Hoc",
+    "fields": [
+      {
+        "name": "activate",
+        "label": "켤 활동",
+        "tab": "basic",
+        "kind": "text",
+        "required": false,
+        "help": "식 — 켤 활동의 id 또는 이름 목록입니다. 들어갈 때 한 번 봅니다."
+      },
+      {
+        "name": "ai",
+        "label": "AI 설정",
+        "tab": "basic",
+        "kind": "json",
+        "required": false,
+        "help": "AI가 안쪽 활동을 도구로 골라 켭니다."
+      },
+      {
+        "name": "result",
+        "label": "한 번의 결과",
+        "tab": "io",
+        "kind": "text",
+        "required": false,
+        "help": "활동 흐름이 끝날 때마다 평가해 모을 변수에 붙이는 식입니다."
+      },
+      {
+        "name": "collect_into",
+        "label": "모을 변수",
+        "tab": "io",
+        "kind": "text",
+        "required": false,
+        "help": "한 번의 결과를 모은 목록입니다. 들어갈 때 비웁니다."
+      }
+    ]
+  },
   "aiTask": {
     "label": "AI 태스크",
     "fields": [

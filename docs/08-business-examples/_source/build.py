@@ -279,7 +279,7 @@ def outputs() -> dict[Path, str]:
 
 def coverage(examples: list[Example]) -> list[str]:
     import re
-    from exdsl import KIND_LABEL
+    from exdsl import KIND_LABEL, is_adhoc
 
     def ids(pred):
         return ", ".join(e.id for e in examples if pred(e)) or "**없음**"
@@ -326,7 +326,10 @@ def coverage(examples: list[Example]) -> list[str]:
         ("BPM 프로세스 호출", lambda e: any(n.kind == "call" and not n.props.get("delegate") for n in nodes(e))),
         ("맡기기 (`bpm:call.delegate`)", lambda e: any(n.kind == "call" and n.props.get("delegate") for n in nodes(e))),
         ("일괄 기동 (반복 맡기기)", lambda e: any(n.kind == "call" and n.props.get("delegate") and n.props.get("loop") for n in nodes(e))),
-        ("하위 프로세스", has("sub")),
+        ("하위 프로세스", lambda e: any(n.kind == "sub" and not is_adhoc(n) for n in nodes(e))),
+        ("Ad Hoc 하위 프로세스 — 식 (`activate`)", lambda e: any(is_adhoc(n) and "activate" in n.props["adhoc"] for n in nodes(e))),
+        ("Ad Hoc 하위 프로세스 — AI (`ai`)", lambda e: any(is_adhoc(n) and "ai" in n.props["adhoc"] for n in nodes(e))),
+        ("Ad Hoc 하위 프로세스 — 완료 조건", lambda e: any(is_adhoc(n) and n.props.get("completion") for n in nodes(e))),
         ("배타 게이트웨이", has("xgw")), ("포함 게이트웨이", has("igw")), ("병렬 게이트웨이", has("pgw")),
         ("중간 던지기 — 이정표(없음)", has("throw", kind="none")), ("중간 던지기·받기 — 신호", lambda e: has("throw", kind="signal")(e) or has("catch", kind="signal")(e)),
         ("중간 받기 — 타이머", has("catch", kind="timer")),

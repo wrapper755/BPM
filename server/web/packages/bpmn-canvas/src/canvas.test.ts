@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { laidOut, needsLayout } from "./auto-layout";
 import { BPM_MODDLE } from "./moddle";
 import { readApprovals } from "./approvals";
-import { EVENT_KINDS, eventOf, gatewayOf, multiInstanceOf, propertiesOf } from "./read";
+import { EVENT_KINDS, adHocOf, eventOf, gatewayOf, multiInstanceOf, propertiesOf } from "./read";
 import type { BusinessObject, ExtensionElement, ExtensionElements, Flow } from "./types";
 
 /** 그림 좌표(DI)가 없는 정의 — 「자리를 지어 줘야 하는 것」의 본보기다. */
@@ -117,6 +117,27 @@ describe("노드 읽기", () => {
       extension: "office",
       data: { path: "a.xlsx" },
     });
+  });
+
+  it("Ad Hoc 하위 프로세스의 표준 칸은 엔진과 같은 기본값으로 읽는다 (C14 §Ad Hoc)", () => {
+    expect(adHocOf(bo({ $type: "bpmn:SubProcess", id: "Sub_1" }))).toBeNull();
+    expect(adHocOf(bo({ $type: "bpmn:AdHocSubProcess", id: "Sub_1" }))).toEqual({
+      ordering: "Parallel",
+      cancelRemaining: true,
+      completion: "",
+    });
+    const found = propertiesOf(
+      bo({
+        $type: "bpmn:AdHocSubProcess",
+        id: "Sub_1",
+        ordering: "Sequential",
+        cancelRemainingInstances: false,
+        completionCondition: { body: "len(받은서류목록) >= 2" },
+        extensionElements: extensions([{ $type: "bpm:adHoc", id: "h", value: '{"activate":"모자란서류"}' }]),
+      }),
+    );
+    expect(found.adHoc).toEqual({ ordering: "Sequential", cancelRemaining: false, completion: "len(받은서류목록) >= 2" });
+    expect(found.bpm.adHoc).toBe('{"activate":"모자란서류"}');
   });
 
   it("반복 표시는 엔진과 같게 읽는다", () => {

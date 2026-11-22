@@ -261,6 +261,23 @@ def sub(id, name, children, flows, boundaries=None):
     return Node(id, "sub", name, {}, children, flows, boundaries or [])
 
 
+def adhoc(id, name, children, flows=None, boundaries=None, *, activate=None, ai=None, result=None,
+          collect_into=None, ordering="Parallel", cancel=True, completion=None):
+    """**Ad Hoc 하위 프로세스** (C14 §Ad Hoc, ADR-0190) — 하위 프로세스(`sub`)에 고르는 쪽을 단다.
+
+    `activate`(식 — 켤 활동 id·이름 목록) 또는 `ai`(`{goal, inputs, results, …}`) 하나. 안의 활동은
+    흐름 없이 켜진다 — 시작·끝 이벤트를 두지 않는다 (B18).
+    """
+    spec = {k: v for k, v in dict(activate=activate, ai=ai, result=result, collect_into=collect_into).items()
+            if v is not None}
+    props = dict(adhoc=spec, ordering=ordering, cancel=cancel, completion=completion)
+    return Node(id, "sub", name, props, children, flows or [], boundaries or [])
+
+
+def is_adhoc(n: Node) -> bool:
+    return n.kind == "sub" and "adhoc" in n.props
+
+
 def throw(id, name, kind="none", ref=None):
     return Node(id, "throw", name, dict(kind=kind, ref=ref))
 
@@ -332,7 +349,7 @@ def validate(ex: Example) -> list[str]:
 
     by_id_all = {n.id: n for n in all_nodes(ex.nodes)}
 
-    def chk_scope(nodes, flows, bnds, where):
+    def chk_scope(nodes, flows, bnds, where, adhoc_scope=False):
         nid = {n.id for n in nodes} | {b.id for b in bnds}
         for fl in flows:
             if fl.src not in nid or fl.dst not in nid:
@@ -340,22 +357,31 @@ def validate(ex: Example) -> list[str]:
         for n in nodes:
             ins = [x for x in flows if x.dst == n.id]
             outs = [x for x in flows if x.src == n.id]
+            if adhoc_scope and n.kind in ("start", "end"):
+                errs.append(f"{where}: Ad Hoc 안에 시작·끝 이벤트 {n.id} (C14 B18)")
             if n.props.get("for_compensation"):
                 if ins or outs:
                     errs.append(f"{where}: 보상 처리기 {n.id}에 흐름이 있다 (C14 B17)")
                 if not any(b.kind == "compensate" and b.props.get("handler") == n.id for b in bnds):
                     errs.append(f"{where}: 보상 처리기 {n.id}를 잇는 보상 경계가 없다")
                 continue
-            if n.kind != "start" and not ins:
+            # Ad Hoc 안의 활동은 흐름 없이 켜진다 (C14 §Ad Hoc) — 들고 나는 흐름을 묻지 않는다.
+            if n.kind != "start" and not ins and not adhoc_scope:
                 errs.append(f"{where}: {n.id} 들어오는 흐름 없음")
-            if n.kind != "end" and not outs:
+            if n.kind != "end" and not outs and not adhoc_scope:
                 errs.append(f"{where}: {n.id} 나가는 흐름 없음")
             if n.kind in ("xgw", "igw") and len(outs) > 1:
                 no_cond = [x for x in outs if not x.cond]
                 if any(not x.default for x in no_cond):
                     errs.append(f"{where}: {n.id} 조건 없는 흐름이 default가 아님")
             if n.kind == "sub":
-                chk_scope(n.children, n.flows, n.boundaries, n.id)
+                chk_scope(n.children, n.flows, n.boundaries, n.id, adhoc_scope=is_adhoc(n))
+            if is_adhoc(n):
+                spec = n.props["adhoc"]
+                if ("activate" in spec) == ("ai" in spec):
+                    errs.append(f"{n.id}: Ad Hoc에 activate·ai 중 하나만 (C14 B18)")
+                if ("result" in spec) != ("collect_into" in spec):
+                    errs.append(f"{n.id}: Ad Hoc의 result·collect_into는 함께 (C14 B18)")
             if n.kind in ("ai", "svc", "rule", "call") and n.props.get("loop") and "collect_into" not in n.props["loop"]:
                 errs.append(f"{n.id} 반복에 collect_into 없음")
             if n.kind in ("appr", "manual"):
@@ -681,6 +707,15 @@ def _node_xml(n: Node, ex: Example, flows_all, data_by_writer, ind="    "):
             inner += boundary_xml(b, ex, n.flows, ind + "  ")
         for fl in n.flows:
             inner += flow_xml(fl, ind + "  ")
+        if is_adhoc(n):
+            # Ad Hoc (C14 §Ad Hoc) — 표준 칸은 표준 속성·요소로, 고르는 쪽은 `bpm:adHoc`로.
+            attrs = f' ordering="{p["ordering"]}" cancelRemainingInstances="{"true" if p["cancel"] else "false"}"'
+            done = ""
+            if p.get("completion"):
+                done = (f'{ind}  <bpmn:completionCondition xsi:type="bpmn:tFormalExpression">'
+                        f'{escape(p["completion"])}</bpmn:completionCondition>\n')
+            return (f'{ind}<bpmn:adHocSubProcess id="{n.id}" name="{nm}"{attrs}>\n{ext_el("adHoc", p["adhoc"])}'
+                    f'{io}{inner}{done}{ind}</bpmn:adHocSubProcess>\n')
         return f'{ind}<bpmn:subProcess id="{n.id}" name="{nm}">\n{io}{inner}{ind}</bpmn:subProcess>\n'
     raise ValueError(k)
 
@@ -1054,6 +1089,16 @@ def node_summary(n: Node) -> str:
         return s
     if k in ("xgw", "igw", "pgw"):
         return "—"
+    if k == "sub" and is_adhoc(n):
+        spec = n.props["adhoc"]
+        how = f"식 `{spec['activate']}`" if "activate" in spec else (
+            "AI · 결과 " + (", ".join(f"`{a}`:{b}" for a, b in spec["ai"].get("results", {}).items()) or "없음"))
+        s = f"Ad Hoc({'차례' if p['ordering'] == 'Sequential' else '함께'}) · {how}"
+        if spec.get("collect_into"):
+            s += f" · 모음 `{spec['result']}`→`{spec['collect_into']}`"
+        if p.get("completion"):
+            s += f" · 완료 조건 `{p['completion']}`" + ("" if p["cancel"] else " (남은 것을 기다림)")
+        return s
     if k == "sub":
         return f"안에 {len(n.children)}개 노드"
     return ""
@@ -1090,7 +1135,8 @@ def to_card(ex: Example, bpmn_rel: str, cases_rel: str) -> str:
                     elif fl.default:
                         t += " (기본)"
                     nxt.append(t)
-            out.append(f"| `{prefix}{n.id}` | {md_cell(n.name)} | {KIND_LABEL[n.kind]} | {md_cell(node_summary(n))} | {md_cell(', '.join(nxt))} |")
+            label = "Ad Hoc 하위 프로세스" if is_adhoc(n) else KIND_LABEL[n.kind]
+            out.append(f"| `{prefix}{n.id}` | {md_cell(n.name)} | {label} | {md_cell(node_summary(n))} | {md_cell(', '.join(nxt))} |")
             if n.kind == "sub":
                 out += rows(n.children, n.flows, n.boundaries, prefix="↳ ")
         for b in bnds:
@@ -1171,6 +1217,12 @@ def defined_vars(ex: Example) -> set[str]:
                 d.add(t["count_as"])
         if p.get("loop"):
             d |= {p["loop"]["item"], p["loop"]["collect_into"]}
+        if is_adhoc(n):
+            spec = p["adhoc"]
+            if spec.get("collect_into"):
+                d.add(spec["collect_into"])
+            if "ai" in spec:
+                d |= set(spec["ai"].get("inputs", {})) | set(spec["ai"].get("results", {}))
     d |= {x.props["store_as"] for x in ex.data}
     return d
 
